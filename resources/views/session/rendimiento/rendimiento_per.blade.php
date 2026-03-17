@@ -1,0 +1,83 @@
+<?php
+use App\Models\Funciones;
+$fun=new Funciones();
+?>
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<script type="text/javascript">
+@if($mi==$mf)
+    $(document).ready(function(){
+    @if(sizeof($diario)>0)
+    google.charts.load('current', {'packages':['corechart']});
+    google.charts.setOnLoadCallback(drawChart);
+
+    function drawChart() {
+        var data = google.visualization.arrayToDataTable([
+            ['Fecha', 'Línea de Rendimiento'],
+            @foreach($diario as $d)
+                ['{{date('d/m/Y',strtotime($d['dia_fech']))}}',{{$d['dia_calificacion']}}],
+            @endforeach
+        ]);
+        var options = {
+            title: "Funcionario : {{$user->name}} ",
+            colors:['#ff0000'],
+            legend: { position: 'bottom' },
+            hAxis:{title:'Rendimiento del mes de {{$fun->mes($mes)}} del {{$año}}'},
+            vAxis:{title:'Rendimiento',
+                minValue:0,
+                maxValue:10
+            }
+        };
+        var chart = new google.visualization.LineChart(document.getElementById('line_chart'));
+        chart.draw(data, options);
+    }
+    @endif
+});
+@else
+$(document).ready(function(){
+    google.charts.load('current', {'packages':['corechart']});
+    google.charts.setOnLoadCallback(drawChart);
+    function drawChart() {
+        var data = google.visualization.arrayToDataTable([
+            ['Fecha', 'Línea de Rendimiento'],
+            @foreach($diario as $d)
+                ['{{$fun->mes($d->mes)}}',{{$d->cal}}],
+            @endforeach
+        ]);
+        var options = {
+            title: "Funcionario : {{$user->name}} ",
+            colors:['#ff0000'],
+            legend: { position: 'bottom' },
+            hAxis:{title:'Rendimiento de {{$fun->mes($mi)}} a {{$fun->mes($mf)}} del {{$año}}' },
+            vAxis:{title:'Rendimiento',
+                minValue:0,
+                maxValue:10
+            }
+        };
+            @if(sizeof($diario)>0)
+        var chart = new google.visualization.LineChart(document.getElementById('line_chart'));
+        chart.draw(data, options);
+        @endif
+    }
+});
+@endif
+
+</script>
+<div>
+    <?php $titulo="";
+        if($mi==$mf){
+            $titulo="Rendimiento del mes de ".$fun->mes($mes)." del $año";
+        }else{
+            $titulo="Rendimiento de ".$fun->mes($mi)." a ".$fun->mes($mf)." del $año";
+        }
+    ?>
+    <div class="alert-info centrar_bloque col-md-5 p-2 mb-4 rounded shadow">
+        <h5 class="text-dark text-center font-weight-bolder">{{$titulo}} </h5>
+    </div>
+<div id="line_chart" class="col-md-12 border mt-2" style="height: 500px">
+    @if(sizeof($diario)==0)
+        <span class="mensaje-peligro"> * No hay datos para mostrar</span>
+    @else
+        {{sizeof($diario)}}
+    @endif
+</div>
+</div>

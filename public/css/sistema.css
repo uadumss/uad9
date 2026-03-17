@@ -1,0 +1,50 @@
+.centrar_bloque {
+    float: none;
+    margin: 0 auto;
+}
+.imgRedonda {
+    border-radius:150px;
+    border:0px solid #CCC;
+}
+.imgRedondaGrande {
+    border-radius:150px;
+    border:0px solid #CCC;
+}
+
+.modal:nth-of-type(even) {
+    z-index: 1052 !important;
+}
+.modal-backdrop.show:nth-of-type(even) {
+    z-index: 1051 !important;
+}
+.mensaje{
+    font-size: 0.8em;
+    font-weight:bold;
+    font-style: italic;
+    color: #0075eb;
+}
+.mensaje-peligro{
+    font-size: 0.8em;
+    font-weight:bold;
+    font-style: italic;
+    color: #eb0026;
+}
+.bg-verde-oscuro{
+    background-color: #1b4b72;
+}
+/*Logo*/
+.logo {
+    line-height: 1;
+}
+
+.logo img {
+    max-height: 100px;
+    margin: 15px;
+}
+
+.logo span {
+    font-size: 30px;
+    font-weight: 700;
+    color: #012970;
+    font-family: "Nunito", sans-serif;
+}
