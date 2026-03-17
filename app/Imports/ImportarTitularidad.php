@@ -50,7 +50,7 @@ class ImportarTitularidad implements ToModel, WithHeadingRow, WithValidation, Wi
                 'fun_estado' => 'A',
             ];
             
-            $funcionario = Funcionario::updateOrCreate(
+            $funcionario = Funcionario::firstOrCreate(
                 ['fun_ci' => $rowNormalizado['ci']],
                 $datosActualizacion
             );
