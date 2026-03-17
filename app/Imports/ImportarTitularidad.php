@@ -10,9 +10,9 @@ use App\Models\T_observacion;
 use App\Models\Titularidad;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use Maatwebsite\Excel\Concerns\{Importable, ToModel, WithHeadingRow,WithValidation};
+use Maatwebsite\Excel\Concerns\{Importable, ToModel, WithHeadingRow, WithValidation, WithChunkReading};
 
-class ImportarTitularidad implements ToModel,WithHeadingRow,WithValidation
+class ImportarTitularidad implements ToModel, WithHeadingRow, WithValidation, WithChunkReading
 {
     /**
     * @param array $row
@@ -21,44 +21,52 @@ class ImportarTitularidad implements ToModel,WithHeadingRow,WithValidation
     */
     public function model(array $row)
     {
-        $funcionario='';
-        $documento='';
-        $vacio='';
+        $rowNormalizado = [];
+        foreach ($row as $key => $value) {
+            $keyNormalizado = strtolower(trim(str_replace(' ', '', $key)));
+            $rowNormalizado[$keyNormalizado] = $value;
+        }
 
-        $funcionario=Funcionario::all()->where('fun_nombre','=',$row['nombre'])
-            ->where('fun_doc_adm','=','A')->first();
-        if($funcionario){
-            if($funcionario->fun_doc_adm=='A'){
-                $funcionario->fun_folder='t';
-                $funcionario->fun_fecha_folder=date('d/m/Y');
-                $funcionario->save();
-
-                $titulo=Documento::create([
-                    'doc_titulo'=>$row['detalle'],
-                    'cod_fun'=>$funcionario->cod_fun,
-                    'doc_universidad'=>$row['universidad'],
-                    'doc_umss'=>$row['doc_umss'],
-                    'doc_legalizado'=>$row['legalizado'],
-                    'doc_verificado'=>$row['legalizado'],
-                    'doc_grado'=>$row['grado'],
-                    'doc_gestion'=>$row['gestion'],
-                    'doc_tipo'=>$row['tipo'],
-                ]);
-                if($row['obstitulo']!=''){
-                    $observacion=D_observacion::create([
-                       'cod_doc'=>$titulo->cod_doc,
-                       'od_obs'=>$row['obstitulo'],
-                       'od_fecha'=>date('d/m/Y'),
-                    ]);
-                    $titulo->doc_obs='t';
-                    $titulo->save();
-                }
-            }
-        }else{
+        if (empty($rowNormalizado['ci']) || empty($rowNormalizado['nombres'])) {
             return null;
         }
 
+        $tipoFuncionario = 'A';
+        if (!empty($rowNormalizado['sector'])) {
+            $sectorLower = strtolower(trim($rowNormalizado['sector']));
+            if (strpos($sectorLower, 'doc') !== false) {
+                $tipoFuncionario = 'D';
+            } elseif (strpos($sectorLower, 'adm') !== false) {
+                $tipoFuncionario = 'A';
+            }
+        }
+
+        try {
+            $datosActualizacion = [
+                'fun_nombre' => $rowNormalizado['nombres'],
+                'fun_doc_adm' => $tipoFuncionario,
+                'fun_carrera' => $rowNormalizado['actividad'] ?? '',
+                'fun_facultad' => $rowNormalizado['da'] ?? '',
+                'fun_estado' => 'A',
+            ];
+            
+            $funcionario = Funcionario::firstOrCreate(
+                ['fun_ci' => $rowNormalizado['ci']],
+                $datosActualizacion
+            );
+
+            return null;
+        } catch (\Exception $e) {
+            \Log::error('Error importando CI: ' . $rowNormalizado['ci'] . ' - ' . $e->getMessage());
+            return null;
+        }
     }
+
+    public function chunkSize(): int
+    {
+        return 1000;
+    }
+
     public function rules(): array
     {
         return [
