@@ -31,4 +31,15 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'recaudaciones' => [
+        'url' => env('RECAUDACIONES_URL', env('API_BASE_URL_RECAUDACIONES')),
+        'token' => env('RECAUDACIONES_TOKEN', env('API_KEY_RECAUDACIONES')),
+        'verify_ssl' => env('RECAUDACIONES_VERIFY_SSL', true),
+    ],
+
+    'ocrspace' => [
+        'api_key' => env('OCR_SPACE_API_KEY'),
+        'verify_ssl' => env('OCR_SPACE_VERIFY_SSL', true),
+    ],
+
 ];

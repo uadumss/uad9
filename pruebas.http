@@ -1,0 +1,64 @@
+@baseUrl = http://127.0.0.1:8000
+
+### Recaudaciones - Busqueda por Numero de Control y Documento
+POST {{baseUrl}}/api/recaudaciones/buscar-control-documento
+Content-Type: application/json
+Accept: application/json
+
+{
+    "unidad": 122,
+    "recibo": 28714,
+    "documento": "8013761"
+}
+
+### Recaudaciones - Busqueda por Numero de Control (Recibo)
+POST {{baseUrl}}/api/recaudaciones/buscar-control
+Content-Type: application/json
+Accept: application/json
+
+{
+    "unidad": 122,
+    "recibo": 21600
+}
+
+### Recaudaciones - Busqueda por Numero de Documento (CI)
+POST {{baseUrl}}/api/recaudaciones/buscar-documento
+Content-Type: application/json
+Accept: application/json
+
+{
+    "unidad": 122,
+    "documento": "8013761"
+}
+
+### OCR - Extraer datos de recibo (imagen o pdf)
+POST {{baseUrl}}/api/recaudaciones/extraer-datos-documento
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+Accept: application/json
+
+--WebAppBoundary
+Content-Disposition: form-data; name="archivo"; filename="recibo.jpg"
+Content-Type: image/jpeg
+
+< ./recibo.jpg
+--WebAppBoundary
+Content-Disposition: form-data; name="language"
+
+spa
+--WebAppBoundary--
+
+### OCR - Extraer datos de diploma (sin QR)
+POST {{baseUrl}}/api/recaudaciones/extraer-datos-diploma
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+Accept: application/json
+
+--WebAppBoundary
+Content-Disposition: form-data; name="archivo"; filename="diploma.jpg"
+Content-Type: image/jpeg
+
+< ./diploma.jpg
+--WebAppBoundary
+Content-Disposition: form-data; name="language"
+
+spa
+--WebAppBoundary--
