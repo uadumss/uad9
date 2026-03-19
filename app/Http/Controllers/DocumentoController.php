@@ -271,6 +271,14 @@ class DocumentoController extends Controller
                 $texto="</table>";*/
                 //$lista=Excel::toArray(new ImportarDoc(), $form->file('archivo'));
                 $importado = Excel::import(new ImportarTitularidad(), $form->file('archivo'));
+                
+                // Guardar el archivo en storage con nombre original + fecha
+                $nombreOriginal = pathinfo($form->file('archivo')->getClientOriginalName(), PATHINFO_FILENAME);
+                $extension = $form->file('archivo')->getClientOriginalExtension();
+                $nombreArchivo = 'titularidad-' . date('Y-m-d_H-i-s') . '-' . $nombreOriginal . '.' . $extension;
+                $ruta = 'importaciones/titularidad/';
+                Storage::putFileAs($ruta, $form->file('archivo'), $nombreArchivo);
+                
                 \Session::flash('exito_importacion', 'Se ha importado con exito los datos');
                 //return $lista[0];
                 //dd($lista);
@@ -297,6 +305,14 @@ class DocumentoController extends Controller
                 $texto="</table>";*/
                 //$lista=Excel::toArray(new ImportarDoc(), $form->file('archivo'));
                 $importado = Excel::import(new ImportarTitularidad(), $form->file('archivo'));
+                
+                // Guardar el archivo en storage con nombre original + fecha
+                $nombreOriginal = pathinfo($form->file('archivo')->getClientOriginalName(), PATHINFO_FILENAME);
+                $extension = $form->file('archivo')->getClientOriginalExtension();
+                $nombreArchivo = 'funcionarios-' . date('Y-m-d_H-i-s') . '-' . $nombreOriginal . '.' . $extension;
+                $ruta = 'importaciones/funcionarios/';
+                Storage::putFileAs($ruta, $form->file('archivo'), $nombreArchivo);
+                
                 \Session::flash('exito_importacion', 'Se ha importado con exito los datos');
                 //return $lista[0];
                 //dd($lista);
