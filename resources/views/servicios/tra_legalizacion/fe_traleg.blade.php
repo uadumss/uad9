@@ -646,7 +646,8 @@
                 type: 'POST',
                 data: {
                     _token: formulario.find('input[name="_token"]').val(),
-                    control: control
+                    control: control,
+                    reimpresion: formulario.find('input[name="reimpresion"]').val() || ''
                 },
                 success: function(resp){
                     if(!resp.ok){
@@ -659,18 +660,7 @@
                         return;
                     }
 
-                    if(resp.tipo_legalizacion_sugerido){
-                        formulario.find('select[data-campo="tipo-legalizacion"]').val(String(resp.tipo_legalizacion_sugerido));
-                    } else if(resp.cuenta){
-                        var select=formulario.find('select[data-campo="tipo-legalizacion"]');
-                        var cuentaApi=normalizarTexto(resp.cuenta);
-                        select.find('option').each(function(){
-                            if(normalizarTexto($(this).text())===cuentaApi){
-                                select.val($(this).val());
-                                return false;
-                            }
-                        });
-                    }
+                    autoseleccionarTipoLegalizacion(formulario,resp);
                     sincronizarTipoLegalizacion(formulario);
                     formulario.find('input[data-campo="preimpreso-api"]').val(resp.preimpreso || '');
                     okInput.val('1');
@@ -728,6 +718,43 @@
                 .replace(/[\u0300-\u036f]/g, '')
                 .replace(/\s+/g, ' ')
                 .trim();
+        }
+
+        function autoseleccionarTipoLegalizacion(formulario,resp){
+            var select=formulario.find('select[data-campo="tipo-legalizacion"]');
+            if(!select.length){
+                return;
+            }
+
+            var codigo=(resp && resp.tipo_legalizacion_sugerido) ? String(resp.tipo_legalizacion_sugerido) : '';
+            if(codigo!=='' && select.find('option[value="'+codigo+'"]').length){
+                select.val(codigo);
+                return;
+            }
+
+            var nombreSugerido=normalizarTexto(resp && resp.nombre_tipo_legalizacion_sugerido ? resp.nombre_tipo_legalizacion_sugerido : '');
+            var cuentaApi=normalizarTexto(resp && resp.cuenta ? resp.cuenta : '');
+
+            if(nombreSugerido==='' && cuentaApi===''){
+                return;
+            }
+
+            var encontrado=false;
+            select.find('option').each(function(){
+                var texto=normalizarTexto($(this).text());
+                if(
+                    (nombreSugerido!=='' && (texto===nombreSugerido || texto.indexOf(nombreSugerido)!==-1 || nombreSugerido.indexOf(texto)!==-1)) ||
+                    (cuentaApi!=='' && (texto===cuentaApi || texto.indexOf(cuentaApi)!==-1 || cuentaApi.indexOf(texto)!==-1))
+                ){
+                    select.val($(this).val());
+                    encontrado=true;
+                    return false;
+                }
+            });
+
+            if(!encontrado && select.find('option').length){
+                select.val(select.find('option:first').val());
+            }
         }
 
         function sincronizarTipoLegalizacion(formulario){
