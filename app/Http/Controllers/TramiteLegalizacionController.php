@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
@@ -665,7 +666,13 @@ class TramiteLegalizacionController extends Controller
     {
         $error='';
         if(!Schema::hasTable('recaudacion_usos')){
-            return true;
+            $error='No se puede continuar: falta la tabla de bloqueo de pagos (migración pendiente).';
+            Log::critical('Bloqueo de recaudación deshabilitado por migración faltante.',[
+                'tabla'=>'recaudacion_usos',
+                'cod_tra'=>$codTra,
+                'cod_dtra'=>$codDtra,
+            ]);
+            return false;
         }
 
         $identificador=trim((string)($validacion['identificador'] ?? ''));
@@ -708,6 +715,12 @@ class TramiteLegalizacionController extends Controller
             ]);
         }catch(\Throwable $e){
             $error='No se guardó el bloqueo. Intente de nuevo.';
+            Log::error('Error al registrar uso de recaudación.',[
+                'cod_tra'=>$codTra,
+                'cod_dtra'=>$codDtra,
+                'identificador'=>$identificador,
+                'error'=>$e->getMessage(),
+            ]);
             return false;
         }
 
