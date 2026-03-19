@@ -491,7 +491,7 @@ class TramiteLegalizacionController extends Controller
         if(!$persona || !$persona->per_ci){
             return response()->json([
                 'ok'=>false,
-                'message'=>'El trámite no tiene CI válido para consultar recaudaciones',
+                'message'=>'El CI no es válido para consultar.',
             ],422);
         }
 
@@ -529,7 +529,7 @@ class TramiteLegalizacionController extends Controller
         if($baseUrl==='' || $token===''){
             return [
                 'ok'=>false,
-                'message'=>'Configuración de recaudaciones incompleta en services/.env',
+                'message'=>'Sistema no configurado. Contacte al ITS.',
             ];
         }
 
@@ -546,14 +546,24 @@ class TramiteLegalizacionController extends Controller
         } catch (\Throwable $e) {
             return [
                 'ok'=>false,
-                'message'=>'Error de comunicación con recaudaciones',
+                'message'=>'No hay conexión. Intente en unos momentos.',
             ];
         }
 
         if(!$response->successful()){
+            $json=$response->json();
+            $errMsg='Control no encontrado.';
+            
+            if(isset($json['error']['message'])){
+                $msg=(string)($json['error']['message'] ?? '');
+                if(stripos($msg,'recibo')!==false || stripos($msg,'no se encuentra')!==false){
+                    $errMsg='Control no encontrado.';
+                }
+            }
+            
             return [
                 'ok'=>false,
-                'message'=>'No se pudo validar el valorado en recaudaciones',
+                'message'=>$errMsg,
             ];
         }
 
@@ -565,7 +575,7 @@ class TramiteLegalizacionController extends Controller
         if(!is_array($lista) || sizeof($lista)==0){
             return [
                 'ok'=>false,
-                'message'=>'No existe comprobante en recaudaciones para ese número de control y CI',
+                'message'=>'Control no encontrado. (Revise: escriba bien el número)',
             ];
         }
 
@@ -573,14 +583,16 @@ class TramiteLegalizacionController extends Controller
         if(!$fila){
             return [
                 'ok'=>false,
-                'message'=>'No se encontró un pago válido para ese control con sus datos personales',
+                'message'=>'No coincide con sus datos. (El pago existe pero con otro nombre)',
             ];
         }
 
         if((string)($fila['documento'] ?? '')!==$ci){
+            $ciRecaudacion=$fila['documento'] ?? '';
             return [
                 'ok'=>false,
-                'message'=>'El CI del comprobante no coincide con el CI del trámite',
+                'message'=>'El CI no coincide.',
+                'detalle'=>'(Recaudación: '.$ciRecaudacion.' | Trámite: '.$ci.')',
             ];
         }
 
@@ -596,7 +608,8 @@ class TramiteLegalizacionController extends Controller
         if(!$coincideNombre){
             return [
                 'ok'=>false,
-                'message'=>'Los nombres del comprobante no coinciden con los datos del trámite',
+                'message'=>'El nombre no coincide.',
+                'detalle'=>'(Recaudación: '.$nombreR.' | Datos: '.$nombreSistema.')',
             ];
         }
 
@@ -648,7 +661,7 @@ class TramiteLegalizacionController extends Controller
 
         $yaExiste=DB::table('recaudacion_usos')->where('identificador','=',$identificador)->first();
         if($yaExiste){
-            $error='Este pago ya fue utilizado en otra legalización y no puede volver a usarse.';
+            $error='Este pago ya se usó.';
             return false;
         }
 
@@ -668,7 +681,7 @@ class TramiteLegalizacionController extends Controller
                 'updated_at'=>now(),
             ]);
         }catch(\Throwable $e){
-            $error='No se pudo confirmar el bloqueo de uso único del pago. Intente nuevamente.';
+            $error='No se guardó el bloqueo. Intente de nuevo.';
             return false;
         }
 
@@ -686,16 +699,26 @@ class TramiteLegalizacionController extends Controller
 
     private function mensajePagoYaUsado(object $usoPago): string
     {
-        $fechaUso=trim((string)($usoPago->fecha_pago ?? ''));
         $nombrePersona=trim((string)($usoPago->nombre_persona ?? ''));
         $ciPersona=trim((string)($usoPago->documento ?? ''));
+        $fechaPago=trim((string)($usoPago->fecha_pago ?? ''));
 
-        $detallePersona='';
+        $mensaje='Este pago ya fue utilizado';
+        
         if($nombrePersona!=='' || $ciPersona!==''){
-            $detallePersona=' a nombre de '.trim($nombrePersona.' '.($ciPersona!=='' ? '(CI '.$ciPersona.')' : ''));
+            $mensaje.=' a nombre de '.$nombrePersona;
+            if($ciPersona!==''){
+                $mensaje.=' (CI '.$ciPersona.')';
+            }
         }
+        
+        if($fechaPago!==''){
+            $mensaje.=' el '.$fechaPago;
+        }
+        
+        $mensaje.='. No se puede usar nuevamente.';
 
-        return 'Este pago ya fue utilizado'.$detallePersona.($fechaUso!=='' ? ' el '.$fechaUso : '').' y no se puede volver a registrar.';
+        return $mensaje;
     }
 
     private function seleccionarFilaRecaudacion(array $lista, string $preimpreso): ?array

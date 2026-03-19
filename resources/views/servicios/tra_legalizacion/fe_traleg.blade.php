@@ -560,6 +560,26 @@
         </div>
     </div>
 
+    <style>
+        /* Estilos para estados de validación */
+        [data-campo="estado-validacion"] {
+            display: block;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        [data-campo="estado-validacion"].text-success {
+            color: #28a745;
+        }
+
+        [data-campo="estado-validacion"].text-danger {
+            color: #dc3545;
+        }
+
+        [data-campo="estado-validacion"].text-muted {
+            color: #6c757d;
+        }
+    </style>
 
     <script>
         function cargarDatosPersonales(ci){
@@ -609,12 +629,20 @@
             var okInput=formulario.find('[data-campo="validacion-recaudacion-ok"]');
             var estado=formulario.find('[data-campo="estado-validacion"]');
             okInput.val('0');
+            
             if(!control){
-                estado.removeClass('text-success').addClass('text-danger').text('Debe ingresar número de control');
+                estado
+                    .removeClass('text-success text-muted')
+                    .addClass('text-danger')
+                    .html('Escriba el número de control');
                 return;
             }
 
-            estado.removeClass('text-danger text-success').addClass('text-muted').text('Validando en recaudaciones...');
+            estado
+                .removeClass('text-danger text-success')
+                .addClass('text-muted')
+                .text('Verificando...');
+            
             $.ajax({
                 url: "{{url('validar valorado recaudaciones/'.$tramite->cod_tra)}}",
                 type: 'POST',
@@ -625,14 +653,17 @@
                 success: function(resp){
                     if(!resp.ok){
                         okInput.val('0');
-                        estado.removeClass('text-success').addClass('text-danger').text(resp.message || 'No se pudo validar el comprobante');
+                        var msg=resp.message || 'No se pudo validar el comprobante';
+                        estado
+                            .removeClass('text-success text-muted')
+                            .addClass('text-danger')
+                            .text(msg);
                         return;
                     }
 
                     if(resp.tipo_legalizacion_sugerido){
                         formulario.find('select[data-campo="tipo-legalizacion"]').val(String(resp.tipo_legalizacion_sugerido));
                     } else if(resp.cuenta){
-                        // Si no hay sugerencia por código de cuenta, intenta mapear por texto de cuenta
                         var select=formulario.find('select[data-campo="tipo-legalizacion"]');
                         var cuentaApi=normalizarTexto(resp.cuenta);
                         select.find('option').each(function(){
@@ -646,26 +677,28 @@
                     formulario.find('input[data-campo="preimpreso-api"]').val(resp.preimpreso || '');
                     okInput.val('1');
 
-                    var detalle='';
+                    var msg='Validado. Monto Bs. '+(resp.monto || '0');
                     if(resp.fecha_pago){
-                        detalle+=' | Fecha '+resp.fecha_pago;
+                        msg+=' - Fecha '+resp.fecha_pago;
                     }
                     if(resp.cajero){
-                        detalle+=' | Cajero '+resp.cajero;
+                        msg+=' - Caja '+resp.cajero;
                     }
-                    if(resp.preimpreso){
-                        detalle+=' | Preimpreso '+resp.preimpreso;
-                    }
-                    estado.removeClass('text-danger').addClass('text-success')
-                        .text('Validado: CI y nombre coinciden. Monto Bs. '+(resp.monto || '0')+detalle);
+                    estado
+                        .removeClass('text-danger text-muted')
+                        .addClass('text-success')
+                        .text(msg);
                 },
                 error: function(xhr){
-                    var msg='No se pudo validar el comprobante en recaudaciones';
+                    var msg='No hay conexión. Intente en unos momentos.';
                     if(xhr.responseJSON && xhr.responseJSON.message){
                         msg=xhr.responseJSON.message;
                     }
                     okInput.val('0');
-                    estado.removeClass('text-success').addClass('text-danger').text(msg);
+                    estado
+                        .removeClass('text-success text-muted')
+                        .addClass('text-danger')
+                        .text(msg);
                 }
             });
         }
@@ -676,7 +709,7 @@
             var validado=form.find('[data-campo="validacion-recaudacion-ok"]').val()==='1';
 
             if(!cuadis && !validado){
-                $('#error_datos_span').html('Primero valide el número de control en recaudaciones.');
+                $('#error_datos_span').html('Valide el número de control primero.');
                 $('#error_datos').show();
                 setTimeout(function () {
                     $('#error_datos').hide(500);
