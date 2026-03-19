@@ -382,12 +382,11 @@
                                         <tr>
                                             <th class="text-right font-italic">Trámite : </th>
                                             <td class="border-bottom border-dark">
-                                                <select class="custom-select custom-select-sm border-0 " data-campo="tipo-legalizacion" disabled>
+                                                <select class="custom-select custom-select-sm border-0" name="tipo" data-campo="tipo-legalizacion" onchange="sincronizarTipoLegalizacion($(this).closest('form'))">
                                                     @foreach($lista_tramites as $l)
                                                         <option value="{{$l->cod_tre}}">{{$l->tre_nombre}}</option>
                                                     @endforeach
                                                 </select>
-                                                <input type="hidden" name="tipo" data-campo="tipo-legalizacion-hidden" value="{{isset($lista_tramites[0]) ? $lista_tramites[0]->cod_tre : ''}}">
                                             </td>
                                         </tr>
                                         <tr>
@@ -524,19 +523,20 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <th class="text-right font-italic">Validación:</th>
-                                            <td class="border-bottom border-dark">
-                                                <small class="text-muted" data-campo="estado-validacion">Pendiente de validación</small>
-                                            </td>
-                                        </tr>
-                                        <tr>
                                             <th class="text-right font-italic ">N° control Búsqueda:</th>
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group">
                                                     <input class="form-control form-control-sm" name="valorado_bus" />
+                                                    &nbsp;&nbsp;<span class="font-italic font-weight-bold"> Nro. control Reimpresión : </span>&nbsp;&nbsp;
+                                                    <input class="form-control form-control-sm" readonly name="reimpresion" data-campo="preimpreso-api" />
                                                 </div>
                                             </td>
-
+                                        </tr>
+                                        <tr>
+                                            <th class="text-right font-italic">Validación:</th>
+                                            <td class="border-bottom border-dark">
+                                                <small class="text-muted" data-campo="estado-validacion">Pendiente de validación</small>
+                                            </td>
                                         </tr>
                                     </table>
                                     <input type="hidden" name="ctra" value="{{$tramite->cod_tra}}">
@@ -734,8 +734,9 @@
 
         function sincronizarTipoLegalizacion(formulario){
             var select=formulario.find('select[data-campo="tipo-legalizacion"]');
-            var hidden=formulario.find('input[data-campo="tipo-legalizacion-hidden"]');
-            hidden.val(select.val() || '');
+            if(select.length){
+                select.val(select.find('option:selected').val());
+            }
         }
 
         $(function(){
