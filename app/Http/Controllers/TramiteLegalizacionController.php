@@ -613,6 +613,23 @@ class TramiteLegalizacionController extends Controller
             ];
         }
 
+        $preimpresoApi=$this->valorPreimpresoFila($fila);
+        $fechaPago=(string)($fila['fecha'] ?? '');
+
+        $usoCombinacion=$this->buscarUsoPagoPorCombinacion(
+            $nombreR,
+            (string)$control,
+            $preimpresoApi,
+            $fechaPago
+        );
+        if($usoCombinacion){
+            return [
+                'ok'=>false,
+                'message'=>$this->mensajePagoYaUsado($usoCombinacion),
+            ];
+        }
+
+        // Respaldo adicional: evita reutilización del mismo identificador aunque cambie formato de datos.
         $usoIdentificador=$this->buscarUsoPagoPorIdentificador((string)($fila['identificador'] ?? ''));
         if($usoIdentificador){
             return [
@@ -620,8 +637,6 @@ class TramiteLegalizacionController extends Controller
                 'message'=>$this->mensajePagoYaUsado($usoIdentificador),
             ];
         }
-
-        $preimpresoApi=$this->valorPreimpresoFila($fila);
 
         $codigoCuenta=(string)($fila['codigo_cuenta'] ?? '');
         $tramiteSugerido=Tramite::where('tre_hab','=','t')
@@ -656,6 +671,17 @@ class TramiteLegalizacionController extends Controller
         $identificador=trim((string)($validacion['identificador'] ?? ''));
         if($identificador===''){
             $error='No se pudo registrar el uso del pago: identificador vacío';
+            return false;
+        }
+
+        $usoCombinacion=$this->buscarUsoPagoPorCombinacion(
+            (string)($validacion['nombre_recaudaciones'] ?? ''),
+            (string)($validacion['control'] ?? ''),
+            (string)($validacion['preimpreso'] ?? ''),
+            (string)($validacion['fecha_pago'] ?? '')
+        );
+        if($usoCombinacion){
+            $error='Este pago ya se usó (misma combinación de nombre, impreso, control y fecha).';
             return false;
         }
 
@@ -695,6 +721,42 @@ class TramiteLegalizacionController extends Controller
         }
 
         return DB::table('recaudacion_usos')->where('identificador','=',$identificador)->first();
+    }
+
+    private function buscarUsoPagoPorCombinacion(string $nombrePersona, string $recibo, string $preimpreso, string $fechaPago)
+    {
+        if(!Schema::hasTable('recaudacion_usos')){
+            return null;
+        }
+
+        if(trim($recibo)==='' || trim($fechaPago)===''){
+            return null;
+        }
+
+        $query=DB::table('recaudacion_usos')
+            ->where('recibo','=',trim($recibo))
+            ->where('fecha_pago','=',trim($fechaPago));
+
+        $preimpreso=trim($preimpreso);
+        if($preimpreso!==''){
+            $query->where('preimpreso','=',$preimpreso);
+        }
+
+        $usos=$query->get();
+        if($usos->isEmpty()){
+            return null;
+        }
+
+        $nombreNormalizado=$this->normalizarTexto($nombrePersona);
+        foreach($usos as $uso){
+            $nombreGuardado=$this->normalizarTexto((string)($uso->nombre_persona ?? ''));
+            if($nombreNormalizado!=='' && $nombreGuardado!==$nombreNormalizado){
+                continue;
+            }
+            return $uso;
+        }
+
+        return null;
     }
 
     private function mensajePagoYaUsado(object $usoPago): string
