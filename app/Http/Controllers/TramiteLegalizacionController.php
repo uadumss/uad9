@@ -776,7 +776,14 @@ class TramiteLegalizacionController extends Controller
     {
         $nombrePersona=trim((string)($usoPago->nombre_persona ?? ''));
         $ciPersona=trim((string)($usoPago->documento ?? ''));
-        $fechaPago=trim((string)($usoPago->fecha_pago ?? ''));
+        $fechaUso=trim((string)($usoPago->created_at ?? ''));
+
+        if($fechaUso!==''){
+            $timestamp=strtotime($fechaUso);
+            if($timestamp!==false){
+                $fechaUso=date('d/m/Y H:i', $timestamp);
+            }
+        }
 
         $mensaje='Este pago ya fue utilizado';
         
@@ -787,8 +794,8 @@ class TramiteLegalizacionController extends Controller
             }
         }
         
-        if($fechaPago!==''){
-            $mensaje.=' el '.$fechaPago;
+        if($fechaUso!==''){
+            $mensaje.=' el '.$fechaUso;
         }
         
         $mensaje.='. No se puede usar nuevamente.';
