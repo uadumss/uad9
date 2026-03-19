@@ -473,12 +473,11 @@
                                         <tr>
                                             <th class="text-right font-italic ">Tipo de legalización :</th>
                                             <td class="border-bottom border-dark">
-                                                <select class="custom-select custom-select-sm border-0 " data-campo="tipo-legalizacion" disabled>
+                                                <select class="custom-select custom-select-sm border-0 " name="tipo" data-campo="tipo-legalizacion" onchange="sincronizarTipoLegalizacion($(this).closest('form'))">
                                                     @foreach($lista_tramites as $l)
                                                         <option value="{{$l->cod_tre}}">{{$l->tre_nombre}}</option>
                                                     @endforeach
                                                 </select>
-                                                <input type="hidden" name="tipo" data-campo="tipo-legalizacion-hidden" value="{{isset($lista_tramites[0]) ? $lista_tramites[0]->cod_tre : ''}}">
                                             </td>
                                         </tr>
                                         <tr>
@@ -528,7 +527,7 @@
                                                 <div class="input-group">
                                                     <input class="form-control form-control-sm" name="valorado_bus" />
                                                     &nbsp;&nbsp;<span class="font-italic font-weight-bold"> Nro. control Reimpresión : </span>&nbsp;&nbsp;
-                                                    <input class="form-control form-control-sm" readonly name="reimpresion" data-campo="preimpreso-api" />
+                                                    <input class="form-control form-control-sm" name="reimpresion" data-campo="preimpreso-api" />
                                                 </div>
                                             </td>
                                         </tr>
@@ -540,7 +539,6 @@
                                         </tr>
                                     </table>
                                     <input type="hidden" name="ctra" value="{{$tramite->cod_tra}}">
-                                    <input type="hidden" name="reimpresion" data-campo="preimpreso-api" value="">
                                     <input type="hidden" data-campo="validacion-recaudacion-ok" value="0">
                                 </form>
                                 <br/>
