@@ -7,8 +7,8 @@ Accept: application/json
 
 {
     "unidad": 122,
-    "recibo": 28714,
-    "documento": "8013761"
+    "recibo": 7910,
+    "documento": "8050657"
 }
 
 ### Recaudaciones - Busqueda por Numero de Control (Recibo)
@@ -18,7 +18,7 @@ Accept: application/json
 
 {
     "unidad": 122,
-    "recibo": 21600
+    "recibo": 7910
 }
 
 ### Recaudaciones - Busqueda por Numero de Documento (CI)

@@ -395,8 +395,6 @@
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group">
                                                     <input type="text" class=" form-control form-control-sm" name="control" required onchange="validarControlRecaudaciones(this)">
-                                                    &nbsp;&nbsp;<span class="font-italic font-weight-bold"> Nro. control Reimpresión : </span>&nbsp;&nbsp;
-                                                    <input class="form-control form-control-sm" name="reimpresion" />
                                                     &nbsp;&nbsp;&nbsp;&nbsp;<span class="font-italic text-dark font-weight-bold"> CUADIS :
                                                             <input type="checkbox" name="cuadis" />
                                                         </span>&nbsp;&nbsp;
@@ -442,8 +440,10 @@
                                     </table>
                                     <input type="hidden" name="ctra" value="{{$tramite->cod_tra}}">
                                     <input type="hidden" name="tipo_tramite" value="t">
+                                    <input type="hidden" name="reimpresion" data-campo="preimpreso-api" value="">
+                                    <input type="hidden" data-campo="validacion-recaudacion-ok" value="0">
                                 </form>
-                                <a href="#" class="btn btn-sm btn-primary float-right mr-4" onclick="enviar1('form_docleg','{{url('g_docleg')}}','panel_traleg')"
+                                <a href="#" class="btn btn-sm btn-primary float-right mr-4" onclick="crearDoclegConValidacion('form_docleg','{{url('g_docleg')}}','panel_traleg')"
                                    title="Editar legalización">+ Crear </a>
                                 <br/><br/>
                             </div>
@@ -534,17 +534,17 @@
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group">
                                                     <input class="form-control form-control-sm" name="valorado_bus" />
-                                                    &nbsp;&nbsp;<span class="font-italic font-weight-bold"> Nro. control Reimpresión : </span>&nbsp;&nbsp;
-                                                    <input class="form-control form-control-sm" name="reimpresion" />
                                                 </div>
                                             </td>
 
                                         </tr>
                                     </table>
                                     <input type="hidden" name="ctra" value="{{$tramite->cod_tra}}">
+                                    <input type="hidden" name="reimpresion" data-campo="preimpreso-api" value="">
+                                    <input type="hidden" data-campo="validacion-recaudacion-ok" value="0">
                                 </form>
                                 <br/>
-                                <a href="#" class="btn btn-sm btn-primary float-right mr-4" onclick="enviar1('form_docleg','{{url('g_docleg')}}','panel_traleg')"
+                                <a href="#" class="btn btn-sm btn-primary float-right mr-4" onclick="crearDoclegConValidacion('form_docleg','{{url('g_docleg')}}','panel_traleg')"
                                    title="Editar legalización">+ Crear </a>
                                 <br/><br/>
                             </div>
@@ -606,7 +606,9 @@
         function validarControlRecaudaciones(inputControl){
             var formulario=$(inputControl).closest('form');
             var control=formulario.find('input[name="control"]').val();
+            var okInput=formulario.find('[data-campo="validacion-recaudacion-ok"]');
             var estado=formulario.find('[data-campo="estado-validacion"]');
+            okInput.val('0');
             if(!control){
                 estado.removeClass('text-success').addClass('text-danger').text('Debe ingresar número de control');
                 return;
@@ -622,6 +624,7 @@
                 },
                 success: function(resp){
                     if(!resp.ok){
+                        okInput.val('0');
                         estado.removeClass('text-success').addClass('text-danger').text(resp.message || 'No se pudo validar el comprobante');
                         return;
                     }
@@ -640,18 +643,48 @@
                         });
                     }
                     sincronizarTipoLegalizacion(formulario);
+                    formulario.find('input[data-campo="preimpreso-api"]').val(resp.preimpreso || '');
+                    okInput.val('1');
 
+                    var detalle='';
+                    if(resp.fecha_pago){
+                        detalle+=' | Fecha '+resp.fecha_pago;
+                    }
+                    if(resp.cajero){
+                        detalle+=' | Cajero '+resp.cajero;
+                    }
+                    if(resp.preimpreso){
+                        detalle+=' | Preimpreso '+resp.preimpreso;
+                    }
                     estado.removeClass('text-danger').addClass('text-success')
-                        .text('Validado: CI y nombre coinciden. Monto Bs. '+(resp.monto || '0'));
+                        .text('Validado: CI y nombre coinciden. Monto Bs. '+(resp.monto || '0')+detalle);
                 },
                 error: function(xhr){
                     var msg='No se pudo validar el comprobante en recaudaciones';
                     if(xhr.responseJSON && xhr.responseJSON.message){
                         msg=xhr.responseJSON.message;
                     }
+                    okInput.val('0');
                     estado.removeClass('text-success').addClass('text-danger').text(msg);
                 }
             });
+        }
+
+        function crearDoclegConValidacion(formulario,ruta,panel){
+            var form=$('#'+formulario);
+            var cuadis=form.find('input[name="cuadis"]').is(':checked');
+            var validado=form.find('[data-campo="validacion-recaudacion-ok"]').val()==='1';
+
+            if(!cuadis && !validado){
+                $('#error_datos_span').html('Primero valide el número de control en recaudaciones.');
+                $('#error_datos').show();
+                setTimeout(function () {
+                    $('#error_datos').hide(500);
+                }, 4000);
+                return;
+            }
+
+            enviar1(formulario,ruta,panel);
         }
 
         function normalizarTexto(texto){

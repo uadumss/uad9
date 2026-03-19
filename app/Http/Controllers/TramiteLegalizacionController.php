@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -104,7 +105,6 @@ class TramiteLegalizacionController extends Controller
             ->select('tramitas.*','per_nombre','per_apellido')->first();
         $docleg=D_tramita::all()->where('cod_tra',$cod_tra);
         return view('servicios.tra_legalizacion.f_eli_tramita',compact('tramita','docleg'));
-
     }
     public function fe_traleg($cod_tra){
         $tramite=DB::table('tramitas')
@@ -231,13 +231,7 @@ class TramiteLegalizacionController extends Controller
         /* cuadis = 'c' hace referencia a los del cuadis que no pagan valorados*/
         $cuadis='';
         if($form['cuadis']!='on'){
-            if($form['control']!=''){
-                $control=D_tramita::where('dtra_control','=',$form['control'])->first();
-                if($control){
-                    \Session::flash('error','El valorado ya esta registrado');
-                    return redirect('datos tramite legalizacion/'.$form['ctra']);
-                }
-            }else{
+            if($form['control']==''){
                 \Session::flash('error','El número de control del valorado es requerido');
                 return redirect('datos tramite legalizacion/'.$form['ctra']);
             }
@@ -247,10 +241,19 @@ class TramiteLegalizacionController extends Controller
         if(!isset($form['cdtra'])){
             $datosTramita=Tramita::find($form['ctra']);
             $persona=Persona::find($datosTramita->id_per);
+            $preimpreso=trim((string)($form['reimpresion'] ?? ''));
+            $verificacionRecaudacion=['ok'=>true];
 
             // Validación obligatoria contra recaudaciones para valorados pagados
             if($cuadis!='c'){
-                $verificacionRecaudacion=$this->validarRecaudacionLegalizacion((string)$form['control'],(string)$persona->per_ci,$datosTramita->tra_tipo_tramite);
+                $verificacionRecaudacion=$this->validarRecaudacionLegalizacion(
+                    (string)$form['control'],
+                    (string)$persona->per_ci,
+                    $datosTramita->tra_tipo_tramite,
+                    (int)$persona->id_per,
+                    $preimpreso,
+                    (int)$form['ctra']
+                );
                 if(!$verificacionRecaudacion['ok']){
                     \Session::flash('error',$verificacionRecaudacion['message']);
                     return redirect('datos tramite legalizacion/'.$form['ctra']);
@@ -405,6 +408,14 @@ class TramiteLegalizacionController extends Controller
                     'dtra_supletorio'=>$supletorio,
                     'dtra_sin_valorado'=>$cuadis,
                 ]);
+                if($cuadis!='c'){
+                    $errorUso='';
+                    if(!$this->registrarUsoRecaudacion($verificacionRecaudacion,(int)$form['ctra'],(int)$tramite->cod_dtra,$errorUso)){
+                        $tramite->delete();
+                        \Session::flash('error',$errorUso);
+                        return redirect('datos tramite legalizacion/'.$form['ctra']);
+                    }
+                }
                 $nuevo=json_encode($tramite);
                 SessionController::write('C','',$nuevo,'d_tramitas','3',$tramite->cod_dtra);
 
@@ -434,6 +445,14 @@ class TramiteLegalizacionController extends Controller
                         'dtra_buscar_en'=>$form['buscar_en'],
                         'dtra_sin_valorado'=>$cuadis,
                     ]);
+                    if($cuadis!='c'){
+                        $errorUso='';
+                        if(!$this->registrarUsoRecaudacion($verificacionRecaudacion,(int)$form['ctra'],(int)$tramite->cod_dtra,$errorUso)){
+                            $tramite->delete();
+                            \Session::flash('error',$errorUso);
+                            return redirect('datos tramite legalizacion/'.$form['ctra']);
+                        }
+                    }
                     $nuevo=json_encode($tramite);
                     SessionController::write('C','',$nuevo,'d_tramitas','3',$tramite->cod_dtra);
                     \Session::flash('exito','Se ha creado exitosamente el trámite ');
@@ -457,6 +476,7 @@ class TramiteLegalizacionController extends Controller
     {
         $data=$request->validate([
             'control'=>['required','integer'],
+            'reimpresion'=>['nullable','string','max:30'],
         ]);
 
         $tramita=Tramita::find($cod_tra);
@@ -475,7 +495,14 @@ class TramiteLegalizacionController extends Controller
             ],422);
         }
 
-        $validacion=$this->validarRecaudacionLegalizacion((string)$data['control'],(string)$persona->per_ci,$tramita->tra_tipo_tramite);
+        $validacion=$this->validarRecaudacionLegalizacion(
+            (string)$data['control'],
+            (string)$persona->per_ci,
+            $tramita->tra_tipo_tramite,
+            (int)$persona->id_per,
+            trim((string)($data['reimpresion'] ?? '')),
+            (int)$cod_tra
+        );
         if(!$validacion['ok']){
             return response()->json($validacion,422);
         }
@@ -483,7 +510,14 @@ class TramiteLegalizacionController extends Controller
         return response()->json($validacion);
     }
 
-    private function validarRecaudacionLegalizacion(string $control, string $ci, string $tipoTramite): array
+    private function validarRecaudacionLegalizacion(
+        string $control,
+        string $ci,
+        string $tipoTramite,
+        int $idPer,
+        string $preimpreso = '',
+        int $codTraActual = 0
+    ): array
     {
         $baseUrl = rtrim((string) config('services.recaudaciones.url'), '/');
         $token = (string) config('services.recaudaciones.token');
@@ -535,7 +569,14 @@ class TramiteLegalizacionController extends Controller
             ];
         }
 
-        $fila=$lista[0];
+        $fila=$this->seleccionarFilaRecaudacion($lista,$preimpreso);
+        if(!$fila){
+            return [
+                'ok'=>false,
+                'message'=>'No se encontró un pago válido para ese control con sus datos personales',
+            ];
+        }
+
         if((string)($fila['documento'] ?? '')!==$ci){
             return [
                 'ok'=>false,
@@ -559,6 +600,16 @@ class TramiteLegalizacionController extends Controller
             ];
         }
 
+        $usoIdentificador=$this->buscarUsoPagoPorIdentificador((string)($fila['identificador'] ?? ''));
+        if($usoIdentificador){
+            return [
+                'ok'=>false,
+                'message'=>$this->mensajePagoYaUsado($usoIdentificador),
+            ];
+        }
+
+        $preimpresoApi=$this->valorPreimpresoFila($fila);
+
         $codigoCuenta=(string)($fila['codigo_cuenta'] ?? '');
         $tramiteSugerido=Tramite::where('tre_hab','=','t')
             ->where('tre_tipo','=',$tipoTramite)
@@ -567,14 +618,121 @@ class TramiteLegalizacionController extends Controller
 
         return [
             'ok'=>true,
+            'control'=>$control,
             'ci'=>$ci,
             'nombre_recaudaciones'=>$nombreR,
+            'identificador'=>$fila['identificador'] ?? '',
+            'fecha_pago'=>$fila['fecha'] ?? '',
+            'cajero'=>$fila['cajero'] ?? '',
             'codigo_cuenta'=>$codigoCuenta,
             'cuenta'=>$fila['cuenta'] ?? '',
             'monto'=>$fila['total'] ?? '',
+            'preimpreso'=>$preimpresoApi,
             'tipo_legalizacion_sugerido'=>$tramiteSugerido ? $tramiteSugerido->cod_tre : null,
             'nombre_tipo_legalizacion_sugerido'=>$tramiteSugerido ? $tramiteSugerido->tre_nombre : null,
         ];
+    }
+
+    private function registrarUsoRecaudacion(array $validacion, int $codTra, int $codDtra, string &$error): bool
+    {
+        $error='';
+        if(!Schema::hasTable('recaudacion_usos')){
+            return true;
+        }
+
+        $identificador=trim((string)($validacion['identificador'] ?? ''));
+        if($identificador===''){
+            $error='No se pudo registrar el uso del pago: identificador vacío';
+            return false;
+        }
+
+        $yaExiste=DB::table('recaudacion_usos')->where('identificador','=',$identificador)->first();
+        if($yaExiste){
+            $error='Este pago ya fue utilizado en otra legalización y no puede volver a usarse.';
+            return false;
+        }
+
+        try{
+            DB::table('recaudacion_usos')->insert([
+                'identificador'=>$identificador,
+                'recibo'=>(string)($validacion['control'] ?? ''),
+                'preimpreso'=>(string)($validacion['preimpreso'] ?? ''),
+                'fecha_pago'=>(string)($validacion['fecha_pago'] ?? ''),
+                'documento'=>(string)($validacion['ci'] ?? ''),
+                'nombre_persona'=>(string)($validacion['nombre_recaudaciones'] ?? ''),
+                'cajero'=>(string)($validacion['cajero'] ?? ''),
+                'cod_tra'=>$codTra,
+                'cod_dtra'=>$codDtra,
+                'usuario_registro'=>Auth::check() ? Auth::user()->name : 'sistema',
+                'created_at'=>now(),
+                'updated_at'=>now(),
+            ]);
+        }catch(\Throwable $e){
+            $error='No se pudo confirmar el bloqueo de uso único del pago. Intente nuevamente.';
+            return false;
+        }
+
+        return true;
+    }
+
+    private function buscarUsoPagoPorIdentificador(string $identificador)
+    {
+        if($identificador==='' || !Schema::hasTable('recaudacion_usos')){
+            return null;
+        }
+
+        return DB::table('recaudacion_usos')->where('identificador','=',$identificador)->first();
+    }
+
+    private function mensajePagoYaUsado(object $usoPago): string
+    {
+        $fechaUso=trim((string)($usoPago->fecha_pago ?? ''));
+        $nombrePersona=trim((string)($usoPago->nombre_persona ?? ''));
+        $ciPersona=trim((string)($usoPago->documento ?? ''));
+
+        $detallePersona='';
+        if($nombrePersona!=='' || $ciPersona!==''){
+            $detallePersona=' a nombre de '.trim($nombrePersona.' '.($ciPersona!=='' ? '(CI '.$ciPersona.')' : ''));
+        }
+
+        return 'Este pago ya fue utilizado'.$detallePersona.($fechaUso!=='' ? ' el '.$fechaUso : '').' y no se puede volver a registrar.';
+    }
+
+    private function seleccionarFilaRecaudacion(array $lista, string $preimpreso): ?array
+    {
+        if(sizeof($lista)===0){
+            return null;
+        }
+
+        if($preimpreso===''){
+            return $lista[0];
+        }
+
+        $preimpresoNormalizado=$this->normalizarNumero($preimpreso);
+        foreach($lista as $fila){
+            $valorFila=$this->normalizarNumero($this->valorPreimpresoFila((array)$fila));
+            if($valorFila!=='' && $valorFila===$preimpresoNormalizado){
+                return (array)$fila;
+            }
+        }
+
+        return null;
+    }
+
+    private function valorPreimpresoFila(array $fila): string
+    {
+        $keys=['preimpreso','nro_preimpreso','numero_preimpreso','pre_impreso'];
+        foreach($keys as $key){
+            if(isset($fila[$key]) && (string)$fila[$key]!==''){
+                return (string)$fila[$key];
+            }
+        }
+        return '';
+    }
+
+    private function normalizarNumero(string $valor): string
+    {
+        return preg_replace('/\D+/', '', trim($valor)) ?? '';
     }
 
     private function normalizarTexto(string $valor): string
