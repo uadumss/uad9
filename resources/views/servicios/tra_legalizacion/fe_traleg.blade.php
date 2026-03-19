@@ -623,6 +623,7 @@
 
         function validarControlRecaudaciones(inputControl){
             var formulario=$(inputControl).closest('form');
+            sincronizarCamposObligatorios(formulario);
             var control=formulario.find('input[name="control"]').val();
             var okInput=formulario.find('[data-campo="validacion-recaudacion-ok"]');
             var estado=formulario.find('[data-campo="estado-validacion"]');
@@ -693,6 +694,7 @@
 
         function crearDoclegConValidacion(formulario,ruta,panel){
             var form=$('#'+formulario);
+            sincronizarCamposObligatorios(form);
             var cuadis=form.find('input[name="cuadis"]').is(':checked');
             var validado=form.find('[data-campo="validacion-recaudacion-ok"]').val()==='1';
 
@@ -757,6 +759,25 @@
             }
         }
 
+        function sincronizarCamposObligatorios(formulario){
+            var form=$(formulario);
+            if(!form.length){
+                return;
+            }
+
+            // Reglas del formulario original:
+            // Búsqueda (tipo B): numero, gestion, buscar_en, documentos y control obligatorios.
+            // Legalización (L/C/E): gestion, control y reintegro obligatorios.
+            var esBusqueda=form.find('select[name="buscar_en"]').length>0 || form.find('textarea[name="documentos"]').length>0;
+
+            form.find('input[name="control"]').prop('required',true);
+            form.find('input[name="gestion"]').prop('required',true);
+            form.find('input[name="numero"]').prop('required',esBusqueda);
+            form.find('input[name="reintegro"]').prop('required',!esBusqueda);
+            form.find('select[name="buscar_en"]').prop('required',esBusqueda);
+            form.find('textarea[name="documentos"]').prop('required',esBusqueda);
+        }
+
         function sincronizarTipoLegalizacion(formulario){
             var select=formulario.find('select[data-campo="tipo-legalizacion"]');
             if(select.length){
@@ -769,6 +790,13 @@
                 if($(this).find('select[data-campo="tipo-legalizacion"]').length){
                     sincronizarTipoLegalizacion($(this));
                 }
+                if($(this).find('input[name="control"]').length){
+                    sincronizarCamposObligatorios($(this));
+                }
+            });
+
+            $(document).on('change','form input[name="cuadis"]',function(){
+                sincronizarCamposObligatorios($(this).closest('form'));
             });
         });
 
