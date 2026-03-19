@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('usuario_registro', 120)->nullable();
             $table->timestamps();
 
-            $table->index(['recibo', 'preimpreso']);
+            $table->index(['recibo', 'fecha_pago', 'preimpreso']);
             $table->index('cod_tra');
             $table->index('cod_dtra');
         });
