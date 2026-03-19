@@ -382,24 +382,31 @@
                                         <tr>
                                             <th class="text-right font-italic">Trámite : </th>
                                             <td class="border-bottom border-dark">
-                                                <select class="custom-select custom-select-sm border-0 " name="tipo">
+                                                <select class="custom-select custom-select-sm border-0 " data-campo="tipo-legalizacion" disabled>
                                                     @foreach($lista_tramites as $l)
                                                         <option value="{{$l->cod_tre}}">{{$l->tre_nombre}}</option>
                                                     @endforeach
                                                 </select>
+                                                <input type="hidden" name="tipo" data-campo="tipo-legalizacion-hidden" value="{{isset($lista_tramites[0]) ? $lista_tramites[0]->cod_tre : ''}}">
                                             </td>
                                         </tr>
                                         <tr>
                                             <th class="text-right font-italic"> Nº control valorado: </th>
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group">
-                                                    <input type="text" class=" form-control form-control-sm" name="control" required>
+                                                    <input type="text" class=" form-control form-control-sm" name="control" required onchange="validarControlRecaudaciones(this)">
                                                     &nbsp;&nbsp;<span class="font-italic font-weight-bold"> Nro. control Reimpresión : </span>&nbsp;&nbsp;
                                                     <input class="form-control form-control-sm" name="reimpresion" />
                                                     &nbsp;&nbsp;&nbsp;&nbsp;<span class="font-italic text-dark font-weight-bold"> CUADIS :
                                                             <input type="checkbox" name="cuadis" />
                                                         </span>&nbsp;&nbsp;
                                                 </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th class="text-right font-italic">Validación:</th>
+                                            <td class="border-bottom border-dark">
+                                                <small class="text-muted" data-campo="estado-validacion">Pendiente de validación</small>
                                             </td>
                                         </tr>
                                         <tr><th class="text-right font-italic">Nro. Título:</th>
@@ -467,11 +474,12 @@
                                         <tr>
                                             <th class="text-right font-italic ">Tipo de legalización :</th>
                                             <td class="border-bottom border-dark">
-                                                <select class="custom-select custom-select-sm border-0 " name="tipo">
+                                                <select class="custom-select custom-select-sm border-0 " data-campo="tipo-legalizacion" disabled>
                                                     @foreach($lista_tramites as $l)
                                                         <option value="{{$l->cod_tre}}">{{$l->tre_nombre}}</option>
                                                     @endforeach
                                                 </select>
+                                                <input type="hidden" name="tipo" data-campo="tipo-legalizacion-hidden" value="{{isset($lista_tramites[0]) ? $lista_tramites[0]->cod_tre : ''}}">
                                             </td>
                                         </tr>
                                         <tr>
@@ -509,10 +517,16 @@
                                             <th class="text-right font-italic ">Nro. Control:</th>
                                             <td class="border-bottom border-dark input-group">
                                                 <div class="input-group">
-                                                    <input class="form-control form-control-sm border-0" required name="control" />
+                                                    <input class="form-control form-control-sm border-0" required name="control" onchange="validarControlRecaudaciones(this)" />
                                                     <span class="text-primary font-weight-bold font-italic"> Reintegro : &nbsp;</span>
                                                     <input class="form-control form-control-sm border" required name="reintegro" />
                                                 </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th class="text-right font-italic">Validación:</th>
+                                            <td class="border-bottom border-dark">
+                                                <small class="text-muted" data-campo="estado-validacion">Pendiente de validación</small>
                                             </td>
                                         </tr>
                                         <tr>
@@ -588,6 +602,83 @@
                 }
             });
         }
+
+        function validarControlRecaudaciones(inputControl){
+            var formulario=$(inputControl).closest('form');
+            var control=formulario.find('input[name="control"]').val();
+            var estado=formulario.find('[data-campo="estado-validacion"]');
+            if(!control){
+                estado.removeClass('text-success').addClass('text-danger').text('Debe ingresar número de control');
+                return;
+            }
+
+            estado.removeClass('text-danger text-success').addClass('text-muted').text('Validando en recaudaciones...');
+            $.ajax({
+                url: "{{url('validar valorado recaudaciones/'.$tramite->cod_tra)}}",
+                type: 'POST',
+                data: {
+                    _token: formulario.find('input[name="_token"]').val(),
+                    control: control
+                },
+                success: function(resp){
+                    if(!resp.ok){
+                        estado.removeClass('text-success').addClass('text-danger').text(resp.message || 'No se pudo validar el comprobante');
+                        return;
+                    }
+
+                    if(resp.tipo_legalizacion_sugerido){
+                        formulario.find('select[data-campo="tipo-legalizacion"]').val(String(resp.tipo_legalizacion_sugerido));
+                    } else if(resp.cuenta){
+                        // Si no hay sugerencia por código de cuenta, intenta mapear por texto de cuenta
+                        var select=formulario.find('select[data-campo="tipo-legalizacion"]');
+                        var cuentaApi=normalizarTexto(resp.cuenta);
+                        select.find('option').each(function(){
+                            if(normalizarTexto($(this).text())===cuentaApi){
+                                select.val($(this).val());
+                                return false;
+                            }
+                        });
+                    }
+                    sincronizarTipoLegalizacion(formulario);
+
+                    estado.removeClass('text-danger').addClass('text-success')
+                        .text('Validado: CI y nombre coinciden. Monto Bs. '+(resp.monto || '0'));
+                },
+                error: function(xhr){
+                    var msg='No se pudo validar el comprobante en recaudaciones';
+                    if(xhr.responseJSON && xhr.responseJSON.message){
+                        msg=xhr.responseJSON.message;
+                    }
+                    estado.removeClass('text-success').addClass('text-danger').text(msg);
+                }
+            });
+        }
+
+        function normalizarTexto(texto){
+            if(!texto){
+                return '';
+            }
+            return texto.toString()
+                .toUpperCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function sincronizarTipoLegalizacion(formulario){
+            var select=formulario.find('select[data-campo="tipo-legalizacion"]');
+            var hidden=formulario.find('input[data-campo="tipo-legalizacion-hidden"]');
+            hidden.val(select.val() || '');
+        }
+
+        $(function(){
+            $('form').each(function(){
+                if($(this).find('select[data-campo="tipo-legalizacion"]').length){
+                    sincronizarTipoLegalizacion($(this));
+                }
+            });
+        });
 
     </script>
 

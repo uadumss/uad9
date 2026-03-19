@@ -14,6 +14,7 @@ use App\Models\Titulo;
 use App\Models\Tramita;
 use App\Models\Tramite;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -246,6 +247,16 @@ class TramiteLegalizacionController extends Controller
         if(!isset($form['cdtra'])){
             $datosTramita=Tramita::find($form['ctra']);
             $persona=Persona::find($datosTramita->id_per);
+
+            // Validación obligatoria contra recaudaciones para valorados pagados
+            if($cuadis!='c'){
+                $verificacionRecaudacion=$this->validarRecaudacionLegalizacion((string)$form['control'],(string)$persona->per_ci,$datosTramita->tra_tipo_tramite);
+                if(!$verificacionRecaudacion['ok']){
+                    \Session::flash('error',$verificacionRecaudacion['message']);
+                    return redirect('datos tramite legalizacion/'.$form['ctra']);
+                }
+            }
+
             $tramita=Tramite::find($form['tipo']);
             $a=$tramita->tre_buscar_en;
             $respuesta="";
@@ -440,6 +451,138 @@ class TramiteLegalizacionController extends Controller
 
         }
         return redirect('datos tramite legalizacion/'.$form['ctra']);
+    }
+
+    public function validar_valorado_recaudaciones(Request $request, $cod_tra)
+    {
+        $data=$request->validate([
+            'control'=>['required','integer'],
+        ]);
+
+        $tramita=Tramita::find($cod_tra);
+        if(!$tramita || !$tramita->id_per){
+            return response()->json([
+                'ok'=>false,
+                'message'=>'Debe registrar primero los datos personales del trámite',
+            ],422);
+        }
+
+        $persona=Persona::find($tramita->id_per);
+        if(!$persona || !$persona->per_ci){
+            return response()->json([
+                'ok'=>false,
+                'message'=>'El trámite no tiene CI válido para consultar recaudaciones',
+            ],422);
+        }
+
+        $validacion=$this->validarRecaudacionLegalizacion((string)$data['control'],(string)$persona->per_ci,$tramita->tra_tipo_tramite);
+        if(!$validacion['ok']){
+            return response()->json($validacion,422);
+        }
+
+        return response()->json($validacion);
+    }
+
+    private function validarRecaudacionLegalizacion(string $control, string $ci, string $tipoTramite): array
+    {
+        $baseUrl = rtrim((string) config('services.recaudaciones.url'), '/');
+        $token = (string) config('services.recaudaciones.token');
+        $verifySsl = filter_var(config('services.recaudaciones.verify_ssl', true), FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
+        if ($verifySsl === null) {
+            $verifySsl = true;
+        }
+
+        if($baseUrl==='' || $token===''){
+            return [
+                'ok'=>false,
+                'message'=>'Configuración de recaudaciones incompleta en services/.env',
+            ];
+        }
+
+        try {
+            $response=Http::withToken($token)
+                ->acceptJson()
+                ->timeout(20)
+                ->withOptions(['verify'=>$verifySsl])
+                ->post($baseUrl,[
+                'unidad'=>122,
+                'recibo'=>(int)$control,
+                'documento'=>$ci,
+            ]);
+        } catch (\Throwable $e) {
+            return [
+                'ok'=>false,
+                'message'=>'Error de comunicación con recaudaciones',
+            ];
+        }
+
+        if(!$response->successful()){
+            return [
+                'ok'=>false,
+                'message'=>'No se pudo validar el valorado en recaudaciones',
+            ];
+        }
+
+        $json=$response->json();
+        $lista=$json['data']['result'] ?? [];
+        if(sizeof($lista)===0){
+            $lista=$json['result'] ?? [];
+        }
+        if(!is_array($lista) || sizeof($lista)==0){
+            return [
+                'ok'=>false,
+                'message'=>'No existe comprobante en recaudaciones para ese número de control y CI',
+            ];
+        }
+
+        $fila=$lista[0];
+        if((string)($fila['documento'] ?? '')!==$ci){
+            return [
+                'ok'=>false,
+                'message'=>'El CI del comprobante no coincide con el CI del trámite',
+            ];
+        }
+
+        $nombreR=trim(($fila['apellido_1'] ?? '').' '.($fila['apellido_2'] ?? '').' '.($fila['nombre_1'] ?? '').' '.($fila['nombre_2'] ?? ''));
+        $persona=Persona::where('per_ci','=',$ci)->first();
+        $nombreSistema='';
+        $coincideNombre=true;
+        if($persona){
+            $nombreSistema=$this->normalizarTexto(($persona->per_apellido ?? '').' '.($persona->per_nombre ?? ''));
+            $coincideNombre=($nombreSistema===$this->normalizarTexto($nombreR));
+        }
+
+        if(!$coincideNombre){
+            return [
+                'ok'=>false,
+                'message'=>'Los nombres del comprobante no coinciden con los datos del trámite',
+            ];
+        }
+
+        $codigoCuenta=(string)($fila['codigo_cuenta'] ?? '');
+        $tramiteSugerido=Tramite::where('tre_hab','=','t')
+            ->where('tre_tipo','=',$tipoTramite)
+            ->where('tre_numero_cuenta','=',$codigoCuenta)
+            ->first();
+
+        return [
+            'ok'=>true,
+            'ci'=>$ci,
+            'nombre_recaudaciones'=>$nombreR,
+            'codigo_cuenta'=>$codigoCuenta,
+            'cuenta'=>$fila['cuenta'] ?? '',
+            'monto'=>$fila['total'] ?? '',
+            'tipo_legalizacion_sugerido'=>$tramiteSugerido ? $tramiteSugerido->cod_tre : null,
+            'nombre_tipo_legalizacion_sugerido'=>$tramiteSugerido ? $tramiteSugerido->tre_nombre : null,
+        ];
+    }
+
+    private function normalizarTexto(string $valor): string
+    {
+        $valor=mb_strtoupper(trim($valor));
+        $valor=str_replace(['Á','É','Í','Ó','Ú'],['A','E','I','O','U'],$valor);
+        $valor=preg_replace('/\s+/', ' ', $valor);
+        return (string)$valor;
     }
     public function obs_docleg($cod_dtra){
         $docleg=DB::table('d_tramitas')->join('tramites','d_tramitas.cod_tre','=','tramites.cod_tre')

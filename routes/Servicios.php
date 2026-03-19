@@ -59,6 +59,7 @@ Route::group(['middleware'=>['permission:acceso al sistema - srv']],function(){
 
     //=======================DOCUMENTOS DE LEGALIZACION DOCLEG======================
     Route::get('datos tramite legalizacion/{cod_tra}',[TramiteLegalizacionController::class,'fe_traleg']);
+    Route::post('validar valorado recaudaciones/{cod_tra}',[TramiteLegalizacionController::class,'validar_valorado_recaudaciones']);
     Route::post('g_docleg',[TramiteLegalizacionController::class,'g_docleg'])->middleware(['permission:crear docleg - srv']);
     Route::get('f_eli_docleg/{cod_dtra}',[TramiteLegalizacionController::class,'f_eli_docleg'])->middleware(['permission:eliminar docleg - srv']);
     Route::post('eli_docleg',[TramiteLegalizacionController::class,'eli_docleg'])->middleware(['permission:eliminar docleg - srv']);
