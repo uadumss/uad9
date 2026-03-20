@@ -21,7 +21,8 @@ class PersonaController extends Controller
 
     }
     public function datos_per($ci){
-        $persona=Persona::where('per_ci','=',$ci)->select('per_nombre','per_apellido','per_sexo','per_ci_exp','per_celular','per_cod_sis')->get();
+        $ci=trim((string)$ci);
+        $persona=Persona::where('per_ci','=',$ci)->select('per_ci','per_nombre','per_apellido','per_sexo','per_ci_exp','per_celular','per_cod_sis')->get();
         $dato="No";
         if(sizeof($persona)>0){
             $dato=json_encode($persona[0]);

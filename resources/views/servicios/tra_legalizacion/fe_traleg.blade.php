@@ -382,7 +382,8 @@
                                         <tr>
                                             <th class="text-right font-italic">Trámite : </th>
                                             <td class="border-bottom border-dark">
-                                                <select class="custom-select custom-select-sm border-0 " name="tipo">
+                                                <select class="custom-select custom-select-sm border-0" data-campo="tipo-legalizacion" disabled>
+                                                    <option value="" selected></option>
                                                     @foreach($lista_tramites as $l)
                                                         <option value="{{$l->cod_tre}}">{{$l->tre_nombre}}</option>
                                                     @endforeach
@@ -393,13 +394,17 @@
                                             <th class="text-right font-italic"> Nº control valorado: </th>
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group">
-                                                    <input type="text" class=" form-control form-control-sm" name="control" required>
-                                                    &nbsp;&nbsp;<span class="font-italic font-weight-bold"> Nro. control Reimpresión : </span>&nbsp;&nbsp;
-                                                    <input class="form-control form-control-sm" name="reimpresion" />
+                                                    <input type="text" class=" form-control form-control-sm" name="control" required onchange="validarControlRecaudaciones(this)">
                                                     &nbsp;&nbsp;&nbsp;&nbsp;<span class="font-italic text-dark font-weight-bold"> CUADIS :
                                                             <input type="checkbox" name="cuadis" />
                                                         </span>&nbsp;&nbsp;
                                                 </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th class="text-right font-italic">Validación:</th>
+                                            <td class="border-bottom border-dark">
+                                                <small class="text-muted" data-campo="estado-validacion">Pendiente de validación</small>
                                             </td>
                                         </tr>
                                         <tr><th class="text-right font-italic">Nro. Título:</th>
@@ -435,8 +440,11 @@
                                     </table>
                                     <input type="hidden" name="ctra" value="{{$tramite->cod_tra}}">
                                     <input type="hidden" name="tipo_tramite" value="t">
+                                    <input type="hidden" name="tipo" data-campo="tipo-legalizacion-hidden" value="">
+                                    <input type="hidden" name="reimpresion" data-campo="preimpreso-api" value="">
+                                    <input type="hidden" data-campo="validacion-recaudacion-ok" value="0">
                                 </form>
-                                <a href="#" class="btn btn-sm btn-primary float-right mr-4" onclick="enviar1('form_docleg','{{url('g_docleg')}}','panel_traleg')"
+                                <a href="#" class="btn btn-sm btn-primary float-right mr-4" onclick="crearDoclegConValidacion('form_docleg','{{url('g_docleg')}}','panel_traleg')"
                                    title="Editar legalización">+ Crear </a>
                                 <br/><br/>
                             </div>
@@ -467,11 +475,13 @@
                                         <tr>
                                             <th class="text-right font-italic ">Tipo de legalización :</th>
                                             <td class="border-bottom border-dark">
-                                                <select class="custom-select custom-select-sm border-0 " name="tipo">
+                                                <select class="custom-select custom-select-sm border-0 " data-campo="tipo-legalizacion" disabled>
+                                                    <option value="" selected></option>
                                                     @foreach($lista_tramites as $l)
                                                         <option value="{{$l->cod_tre}}">{{$l->tre_nombre}}</option>
                                                     @endforeach
                                                 </select>
+                                                <input type="hidden" name="tipo" data-campo="tipo-legalizacion-hidden" value="">
                                             </td>
                                         </tr>
                                         <tr>
@@ -509,7 +519,7 @@
                                             <th class="text-right font-italic ">Nro. Control:</th>
                                             <td class="border-bottom border-dark input-group">
                                                 <div class="input-group">
-                                                    <input class="form-control form-control-sm border-0" required name="control" />
+                                                    <input class="form-control form-control-sm border-0" required name="control" onchange="validarControlRecaudaciones(this)" />
                                                     <span class="text-primary font-weight-bold font-italic"> Reintegro : &nbsp;</span>
                                                     <input class="form-control form-control-sm border" required name="reintegro" />
                                                 </div>
@@ -521,16 +531,22 @@
                                                 <div class="input-group">
                                                     <input class="form-control form-control-sm" name="valorado_bus" />
                                                     &nbsp;&nbsp;<span class="font-italic font-weight-bold"> Nro. control Reimpresión : </span>&nbsp;&nbsp;
-                                                    <input class="form-control form-control-sm" name="reimpresion" />
+                                                    <input class="form-control form-control-sm" name="reimpresion" data-campo="preimpreso-api" readonly />
                                                 </div>
                                             </td>
-
+                                        </tr>
+                                        <tr>
+                                            <th class="text-right font-italic">Validación:</th>
+                                            <td class="border-bottom border-dark">
+                                                <small class="text-muted" data-campo="estado-validacion">Pendiente de validación</small>
+                                            </td>
                                         </tr>
                                     </table>
                                     <input type="hidden" name="ctra" value="{{$tramite->cod_tra}}">
+                                    <input type="hidden" data-campo="validacion-recaudacion-ok" value="0">
                                 </form>
                                 <br/>
-                                <a href="#" class="btn btn-sm btn-primary float-right mr-4" onclick="enviar1('form_docleg','{{url('g_docleg')}}','panel_traleg')"
+                                <a href="#" class="btn btn-sm btn-primary float-right mr-4" onclick="crearDoclegConValidacion('form_docleg','{{url('g_docleg')}}','panel_traleg')"
                                    title="Editar legalización">+ Crear </a>
                                 <br/><br/>
                             </div>
@@ -546,6 +562,26 @@
         </div>
     </div>
 
+    <style>
+        /* Estilos para estados de validación */
+        [data-campo="estado-validacion"] {
+            display: block;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        [data-campo="estado-validacion"].text-success {
+            color: #28a745;
+        }
+
+        [data-campo="estado-validacion"].text-danger {
+            color: #dc3545;
+        }
+
+        [data-campo="estado-validacion"].text-muted {
+            color: #6c757d;
+        }
+    </style>
 
     <script>
         function cargarDatosPersonales(ci){
@@ -588,6 +624,187 @@
                 }
             });
         }
+
+        function validarControlRecaudaciones(inputControl){
+            var formulario=$(inputControl).closest('form');
+            sincronizarCamposObligatorios(formulario);
+            var control=formulario.find('input[name="control"]').val();
+            var okInput=formulario.find('[data-campo="validacion-recaudacion-ok"]');
+            var estado=formulario.find('[data-campo="estado-validacion"]');
+            okInput.val('0');
+            
+            if(!control){
+                estado
+                    .removeClass('text-success text-muted')
+                    .addClass('text-danger')
+                    .html('Escriba el número de control');
+                return;
+            }
+
+            estado
+                .removeClass('text-danger text-success')
+                .addClass('text-muted')
+                .text('Verificando...');
+            
+            $.ajax({
+                url: "{{url('validar valorado recaudaciones/'.$tramite->cod_tra)}}",
+                type: 'POST',
+                data: {
+                    _token: formulario.find('input[name="_token"]').val(),
+                    control: control,
+                    reimpresion: formulario.find('input[name="reimpresion"]').val() || ''
+                },
+                success: function(resp){
+                    if(!resp.ok){
+                        okInput.val('0');
+                        var msg=resp.message || 'No se pudo validar el comprobante';
+                        estado
+                            .removeClass('text-success text-muted')
+                            .addClass('text-danger')
+                            .text(msg);
+                        return;
+                    }
+
+                    autoseleccionarTipoLegalizacion(formulario,resp);
+                    sincronizarTipoLegalizacion(formulario);
+                    formulario.find('input[data-campo="preimpreso-api"]').val(resp.preimpreso || '');
+                    okInput.val('1');
+
+                    var msg='Validado. Monto Bs. '+(resp.monto || '0');
+                    if(resp.fecha_pago){
+                        msg+=' - Fecha '+resp.fecha_pago;
+                    }
+                    if(resp.cajero){
+                        msg+=' - Caja '+resp.cajero;
+                    }
+                    estado
+                        .removeClass('text-danger text-muted')
+                        .addClass('text-success')
+                        .text(msg);
+                },
+                error: function(xhr){
+                    var msg='No hay conexión. Intente en unos momentos.';
+                    if(xhr.responseJSON && xhr.responseJSON.message){
+                        msg=xhr.responseJSON.message;
+                    }
+                    okInput.val('0');
+                    estado
+                        .removeClass('text-success text-muted')
+                        .addClass('text-danger')
+                        .text(msg);
+                }
+            });
+        }
+
+        function crearDoclegConValidacion(formulario,ruta,panel){
+            var form=$('#'+formulario);
+            sincronizarCamposObligatorios(form);
+            var cuadis=form.find('input[name="cuadis"]').is(':checked');
+            var validado=form.find('[data-campo="validacion-recaudacion-ok"]').val()==='1';
+
+            if(!cuadis && !validado){
+                $('#error_datos_span').html('Valide el número de control primero.');
+                $('#error_datos').show();
+                setTimeout(function () {
+                    $('#error_datos').hide(500);
+                }, 4000);
+                return;
+            }
+
+            enviar1(formulario,ruta,panel);
+        }
+
+        function normalizarTexto(texto){
+            if(!texto){
+                return '';
+            }
+            return texto.toString()
+                .toUpperCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function autoseleccionarTipoLegalizacion(formulario,resp){
+            var select=formulario.find('select[data-campo="tipo-legalizacion"]');
+            if(!select.length){
+                return;
+            }
+
+            var codigo=(resp && resp.tipo_legalizacion_sugerido) ? String(resp.tipo_legalizacion_sugerido) : '';
+            if(codigo!=='' && select.find('option[value="'+codigo+'"]').length){
+                select.val(codigo);
+                return;
+            }
+
+            var nombreSugerido=normalizarTexto(resp && resp.nombre_tipo_legalizacion_sugerido ? resp.nombre_tipo_legalizacion_sugerido : '');
+            var cuentaApi=normalizarTexto(resp && resp.cuenta ? resp.cuenta : '');
+
+            if(nombreSugerido==='' && cuentaApi===''){
+                return;
+            }
+
+            var encontrado=false;
+            select.find('option').each(function(){
+                var texto=normalizarTexto($(this).text());
+                if(
+                    (nombreSugerido!=='' && (texto===nombreSugerido || texto.indexOf(nombreSugerido)!==-1 || nombreSugerido.indexOf(texto)!==-1)) ||
+                    (cuentaApi!=='' && (texto===cuentaApi || texto.indexOf(cuentaApi)!==-1 || cuentaApi.indexOf(texto)!==-1))
+                ){
+                    select.val($(this).val());
+                    encontrado=true;
+                    return false;
+                }
+            });
+
+            if(!encontrado){
+                select.val('');
+            }
+        }
+
+        function sincronizarCamposObligatorios(formulario){
+            var form=$(formulario);
+            if(!form.length){
+                return;
+            }
+
+            // Reglas del formulario original:
+            // Búsqueda (tipo B): numero, gestion, buscar_en, documentos y control obligatorios.
+            // Legalización (L/C/E): gestion, control y reintegro obligatorios.
+            var esBusqueda=form.find('select[name="buscar_en"]').length>0 || form.find('textarea[name="documentos"]').length>0;
+
+            form.find('input[name="control"]').prop('required',true);
+            form.find('input[name="gestion"]').prop('required',true);
+            form.find('input[name="numero"]').prop('required',esBusqueda);
+            form.find('input[name="reintegro"]').prop('required',!esBusqueda);
+            form.find('select[name="buscar_en"]').prop('required',esBusqueda);
+            form.find('textarea[name="documentos"]').prop('required',esBusqueda);
+        }
+
+        function sincronizarTipoLegalizacion(formulario){
+            var select=formulario.find('select[data-campo="tipo-legalizacion"]');
+            if(select.length){
+                var valorSeleccionado=select.find('option:selected').val() || '';
+                select.val(valorSeleccionado);
+                formulario.find('input[data-campo="tipo-legalizacion-hidden"]').val(valorSeleccionado);
+            }
+        }
+
+        $(function(){
+            $('form').each(function(){
+                if($(this).find('select[data-campo="tipo-legalizacion"]').length){
+                    sincronizarTipoLegalizacion($(this));
+                }
+                if($(this).find('input[name="control"]').length){
+                    sincronizarCamposObligatorios($(this));
+                }
+            });
+
+            $(document).on('change','form input[name="cuadis"]',function(){
+                sincronizarCamposObligatorios($(this).closest('form'));
+            });
+        });
 
     </script>
 
