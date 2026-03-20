@@ -65,6 +65,10 @@
                             <h5 class="text-white text-center">Lista de {{$funcionario}}s</h5>
                         </div>
 
+                        <div class="mt-3 mb-3">
+                            <input type="text" id="buscadorFuncionarios" class="form-control" placeholder="🔍 Buscar funcionario..." autocomplete="off">
+                        </div>
+
                                 <hr class="sidebar-divider">
                                 <table class="table table-sm table-hover"  width="100%" cellspacing="0" style="font-size: 0.8em">
                                     <thead>
@@ -144,6 +148,9 @@
                                     @endforeach
                                     </tbody>
                                 </table>
+                                <div id="mensajeSinResultados" class="alert alert-info text-center" style="display: none;">
+                                    <i class="fas fa-search"></i> No se encontraron resultados
+                                </div>
 
                     </div>
                 </div>
@@ -211,5 +218,30 @@
                     }
                 });
             }
+
+            // Buscador de funcionarios
+            document.getElementById('buscadorFuncionarios').addEventListener('keyup', function() {
+                const busqueda = this.value.toLowerCase();
+                const filas = document.querySelectorAll('table tbody tr');
+                let hayCoincidencias = false;
+                
+                filas.forEach(fila => {
+                    const contenido = fila.textContent.toLowerCase();
+                    if (contenido.includes(busqueda)) {
+                        fila.style.display = '';
+                        hayCoincidencias = true;
+                    } else {
+                        fila.style.display = 'none';
+                    }
+                });
+                
+                // Mostrar u ocultar mensaje de sin resultados
+                const mensajeResultados = document.getElementById('mensajeSinResultados');
+                if (!hayCoincidencias && busqueda.length > 0) {
+                    mensajeResultados.style.display = 'block';
+                } else {
+                    mensajeResultados.style.display = 'none';
+                }
+            });
         </script>
 @endsection
