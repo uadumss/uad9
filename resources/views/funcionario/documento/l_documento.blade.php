@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let sortOrder = {};
 
     headers.forEach((header, index) => {
-        if (index < headers.length - 1) { // No ordenar la columna de opciones
+        if (index < headers.length - 1) {
             header.addEventListener('click', function() {
                 sortTable(table, index, header);
             });
@@ -240,17 +240,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function sortTable(table, columnIndex, header) {
         const tbody = table.querySelector('tbody');
         const rows = Array.from(tbody.querySelectorAll('tr'));
-        
-        // Determinar dirección del ordenamiento
+
         const ascending = !sortOrder[columnIndex] || !sortOrder[columnIndex].asc;
         sortOrder[columnIndex] = { asc: ascending };
 
-        // Ordenar filas
         rows.sort((a, b) => {
             let aText = a.cells[columnIndex].textContent.trim();
             let bText = b.cells[columnIndex].textContent.trim();
 
-            // Intenta convertir a números si es posible
             const aNum = parseFloat(aText);
             const bNum = parseFloat(bText);
 
@@ -258,7 +255,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 return ascending ? aNum - bNum : bNum - aNum;
             }
 
-            // Ordenamiento alfabético
             if (ascending) {
                 return aText.localeCompare(bText, 'es');
             } else {

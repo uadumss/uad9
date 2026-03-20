@@ -145,7 +145,6 @@ class UniversidadHelper
             return null;
         }
 
-        // Normalizar la búsqueda: mayúsculas, sin espacios extras y sin acentos
         $busqueda = self::normalizarTexto($nombreUniversidad);
 
         // Buscar en universidades públicas
