@@ -128,16 +128,17 @@
                             <h5 class="text-white text-center">Lista de Diplomas y Títulos</h5>
                         </div>
                         <hr class="sidebar-divider">
-                                <table class="table table-sm table-hover" width="100%" cellspacing="0" style="font-size: 0.8em">
+                                <table class="table table-sm table-hover sortable-table" width="100%" cellspacing="0" style="font-size: 0.8em" id="tablaDocumentos">
                                     <thead>
                                     <tr class="bg-gray-600 text-white">
-                                        <th>Nº</th>
-                                        <th class="">Tipo</th>
-                                        <th class="">Tìtulo</th>
-                                        <th class="">Grado</th>
-                                        <th class="">Universidad</th>
-                                        <th class="">Educación Superior</th>
-                                        <th class="">Reválida</th>
+                                        <th style="cursor: pointer; user-select: none;">Nº <span class="sort-indicator"></span></th>
+                                        <th style="cursor: pointer; user-select: none;">Tipo <span class="sort-indicator"></span></th>
+                                        <th style="cursor: pointer; user-select: none;">Tìtulo <span class="sort-indicator"></span></th>
+                                        <th style="cursor: pointer; user-select: none;">Grado <span class="sort-indicator"></span></th>
+                                        <th style="cursor: pointer; user-select: none;">Universidad <span class="sort-indicator"></span></th>
+                                        <th style="cursor: pointer; user-select: none;">Tipo Univ. <span class="sort-indicator"></span></th>
+                                        <th style="cursor: pointer; user-select: none;">Educación Superior <span class="sort-indicator"></span></th>
+                                        <th style="cursor: pointer; user-select: none;">Reválida <span class="sort-indicator"></span></th>
                                         <th>Opciones</th>
                                     </tr>
                                     </thead>
@@ -177,6 +178,7 @@
                                             </td>
                                             <td>{{$d->doc_grado}}</td>
                                             <td>{{$d->doc_universidad}}</td>
+                                            <td><span class="badge badge-{{ \App\Helpers\UniversidadHelper::getTipoUniversidad($d->doc_universidad) === 'Pública' ? 'success' : (\App\Helpers\UniversidadHelper::getTipoUniversidad($d->doc_universidad) === 'Privada' ? 'warning' : 'info') }}">{{ \App\Helpers\UniversidadHelper::getTipoUniversidad($d->doc_universidad) }}</span></td>
                                             <td>
                                                 @if($d->doc_edu_superior=='t')
                                                     <span class="bg-success text-white rounded font-italic pr-1 pl-1 font-weight-bold"> Docencia </span>
@@ -220,5 +222,59 @@
             </div>
             <!--===========================END ==============================-->
     @endcan
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.getElementById('tablaDocumentos');
+    const headers = table.querySelectorAll('th');
+    let sortOrder = {};
+
+    headers.forEach((header, index) => {
+        if (index < headers.length - 1) {
+            header.addEventListener('click', function() {
+                sortTable(table, index, header);
+            });
+        }
+    });
+
+    function sortTable(table, columnIndex, header) {
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+
+        const ascending = !sortOrder[columnIndex] || !sortOrder[columnIndex].asc;
+        sortOrder[columnIndex] = { asc: ascending };
+
+        rows.sort((a, b) => {
+            let aText = a.cells[columnIndex].textContent.trim();
+            let bText = b.cells[columnIndex].textContent.trim();
+
+            const aNum = parseFloat(aText);
+            const bNum = parseFloat(bText);
+
+            if (!isNaN(aNum) && !isNaN(bNum)) {
+                return ascending ? aNum - bNum : bNum - aNum;
+            }
+
+            if (ascending) {
+                return aText.localeCompare(bText, 'es');
+            } else {
+                return bText.localeCompare(aText, 'es');
+            }
+        });
+
+        // Limpiar indicadores de todas las columnas
+        table.querySelectorAll('.sort-indicator').forEach(indicator => {
+            indicator.textContent = '';
+        });
+
+        // Agregar indicador a la columna actual
+        const indicator = header.querySelector('.sort-indicator');
+        indicator.textContent = ascending ? ' ↑' : ' ↓';
+
+        // Re-insertar las filas ordenadas
+        rows.forEach(row => tbody.appendChild(row));
+    }
+});
+</script>
 
 @endsection
