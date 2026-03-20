@@ -382,7 +382,8 @@
                                         <tr>
                                             <th class="text-right font-italic">Trámite : </th>
                                             <td class="border-bottom border-dark">
-                                                <select class="custom-select custom-select-sm border-0" name="tipo" data-campo="tipo-legalizacion" onchange="sincronizarTipoLegalizacion($(this).closest('form'))">
+                                                <select class="custom-select custom-select-sm border-0" data-campo="tipo-legalizacion" disabled>
+                                                    <option value="" selected></option>
                                                     @foreach($lista_tramites as $l)
                                                         <option value="{{$l->cod_tre}}">{{$l->tre_nombre}}</option>
                                                     @endforeach
@@ -439,6 +440,7 @@
                                     </table>
                                     <input type="hidden" name="ctra" value="{{$tramite->cod_tra}}">
                                     <input type="hidden" name="tipo_tramite" value="t">
+                                    <input type="hidden" name="tipo" data-campo="tipo-legalizacion-hidden" value="">
                                     <input type="hidden" name="reimpresion" data-campo="preimpreso-api" value="">
                                     <input type="hidden" data-campo="validacion-recaudacion-ok" value="0">
                                 </form>
@@ -473,11 +475,13 @@
                                         <tr>
                                             <th class="text-right font-italic ">Tipo de legalización :</th>
                                             <td class="border-bottom border-dark">
-                                                <select class="custom-select custom-select-sm border-0 " name="tipo" data-campo="tipo-legalizacion" onchange="sincronizarTipoLegalizacion($(this).closest('form'))">
+                                                <select class="custom-select custom-select-sm border-0 " data-campo="tipo-legalizacion" disabled>
+                                                    <option value="" selected></option>
                                                     @foreach($lista_tramites as $l)
                                                         <option value="{{$l->cod_tre}}">{{$l->tre_nombre}}</option>
                                                     @endforeach
                                                 </select>
+                                                <input type="hidden" name="tipo" data-campo="tipo-legalizacion-hidden" value="">
                                             </td>
                                         </tr>
                                         <tr>
@@ -527,7 +531,7 @@
                                                 <div class="input-group">
                                                     <input class="form-control form-control-sm" name="valorado_bus" />
                                                     &nbsp;&nbsp;<span class="font-italic font-weight-bold"> Nro. control Reimpresión : </span>&nbsp;&nbsp;
-                                                    <input class="form-control form-control-sm" name="reimpresion" data-campo="preimpreso-api" />
+                                                    <input class="form-control form-control-sm" name="reimpresion" data-campo="preimpreso-api" readonly />
                                                 </div>
                                             </td>
                                         </tr>
@@ -754,8 +758,8 @@
                 }
             });
 
-            if(!encontrado && select.find('option').length){
-                select.val(select.find('option:first').val());
+            if(!encontrado){
+                select.val('');
             }
         }
 
@@ -781,7 +785,9 @@
         function sincronizarTipoLegalizacion(formulario){
             var select=formulario.find('select[data-campo="tipo-legalizacion"]');
             if(select.length){
-                select.val(select.find('option:selected').val());
+                var valorSeleccionado=select.find('option:selected').val() || '';
+                select.val(valorSeleccionado);
+                formulario.find('input[data-campo="tipo-legalizacion-hidden"]').val(valorSeleccionado);
             }
         }
 

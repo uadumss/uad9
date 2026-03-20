@@ -580,85 +580,120 @@ class TramiteLegalizacionController extends Controller
             ];
         }
 
-        $fila=$this->seleccionarFilaRecaudacion($lista,$preimpreso);
-        if(!$fila){
+        $persona=Persona::where('per_ci','=',$ci)->first();
+        $nombreSistema='';
+        $nombreSistemaNormalizado='';
+        if($persona){
+            $nombreSistemaNormalizado=$this->normalizarTexto(($persona->per_apellido ?? '').' '.($persona->per_nombre ?? ''));
+        }
+
+        $candidatos=$this->filtrarFilasRecaudacionPorPreimpreso($lista,$preimpreso);
+        if(sizeof($candidatos)===0){
             return [
                 'ok'=>false,
                 'message'=>'No coincide con sus datos. (El pago existe pero con otro nombre)',
             ];
         }
 
-        if((string)($fila['documento'] ?? '')!==$ci){
-            $ciRecaudacion=$fila['documento'] ?? '';
+        $usoEncontrado=null;
+        $mensajeCuentaInvalida='';
+        $detalleCi='';
+        $detalleNombre='';
+
+        foreach($candidatos as $fila){
+            $ciFila=(string)($fila['documento'] ?? '');
+            if($ciFila!==$ci){
+                if($detalleCi===''){
+                    $detalleCi='(Recaudación: '.$ciFila.' | Trámite: '.$ci.')';
+                }
+                continue;
+            }
+
+            $nombreR=trim(($fila['apellido_1'] ?? '').' '.($fila['apellido_2'] ?? '').' '.($fila['nombre_1'] ?? '').' '.($fila['nombre_2'] ?? ''));
+            $nombreRecaudacionNormalizado=$this->normalizarTexto($nombreR);
+            if($nombreSistemaNormalizado!=='' && $nombreSistemaNormalizado!==$nombreRecaudacionNormalizado){
+                if($detalleNombre===''){
+                    $detalleNombre='(Recaudación: '.$nombreR.' | Datos: '.$nombreSistemaNormalizado.')';
+                }
+                continue;
+            }
+
+            $preimpresoApi=$this->valorPreimpresoFila((array)$fila);
+            $fechaPago=(string)($fila['fecha'] ?? '');
+
+            $usoCombinacion=$this->buscarUsoPagoPorCombinacion(
+                $nombreR,
+                $ci,
+                (string)$control,
+                $preimpresoApi,
+                $fechaPago
+            );
+            if($usoCombinacion){
+                $usoEncontrado=$usoCombinacion;
+                continue;
+            }
+
+            $codigoCuenta=(string)($fila['codigo_cuenta'] ?? '');
+            $tramiteSugerido=Tramite::where('tre_hab','=','t')
+                ->where('tre_tipo','=',$tipoTramite)
+                ->where('tre_numero_cuenta','=',$codigoCuenta)
+                ->first();
+
+            if(!$tramiteSugerido){
+                $mensajeCuentaInvalida='La cuenta del valorado no corresponde al tipo de trámite actual.';
+                continue;
+            }
+
+            return [
+                'ok'=>true,
+                'control'=>$control,
+                'ci'=>$ci,
+                'nombre_recaudaciones'=>$nombreR,
+                'identificador'=>$fila['identificador'] ?? '',
+                'fecha_pago'=>$fila['fecha'] ?? '',
+                'cajero'=>$fila['cajero'] ?? '',
+                'codigo_cuenta'=>$codigoCuenta,
+                'cuenta'=>$fila['cuenta'] ?? '',
+                'monto'=>$fila['total'] ?? '',
+                'preimpreso'=>$preimpresoApi,
+                'tipo_legalizacion_sugerido'=>$tramiteSugerido->cod_tre,
+                'nombre_tipo_legalizacion_sugerido'=>$tramiteSugerido->tre_nombre,
+            ];
+        }
+
+        if($usoEncontrado){
+            return [
+                'ok'=>false,
+                'message'=>$this->mensajePagoYaUsado($usoEncontrado),
+            ];
+        }
+
+        if($mensajeCuentaInvalida!==''){
+            return [
+                'ok'=>false,
+                'message'=>$mensajeCuentaInvalida,
+            ];
+        }
+
+        if($detalleCi!==''){
             return [
                 'ok'=>false,
                 'message'=>'El CI no coincide.',
-                'detalle'=>'(Recaudación: '.$ciRecaudacion.' | Trámite: '.$ci.')',
+                'detalle'=>$detalleCi,
             ];
         }
 
-        $nombreR=trim(($fila['apellido_1'] ?? '').' '.($fila['apellido_2'] ?? '').' '.($fila['nombre_1'] ?? '').' '.($fila['nombre_2'] ?? ''));
-        $persona=Persona::where('per_ci','=',$ci)->first();
-        $nombreSistema='';
-        $coincideNombre=true;
-        if($persona){
-            $nombreSistema=$this->normalizarTexto(($persona->per_apellido ?? '').' '.($persona->per_nombre ?? ''));
-            $coincideNombre=($nombreSistema===$this->normalizarTexto($nombreR));
-        }
-
-        if(!$coincideNombre){
+        if($detalleNombre!==''){
             return [
                 'ok'=>false,
                 'message'=>'El nombre no coincide.',
-                'detalle'=>'(Recaudación: '.$nombreR.' | Datos: '.$nombreSistema.')',
+                'detalle'=>$detalleNombre,
             ];
         }
-
-        $preimpresoApi=$this->valorPreimpresoFila($fila);
-        $fechaPago=(string)($fila['fecha'] ?? '');
-
-        $usoCombinacion=$this->buscarUsoPagoPorCombinacion(
-            $nombreR,
-            (string)$control,
-            $preimpresoApi,
-            $fechaPago
-        );
-        if($usoCombinacion){
-            return [
-                'ok'=>false,
-                'message'=>$this->mensajePagoYaUsado($usoCombinacion),
-            ];
-        }
-
-        // Respaldo adicional: evita reutilización del mismo identificador aunque cambie formato de datos.
-        $usoIdentificador=$this->buscarUsoPagoPorIdentificador((string)($fila['identificador'] ?? ''));
-        if($usoIdentificador){
-            return [
-                'ok'=>false,
-                'message'=>$this->mensajePagoYaUsado($usoIdentificador),
-            ];
-        }
-
-        $codigoCuenta=(string)($fila['codigo_cuenta'] ?? '');
-        $tramiteSugerido=Tramite::where('tre_hab','=','t')
-            ->where('tre_tipo','=',$tipoTramite)
-            ->where('tre_numero_cuenta','=',$codigoCuenta)
-            ->first();
 
         return [
-            'ok'=>true,
-            'control'=>$control,
-            'ci'=>$ci,
-            'nombre_recaudaciones'=>$nombreR,
-            'identificador'=>$fila['identificador'] ?? '',
-            'fecha_pago'=>$fila['fecha'] ?? '',
-            'cajero'=>$fila['cajero'] ?? '',
-            'codigo_cuenta'=>$codigoCuenta,
-            'cuenta'=>$fila['cuenta'] ?? '',
-            'monto'=>$fila['total'] ?? '',
-            'preimpreso'=>$preimpresoApi,
-            'tipo_legalizacion_sugerido'=>$tramiteSugerido ? $tramiteSugerido->cod_tre : null,
-            'nombre_tipo_legalizacion_sugerido'=>$tramiteSugerido ? $tramiteSugerido->tre_nombre : null,
+            'ok'=>false,
+            'message'=>'No se encontró una boleta válida disponible para este trámite.',
         ];
     }
 
@@ -683,18 +718,13 @@ class TramiteLegalizacionController extends Controller
 
         $usoCombinacion=$this->buscarUsoPagoPorCombinacion(
             (string)($validacion['nombre_recaudaciones'] ?? ''),
+            (string)($validacion['ci'] ?? ''),
             (string)($validacion['control'] ?? ''),
             (string)($validacion['preimpreso'] ?? ''),
             (string)($validacion['fecha_pago'] ?? '')
         );
         if($usoCombinacion){
             $error='Este pago ya se usó (misma combinación de nombre, impreso, control y fecha).';
-            return false;
-        }
-
-        $yaExiste=DB::table('recaudacion_usos')->where('identificador','=',$identificador)->first();
-        if($yaExiste){
-            $error='Este pago ya se usó.';
             return false;
         }
 
@@ -727,16 +757,7 @@ class TramiteLegalizacionController extends Controller
         return true;
     }
 
-    private function buscarUsoPagoPorIdentificador(string $identificador)
-    {
-        if($identificador==='' || !Schema::hasTable('recaudacion_usos')){
-            return null;
-        }
-
-        return DB::table('recaudacion_usos')->where('identificador','=',$identificador)->first();
-    }
-
-    private function buscarUsoPagoPorCombinacion(string $nombrePersona, string $recibo, string $preimpreso, string $fechaPago)
+    private function buscarUsoPagoPorCombinacion(string $nombrePersona, string $documento, string $recibo, string $preimpreso, string $fechaPago)
     {
         if(!Schema::hasTable('recaudacion_usos')){
             return null;
@@ -749,6 +770,11 @@ class TramiteLegalizacionController extends Controller
         $query=DB::table('recaudacion_usos')
             ->where('recibo','=',trim($recibo))
             ->where('fecha_pago','=',trim($fechaPago));
+
+        $documento=trim($documento);
+        if($documento!==''){
+            $query->where('documento','=',$documento);
+        }
 
         $preimpreso=trim($preimpreso);
         if($preimpreso!==''){
@@ -770,6 +796,31 @@ class TramiteLegalizacionController extends Controller
         }
 
         return null;
+    }
+
+    private function filtrarFilasRecaudacionPorPreimpreso(array $lista, string $preimpreso): array
+    {
+        if(sizeof($lista)===0){
+            return [];
+        }
+
+        if($preimpreso===''){
+            return array_map(function($fila){
+                return (array)$fila;
+            }, $lista);
+        }
+
+        $resultado=[];
+        $preimpresoNormalizado=$this->normalizarNumero($preimpreso);
+        foreach($lista as $fila){
+            $filaArr=(array)$fila;
+            $valorFila=$this->normalizarNumero($this->valorPreimpresoFila($filaArr));
+            if($valorFila!=='' && $valorFila===$preimpresoNormalizado){
+                $resultado[]=$filaArr;
+            }
+        }
+
+        return $resultado;
     }
 
     private function mensajePagoYaUsado(object $usoPago): string
