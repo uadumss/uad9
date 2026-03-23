@@ -16,21 +16,37 @@
                     </div>
                     <hr class="sidebar-divider"/>
                     <span class="text-primary font-weight-bold font-italic" style="font-size: 0.8em"> * DATOS DEL FUNCIONARIO</span><br/><br/>
+                    <div id="mensajeDuplicado" class="alert alert-danger" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i> Ya existe un funcionario con ese CI.
+                    </div>
                     <div class="row">
                         <div class="col-md-5">
                             <table class="col-md-12">
+                                <tr>
+                                    <th class="text-right font-italic text-dark">Tipo de funcionario:</th>
+                                    <td class="border-bottom border-dark">
+                                        <select class="form-control border-0 form-control-sm" name="tipo" id="tipo" onchange="verificarDuplicado()">
+                                            <option value="D">Docente</option>
+                                            <option value="A">Administrativo</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                
+                                <tr>
+                                    <th class="text-right font-italic text-dark">Nº CI:</th>
+                                    <td class="border-bottom border-dark">
+                                        <input type="text" class="form-control form-control-sm border-0" required name="ci" id="ci" oninput="verificarDuplicado()"/>
+                                    </td>
+                                </tr>
+                            
                                 <tr>
                                     <th class="text-right font-italic text-dark">Apellidos y Nombres :</th>
                                     <td class="border-bottom border-dark">
                                         <input type="text" class="form-control form-control-sm border-0" required name="nombre" />
                                     </td>
                                 </tr>
-                                <tr>
-                                    <th class="text-right font-italic text-dark">Nº CI:</th>
-                                    <td class="border-bottom border-dark">
-                                        <input type="text" class="form-control form-control-sm border-0" name="ci"/>
-                                    </td>
-                                </tr>
+                                
+        
                                 <tr>
                                     <th class="text-right font-italic text-dark">Sexo:</th>
                                     <td class="border-bottom border-dark">
@@ -62,15 +78,6 @@
                                     <th class="text-right font-italic text-dark">Presentación de Folder:</th>
                                     <td class="border-bottom border-dark">
                                         &nbsp;<input type="checkbox" class="custom-checkbox" name="folder" />
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th class="text-right font-italic text-dark">Tipo de funcionario:</th>
-                                    <td class="border-bottom border-dark">
-                                        <select class="form-control border-0 form-control-sm" name="tipo">
-                                            <option value="D">Docente</option>
-                                            <option value="A">Administrativo</option>
-                                        </select>
                                     </td>
                                 </tr>
 
@@ -201,7 +208,7 @@
                                 <tr>
                                     <th class="text-right font-italic text-dark">Tipo de funcionario:</th>
                                     <td class="border-bottom border-dark">
-                                        <select class="form-control border-0 form-control-sm" name="tipo">
+                                        <select class="form-control border-0 form-control-sm" name="tipo" id="tipo">
                                             @if($funcionario->fun_doc_adm=='D')
                                                 <option value="D">Docente</option>
                                                 <option value="A">Administrativo</option>
@@ -293,7 +300,7 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" type="button" data-dismiss="modal">Cerrar</button>
-            <input class="btn btn-primary" type="submit" value="Guardar"/>
+            <input class="btn btn-primary" type="submit" value="Guardar" id="btnGuardar"/>
         </div>
     </div>
 </form>
@@ -311,6 +318,51 @@
                 $('#'+panel).html("<br/><div class='alert-danger p-2 rounded'><span class='font-weight-bold'>Error: </span>Quiza no tenga permisos para esta acción </div>");
             }
         });
+    }
+
+    function verificarDuplicado(){
+        var ci = $('#ci').val();
+        var tipo = $('#tipo').val();
+        if(ci && tipo){
+            $.ajax({
+                url: '{{url("verificar-duplicado-funcionario")}}',
+                type: 'POST',
+                data: {
+                    ci: ci,
+                    tipo: tipo,
+                    _token: '{{csrf_token()}}'
+                },
+                success: function (resp) {
+                    if(resp.existe){
+                        $('#mensajeDuplicado').html('Ya existe un funcionario con este CI y tipo.').show();
+                        $('#btnGuardar').prop('disabled', true);
+                    } else {
+                        $('#mensajeDuplicado').hide();
+                        $('#btnGuardar').prop('disabled', false);
+                        if(resp.autocompletar){
+                            // Autocompletar campos
+                            $('input[name="nombre"]').val(resp.datos.nombre);
+                            $('#sexo').val(resp.datos.sexo);
+                            $('#telefonos').val(resp.datos.telefonos);
+                            $('input[name="email"]').val(resp.datos.email);
+                            //$('input[name="fecha"]').val(resp.datos.fecha_ingreso);
+                            $('select[name="nacionalidad"]').val(resp.datos.nacionalidad);
+                            $('select[name="pais"]').val(resp.datos.cod_nac);
+                            //$('textarea[name="facultad"]').val(resp.datos.facultad);
+                            //$('textarea[name="carrera1"]').val(resp.datos.carrera);
+                            //$('textarea[name="observacion"]').val(resp.datos.observacion);
+                        }
+                    }
+                },
+                error: function () {
+                    $('#mensajeDuplicado').html('Error al verificar duplicado.').show();
+                    $('#btnGuardar').prop('disabled', true);
+                }
+            });
+        } else {
+            $('#mensajeDuplicado').hide();
+            $('#btnGuardar').prop('disabled', false);
+        }
     }
 
 </script>
