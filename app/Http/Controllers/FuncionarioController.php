@@ -380,6 +380,7 @@ class FuncionarioController extends Controller
                         'universidad' => $doc->doc_universidad,
                         'tipo_universidad' => $tipo_uni,
                         'revalida' => $revalida,
+                        'verificado' => $doc->doc_verificado === 't' ? 'Verificado' : 'Pendiente',
                         'fecha_emision' => $doc->doc_fecha_emision ?? ''
                     ];
                 }
