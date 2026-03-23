@@ -1,37 +1,40 @@
-@extends('marco.pagina')
-@section('contenido')
-    @if(Session::has('exito'))
+
+<?php $__env->startSection('contenido'); ?>
+    <?php if(Session::has('exito')): ?>
         <div class="alert alert-success alert-dismissible">
             <button type="button" class="close" data-dismiss="alert" aria-label="close">
                 <span aria-hidden="true">&times;</span>
             </button>
-            {!! session('exito') !!}
-        </div>
-    @endif
-    @if(Session::has('error'))
-        <div class="alert alert-danger alert-dismissible">
-            <button type="button" class="close" data-dismiss="alert" aria-label="close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-            {!! session('error') !!}
-        </div>
-    @endif
-    @if(Session::has('errores'))
-        <div class="alert alert-danger alert-dismissible">
-            <button type="button" class="close" data-dismiss="alert" aria-label="close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-            {!! session('errores') !!}
-        </div>
-    @endif
+            <?php echo session('exito'); ?>
 
-    @if(isset($fallas) && count($fallas)>0)
+        </div>
+    <?php endif; ?>
+    <?php if(Session::has('error')): ?>
+        <div class="alert alert-danger alert-dismissible">
+            <button type="button" class="close" data-dismiss="alert" aria-label="close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            <?php echo session('error'); ?>
+
+        </div>
+    <?php endif; ?>
+    <?php if(Session::has('errores')): ?>
+        <div class="alert alert-danger alert-dismissible">
+            <button type="button" class="close" data-dismiss="alert" aria-label="close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            <?php echo session('errores'); ?>
+
+        </div>
+    <?php endif; ?>
+
+    <?php if(isset($fallas) && count($fallas)>0): ?>
         <div class="alert alert-danger alert-dismissible">
             <button type="button" class="close" data-dismiss="alert" aria-label="close">
                 <span aria-hidden="true">&times;</span>
             </button>
             <ul>
-                @foreach($fallas as $f)
+                <?php $__currentLoopData = $fallas; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $f): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                     <li>
                         <?php echo "Fila: ".$f->row()." - ";?>
                         <?php $errores=(array) $f->errors();
@@ -40,10 +43,10 @@
                         endforeach;
                         ?>
                     </li>
-                @endforeach
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </ul>
         </div>
-    @endif
+    <?php endif; ?>
     <div class="card">
         <div class="card shadow mb-4">
             <div class="card-header py-3 alert-primary">
@@ -51,7 +54,7 @@
                     <h5 class=""><i class="fas fa-university"></i>&nbsp;Funcionarios</h5>
 
                     <a href="" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#docente"
-                    onclick="cargarDatos('{{url('fe_funcionario/0')}}','panel_docente')">+ Funcionario</a>
+                    onclick="cargarDatos('<?php echo e(url('fe_funcionario/0')); ?>','panel_docente')">+ Funcionario</a>
 
                         <a href="" class="btn btn-sm btn-outline-info text-dark" data-toggle="modal" data-target="#nuevaImportacion"><i class="fas fa-upload"> Nueva importación</i></a>
                 </div>
@@ -59,14 +62,14 @@
             <div class="card-body">
                 <div class="">
                     <div class="">
-                        <a href="{{url('listar funcionario/docente')}}" class="btn btn-outline-info btn-sm text-dark mt-1 shadow-sm"><i class="fas fa-arrow-alt-circle-right"></i> Listar docente</a> &nbsp;&nbsp;
-                        <a href="{{url('listar funcionario/administrativo')}}" class="btn btn-outline-info btn-sm text-dark mt-1 shadow-sm"><i class="fas fa-arrow-alt-circle-right"></i> Listar Administrativo</a>
+                        <a href="<?php echo e(url('listar funcionario/docente')); ?>" class="btn btn-outline-info btn-sm text-dark mt-1 shadow-sm"><i class="fas fa-arrow-alt-circle-right"></i> Listar docente</a> &nbsp;&nbsp;
+                        <a href="<?php echo e(url('listar funcionario/administrativo')); ?>" class="btn btn-outline-info btn-sm text-dark mt-1 shadow-sm"><i class="fas fa-arrow-alt-circle-right"></i> Listar Administrativo</a>
                         <div class="bg-primary centrar_bloque p-1 col-md-3 rounded shadow">
-                            <h5 class="text-white text-center">Lista de {{$funcionario}}s</h5>
+                            <h5 class="text-white text-center">Lista de <?php echo e($funcionario); ?>s</h5>
                         </div>
 
-                        <form action="{{ url('listar funcionario/'.$funcionario) }}" method="GET" class="form-inline mt-3 mb-3">
-                            <input type="text" name="q" value="{{ old('q', $search ?? '') }}" class="form-control mr-2" placeholder="🔍 Buscar funcionario..." autocomplete="off">
+                        <form action="<?php echo e(url('listar funcionario/'.$funcionario)); ?>" method="GET" class="form-inline mt-3 mb-3">
+                            <input type="text" name="q" value="<?php echo e(old('q', $search ?? '')); ?>" class="form-control mr-2" placeholder="🔍 Buscar funcionario..." autocomplete="off">
                             <button type="submit" class="btn btn-sm btn-primary">Buscar</button>
                         </form>
 
@@ -88,65 +91,68 @@
                                     </thead>
                                     <tbody>
                                     <?php $j=1;?>
-                                    @foreach($funcionarios as $f)
-                                        @if($f->fun_obs!='t')
+                                    <?php $__currentLoopData = $funcionarios; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $f): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                        <?php if($f->fun_obs!='t'): ?>
                                             <tr>
-                                        @else
-                                            @if($f->fun_folder!='t')
+                                        <?php else: ?>
+                                            <?php if($f->fun_folder!='t'): ?>
                                                 <tr class="bg-warning">
-                                            @else
+                                            <?php else: ?>
                                                 <tr class="alert-danger">
-                                            @endif
+                                            <?php endif; ?>
 
-                                        @endif
+                                        <?php endif; ?>
                                             <td>
-                                                {{$j}}
+                                                <?php echo e($j); ?>
+
 
                                             </td>
-                                            <td>{{$f->fun_nombre}}
-                                                @if($f->fun_folder!='t')
+                                            <td><?php echo e($f->fun_nombre); ?>
+
+                                                <?php if($f->fun_folder!='t'): ?>
                                                     <span class="bg-danger p-1 rounded text-white">*</span>
-                                                @endif
+                                                <?php endif; ?>
                                             </td>
-                                            <td>{{$f->fun_ci}} - {{$f->cod_fun}}</td>
-                                            @php $sexo=$f->fun_sexo=='M'?'Masculino':'Femenino' @endphp
-                                            <td>{{$sexo}}</td>
-                                            <td>{{$f->fun_telefonos}}</td>
-                                            <td>{{$f->fun_email}}</td>
+                                            <td><?php echo e($f->fun_ci); ?> - <?php echo e($f->cod_fun); ?></td>
+                                            <?php $sexo=$f->fun_sexo=='M'?'Masculino':'Femenino' ?>
+                                            <td><?php echo e($sexo); ?></td>
+                                            <td><?php echo e($f->fun_telefonos); ?></td>
+                                            <td><?php echo e($f->fun_email); ?></td>
                                             <td>
-                                                @if($f->fun_fecha_ingreso!='')
-                                                    {{date('d/m/Y',strtotime($f->fun_fecha_ingreso))}}
-                                                @endif
+                                                <?php if($f->fun_fecha_ingreso!=''): ?>
+                                                    <?php echo e(date('d/m/Y',strtotime($f->fun_fecha_ingreso))); ?>
+
+                                                <?php endif; ?>
                                             </td>
-                                            @php $nacionalidad=$f->fun_nacionalidad=='B'?'Boliviano':'Extranjero' @endphp
-                                                <td>{{$nacionalidad}}</td>
-                                            <td>{{$f->cod_nac}}</td>
+                                            <?php $nacionalidad=$f->fun_nacionalidad=='B'?'Boliviano':'Extranjero' ?>
+                                                <td><?php echo e($nacionalidad); ?></td>
+                                            <td><?php echo e($f->cod_nac); ?></td>
                                             <td>
-                                                <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#docente" data-toggle="modal" onclick="cargarDatos('{{url('fe_funcionario/'.$f->cod_fun)}}','panel_docente')"
+                                                <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#docente" data-toggle="modal" onclick="cargarDatos('<?php echo e(url('fe_funcionario/'.$f->cod_fun)); ?>','panel_docente')"
                                                    title="Editar funcionario"><i class="fas fa-edit"></i>
                                                 </a>
-                                                <a href="{{url('listar documentos funcionario/'.$f->cod_fun)}}" class="btn btn-light btn-circle btn-sm text-primary" title="Mostrar documentos">
+                                                <a href="<?php echo e(url('listar documentos funcionario/'.$f->cod_fun)); ?>" class="btn btn-light btn-circle btn-sm text-primary" title="Mostrar documentos">
                                                     <i class="fas fa-arrow-alt-circle-right"></i>
                                                 </a>
-                                                @if($f->fun_obs=='t')
+                                                <?php if($f->fun_obs=='t'): ?>
                                                     <a href="" class="btn btn-light btn-circle btn-sm text-danger" title="Ver Observacion">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
-                                                @endif
-                                                @if($f->fun_folder!='t')
-                                                    <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#docente" data-toggle="modal" onclick="cargarDatos('{{url('fe_presentar folder/'.$f->cod_fun)}}','panel_docente')"
+                                                <?php endif; ?>
+                                                <?php if($f->fun_folder!='t'): ?>
+                                                    <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#docente" data-toggle="modal" onclick="cargarDatos('<?php echo e(url('fe_presentar folder/'.$f->cod_fun)); ?>','panel_docente')"
                                                         title="Presentar Folder"><i class="text-primary fas fa-folder-open"></i>
                                                     </a>
-                                                @endif
+                                                <?php endif; ?>
 
-                                                <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#docente" data-toggle="modal" onclick="cargarDatos('{{url('fe_eliminar funcionario/'.$f->cod_fun)}}','panel_docente')"
+                                                <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#docente" data-toggle="modal" onclick="cargarDatos('<?php echo e(url('fe_eliminar funcionario/'.$f->cod_fun)); ?>','panel_docente')"
                                                    title="Eliminar funcionario"><i class="text-danger fas fa-trash-alt"></i>
                                                 </a>
 
                                             </td>
                                         </tr>
                                         <?php $j++;?>
-                                    @endforeach
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                     </tbody>
                                 </table>
 
@@ -159,7 +165,8 @@
                                         }
                                     </style>
                                     <nav aria-label="Page navigation">
-                                        {{ $funcionarios->links('pagination::bootstrap-4') }}
+                                        <?php echo e($funcionarios->links('pagination::bootstrap-4')); ?>
+
                                     </nav>
                                 </div>
 
@@ -172,7 +179,7 @@
             </div>
         </div>
 
-    @can('acceder al sistema - dya')
+    <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('acceder al sistema - dya')): ?>
         <!--===========================MODAL DOCENTE===================-->
             <div class="modal fade" id="docente" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-xl" role="document" id="panel_docente">
@@ -180,11 +187,11 @@
                 </div>
             </div>
             <!--===========================END ==============================-->
-    @endcan
+    <?php endif; ?>
         <div class="modal fade" id="nuevaImportacion" style="z-index: 1500;" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg" role="document">
-                <form action="{{url('importar nuevos')}}" method="POST" id="form_importar" enctype="multipart/form-data">
-                    @csrf
+                <form action="<?php echo e(url('importar nuevos')); ?>" method="POST" id="form_importar" enctype="multipart/form-data">
+                    <?php echo csrf_field(); ?>
                     <div class="modal-content border-bottom-primary">
                         <div class="modal-header bg-primary">
                             <h5 class="modal-title font-weight-bolder text-white" id="exampleModalLabel"><i class="fas fa-book"></i> Nueva importación</h5>
@@ -259,4 +266,6 @@
                 }
             });
         </script>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('marco.pagina', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\uad9\resources\views/funcionario/l_funcionario.blade.php ENDPATH**/ ?>
