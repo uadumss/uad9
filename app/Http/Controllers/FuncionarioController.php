@@ -15,13 +15,28 @@ use Maatwebsite\Excel\Excel;
 
 class FuncionarioController extends Controller
 {
-    public function l_funcionario($funcionario){
-        $tipoFun=$funcionario=='docente'? 'D':'A';
-        $funcionarios=DB::table('doc_adm.funcionarios')->where('fun_doc_adm','=',$tipoFun)
-            ->orWhere('fun_doc_adm','=','E')
-            ->orderBy('fun_nombre')->get();
+    public function l_funcionario($funcionario, Request $request){
+        $tipoFun = $funcionario=='docente' ? 'D' : 'A';
+        $search = trim($request->input('q',''));
 
-        return view('funcionario.l_funcionario',compact('funcionarios','tipoFun','funcionario'));
+        $funcionarios = DB::table('doc_adm.funcionarios')
+            ->select('cod_fun','fun_nombre','fun_ci','fun_sexo','fun_telefonos','fun_email','fun_fecha_ingreso','fun_nacionalidad','cod_nac','fun_obs','fun_folder')
+            ->where(function($query) use ($tipoFun) {
+                $query->where('fun_doc_adm','=',$tipoFun)
+                    ->orWhere('fun_doc_adm','=','E');
+            })
+            ->when($search, function($query, $search){
+                $query->where(function($query) use ($search){
+                    $query->where('fun_nombre','ilike','%'.$search.'%')
+                          ->orWhere('fun_ci','ilike','%'.$search.'%')
+                          ->orWhere('fun_email','ilike','%'.$search.'%');
+                });
+            })
+            ->orderBy('fun_nombre')
+            ->paginate(200)
+            ->appends(['q'=>$search]);
+
+        return view('funcionario.l_funcionario',compact('funcionarios','tipoFun','funcionario','search'));
     }
     public function fe_funcionario($cod_fun){
         $funcionario='';
