@@ -20,12 +20,31 @@ class ExportFuncionarioConsulta implements FromArray,WithHeadings
     }
     public function headings(): array
     {
-        $cabecera= ['Nombre', 	'CI' ,'Facultad','Carrera'];
+        $cabecera= ['Nombre', 	'CI' ,'Facultad','Carrera','Tipo de Funcionario'];
         return $cabecera;
     }
     public function array(): array
     {
-        return $this->resultado;
+        $resultado = [];
+        foreach($this->resultado as $item) {
+            $item->fun_doc_adm = $this->getNombreTipo($item->fun_doc_adm);
+            $resultado[] = $item;
+        }
+        return $resultado;
+    }
+
+    private function getNombreTipo($tipo)
+    {
+        switch($tipo) {
+            case 'D':
+                return 'DOCENTE';
+            case 'A':
+                return 'ADMINISTRATIVO';
+            case 'E':
+                return 'DOCENTE Y ADMINISTRATIVO';
+            default:
+                return $tipo;
+        }
     }
     /*public function prepareRows($rows)
     {

@@ -178,9 +178,9 @@ class FuncionarioController extends Controller
 
         $i=1;
         if($funcionario=='-'){
-            $consulta="select fun_nombre,fun_ci,fun_facultad,fun_carrera from doc_adm.funcionarios";
+            $consulta="select fun_nombre,fun_ci,fun_facultad,fun_carrera,fun_doc_adm from doc_adm.funcionarios";
         }else{
-            $consulta="select fun_nombre,fun_ci,fun_facultad,fun_carrera from doc_adm.funcionarios where ".$funcionario;
+            $consulta="select fun_nombre,fun_ci,fun_facultad,fun_carrera,fun_doc_adm from doc_adm.funcionarios where ".$funcionario;
             $i=0;
         }
 

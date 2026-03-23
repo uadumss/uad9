@@ -31,6 +31,7 @@
         <th class="">CI</th>
         <th>Facultad</th>
         <th>Carrera</th>
+        <th>Tipo de Funcionario</th>
     </tr>
     </thead>
     <tbody>
@@ -44,6 +45,21 @@
                     <td>{{$f->fun_ci}}</td>
                     <td>{{$f->fun_facultad}}</td>
                     <td>{{$f->fun_carrera}}</td>
+                    <td>
+                        @switch($f->fun_doc_adm)
+                            @case('D')
+                                DOCENTE
+                            @break
+                            @case('A')
+                                ADMINISTRATIVO
+                            @break
+                            @case('E')
+                                DOCENTE Y ADMINISTRATIVO
+                            @break
+                            @default
+                                {{ $f->fun_doc_adm }}
+                        @endswitch
+                    </td>
                 </tr>
                 <?php $j++;?>
                 @endforeach
