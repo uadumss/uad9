@@ -318,48 +318,74 @@ class ApostillaController extends Controller
         $form->validate([
             'cl'=>'required',
             'ca'=>'required',
+            'preimpreso'=>'required',
+            'gestion_valorado'=>'required',
         ]);
         $apostilla=Lista_doc_apostilla::find($form['cl']);
         $tramite_apostilla=Apostilla::find($form['ca']);
-        if($tramite_apostilla->apos_estado<=1){
-            if($tramite_apostilla->apos_estado==0){
-                $tramite_apostilla->apos_estado=1;
-                $tramite_apostilla->save();
-            }
-            $uuid=(String)Str::uuid();
-            $maximo=DB::select('select max(dapo_numero) as max from apostilla.detalle_apostilla');
-            $numero=1;
-            if($maximo[0]->max){
-                $numero=((int)$maximo[0]->max+1);
-            }
-            $documento=Detalle_apostilla::create([
-                'cod_dapo'=>$uuid,
-                'cod_apos'=>$form['ca'],
-                'cod_lis'=>$form['cl'],
-                'dapo_fecha_ingreso'=>date('d/m/Y'),
-                'dapo_hab'=>'t',
-                'dapo_numero'=>$numero,
-            ]);
 
-            if(isset($form['numero'])){
-                $documento->dapo_numero_documento=$form['numero'];
-            }
-            if(isset($form['gestion'])){
-                $documento->dapo_gestion_documento=$form['gestion'];
-            }
-            $documento->dapo_buscar_en=$apostilla->lis_tipo;
-            $documento->save();
+        $preimpreso=$form['preimpreso'];
+        $gestion_valorado=$form['gestion_valorado'];
 
-            $nuevo=json_encode($documento);
-            SessionController::write('C','',$nuevo,'detalle_apostilla','4',$documento->cod_dapo);
+        $duplicado=DB::table('apostilla.detalle_apostilla')
+            ->where('dapo_valorado_preimpreso','=',$preimpreso)
+            ->where('dapo_valorado_gestion','=',$gestion_valorado)
+            ->count();
+        if($duplicado<1){
+            if($tramite_apostilla->apos_estado<=1){
+                if($tramite_apostilla->apos_estado==0){
+                    $tramite_apostilla->apos_estado=1;
+                    $tramite_apostilla->save();
+                }
+                $uuid=(String)Str::uuid();
+                $maximo=DB::select('select max(dapo_numero) as max from apostilla.detalle_apostilla');
+                $numero=1;
+                if($maximo[0]->max){
+                    $numero=((int)$maximo[0]->max+1);
+                }
 
-            \Session::flash('exitoagregar','Se ha agragado el tramite correctamente');
-            return redirect('ajax tabla agregar/'.$form['ca']);
+
+
+                $documento=Detalle_apostilla::create([
+                    'cod_dapo'=>$uuid,
+                    'cod_apos'=>$form['ca'],
+                    'cod_lis'=>$form['cl'],
+                    'dapo_fecha_ingreso'=>date('d/m/Y'),
+                    'dapo_hab'=>'t',
+                    'dapo_numero'=>$numero,
+                ]);
+
+                if(isset($form['numero'])){
+                    $documento->dapo_numero_documento=$form['numero'];
+                }
+                if(isset($form['gestion'])){
+                    $documento->dapo_gestion_documento=$form['gestion'];
+                }
+
+                if(isset($form['preimpreso'])){
+                    $documento->dapo_valorado_preimpreso=$form['preimpreso'];
+                }
+                if(isset($form['gestion_valorado'])){
+                    $documento->dapo_valorado_gestion=$form['gestion_valorado'];
+                }
+
+
+                $documento->dapo_buscar_en=$apostilla->lis_tipo;
+                $documento->save();
+
+                $nuevo=json_encode($documento);
+                SessionController::write('C','',$nuevo,'detalle_apostilla','4',$documento->cod_dapo);
+
+                \Session::flash('exitoagregar','Se ha agragado el tramite correctamente');
+                return redirect('ajax tabla agregar/'.$form['ca']);
+            }else{
+                \Session::flash('erroragregar','No se puede agregar mas documentos');
+                return redirect('ajax tabla agregar/'.$form['ca']);
+            }
         }else{
-            \Session::flash('erroragregar','No se puede agregar mas documentos');
+            \Session::flash('erroragregar','El número de valorado ya existe');
             return redirect('ajax tabla agregar/'.$form['ca']);
         }
-
     }
     public function ajax_tabla_agregar($cod_apos){
         $detalle_apostilla=DB::table('apostilla.detalle_apostilla')

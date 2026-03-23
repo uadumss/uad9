@@ -50,7 +50,6 @@
                     @endcan
                     <a class="collapse-item" href="{{url('lista importaciones/'.Auth::user()->id)}}"><i class="fas fa-upload"></i> Importar títulos</a>
                     <a class="collapse-item" href="{{url('reportes/')}}"><i class="fas fa-chart-area"></i> Reportes</a>
-                    <a class="collapse-item" href="{{url('corregir duplicados/')}}"><i class="fas fa-chart-area"></i> Duplicados</a>
 
                 </div>
             </div>
@@ -170,14 +169,13 @@
                 <div class="dropright show">
                     <a class="collapse-item" href="{{url("lista convocatoria noatentado/".date('Y'))}}"><i class="fas fa-clipboard-list"></i> Convocatoria</a>
                     <a class="collapse-item" href="{{url("lista sancionados noatentado")}}"><i class="fas fa-user-lock"></i> Lista de sancionados</a>
-                    <a class="collapse-item" href="#"><i class="fas fa-chart-area"></i> Reportes</a>
                 </div>
             </div>
         </div>
     </li>
     @endcan
-     @can('acceso al sistema - f')
-        <li class="nav-item">
+    @can('acceso al sistema - f')
+    <li class="nav-item">
             <a class="nav-link collapsed text-dark" href="#" data-toggle="collapse" data-target="#CollapseUnidad" aria-expanded="true" aria-controls="collapseTwo">
                 <i class="fas fa-file-pdf text-dark"></i>
                 <span>UNIDADES</span>
@@ -188,29 +186,6 @@
                     <div class="dropright">
                         <a class="collapse-item" href="{{url('listar facultad/')}}"><i class="fas fa-university text-dark"></i> Facultad</a>
                         <a class="collapse-item" href="{{url('listar unidad/')}}"><i class="fas fa-university text-dark"></i> Unidad</a>
-                    </div>
-                </div>
-            </div>
-        </li>
-    @endcan
-    @can('acceso al sistema - srv')
-    <li class="nav-item">
-        <a class="nav-link collapsed text-dark" href="{{url('l_firma/')}}">
-            <i class="fas fa-university text-dark"></i> <span>Firma</span></a>
-    </li>
-    @endcan
-
-    @can('acceder al sistema - cla')
-        <li class="nav-item">
-            <a class="nav-link collapsed text-dark" href="#" data-toggle="collapse" data-target="#collapseClaustro" aria-expanded="true" aria-controls="collapseTwo">
-                <i class="fas fa-vote-yea text-dark"></i>
-                <span>CLAUSTROS</span>
-            </a>
-            <div id="collapseClaustro" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar" overflow>
-                <div class="bg-white py-2 collapse-inner rounded">
-                    <h5 class="collapse-header">MENU</h5>
-                    <div class="dropright">
-                        <a class="collapse-item" href="{{url('lista consejo')}}"> <i class="fas fa-user-friends"></i> Consejos</a>
                     </div>
                 </div>
             </div>
@@ -234,6 +209,22 @@
         </li>
 
     @endcan
+	@can('acceder al sistema - cla')
+        <li class="nav-item">
+            <a class="nav-link collapsed text-dark" href="#" data-toggle="collapse" data-target="#collapseClaustro" aria-expanded="true" aria-controls="collapseTwo">
+                <i class="fas fa-vote-yea text-dark"></i>
+                <span>CLAUSTROS</span>
+            </a>
+            <div id="collapseClaustro" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar" overflow>
+                <div class="bg-white py-2 collapse-inner rounded">
+                    <h5 class="collapse-header">MENU</h5>
+                    <div class="dropright">
+                        <a class="collapse-item" href="{{url('lista consejo')}}"> <i class="fas fa-user-friends"></i> Consejos</a>
+                    </div>
+                </div>
+            </div>
+        </li>
+    @endcan
     <!-- Divider -->
     <hr class="sidebar-divider">
 
@@ -252,15 +243,20 @@
                 <h6 class="collapse-header">Opciones de usuario:</h6>
                 <a class="collapse-item" href="{{url('l_usuario/f')}}">Lista de usuarios</a>
                 <a class="collapse-item" href="{{url('listar reportes fecha adm/')}}">Reportes</a>
+			<!--url('l_usuario')-->
             </div>
         </div>
-
-        <a class="nav-link collapsed text-dark" href="{{url('corregir datos persona')}}" aria-expanded="true" aria-controls="collapseUtilities">
-            <i class="fas fa-fw fa-user-check text-dark"></i>
-            <span>Corregir datos personales</span>
-        </a>
     </li>
     @endcan
+ 	@can('corregir datos personales  ci - adm')
+	 <li class="nav-item">
+
+	<a class="nav-link collapsed text-dark" href="{{url('corregir datos persona')}}" aria-expanded="true" aria-controls="collapseUtilities">
+            <i class="fas fa-fw fa-user-check text-dark"></i>
+	           <span>Corregir datos personales</span>
+        	</a>
+	</li>
+	@endcan
     @if(Auth::user()->responsable=='t')
         <li class="nav-item">
             <a class="nav-link collapsed text-dark" href="#" data-toggle="collapse" data-target="#collapseProgramacion" aria-expanded="true" aria-controls="collapseUtilities">

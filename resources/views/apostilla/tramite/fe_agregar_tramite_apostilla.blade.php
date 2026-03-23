@@ -81,7 +81,7 @@
                 </div>
                 <!-- ================================LISTA DE DOCUMENTOS====================================-->
                 <div class="col-md-7 pl-3 border shadow pt-2">
-                    <span class="text-danger font-italic font-weight-bold" style="font-size: 16px">* Caracteristicas del trámite</span>
+                    <span class="text-danger font-italic font-weight-bold" style="font-size: 16px">* Caracteristicas hhhhhdel trámite</span>
                     <br/>
                     <br/>
                     <br/>
@@ -98,8 +98,22 @@
                                     <th class="text-dark font-italic">Numero del trámite : </th>
                                     <td class="border-bottom border-dark">
                                         <div class="input-group pt-1">
-                                            <input type="text" class="form-control form-control-sm col-md-2" name="numero"> &nbsp;&nbsp;/&nbsp;&nbsp; Gestión : &nbsp;&nbsp;
-                                            <input type="text" class="form-control form-control-sm col-md-2" pattern="[0-9]{4}" name="gestion">
+                                            <input type="text" class="form-control form-control-sm col-md-3" name="numero"> &nbsp;&nbsp;/&nbsp;&nbsp; Gestión : &nbsp;&nbsp;
+                                            <input type="text" class="form-control form-control-sm col-md-3" pattern="[0-9]{4}" name="gestion">
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="text-dark font-italic">Número preimpreso del valorado : </th>
+                                    <td class="border-bottom border-dark">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control form-control-sm col-sm-4" name="preimpreso"> &nbsp;&nbsp;/&nbsp;&nbsp; Gestión : &nbsp;&nbsp;
+                                            <select name="gestion_valorado" class="custom-select custom-select-sm col-sm-3">
+                                                <option value="<?php echo date('Y')?>"><?php echo Date('Y')?></option>
+                                                @for($gestion=2025;$gestion<date('Y');$gestion++)
+                                                    <option value="<?php $gestion?>"><?php echo $gestion?></option>
+                                                @endfor
+                                            </select>
                                         </div>
                                     </td>
                                 </tr>
@@ -108,8 +122,22 @@
                                     <th class="text-dark font-italic">Numero del título : </th>
                                     <td class="border-bottom border-dark">
                                         <div class="input-group">
-                                            <input type="text" class="form-control form-control-sm" name="numero"> &nbsp;&nbsp;/&nbsp;&nbsp; Gestión : &nbsp;&nbsp;
-                                            <input type="text" class="form-control form-control-sm" pattern="[0-9]{4}" name="gestion">
+                                            <input type="text" class="form-control form-control-sm col-sm-3" name="numero"> &nbsp;&nbsp;/&nbsp;&nbsp; Gestión : &nbsp;&nbsp;
+                                            <input type="text" class="form-control form-control-sm col-sm-3" pattern="[0-9]{4}" name="gestion">
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="text-dark font-italic">Número preimpreso del valorado : </th>
+                                    <td class="border-bottom border-dark">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control form-control-sm col-sm-4" name="preimpreso"> &nbsp;&nbsp;/&nbsp;&nbsp; Gestión : &nbsp;&nbsp;
+                                            <select name="gestion_valorado" class="custom-select custom-select-sm col-sm-3">
+                                                <option value="<?php echo date('Y')?>"><?php echo Date('Y')?></option>
+                                                @for($gestion=2025;$gestion<date('Y');$gestion++)
+                                                    <option value="<?php $gestion?>"><?php echo $gestion?></option>
+                                                @endfor
+                                            </select>
                                         </div>
                                     </td>
                                 </tr>
