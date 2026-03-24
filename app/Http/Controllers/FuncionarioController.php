@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exports\ExportFuncionarioConsulta;
+use App\Helpers\UniversidadHelper;
 use App\Models\Carrera;
 use App\Models\Documento;
 use App\Models\Funcionario;
@@ -210,9 +211,9 @@ class FuncionarioController extends Controller
 
         $i=1;
         if($funcionario=='-'){
-            $consulta="select fun_nombre,fun_ci,fun_facultad,fun_carrera from doc_adm.funcionarios";
+            $consulta="select cod_fun,fun_nombre,fun_ci,fun_facultad,fun_carrera,fun_doc_adm from doc_adm.funcionarios";
         }else{
-            $consulta="select fun_nombre,fun_ci,fun_facultad,fun_carrera from doc_adm.funcionarios where ".$funcionario;
+            $consulta="select cod_fun,fun_nombre,fun_ci,fun_facultad,fun_carrera,fun_doc_adm from doc_adm.funcionarios where ".$funcionario;
             $i=0;
         }
 
@@ -379,6 +380,66 @@ class FuncionarioController extends Controller
             $consulta.=" order by fun_nombre";
             $resultado=DB::select($consulta);
 
+            // Procesar documentos y agregar información de validación
+            foreach($resultado as $funcionario) {
+                // Obtener documentos usando Eloquent
+                $documentos = Documento::where('cod_fun', $funcionario->cod_fun)->get();
+                
+                // Procesar cada documento con información de universidad
+                $documentos_procesados = [];
+                $tipos_encontrados = [];
+                
+                foreach($documentos as $doc) {
+                    $tipo_uni = UniversidadHelper::getTipoUniversidad($doc->doc_universidad);
+                    
+                    // Determinar estado de revalidación
+                    $revalida = '';
+                    if($tipo_uni === 'Extranjera') {
+                        if(!empty(trim($doc->doc_numero_revalida))) {
+                            $revalida = $doc->doc_numero_revalida;
+                        } else {
+                            $revalida = 'FALTA REVALIDACION';
+                        }
+                    }
+                    
+                    // Clasificación para validación de completud
+                    $clasificacion_tipo = $this->clasificarTipoDocumento($doc->doc_tipo);
+                    $tipos_encontrados[$clasificacion_tipo] = true;
+                    
+                    $documentos_procesados[] = [
+                        'titulo' => $doc->doc_titulo,
+                        'tipo' => $doc->doc_tipo,
+                        'universidad' => $doc->doc_universidad,
+                        'tipo_universidad' => $tipo_uni,
+                        'edu_superior' => $doc->doc_edu_superior === 't' ? 'Sí' : '',
+                        'revalida' => $revalida,
+                        'verificado' => $doc->doc_verificado === 't' ? 'Verificado' : 'Pendiente',
+                        'fecha_emision' => $doc->doc_fecha_emision ?? ''
+                    ];
+                }
+
+                // Validar completud de la carpeta
+                $tipos_requeridos = ['DB', 'DA', 'TP', 'POSTGRADO'];
+                $documentos_faltantes = [];
+                
+                foreach($tipos_requeridos as $tipo) {
+                    if(!isset($tipos_encontrados[$tipo])) {
+                        $documentos_faltantes[] = $this->obtenerNombreTipoDocumento($tipo);
+                    }
+                }
+                
+                // Determinar estado
+                $estado_carpeta = [
+                    'completo' => count($documentos_faltantes) === 0,
+                    'faltantes' => $documentos_faltantes,
+                    'mensaje' => count($documentos_faltantes) === 0 ? 'COMPLETO' : 'INCOMPLETO'
+                ];
+
+                // Agregar documentos procesados y estado al objeto
+                $funcionario->documentos = $documentos_procesados;
+                $funcionario->estado_carpeta = $estado_carpeta;
+            }
+
             /*Excel::create('Filename', function($excel) use($resultado) {
                 $excel->sheet('Sheetname', function($sheet) use($resultado) {
                 $sheet->fromArray($resultado);
@@ -394,6 +455,61 @@ class FuncionarioController extends Controller
             //dd($resultado);
 
             */
+    }
+
+    /**
+     * Clasificar tipo de documento para validación de completud
+     */
+    private function clasificarTipoDocumento($tipo_doc)
+    {
+        $tipo = strtoupper(trim($tipo_doc));
+        
+        // DB = Diploma de bachiller
+        if(strpos($tipo, 'DIPLOMA') !== false && strpos($tipo, 'BACHILLER') !== false) {
+            return 'DB';
+        }
+        
+        // DA = Diploma académico
+        if(strpos($tipo, 'DIPLOMA') !== false && strpos($tipo, 'ACADEMICO') !== false) {
+            return 'DA';
+        }
+        
+        // TP = Título profesional
+        if(strpos($tipo, 'TITULO') !== false && strpos($tipo, 'PROFESIONAL') !== false) {
+            return 'TP';
+        }
+        
+        // POSTGRADO = Diplomado, Maestría, Especialidad, Doctorado
+        if(strpos($tipo, 'DIPLOMADO') !== false || 
+           strpos($tipo, 'MAESTRIA') !== false || 
+           strpos($tipo, 'ESPECIALIDAD') !== false || 
+           strpos($tipo, 'DOCTORADO') !== false) {
+            return 'POSTGRADO';
+        }
+        
+        // Otras clasificaciones
+        if(strpos($tipo, 'TECNICO') !== false) {
+            return 'TECNICO';
+        }
+        
+        return 'OTRO';
+    }
+
+    /**
+     * Obtener nombre del tipo de documento para el mensaje de faltantes
+     */
+    private function obtenerNombreTipoDocumento($codigo)
+    {
+        $nombres = [
+            'DB' => 'Diploma de Bachiller',
+            'DA' => 'Diploma Académico',
+            'TP' => 'Título Profesional',
+            'POSTGRADO' => 'Postgrado (Diplomado/Maestría/Especialidad/Doctorado)',
+            'TECNICO' => 'Título Técnico',
+            'OTRO' => 'Otro'
+        ];
+        
+        return $nombres[$codigo] ?? $codigo;
     }
 
     public function verificarDuplicado(Request $request){
