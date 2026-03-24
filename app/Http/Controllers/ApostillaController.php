@@ -12,6 +12,9 @@ use App\Models\Lista_doc_apostilla;
 use App\Models\Objeto;
 use App\Models\Persona;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -299,13 +302,14 @@ class ApostillaController extends Controller
     }
     public function fe_agregar_tramite_apostilla($cod_lis,$cod_apos){
         $apostilla=Lista_doc_apostilla::find($cod_lis);
+        $lista_apostilla=Lista_doc_apostilla::where('lis_hab','=','t')->orderBy('lis_nombre')->get();
         $tramite_apostilla=Apostilla::find($cod_apos);
         $persona=Persona::find($tramite_apostilla->id_per);
         $apoderado=array();
         if($tramite_apostilla->cod_apo!=''){
             $apoderado=Apoderado::find($tramite_apostilla->cod_apo);
         };
-        return view('apostilla.tramite.fe_agregar_tramite_apostilla',compact('apostilla','tramite_apostilla','apoderado','persona','cod_lis','cod_apos'));
+        return view('apostilla.tramite.fe_agregar_tramite_apostilla',compact('apostilla','lista_apostilla','tramite_apostilla','apoderado','persona','cod_lis','cod_apos'));
     }
     public function g_agregar_tramite_apostilla(Request $form){
         /*
@@ -318,75 +322,159 @@ class ApostillaController extends Controller
         $form->validate([
             'cl'=>'required',
             'ca'=>'required',
-            'preimpreso'=>'required',
-            'gestion_valorado'=>'required',
+            'nro_control'=>'required',
+            'gestion_valorado'=>'nullable|digits:4',
         ]);
-        $apostilla=Lista_doc_apostilla::find($form['cl']);
+        $codApos=(int)$form['ca'];
         $tramite_apostilla=Apostilla::find($form['ca']);
+        if(!$tramite_apostilla){
+            return $this->responderAgregarTramiteApostilla($form,false,'No se encontró el trámite de apostilla.',$codApos);
+        }
+        $persona=Persona::find($tramite_apostilla->id_per);
+        if(!$persona || trim((string)$persona->per_ci)===''){
+            return $this->responderAgregarTramiteApostilla($form,false,'Debe registrar correctamente el CI de la persona del trámite.',$codApos);
+        }
 
-        $preimpreso=$form['preimpreso'];
-        $gestion_valorado=$form['gestion_valorado'];
+        $verificacionRecaudacion=$this->validarRecaudacionApostilla(
+            (string)$form['nro_control'],
+            (string)$persona->per_ci,
+            (int)$tramite_apostilla->id_per,
+            (int)$form['cl']
+        );
+        if(!$verificacionRecaudacion['ok']){
+            return $this->responderAgregarTramiteApostilla($form,false,(string)$verificacionRecaudacion['message'],$codApos);
+        }
 
-        $duplicado=DB::table('apostilla.detalle_apostilla')
-            ->where('dapo_valorado_preimpreso','=',$preimpreso)
-            ->where('dapo_valorado_gestion','=',$gestion_valorado)
-            ->count();
-        if($duplicado<1){
-            if($tramite_apostilla->apos_estado<=1){
-                if($tramite_apostilla->apos_estado==0){
-                    $tramite_apostilla->apos_estado=1;
+        $codLisFinal=(int)($verificacionRecaudacion['tipo_apostilla_sugerido'] ?? $form['cl']);
+        $apostilla=Lista_doc_apostilla::find($codLisFinal);
+        if(!$apostilla){
+            return $this->responderAgregarTramiteApostilla($form,false,'No se encontró el tipo de trámite apostilla sugerido por la boleta.',$codApos);
+        }
+
+        $controlIngresado=trim((string)$form['nro_control']);
+        if($controlIngresado===''){
+            return $this->responderAgregarTramiteApostilla($form,false,'Debe ingresar el número de control del pago.',$codApos);
+        }
+
+        $gestion_valorado=$this->extraerGestionDesdeFechaPagoApostilla((string)($verificacionRecaudacion['fecha_pago'] ?? ''));
+        if($gestion_valorado===''){
+            $gestion_valorado=(string)$form['gestion_valorado'];
+        }
+        if(trim($gestion_valorado)===''){
+            return $this->responderAgregarTramiteApostilla($form,false,'No se pudo determinar la gestión del valorado desde la API de recaudaciones.',$codApos);
+        }
+
+        if($tramite_apostilla->apos_estado<=1){
+            if($tramite_apostilla->apos_estado==0){
+                $tramite_apostilla->apos_estado=1;
+                $tramite_apostilla->save();
+            }
+            $uuid=(String)Str::uuid();
+            $maximo=DB::select('select max(dapo_numero) as max from apostilla.detalle_apostilla');
+            $numero=1;
+            if($maximo[0]->max){
+                $numero=((int)$maximo[0]->max+1);
+            }
+
+            $documento=Detalle_apostilla::create([
+                'cod_dapo'=>$uuid,
+                'cod_apos'=>$form['ca'],
+                'cod_lis'=>$codLisFinal,
+                'dapo_fecha_ingreso'=>date('d/m/Y'),
+                'dapo_hab'=>'t',
+                'dapo_numero'=>$numero,
+            ]);
+
+            if(isset($form['numero'])){
+                $documento->dapo_numero_documento=$form['numero'];
+            }
+            if(isset($form['gestion'])){
+                $documento->dapo_gestion_documento=$form['gestion'];
+            }
+
+            $documento->dapo_valorado_preimpreso=$controlIngresado;
+            $documento->dapo_valorado_gestion=$gestion_valorado;
+
+            $documento->dapo_buscar_en=$apostilla->lis_tipo;
+            $documento->save();
+
+            $errorUso='';
+            if(!$this->registrarUsoRecaudacionApostilla($verificacionRecaudacion,(int)$tramite_apostilla->apos_numero,(int)$documento->dapo_numero,$errorUso)){
+                $documento->delete();
+                $detallesRestantes=Detalle_apostilla::where('cod_apos','=',$tramite_apostilla->cod_apos)->first();
+                if(!$detallesRestantes){
+                    $tramite_apostilla->apos_estado=0;
                     $tramite_apostilla->save();
                 }
-                $uuid=(String)Str::uuid();
-                $maximo=DB::select('select max(dapo_numero) as max from apostilla.detalle_apostilla');
-                $numero=1;
-                if($maximo[0]->max){
-                    $numero=((int)$maximo[0]->max+1);
-                }
-
-
-
-                $documento=Detalle_apostilla::create([
-                    'cod_dapo'=>$uuid,
-                    'cod_apos'=>$form['ca'],
-                    'cod_lis'=>$form['cl'],
-                    'dapo_fecha_ingreso'=>date('d/m/Y'),
-                    'dapo_hab'=>'t',
-                    'dapo_numero'=>$numero,
-                ]);
-
-                if(isset($form['numero'])){
-                    $documento->dapo_numero_documento=$form['numero'];
-                }
-                if(isset($form['gestion'])){
-                    $documento->dapo_gestion_documento=$form['gestion'];
-                }
-
-                if(isset($form['preimpreso'])){
-                    $documento->dapo_valorado_preimpreso=$form['preimpreso'];
-                }
-                if(isset($form['gestion_valorado'])){
-                    $documento->dapo_valorado_gestion=$form['gestion_valorado'];
-                }
-
-
-                $documento->dapo_buscar_en=$apostilla->lis_tipo;
-                $documento->save();
-
-                $nuevo=json_encode($documento);
-                SessionController::write('C','',$nuevo,'detalle_apostilla','4',$documento->cod_dapo);
-
-                \Session::flash('exitoagregar','Se ha agragado el tramite correctamente');
-                return redirect('ajax tabla agregar/'.$form['ca']);
-            }else{
-                \Session::flash('erroragregar','No se puede agregar mas documentos');
-                return redirect('ajax tabla agregar/'.$form['ca']);
+                return $this->responderAgregarTramiteApostilla($form,false,$errorUso,$codApos);
             }
+
+            $nuevo=json_encode($documento);
+            SessionController::write('C','',$nuevo,'detalle_apostilla','4',$documento->cod_dapo);
+
+            return $this->responderAgregarTramiteApostilla($form,true,'Se ha agregado el trámite correctamente',$codApos);
         }else{
-            \Session::flash('erroragregar','El número de valorado ya existe');
-            return redirect('ajax tabla agregar/'.$form['ca']);
+            return $this->responderAgregarTramiteApostilla($form,false,'No se puede agregar más documentos',$codApos);
         }
     }
+
+    private function responderAgregarTramiteApostilla(Request $request, bool $ok, string $message, int $codApos)
+    {
+        if($request->ajax() || $request->expectsJson()){
+            return response()->json([
+                'ok'=>$ok,
+                'message'=>$message,
+                'cod_apos'=>$codApos,
+            ],$ok ? 200 : 422);
+        }
+
+        if($ok){
+            \Session::flash('exitoagregar',$message);
+        }else{
+            \Session::flash('erroragregar',$message);
+        }
+
+        return redirect('ajax tabla agregar/'.$codApos);
+    }
+
+    public function validar_valorado_recaudaciones_apostilla(Request $request, $cod_apos)
+    {
+        $data=$request->validate([
+            'nro_control'=>['required','integer'],
+            'cod_lis'=>['required','integer'],
+        ]);
+
+        $tramiteApostilla=Apostilla::find($cod_apos);
+        if(!$tramiteApostilla || !$tramiteApostilla->id_per){
+            return response()->json([
+                'ok'=>false,
+                'message'=>'Debe registrar primero los datos personales del trámite.',
+            ],422);
+        }
+
+        $persona=Persona::find($tramiteApostilla->id_per);
+        if(!$persona || trim((string)$persona->per_ci)===''){
+            return response()->json([
+                'ok'=>false,
+                'message'=>'El CI no es válido para consultar.',
+            ],422);
+        }
+
+        $validacion=$this->validarRecaudacionApostilla(
+            (string)$data['nro_control'],
+            (string)$persona->per_ci,
+            (int)$tramiteApostilla->id_per,
+            (int)$data['cod_lis']
+        );
+
+        if(!$validacion['ok']){
+            return response()->json($validacion,422);
+        }
+        $respuesta=$validacion;
+        unset($respuesta['ci']);
+        return response()->json($respuesta);
+    }
+
     public function ajax_tabla_agregar($cod_apos){
         $detalle_apostilla=DB::table('apostilla.detalle_apostilla')
             ->join('apostilla.lista_doc_apostilla','detalle_apostilla.cod_lis','=','lista_doc_apostilla.cod_lis')
@@ -830,6 +918,402 @@ class ApostillaController extends Controller
             return view('apostilla.reporte.panel_estadistico_apostilla',compact('resultado','fecha','fecha_final','documento','mensaje','form'));
         }
 
+    }
+
+    private function validarRecaudacionApostilla(
+        string $nroControl,
+        string $ci,
+        int $idPer,
+        int $codLis
+    ): array
+    {
+        $ciSistemaRaw=trim($ci);
+        $ciConsulta=$ciSistemaRaw;
+
+        $consultaRecaudacion=$this->consultarRecaudacionDesdeEndpointExistente((int)$nroControl,$ciConsulta);
+        if(!$consultaRecaudacion['ok']){
+            return $consultaRecaudacion;
+        }
+        $lista=$consultaRecaudacion['lista'];
+
+        $persona = Persona::find($idPer);
+        $nombreSistemaNormalizado='';
+        if($persona){
+            $nombreSistemaNormalizado=$this->normalizarTexto(($persona->per_apellido ?? '').' '.($persona->per_nombre ?? ''));
+        }
+
+        $tramiteSeleccionado = Lista_doc_apostilla::find($codLis);
+        $usoEncontrado=null;
+        $mensajeCuentaInvalida='';
+        $detalleCi='';
+        $detalleNombre='';
+
+        foreach($lista as $fila){
+            $ciFila=(string)($fila['documento'] ?? '');
+            if(trim($ciFila)!==$ciSistemaRaw){
+                if($detalleCi===''){
+                    $detalleCi='(Recaudación: '.$ciFila.' | Trámite: '.$ciSistemaRaw.')';
+                }
+                continue;
+            }
+
+            $nombreR=trim(($fila['apellido_1'] ?? '').' '.($fila['apellido_2'] ?? '').' '.($fila['nombre_1'] ?? '').' '.($fila['nombre_2'] ?? ''));
+            $nombreRecaudacionNormalizado=$this->normalizarTexto($nombreR);
+            if($nombreSistemaNormalizado!=='' && $nombreSistemaNormalizado!==$nombreRecaudacionNormalizado){
+                if($detalleNombre===''){
+                    $detalleNombre='(Recaudación: '.$nombreR.' | Datos: '.$nombreSistemaNormalizado.')';
+                }
+                continue;
+            }
+
+            $codigoCuenta=(string)($fila['codigo_cuenta'] ?? '');
+            $tramiteSugerido=$this->buscarTramiteApostillaPorCuenta($codigoCuenta);
+            if(!$tramiteSugerido){
+                $mensajeCuentaInvalida='La cuenta del valorado no corresponde al tipo de trámite actual.';
+                continue;
+            }
+
+            $preimpresoApi=$this->valorPreimpresoFila((array)$fila);
+            $fechaPago=(string)($fila['fecha'] ?? '');
+
+            $usoCombinacion=$this->buscarUsoPagoPorCombinacionApostilla(
+                $nombreR,
+                $ciSistemaRaw,
+                (string)$nroControl,
+                (string)$preimpresoApi,
+                $fechaPago
+            );
+            if($usoCombinacion){
+                $usoEncontrado=$usoCombinacion;
+                continue;
+            }
+
+            $tipoAjustado=($tramiteSeleccionado && (int)$tramiteSeleccionado->cod_lis!==(int)$tramiteSugerido->cod_lis);
+            return [
+                'ok' => true,
+                'nro_control' => $nroControl,
+                'ci' => $ciSistemaRaw,
+                'nombre_recaudaciones' => $nombreR,
+                'identificador' => $fila['identificador'] ?? '',
+                'fecha_pago' => $fechaPago,
+                'cajero' => $fila['cajero'] ?? '',
+                'codigo_cuenta' => $codigoCuenta,
+                'cuenta' => $fila['cuenta'] ?? '',
+                'monto' => $fila['total'] ?? '',
+                'control' => (string)$nroControl,
+                'preimpreso' => (string)$preimpresoApi,
+                'tipo_apostilla_sugerido' => (int)$tramiteSugerido->cod_lis,
+                'nombre_tipo_apostilla_sugerido' => (string)$tramiteSugerido->lis_nombre,
+                'tipo_apostilla_ajustado' => $tipoAjustado,
+            ];
+        }
+
+        if($usoEncontrado){
+            return $this->respuestaErrorValidacionApostilla(
+                'BOLETA_YA_USADA',
+                $this->mensajePagoYaUsadoApostilla($usoEncontrado)
+            );
+        }
+        if($mensajeCuentaInvalida!==''){
+            return $this->respuestaErrorValidacionApostilla(
+                'BOLETA_NO_CORRESPONDE_TRAMITE',
+                $mensajeCuentaInvalida
+            );
+        }
+        if($detalleCi!==''){
+            return $this->respuestaErrorValidacionApostilla(
+                'BOLETA_NO_PERTENECE_PERSONA',
+                'La boleta no pertenece a la persona del tramite.',
+                ['detalle'=>$detalleCi]
+            );
+        }
+        if($detalleNombre!==''){
+            return $this->respuestaErrorValidacionApostilla(
+                'BOLETA_NO_PERTENECE_PERSONA',
+                'La boleta no corresponde a los datos de la persona del tramite.',
+                ['detalle'=>$detalleNombre]
+            );
+        }
+
+        return $this->respuestaErrorValidacionApostilla(
+            'BOLETA_NO_VALIDA',
+            'Boleta no valida para este tramite.'
+        );
+    }
+
+    private function consultarRecaudacionDesdeEndpointExistente(int $recibo, string $documento): array
+    {
+        try{
+            $request=Request::create('/api/recaudaciones/buscar-control-documento','POST',[
+                'unidad'=>122,
+                'recibo'=>$recibo,
+                'documento'=>$documento,
+            ]);
+
+            $response=app(RecaudacionesController::class)->buscarPorControlYDocumento($request);
+        }catch(\Throwable $e){
+            return $this->respuestaErrorValidacionApostilla(
+                'API_NO_DISPONIBLE',
+                'No se pudo conectar con recaudaciones. Intente nuevamente en unos minutos.'
+            );
+        }
+
+        if(!($response instanceof \Illuminate\Http\JsonResponse)){
+            return $this->respuestaErrorValidacionApostilla(
+                'API_RESPUESTA_INVALIDA',
+                'No se pudo validar la boleta en recaudaciones. Intente nuevamente.'
+            );
+        }
+
+        $json=$response->getData(true);
+        if(!is_array($json) || !($json['ok'] ?? false)){
+            $msg=(string)($json['message'] ?? '');
+            $errMap=$this->mapearMensajeErrorRecaudacionApostilla($msg);
+            return $this->respuestaErrorValidacionApostilla($errMap['code'],$errMap['message']);
+        }
+
+        $data=(array)($json['data'] ?? []);
+        $lista=$data['data']['result'] ?? [];
+        if(sizeof($lista)===0){
+            $lista=$data['result'] ?? [];
+        }
+
+        if(!is_array($lista) || sizeof($lista)==0){
+            return $this->respuestaErrorValidacionApostilla(
+                'BOLETA_NO_EXISTE',
+                'Boleta no valida o no existe. Revise el numero de control.'
+            );
+        }
+
+        return [
+            'ok'=>true,
+            'lista'=>$lista,
+        ];
+    }
+
+    private function respuestaErrorValidacionApostilla(string $code, string $message, array $extra=[]): array
+    {
+        return array_merge([
+            'ok'=>false,
+            'code'=>$code,
+            'message'=>$message,
+        ],$extra);
+    }
+
+    private function mapearMensajeErrorRecaudacionApostilla(string $mensajeApi): array
+    {
+        $mensajeApi=trim($mensajeApi);
+        $msgNorm=mb_strtolower($mensajeApi);
+
+        if($mensajeApi==='' || strpos($msgNorm,'not found')!==false || strpos($msgNorm,'no se encuentra')!==false || strpos($msgNorm,'no encontrado')!==false){
+            return [
+                'code'=>'BOLETA_NO_EXISTE',
+                'message'=>'Boleta no valida o no existe. Revise el numero de control.',
+            ];
+        }
+
+        if(strpos($msgNorm,'documento')!==false || strpos($msgNorm,'ci')!==false || strpos($msgNorm,'identidad')!==false){
+            return [
+                'code'=>'BOLETA_NO_PERTENECE_PERSONA',
+                'message'=>'La boleta no pertenece a la persona del tramite.',
+            ];
+        }
+
+        if(strpos($msgNorm,'cuenta')!==false || strpos($msgNorm,'tramite')!==false || strpos($msgNorm,'trámite')!==false){
+            return [
+                'code'=>'BOLETA_NO_CORRESPONDE_TRAMITE',
+                'message'=>'La boleta no corresponde al tramite de apostilla seleccionado.',
+            ];
+        }
+
+        return [
+            'code'=>'BOLETA_NO_VALIDA',
+            'message'=>'Boleta no valida. Verifique los datos e intente nuevamente.',
+        ];
+    }
+
+    private function buscarTramiteApostillaPorCuenta(string $codigoCuenta): ?Lista_doc_apostilla
+    {
+        $cuentaPago=$this->normalizarNumero($codigoCuenta);
+        if($cuentaPago===''){
+            return null;
+        }
+
+        $lista=Lista_doc_apostilla::where('lis_hab','=','t')->get();
+        foreach($lista as $item){
+            $cuentaItem=$this->normalizarNumero((string)($item->lis_cuenta ?? ''));
+            if($cuentaItem!=='' && $cuentaItem===$cuentaPago){
+                return $item;
+            }
+        }
+
+        return null;
+    }
+
+    private function registrarUsoRecaudacionApostilla(array $validacion, int $codTra, int $codDtra, string &$error): bool
+    {
+        $error='';
+        if(!Schema::hasTable('recaudacion_usos')){
+            $error='No se puede continuar: falta la tabla de bloqueo de pagos (migración pendiente).';
+            Log::critical('Bloqueo de recaudación deshabilitado por migración faltante en apostilla.',[
+                'tabla'=>'recaudacion_usos',
+                'cod_tra'=>$codTra,
+                'cod_dtra'=>$codDtra,
+            ]);
+            return false;
+        }
+
+        $identificador=trim((string)($validacion['identificador'] ?? ''));
+        if($identificador===''){
+            $error='No se pudo registrar el uso del pago: identificador vacío';
+            return false;
+        }
+
+        $usoCombinacion=$this->buscarUsoPagoPorCombinacionApostilla(
+            (string)($validacion['nombre_recaudaciones'] ?? ''),
+            (string)($validacion['ci'] ?? ''),
+            (string)($validacion['control'] ?? ''),
+            (string)($validacion['preimpreso'] ?? ''),
+            (string)($validacion['fecha_pago'] ?? '')
+        );
+        if($usoCombinacion){
+            $error='Este pago ya se usó (misma combinación de nombre, impreso, control y fecha).';
+            return false;
+        }
+
+        try{
+            DB::table('recaudacion_usos')->insert([
+                'identificador'=>$identificador,
+                'recibo'=>(string)($validacion['control'] ?? ''),
+                'preimpreso'=>(string)($validacion['preimpreso'] ?? ''),
+                'fecha_pago'=>(string)($validacion['fecha_pago'] ?? ''),
+                'documento'=>(string)($validacion['ci'] ?? ''),
+                'nombre_persona'=>(string)($validacion['nombre_recaudaciones'] ?? ''),
+                'cajero'=>(string)($validacion['cajero'] ?? ''),
+                'cod_tra'=>$codTra,
+                'cod_dtra'=>$codDtra,
+                'usuario_registro'=>Auth::check() ? Auth::user()->name : 'sistema',
+                'created_at'=>now(),
+                'updated_at'=>now(),
+            ]);
+        }catch(\Throwable $e){
+            $error='No se guardó el bloqueo. Intente de nuevo.';
+            Log::error('Error al registrar uso de recaudación en apostilla.',[
+                'cod_tra'=>$codTra,
+                'cod_dtra'=>$codDtra,
+                'identificador'=>$identificador,
+                'error'=>$e->getMessage(),
+            ]);
+            return false;
+        }
+
+        return true;
+    }
+
+    private function buscarUsoPagoPorCombinacionApostilla(string $nombrePersona, string $documento, string $recibo, string $preimpreso, string $fechaPago)
+    {
+        if(!Schema::hasTable('recaudacion_usos')){
+            return null;
+        }
+
+        if(trim($recibo)==='' || trim($fechaPago)===''){
+            return null;
+        }
+
+        $query=DB::table('recaudacion_usos')
+            ->where('recibo','=',trim($recibo))
+            ->where('fecha_pago','=',trim($fechaPago));
+
+        $documento=trim($documento);
+        if($documento!==''){
+            $query->where('documento','=',$documento);
+        }
+
+        $preimpreso=trim($preimpreso);
+        if($preimpreso!==''){
+            $query->where('preimpreso','=',$preimpreso);
+        }
+
+        $usos=$query->get();
+        if($usos->isEmpty()){
+            return null;
+        }
+
+        $nombreNormalizado=$this->normalizarTexto($nombrePersona);
+        foreach($usos as $uso){
+            $nombreGuardado=$this->normalizarTexto((string)($uso->nombre_persona ?? ''));
+            if($nombreNormalizado!=='' && $nombreGuardado!==$nombreNormalizado){
+                continue;
+            }
+            return $uso;
+        }
+
+        return null;
+    }
+
+    private function mensajePagoYaUsadoApostilla(object $usoPago): string
+    {
+        $nombrePersona=trim((string)($usoPago->nombre_persona ?? ''));
+        $ciPersona=trim((string)($usoPago->documento ?? ''));
+        $fechaUso=trim((string)($usoPago->created_at ?? ''));
+
+        if($fechaUso!==''){
+            $timestamp=strtotime($fechaUso);
+            if($timestamp!==false){
+                $fechaUso=date('d/m/Y H:i', $timestamp);
+            }
+        }
+
+        $mensaje='Este pago ya fue utilizado';
+        if($nombrePersona!=='' || $ciPersona!==''){
+            $mensaje.=' a nombre de '.$nombrePersona;
+            if($ciPersona!==''){
+                $mensaje.=' (CI '.$ciPersona.')';
+            }
+        }
+        if($fechaUso!==''){
+            $mensaje.=' el '.$fechaUso;
+        }
+
+        return $mensaje;
+    }
+
+    private function valorPreimpresoFila(array $fila): string
+    {
+        $keys=['preimpreso','nro_preimpreso','numero_preimpreso','pre_impreso'];
+        foreach($keys as $key){
+            if(isset($fila[$key]) && (string)$fila[$key]!==''){
+                return (string)$fila[$key];
+            }
+        }
+        return '';
+    }
+
+    private function normalizarNumero(string $valor): string
+    {
+        return preg_replace('/\D+/', '', trim($valor)) ?? '';
+    }
+
+    private function normalizarTexto(string $valor): string
+    {
+        $valor=mb_strtoupper(trim($valor));
+        $valor=str_replace(['Á','É','Í','Ó','Ú'],['A','E','I','O','U'],$valor);
+        $valor=preg_replace('/\s+/', ' ', $valor);
+        return (string)$valor;
+    }
+
+    private function extraerGestionDesdeFechaPagoApostilla(string $fechaPago): string
+    {
+        $fechaPago=trim($fechaPago);
+        if($fechaPago===''){
+            return '';
+        }
+
+        if(preg_match('/(19|20)\d{2}/',$fechaPago,$m)){
+            return (string)$m[0];
+        }
+
+        return '';
     }
 
     public function construirFecha($dia,$mes,$gestion,$final){

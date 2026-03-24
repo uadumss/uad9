@@ -21,6 +21,7 @@ Route::group(['middleware'=>['permission:acceso al sistema - apo']],function(){
 
     //===========================TRAMITES DE APOSTILLA
     Route::get('agregar tramite lista apostilla/{cod_lis}/{cod_apos}',[ApostillaController::class,'fe_agregar_tramite_apostilla'])->middleware(['permission:agregar documento - apo']);
+    Route::post('validar valorado apostilla/{cod_apos}',[ApostillaController::class,'validar_valorado_recaudaciones_apostilla'])->middleware(['permission:agregar documento - apo']);
     Route::post('guardar agregar tramite apostilla',[ApostillaController::class,'g_agregar_tramite_apostilla'])->middleware(['permission:agregar documento - apo']);
     Route::get('ajax tabla agregar/{cod_apos}',[ApostillaController::class,'ajax_tabla_agregar']);//->middleware(['permission:agregar documento - apo|quitar doumento - apo']);
 
