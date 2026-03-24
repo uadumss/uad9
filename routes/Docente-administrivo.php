@@ -8,6 +8,7 @@ Route::group(['middleware'=>['permission:acceder al sistema - dya']],function(){
     Route::get('listar funcionario/{funcionario}',[FuncionarioController::class,'l_funcionario']);
     Route::get('fe_funcionario/{cod_fun}',[FuncionarioController::class,'fe_funcionario']);
     Route::post('g_funcionario',[FuncionarioController::class,'g_funcionario']);
+    Route::post('verificar-duplicado-funcionario',[FuncionarioController::class,'verificarDuplicado']);
     Route::get('fe_eliminar funcionario/{cod_fun}',[FuncionarioController::class,'fe_eli_funcionario']);
     Route::post('eli_funcionario',[FuncionarioController::class,'eli_funcionario']);
     Route::get('fe_presentar folder/{cod_fun}',[FuncionarioController::class,'fe_presentar_folder']);
