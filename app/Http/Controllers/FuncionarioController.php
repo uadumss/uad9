@@ -16,13 +16,28 @@ use Maatwebsite\Excel\Excel;
 
 class FuncionarioController extends Controller
 {
-    public function l_funcionario($funcionario){
-        $tipoFun=$funcionario=='docente'? 'D':'A';
-        $funcionarios=DB::table('doc_adm.funcionarios')->where('fun_doc_adm','=',$tipoFun)
-            ->orWhere('fun_doc_adm','=','E')
-            ->orderBy('fun_nombre')->get();
+    public function l_funcionario($funcionario, Request $request){
+        $tipoFun = $funcionario=='docente' ? 'D' : 'A';
+        $search = trim($request->input('q',''));
 
-        return view('funcionario.l_funcionario',compact('funcionarios','tipoFun','funcionario'));
+        $funcionarios = DB::table('doc_adm.funcionarios')
+            ->select('cod_fun','fun_nombre','fun_ci','fun_sexo','fun_telefonos','fun_email','fun_fecha_ingreso','fun_nacionalidad','cod_nac','fun_obs','fun_folder')
+            ->where(function($query) use ($tipoFun) {
+                $query->where('fun_doc_adm','=',$tipoFun)
+                    ->orWhere('fun_doc_adm','=','E');
+            })
+            ->when($search, function($query, $search){
+                $query->where(function($query) use ($search){
+                    $query->where('fun_nombre','ilike','%'.$search.'%')
+                          ->orWhere('fun_ci','ilike','%'.$search.'%')
+                          ->orWhere('fun_email','ilike','%'.$search.'%');
+                });
+            })
+            ->orderBy('fun_nombre')
+            ->paginate(200)
+            ->appends(['q'=>$search]);
+
+        return view('funcionario.l_funcionario',compact('funcionarios','tipoFun','funcionario','search'));
     }
     public function fe_funcionario($cod_fun){
         $funcionario='';
@@ -48,10 +63,27 @@ class FuncionarioController extends Controller
     }
     public function g_funcionario(Request $form){
 
+        // Normalizar CI y validar clave única por CI + tipo de funcionario
+        $ci = strtoupper(trim($form['ci']));
+        $tipo = $form['tipo'];
+        $idActual = $form->input('cf', 0);
+
+        $duplicado = Funcionario::where(DB::raw('UPPER(fun_ci)'), $ci)
+            ->where('fun_doc_adm', $tipo)
+            ->when($idActual, function($query, $idActual){
+                return $query->where('cod_fun', '<>', $idActual);
+            })
+            ->exists();
+
+        if($duplicado){
+            \Session::flash('error', 'Ya existe un funcionario con ese CI y tipo.');
+            return redirect()->back()->withInput();
+        }
+
         if(isset($form['cf'])){
             $funcionario=Funcionario::find($form['cf']);
             $funcionario->fun_nombre=$form['nombre'];
-            $funcionario->fun_ci=$form['ci'];
+            $funcionario->fun_ci=$ci;
             $funcionario->fun_sexo=$form['sexo'];
             $funcionario->fun_telefonos=$form['telefonos'];
             $funcionario->fun_email=$form['email'];
@@ -83,7 +115,7 @@ class FuncionarioController extends Controller
             }
             $funcionario=Funcionario::create([
                 'fun_nombre'=>$form['nombre'],
-                'fun_ci'=>$form['ci'],
+                'fun_ci'=>$ci,
                 'fun_sexo'=>$form['sexo'],
                 'fun_telefonos'=>$form['telefonos'],
                 'fun_email'=>$form['email'],
@@ -478,5 +510,52 @@ class FuncionarioController extends Controller
         ];
         
         return $nombres[$codigo] ?? $codigo;
+    }
+
+    public function verificarDuplicado(Request $request){
+        $ci = strtoupper(trim($request->input('ci', '')));
+        $tipo = $request->input('tipo', '');
+        $idActual = $request->input('id_actual', 0);
+
+        if(empty($ci) || empty($tipo)){
+            return response()->json(['existe' => false]);
+        }
+
+        $existe = Funcionario::where(DB::raw('UPPER(fun_ci)'), $ci)
+            ->where('fun_doc_adm', $tipo)
+            ->when($idActual, function($query, $idActual){
+                return $query->where('cod_fun', '<>', $idActual);
+            })
+            ->exists();
+
+        if($existe){
+            return response()->json(['existe' => true]);
+        }
+
+        // Verificar si existe con CI pero diferente tipo
+        $funcionarioExistente = Funcionario::where(DB::raw('UPPER(fun_ci)'), $ci)
+            ->where('fun_doc_adm', '<>', $tipo)
+            ->first();
+
+        if($funcionarioExistente){
+            return response()->json([
+                'existe' => false,
+                'autocompletar' => true,
+                'datos' => [
+                    'nombre' => $funcionarioExistente->fun_nombre,
+                    'sexo' => $funcionarioExistente->fun_sexo,
+                    'telefonos' => $funcionarioExistente->fun_telefonos,
+                    'email' => $funcionarioExistente->fun_email,
+                    'fecha_ingreso' => $funcionarioExistente->fun_fecha_ingreso,
+                    'nacionalidad' => $funcionarioExistente->fun_nacionalidad,
+                    'cod_nac' => $funcionarioExistente->cod_nac,
+                    'facultad' => $funcionarioExistente->fun_facultad,
+                    'carrera' => $funcionarioExistente->fun_carrera,
+                    'observacion' => $funcionarioExistente->fun_obs_personal
+                ]
+            ]);
+        }
+
+        return response()->json(['existe' => false]);
     }
 }
