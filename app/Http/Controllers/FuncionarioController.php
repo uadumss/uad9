@@ -379,6 +379,7 @@ class FuncionarioController extends Controller
                         'tipo' => $doc->doc_tipo,
                         'universidad' => $doc->doc_universidad,
                         'tipo_universidad' => $tipo_uni,
+                        'edu_superior' => $doc->doc_edu_superior === 't' ? 'Sí' : '',
                         'revalida' => $revalida,
                         'verificado' => $doc->doc_verificado === 't' ? 'Verificado' : 'Pendiente',
                         'fecha_emision' => $doc->doc_fecha_emision ?? ''

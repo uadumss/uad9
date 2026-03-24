@@ -30,6 +30,7 @@ class ExportFuncionarioConsulta implements FromArray,WithHeadings
             'Tipo de Documento',
             'Universidad',
             'Tipo de Universidad',
+            'Educación Superior',
             'Revalidación',
             'Documento Verificado',
             'Documentos Faltantes'
@@ -63,6 +64,7 @@ class ExportFuncionarioConsulta implements FromArray,WithHeadings
                         'tipo_documento' => $doc['tipo'],
                         'universidad' => $doc['universidad'],
                         'tipo_universidad' => $doc['tipo_universidad'],
+                        'edu_superior' => $doc['edu_superior'],
                         'revalida' => $doc['revalida'],
                         'verificado' => $doc['verificado'],
                         'faltantes' => $faltantes
@@ -80,6 +82,7 @@ class ExportFuncionarioConsulta implements FromArray,WithHeadings
                     'tipo_documento' => '',
                     'universidad' => '',
                     'tipo_universidad' => '',
+                    'edu_superior' => '',
                     'revalida' => '',
                     'verificado' => '',
                     'faltantes' => isset($item->estado_carpeta) ? implode(', ', $item->estado_carpeta['faltantes']) : 'Sin documentos'

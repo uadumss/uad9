@@ -37,6 +37,7 @@
                 <th style="width: 12%;">Tipo de Documento</th>
                 <th style="width: 15%;">Universidad</th>
                 <th style="width: 12%;">Tipo de Universidad</th>
+                <th style="width: 12%;">Educación Superior</th>
                 <th style="width: 12%;">Revalidación</th>
                 <th style="width: 12%;">Documento Verificado</th>
             </tr>
@@ -52,7 +53,7 @@
                             <td style="font-weight: bold; color: #0c5460; padding: 10px;">{{ $funcionario_num }}</td>
                             <td colspan="6" style="font-weight: bold; color: #0c5460; padding: 10px;">{{ $f->fun_nombre }} ({{ $f->fun_ci }})</td>
                             <td colspan="3" style="text-align: right; font-weight: bold; color: #0c5460; padding: 10px;">Estado del Folder:</td>
-                            <td colspan="2" style="padding: 10px;">
+                            <td colspan="4" style="padding: 10px;">
                                 @if($f->estado_carpeta['completo'])
                                     <span style="background-color: #d4edda; color: #155724; padding: 5px 10px; border-radius: 4px; font-weight: bold;">COMPLETO</span>
                                 @else
@@ -93,8 +94,9 @@
                             <td>{{ $doc['tipo'] }}</td>
                             <td>{{ $doc['universidad'] }}</td>
                             <td>{{ $doc['tipo_universidad'] }}</td>
+                            <td>{{ $doc['edu_superior'] }}</td>
                             <td @if($doc['revalida'] === 'FALTA REVALIDACION') style="background-color: #ffe6e6; color: #c41e3a; font-weight: bold;" @endif>
-                                {{ $doc['revalida'] === 'FALTA REVALIDACION' ? 'FALTA REVALIDACION' : ($doc['revalida'] !== '' ? $doc['revalida'] : 'N/A') }}
+                                {{ $doc['revalida'] === 'FALTA REVALIDACION' ? 'FALTA REVALIDACION' : $doc['revalida'] }}
                             </td>
                             <td @if($doc['verificado'] === 'Pendiente') style="background-color: #fff3cd; color: #856404; font-weight: bold;" @else style="background-color: #d4edda; color: #155724; font-weight: bold;" @endif>
                                 {{ $doc['verificado'] }}
