@@ -345,10 +345,10 @@ class ApostillaController extends Controller
             return $this->responderAgregarTramiteApostilla($form,false,(string)$verificacionRecaudacion['message'],$codApos);
         }
 
-        $codLisFinal=(int)($verificacionRecaudacion['tipo_apostilla_sugerido'] ?? $form['cl']);
+        $codLisFinal=(int)$form['cl'];
         $apostilla=Lista_doc_apostilla::find($codLisFinal);
         if(!$apostilla){
-            return $this->responderAgregarTramiteApostilla($form,false,'No se encontró el tipo de trámite apostilla sugerido por la boleta.',$codApos);
+            return $this->responderAgregarTramiteApostilla($form,false,'No se encontró el tipo de trámite seleccionado.',$codApos);
         }
 
         $controlIngresado=trim((string)$form['nro_control']);
@@ -947,19 +947,33 @@ class ApostillaController extends Controller
         $mensajeCuentaInvalida='';
         $detalleCi='';
         $detalleNombre='';
+        $hayDatosPersonaRecaudacion=false;
+        $hayNombreRecaudacion=false;
 
         foreach($lista as $fila){
-            $ciFila=(string)($fila['documento'] ?? '');
-            if(trim($ciFila)!==$ciSistemaRaw){
+            $ciFila=trim((string)($fila['documento'] ?? ''));
+            $nombreR=trim(($fila['apellido_1'] ?? '').' '.($fila['apellido_2'] ?? '').' '.($fila['nombre_1'] ?? '').' '.($fila['nombre_2'] ?? ''));
+
+            if($ciFila!=='' || $nombreR!==''){
+                $hayDatosPersonaRecaudacion=true;
+            }
+            if($nombreR!==''){
+                $hayNombreRecaudacion=true;
+            }
+
+            if($ciFila===''){
+                continue;
+            }
+
+            if($ciFila!==$ciSistemaRaw){
                 if($detalleCi===''){
                     $detalleCi='(Recaudación: '.$ciFila.' | Trámite: '.$ciSistemaRaw.')';
                 }
                 continue;
             }
 
-            $nombreR=trim(($fila['apellido_1'] ?? '').' '.($fila['apellido_2'] ?? '').' '.($fila['nombre_1'] ?? '').' '.($fila['nombre_2'] ?? ''));
             $nombreRecaudacionNormalizado=$this->normalizarTexto($nombreR);
-            if($nombreSistemaNormalizado!=='' && $nombreSistemaNormalizado!==$nombreRecaudacionNormalizado){
+            if($nombreR!=='' && $nombreSistemaNormalizado!=='' && $nombreSistemaNormalizado!==$nombreRecaudacionNormalizado){
                 if($detalleNombre===''){
                     $detalleNombre='(Recaudación: '.$nombreR.' | Datos: '.$nombreSistemaNormalizado.')';
                 }
@@ -970,6 +984,11 @@ class ApostillaController extends Controller
             $tramiteSugerido=$this->buscarTramiteApostillaPorCuenta($codigoCuenta);
             if(!$tramiteSugerido){
                 $mensajeCuentaInvalida='La cuenta del valorado no corresponde al tipo de trámite actual.';
+                continue;
+            }
+
+            if($tramiteSeleccionado && (int)$tramiteSeleccionado->cod_lis!==(int)$tramiteSugerido->cod_lis){
+                $mensajeCuentaInvalida='El pago no corresponde al trámite seleccionado.';
                 continue;
             }
 
@@ -988,7 +1007,6 @@ class ApostillaController extends Controller
                 continue;
             }
 
-            $tipoAjustado=($tramiteSeleccionado && (int)$tramiteSeleccionado->cod_lis!==(int)$tramiteSugerido->cod_lis);
             return [
                 'ok' => true,
                 'nro_control' => $nroControl,
@@ -1002,9 +1020,6 @@ class ApostillaController extends Controller
                 'monto' => $fila['total'] ?? '',
                 'control' => (string)$nroControl,
                 'preimpreso' => (string)$preimpresoApi,
-                'tipo_apostilla_sugerido' => (int)$tramiteSugerido->cod_lis,
-                'nombre_tipo_apostilla_sugerido' => (string)$tramiteSugerido->lis_nombre,
-                'tipo_apostilla_ajustado' => $tipoAjustado,
             ];
         }
 
@@ -1020,24 +1035,24 @@ class ApostillaController extends Controller
                 $mensajeCuentaInvalida
             );
         }
-        if($detalleCi!==''){
-            return $this->respuestaErrorValidacionApostilla(
-                'BOLETA_NO_PERTENECE_PERSONA',
-                'La boleta no pertenece a la persona del tramite.',
-                ['detalle'=>$detalleCi]
-            );
-        }
-        if($detalleNombre!==''){
+        if($detalleNombre!=='' && $hayNombreRecaudacion){
             return $this->respuestaErrorValidacionApostilla(
                 'BOLETA_NO_PERTENECE_PERSONA',
                 'La boleta no corresponde a los datos de la persona del tramite.',
                 ['detalle'=>$detalleNombre]
             );
         }
+        if($detalleCi!=='' && $hayDatosPersonaRecaudacion){
+            return $this->respuestaErrorValidacionApostilla(
+                'BOLETA_NO_PERTENECE_PERSONA',
+                'La boleta no pertenece a la persona del tramite.',
+                ['detalle'=>$detalleCi]
+            );
+        }
 
         return $this->respuestaErrorValidacionApostilla(
             'BOLETA_NO_VALIDA',
-            'Boleta no valida para este tramite.'
+            'Ingrese un numero de control valido.'
         );
     }
 
@@ -1067,7 +1082,13 @@ class ApostillaController extends Controller
 
         $json=$response->getData(true);
         if(!is_array($json) || !($json['ok'] ?? false)){
-            $msg=(string)($json['message'] ?? '');
+            $msg='';
+            if(is_array($json)){
+                $msg=(string)($json['error']['message'] ?? '');
+                if(trim($msg)===''){
+                    $msg=(string)($json['message'] ?? '');
+                }
+            }
             $errMap=$this->mapearMensajeErrorRecaudacionApostilla($msg);
             return $this->respuestaErrorValidacionApostilla($errMap['code'],$errMap['message']);
         }
@@ -1105,10 +1126,19 @@ class ApostillaController extends Controller
         $mensajeApi=trim($mensajeApi);
         $msgNorm=mb_strtolower($mensajeApi);
 
-        if($mensajeApi==='' || strpos($msgNorm,'not found')!==false || strpos($msgNorm,'no se encuentra')!==false || strpos($msgNorm,'no encontrado')!==false){
+        if(
+            $mensajeApi==='' ||
+            strpos($msgNorm,'not found')!==false ||
+            strpos($msgNorm,'no se encuentra')!==false ||
+            strpos($msgNorm,'no encontrado')!==false ||
+            strpos($msgNorm,'recibo')!==false ||
+            strpos($msgNorm,'control')!==false ||
+            strpos($msgNorm,'valido')!==false ||
+            strpos($msgNorm,'válido')!==false
+        ){
             return [
                 'code'=>'BOLETA_NO_EXISTE',
-                'message'=>'Boleta no valida o no existe. Revise el numero de control.',
+                'message'=>'Ingrese un numero de control valido.',
             ];
         }
 

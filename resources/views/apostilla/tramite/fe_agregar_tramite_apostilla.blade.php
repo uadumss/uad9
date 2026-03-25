@@ -92,11 +92,7 @@
                             <tr>
                                 <th class="text-dark font-italic">Nombre del trámite : </th>
                                 <td class="border-bottom border-dark">
-                                    <select class="custom-select custom-select-sm" data-campo="tipo-apostilla">
-                                        @foreach($lista_apostilla as $item)
-                                            <option value="{{$item->cod_lis}}" @if((int)$item->cod_lis===(int)$cod_lis) selected @endif>{{$item->lis_nombre}}</option>
-                                        @endforeach
-                                    </select>
+                                    <input type="text" class="form-control form-control-sm" value="{{$apostilla->lis_nombre}}" readonly>
                                 </td>
                             </tr>
                             @if($apostilla->lis_tipo=='sid')
@@ -250,7 +246,6 @@
                 setGestionValoradoDesdeAnio(anio);
             }
 
-            autoseleccionarTipoApostilla(resp);
             form.find('input[data-campo="preimpreso-api"]').val(resp.preimpreso || '');
             validacionControlOk=true;
             form.find('[data-campo="validacion-recaudacion-ok"]').val('1');
@@ -280,17 +275,6 @@
                 autocompletarGestionDesdeApi();
             }
         },450);
-    }
-
-    function autoseleccionarTipoApostilla(resp){
-        const select=$('select[data-campo="tipo-apostilla"]');
-        const hidden=$('input[data-campo="tipo-apostilla-hidden"]');
-        if(!select.length || !hidden.length){ return; }
-        const codigo=(resp && resp.tipo_apostilla_sugerido) ? String(resp.tipo_apostilla_sugerido) : '';
-        if(codigo!=='' && select.find('option[value="'+codigo+'"]').length){
-            select.val(codigo);
-            hidden.val(codigo);
-        }
     }
 
     function submitAgregarApostilla(){
@@ -373,14 +357,7 @@
         programarValidacionControlApostilla();
     });
 
-    $(document).on('change','select[data-campo="tipo-apostilla"]',function(){
-        validacionControlOk=false;
-        $('input[data-campo="tipo-apostilla-hidden"]').val($(this).val());
-        $('#form_agregar_tramite').find('[data-campo="validacion-recaudacion-ok"]').val('0');
-        $('#form_agregar_tramite').find('input[data-campo="preimpreso-api"]').val('');
-        $('#form_agregar_tramite').find('input[data-campo="gestion-api"]').val('');
-        $('#validacion-resultado').html('');
-    });
+    // Tipo fijo del trámite en este formulario (comportamiento original).
 </script>
 
 
