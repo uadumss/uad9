@@ -80,11 +80,46 @@ class UniversidadesSeeder extends Seeder
             ['nombre' => 'UNIVERSIDAD TECNOLÓGICA PRIVADA DE SANTA CRUZ', 'sigla' => 'UTEPSA', 'tipo' => 'Privada'],
             ['nombre' => 'UNIVERSIDAD INDÍGENA GUARANÍ APIAGUAIKI TUPA', 'sigla' => 'UNIBOLGUARANI', 'tipo' => 'Privada'],
             ['nombre' => 'UNIVERSIDAD UNIDAD', 'sigla' => 'UUNIDAD', 'tipo' => 'Privada'],
-            ['nombre' => 'HARDVARD', 'sigla' => 'HARDVARD', 'tipo' => 'Extranjera'],
+            
+            // Extranjeras - Latinoamérica
+            ['nombre' => 'UNIVERSIDAD DE BUENOS AIRES', 'sigla' => 'UBA', 'tipo' => 'Extranjera'],
+            ['nombre' => 'PONTIFICIA UNIVERSIDAD CATÓLICA DE CHILE', 'sigla' => 'PUC-CHILE', 'tipo' => 'Extranjera'],
+            ['nombre' => 'UNIVERSIDAD DE SÃO PAULO', 'sigla' => 'USP', 'tipo' => 'Extranjera'],
+            ['nombre' => 'UNIVERSIDAD NACIONAL AUTÓNOMA DE MÉXICO', 'sigla' => 'UNAM', 'tipo' => 'Extranjera'],
+            ['nombre' => 'PONTIFICIA UNIVERSIDAD CATÓLICA DEL PERÚ', 'sigla' => 'PUCP', 'tipo' => 'Extranjera'],
+            ['nombre' => 'UNIVERSIDAD NACIONAL DE COLOMBIA', 'sigla' => 'UNAL', 'tipo' => 'Extranjera'],
+            ['nombre' => 'UNIVERSIDAD DE LOS ANDES COLOMBIA', 'sigla' => 'UNIANDES', 'tipo' => 'Extranjera'],
+            ['nombre' => 'UNIVERSIDADE ESTADUAL DE CAMPINAS', 'sigla' => 'UNICAMP', 'tipo' => 'Extranjera'],
+            ['nombre' => 'INSTITUTO TECNOLÓGICO DE BUENOS AIRES', 'sigla' => 'ITBA', 'tipo' => 'Extranjera'],
+            ['nombre' => 'UNIVERSIDAD NACIONAL DE ASUNCIÓN', 'sigla' => 'UNA', 'tipo' => 'Extranjera'],
+            ['nombre' => 'PONTIFICIA UNIVERSIDAD CATÓLICA DE ARGENTINA', 'sigla' => 'PUC-ARGENTINA', 'tipo' => 'Extranjera'],
+            ['nombre' => 'UNIVERSIDAD DE COSTA RICA', 'sigla' => 'UCR', 'tipo' => 'Extranjera'],
+            ['nombre' => 'UNIVERSIDAD DE CHILE', 'sigla' => 'UCHILE', 'tipo' => 'Extranjera'],
+            
+            // Extranjeras - Internacionales Prestigiosas
+            ['nombre' => 'HARVARD UNIVERSITY', 'sigla' => 'HARVARD', 'tipo' => 'Extranjera'],
+            ['nombre' => 'MASSACHUSETTS INSTITUTE OF TECHNOLOGY', 'sigla' => 'MIT', 'tipo' => 'Extranjera'],
+            ['nombre' => 'STANFORD UNIVERSITY', 'sigla' => 'STANFORD', 'tipo' => 'Extranjera'],
+            ['nombre' => 'UNIVERSITY OF OXFORD', 'sigla' => 'OXFORD', 'tipo' => 'Extranjera'],
+            ['nombre' => 'UNIVERSITY OF CAMBRIDGE', 'sigla' => 'CAMBRIDGE', 'tipo' => 'Extranjera'],
+            ['nombre' => 'YALE UNIVERSITY', 'sigla' => 'YALE', 'tipo' => 'Extranjera'],
+            ['nombre' => 'PRINCETON UNIVERSITY', 'sigla' => 'PRINCETON', 'tipo' => 'Extranjera'],
+            ['nombre' => 'UNIVERSITY OF CHICAGO', 'sigla' => 'UCHICAGO', 'tipo' => 'Extranjera'],
+            ['nombre' => 'IMPERIAL COLLEGE LONDON', 'sigla' => 'ICL', 'tipo' => 'Extranjera'],
+            ['nombre' => 'SWISS FEDERAL INSTITUTE OF TECHNOLOGY ZURICH', 'sigla' => 'ETH-ZURICH', 'tipo' => 'Extranjera'],
+            ['nombre' => 'TECHNISCHE UNIVERSITÄT MÜNCHEN', 'sigla' => 'TUM', 'tipo' => 'Extranjera'],
+            ['nombre' => 'ÉCOLE POLYTECHNIQUE PARIS', 'sigla' => 'POLYTECHNIQUE', 'tipo' => 'Extranjera'],
+            ['nombre' => 'UNIVERSITÉ DE SORBONNE', 'sigla' => 'SORBONNE', 'tipo' => 'Extranjera'],
+            ['nombre' => 'UNIVERSITÀ DI ROMA LA SAPIENZA', 'sigla' => 'SAPIENZA', 'tipo' => 'Extranjera'],
+            ['nombre' => 'UNIVERSITY OF TOKYO', 'sigla' => 'TOKYO', 'tipo' => 'Extranjera'],
+            ['nombre' => 'NATIONAL UNIVERSITY OF SINGAPORE', 'sigla' => 'NUS', 'tipo' => 'Extranjera'],
+            ['nombre' => 'UNIVERSITY OF HONG KONG', 'sigla' => 'HKU', 'tipo' => 'Extranjera'],
+            ['nombre' => 'TSINGHUA UNIVERSITY', 'sigla' => 'TSINGHUA', 'tipo' => 'Extranjera'],
+            ['nombre' => 'PEKING UNIVERSITY', 'sigla' => 'PEKING', 'tipo' => 'Extranjera'],
         ];
 
         foreach ($universidades as $universidad) {
-            Universidad::firstOrCreate(
+            Universidad::updateOrCreate(
                 ['sigla' => $universidad['sigla']],
                 $universidad
             );
