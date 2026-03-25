@@ -528,10 +528,10 @@ class TramiteLegalizacionController extends Controller
         }
 
         if($baseUrl==='' || $token===''){
-            return [
-                'ok'=>false,
-                'message'=>'Sistema no configurado. Contacte al ITS.',
-            ];
+            return $this->respuestaErrorValidacionLegalizacion(
+                'SISTEMA_NO_CONFIGURADO',
+                'Sistema no configurado. Contacte al ITS.'
+            );
         }
 
         try {
@@ -545,27 +545,20 @@ class TramiteLegalizacionController extends Controller
                 'documento'=>$ci,
             ]);
         } catch (\Throwable $e) {
-            return [
-                'ok'=>false,
-                'message'=>'No hay conexión. Intente en unos momentos.',
-            ];
+            return $this->respuestaErrorValidacionLegalizacion(
+                'API_NO_DISPONIBLE',
+                'No se pudo conectar con recaudaciones. Intente nuevamente en unos minutos.'
+            );
         }
 
         if(!$response->successful()){
             $json=$response->json();
-            $errMsg='Control no encontrado.';
-            
-            if(isset($json['error']['message'])){
-                $msg=(string)($json['error']['message'] ?? '');
-                if(stripos($msg,'recibo')!==false || stripos($msg,'no se encuentra')!==false){
-                    $errMsg='Control no encontrado.';
-                }
+            $msg=(string)($json['error']['message'] ?? '');
+            if(trim($msg)===''){
+                $msg=(string)($json['message'] ?? '');
             }
-            
-            return [
-                'ok'=>false,
-                'message'=>$errMsg,
-            ];
+            $errMap=$this->mapearMensajeErrorRecaudacionLegalizacion($msg);
+            return $this->respuestaErrorValidacionLegalizacion($errMap['code'],$errMap['message']);
         }
 
         $json=$response->json();
@@ -574,10 +567,10 @@ class TramiteLegalizacionController extends Controller
             $lista=$json['result'] ?? [];
         }
         if(!is_array($lista) || sizeof($lista)==0){
-            return [
-                'ok'=>false,
-                'message'=>'Control no encontrado. (Revise: escriba bien el número)',
-            ];
+            return $this->respuestaErrorValidacionLegalizacion(
+                'BOLETA_NO_EXISTE',
+                'Ingrese un numero de control valido.'
+            );
         }
 
         $persona=Persona::where('per_ci','=',$ci)->first();
@@ -589,10 +582,10 @@ class TramiteLegalizacionController extends Controller
 
         $candidatos=$this->filtrarFilasRecaudacionPorPreimpreso($lista,$preimpreso);
         if(sizeof($candidatos)===0){
-            return [
-                'ok'=>false,
-                'message'=>'No coincide con sus datos. (El pago existe pero con otro nombre)',
-            ];
+            return $this->respuestaErrorValidacionLegalizacion(
+                'BOLETA_NO_VALIDA',
+                'Boleta no valida para este tramite.'
+            );
         }
 
         $usoEncontrado=null;
@@ -662,38 +655,88 @@ class TramiteLegalizacionController extends Controller
         }
 
         if($usoEncontrado){
-            return [
-                'ok'=>false,
-                'message'=>$this->mensajePagoYaUsado($usoEncontrado),
-            ];
+            return $this->respuestaErrorValidacionLegalizacion(
+                'BOLETA_YA_USADA',
+                $this->mensajePagoYaUsado($usoEncontrado)
+            );
         }
 
         if($mensajeCuentaInvalida!==''){
-            return [
-                'ok'=>false,
-                'message'=>$mensajeCuentaInvalida,
-            ];
+            return $this->respuestaErrorValidacionLegalizacion(
+                'BOLETA_NO_CORRESPONDE_TRAMITE',
+                $mensajeCuentaInvalida
+            );
         }
 
         if($detalleCi!==''){
-            return [
-                'ok'=>false,
-                'message'=>'El CI no coincide.',
-                'detalle'=>$detalleCi,
-            ];
+            return $this->respuestaErrorValidacionLegalizacion(
+                'BOLETA_NO_PERTENECE_PERSONA',
+                'La boleta no pertenece a la persona del trámite.',
+                ['detalle'=>$detalleCi]
+            );
         }
 
         if($detalleNombre!==''){
+            return $this->respuestaErrorValidacionLegalizacion(
+                'BOLETA_NO_PERTENECE_PERSONA',
+                'La boleta no corresponde a los datos de la persona del trámite.',
+                ['detalle'=>$detalleNombre]
+            );
+        }
+
+        return $this->respuestaErrorValidacionLegalizacion(
+            'BOLETA_NO_VALIDA',
+            'Boleta no valida para este tramite.'
+        );
+    }
+
+    private function respuestaErrorValidacionLegalizacion(string $code, string $message, array $extra=[]): array
+    {
+        return array_merge([
+            'ok'=>false,
+            'code'=>$code,
+            'message'=>$message,
+        ],$extra);
+    }
+
+    private function mapearMensajeErrorRecaudacionLegalizacion(string $mensajeApi): array
+    {
+        $mensajeApi=trim($mensajeApi);
+        $msgNorm=mb_strtolower($mensajeApi);
+
+        if(
+            $mensajeApi==='' ||
+            strpos($msgNorm,'not found')!==false ||
+            strpos($msgNorm,'no se encuentra')!==false ||
+            strpos($msgNorm,'no encontrado')!==false ||
+            strpos($msgNorm,'recibo')!==false ||
+            strpos($msgNorm,'control')!==false ||
+            strpos($msgNorm,'valido')!==false ||
+            strpos($msgNorm,'válido')!==false
+        ){
             return [
-                'ok'=>false,
-                'message'=>'El nombre no coincide.',
-                'detalle'=>$detalleNombre,
+                'code'=>'BOLETA_NO_EXISTE',
+                'message'=>'Ingrese un numero de control valido.',
+            ];
+        }
+
+        if(strpos($msgNorm,'documento')!==false || strpos($msgNorm,'ci')!==false || strpos($msgNorm,'identidad')!==false){
+            return [
+                'code'=>'BOLETA_NO_PERTENECE_PERSONA',
+                'message'=>'La boleta no pertenece a la persona del trámite.',
+            ];
+        }
+
+        if(strpos($msgNorm,'cuenta')!==false || strpos($msgNorm,'tramite')!==false || strpos($msgNorm,'trámite')!==false){
+            return [
+                'code'=>'BOLETA_NO_CORRESPONDE_TRAMITE',
+                'message'=>'La boleta no corresponde al trámite seleccionado.',
             ];
         }
 
         return [
-            'ok'=>false,
-            'message'=>'No se encontró una boleta válida disponible para este trámite.',
+            'code'=>'BOLETA_NO_VALIDA',
+            'message'=>'Boleta no valida. Verifique los datos e intente nuevamente.',
         ];
     }
 
