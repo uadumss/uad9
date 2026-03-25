@@ -68,8 +68,8 @@
                             <h5 class="text-white text-center">Lista de <?php echo e($funcionario); ?>s</h5>
                         </div>
 
-                        <form action="<?php echo e(url('listar funcionario/'.$funcionario)); ?>" method="GET" class="form-inline mt-3 mb-3">
-                            <input type="text" name="q" value="<?php echo e(old('q', $search ?? '')); ?>" class="form-control mr-2" placeholder="🔍 Buscar funcionario..." autocomplete="off">
+                        <form id="formBuscador" action="<?php echo e(url('listar funcionario/'.$funcionario)); ?>" method="GET" class="form-inline mt-3 mb-3">
+                            <input type="text" id="buscadorFuncionarios" name="q" value="<?php echo e(old('q', $search ?? '')); ?>" class="form-control mr-2" placeholder="🔍 Buscar funcionario..." autocomplete="off" autofocus>
                             <button type="submit" class="btn btn-sm btn-primary">Buscar</button>
                         </form>
 
@@ -107,17 +107,17 @@
 
 
                                             </td>
-                                            <td><?php echo e($f->fun_nombre); ?>
+                                            <td><?php echo \App\Helpers\UniversidadHelper::highlightText($f->fun_nombre, $search); ?>
 
                                                 <?php if($f->fun_folder!='t'): ?>
                                                     <span class="bg-danger p-1 rounded text-white">*</span>
                                                 <?php endif; ?>
                                             </td>
-                                            <td><?php echo e($f->fun_ci); ?> - <?php echo e($f->cod_fun); ?></td>
+                                            <td><?php echo \App\Helpers\UniversidadHelper::highlightText($f->fun_ci, $search); ?> - <?php echo e($f->cod_fun); ?></td>
                                             <?php $sexo=$f->fun_sexo=='M'?'Masculino':'Femenino' ?>
-                                            <td><?php echo e($sexo); ?></td>
-                                            <td><?php echo e($f->fun_telefonos); ?></td>
-                                            <td><?php echo e($f->fun_email); ?></td>
+                                            <td><?php echo \App\Helpers\UniversidadHelper::highlightText($sexo, $search); ?></td>
+                                            <td><?php echo \App\Helpers\UniversidadHelper::highlightText($f->fun_telefonos, $search); ?></td>
+                                            <td><?php echo \App\Helpers\UniversidadHelper::highlightText($f->fun_email, $search); ?></td>
                                             <td>
                                                 <?php if($f->fun_fecha_ingreso!=''): ?>
                                                     <?php echo e(date('d/m/Y',strtotime($f->fun_fecha_ingreso))); ?>
@@ -125,8 +125,8 @@
                                                 <?php endif; ?>
                                             </td>
                                             <?php $nacionalidad=$f->fun_nacionalidad=='B'?'Boliviano':'Extranjero' ?>
-                                                <td><?php echo e($nacionalidad); ?></td>
-                                            <td><?php echo e($f->cod_nac); ?></td>
+                                                <td><?php echo \App\Helpers\UniversidadHelper::highlightText($nacionalidad, $search); ?></td>
+                                            <td><?php echo \App\Helpers\UniversidadHelper::highlightText($f->cod_nac, $search); ?></td>
                                             <td>
                                                 <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#docente" data-toggle="modal" onclick="cargarDatos('<?php echo e(url('fe_funcionario/'.$f->cod_fun)); ?>','panel_docente')"
                                                    title="Editar funcionario"><i class="fas fa-edit"></i>
@@ -242,27 +242,19 @@
             }
 
             // Buscador de funcionarios
-            document.getElementById('buscadorFuncionarios').addEventListener('keyup', function() {
-                const busqueda = this.value.toLowerCase();
-                const filas = document.querySelectorAll('table tbody tr');
-                let hayCoincidencias = false;
-                
-                filas.forEach(fila => {
-                    const contenido = fila.textContent.toLowerCase();
-                    if (contenido.includes(busqueda)) {
-                        fila.style.display = '';
-                        hayCoincidencias = true;
-                    } else {
-                        fila.style.display = 'none';
-                    }
-                });
-                
-                // Mostrar u ocultar mensaje de sin resultados
-                const mensajeResultados = document.getElementById('mensajeSinResultados');
-                if (!hayCoincidencias && busqueda.length > 0) {
-                    mensajeResultados.style.display = 'block';
-                } else {
-                    mensajeResultados.style.display = 'none';
+            const buscadorInput = document.getElementById('buscadorFuncionarios');
+            const formBuscador = document.getElementById('formBuscador');
+            
+            // Colocar el cursor al final al cargar la página
+            if (buscadorInput.value) {
+                buscadorInput.focus();
+                buscadorInput.setSelectionRange(buscadorInput.value.length, buscadorInput.value.length);
+            }
+            
+            // Si el campo se vacía, recargar automáticamente
+            buscadorInput.addEventListener('keyup', function() {
+                if (this.value.length === 0) {
+                    formBuscador.submit();
                 }
             });
         </script>

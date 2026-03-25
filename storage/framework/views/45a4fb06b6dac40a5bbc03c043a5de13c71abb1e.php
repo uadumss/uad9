@@ -1,4 +1,31 @@
+
 <?php $__env->startSection('contenido'); ?>
+    <style>
+        .table-reporte {
+            border-collapse: collapse;
+            width: 100%;
+            border: 1px solid #dee2e6;
+        }
+        .table-reporte tr {
+            border: 1px solid #dee2e6;
+        }
+        .table-reporte th,
+        .table-reporte td {
+            border: 1px solid #dee2e6 !important;
+            padding: 0.5rem !important;
+            text-align: left;
+        }
+        .table-reporte th {
+            font-weight: 600;
+            background-color: #f8f9fa;
+        }
+        .table-reporte .border-right {
+            border-right: 1px solid #dee2e6 !important;
+        }
+        .table-responsive .table-reporte {
+            margin-bottom: 0;
+        }
+    </style>
     <?php if(Session::has('exito')): ?>
         <div class="alert alert-success alert-dismissible">
             <button type="button" class="close" data-dismiss="alert" aria-label="close">
@@ -63,15 +90,16 @@
                         </div>
                                 <hr class="sidebar-divider">
                         <div class="row">
-                            <div class="col-md-4">
+                            <div class="col-md-12">
                                 <form id="form_reporte" action="<?php echo e(url('procesar reporte dya')); ?>" method="POST">
                                     <?php echo csrf_field(); ?>
                                     <div>
-                                        <div class="bg-info centrar_bloque p-1 col-md-6 rounded shadow">
+                                        <div class="bg-info centrar_bloque p-1 col-md-12 rounded shadow">
                                             <h5 class="text-white text-center">Formulario de reporte</h5>
                                         </div>
                                         <hr class="sidebar-divider"/>
-                                        <table class="table table-sm border-bottom-0">
+                                        <div class="table-responsive">
+                                            <table class="table-reporte">
                                             <tr>
                                                 <td class="text-dark font-italic text-right">Tipo funcionario : </td>
                                                 <td colspan="3">
@@ -319,14 +347,19 @@
                                             <tr>
                                                 <th class="text-right"><span class="text-success font-italic font-weight-bold" style="font-size: 14px;">Reporte excel <i class="fas fa-file-excel"></i> :</span></th>
                                                 <td><input type="checkbox" name="excel" id="excel"></td>
+                                                <td colspan="4" class="text-right pr-3">
+                                                    <button class="btn btn-primary btn-sm" type="button" onclick="enviar('form_reporte','<?php echo e(url('procesar reporte dya')); ?>','panel_reporte')">Generar reporte</button>
+                                                </td>
                                             </tr>
                                         </table>
+                                        </div>
                                     </div>
 
                                 </form>
-                                <button class="btn btn-primary btn-sm" type="button" onclick="enviar('form_reporte','<?php echo e(url('procesar reporte dya')); ?>','panel_reporte')">Generar reporte</button>
                             </div>
-                            <div class="col-md-8 shadow-lg rounded border" id="panel_reporte">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 shadow-lg rounded border p-3 mt-4" id="panel_reporte" style="overflow-x: auto;">
 
                             </div>
                         </div>
