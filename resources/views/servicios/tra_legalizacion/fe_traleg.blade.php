@@ -415,6 +415,7 @@
                                                     <input name="numero" required class="form-control col-md-2 form-control-sm border " pattern="[0-9]{1,6}"> &nbsp;&nbsp;
                                                     / &nbsp;&nbsp;<input name="gestion" required class="form-control col-md-2 form-control-sm border" pattern="[0-9]{1,4}"> &nbsp;&nbsp;(e.j. 1999)
                                                     &nbsp;&nbsp;<a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-campo="estado-sitra-icon" title="No existe en el sitra" onclick="abrirModalSitraFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
+                                                    <span class="ml-1 text-info font-italic" data-campo="sitra-fuente"></span>
                                                 </div>
                                             </td>
                                         </tr>
@@ -512,6 +513,7 @@
                                                     &nbsp;&nbsp;  &nbsp;&nbsp;<input name="numero" class="form-control col-md-2 form-control-sm border "> &nbsp;&nbsp;
                                                     / &nbsp;&nbsp;<input name="gestion" required class="form-control col-md-2 form-control-sm border" pattern="[0-9]{1,4}"> &nbsp;&nbsp;(e.j. 1999)
                                                     &nbsp;&nbsp;<a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-campo="estado-sitra-icon" title="No existe en el sitra" onclick="abrirModalSitraFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
+                                                    <span class="ml-1 text-info font-italic" data-campo="sitra-fuente"></span>
                                                                         &nbsp;&nbsp;&nbsp;&nbsp;
                                                     <span class="font-weight-bold text-dark float-right">
                                                         Supletorio : <input type="checkbox" name="supletorio">
@@ -763,12 +765,27 @@
         function limpiarSitraFormulario(form){
             form.removeData('sitra-response');
             form.removeData('sitra-estado');
+            form.removeData('sitra-fuente');
+            form.find('[data-campo="sitra-fuente"]').text('');
+        }
+
+        function actualizarFuenteSitra(form,fuente){
+            var etiqueta=form.find('[data-campo="sitra-fuente"]');
+            if(!etiqueta.length){
+                return;
+            }
+            if(String(fuente || '').toLowerCase()==='uad9'){
+                etiqueta.text('Respaldo UAD9');
+            }else{
+                etiqueta.text('');
+            }
         }
 
         function abrirModalSitraFormulario(trigger){
             var form=$(trigger).closest('form');
             var resp=form.data('sitra-response') || null;
             var estado=form.data('sitra-estado') || '';
+            var fuente=(form.data('sitra-fuente') || '').toString().toLowerCase();
 
             var nombreSistema='';
             var numeroSistema=(form.find('input[name="numero"]').val() || '').trim();
@@ -837,7 +854,9 @@
                 +'        <span class="font-weight-bold">Nombre :</span> <span>'+esc(nombreSistema)+'</span> | '
                 +'        <span class="font-weight-bold">Nro. Título :</span> <span>'+esc(numeroSistema)+'</span> | '
                 +'        <span class="font-weight-bold">Tipo Documento :</span> <span>'+esc(tipoSistema)+'</span>'
-                +'      </span><br/><br/>'
+                +'      </span><br/>'
+                + (fuente==='uad9' ? '<span class="text-info font-italic" style="font-size:0.85em">Fuente: Respaldo interno UAD9</span><br/>' : '')
+                +'      <br/>'
                 +'      <div class="row">'
                 +'        <div class="font-weight-bold '+claseCaja+' shadow text-center centrar_bloque col-md-9 p-2">'+detalle+'</div>'
                 +'        <div class="pt-2 col-md-2 '+claseIcono+' font-weight-bolder text-left">'+icono+'</div>'
@@ -894,6 +913,8 @@
 
                     form.data('sitra-response',resp);
                     form.data('sitra-estado',resp.estado || '');
+                    form.data('sitra-fuente',resp.fuente || 'sitra');
+                    actualizarFuenteSitra(form,resp.fuente || 'sitra');
 
                     if(resp.estado==='0'){
                         actualizarEstadoSitra(form,'text-success','SITRA: coincide');

@@ -225,8 +225,42 @@ class TramiteLegalizacionController extends Controller
         $persona=Persona::find($tramita->id_per);
         $documento=Funciones::DocumentoSitra($docleg->dtra_buscar_en);
         $numero=$docleg->dtra_numero;
-        $respuesta=TramiteLegalizacionController::verificarSitra($persona->per_ci,$docleg->dtra_numero,$docleg->dtra_buscar_en);
-        return view('servicios.tra_legalizacion.verificacion_sitra', compact('respuesta','persona','docleg','documento'));
+        $fuente='sitra';
+        try {
+            $respuesta=$this->verificarSitra($persona->per_ci,$docleg->dtra_numero,$docleg->dtra_buscar_en);
+        } catch (\Throwable $e) {
+            $respuesta=(object)[];
+        }
+
+        if(!is_object($respuesta)){
+            $respuesta=(object)[];
+        }
+
+        $nombreSitra=trim((string)($respuesta->nombre ?? ''));
+        $tipoSitra=trim((string)($respuesta->tipo ?? ''));
+        $numeroSitra=trim((string)($respuesta->numero ?? ''));
+
+        if($nombreSitra==='' && $tipoSitra==='' && $numeroSitra===''){
+            $respaldoUad9=$this->buscarRespaldoInternoSitra(
+                (int)$tramita->id_per,
+                (string)$docleg->dtra_numero,
+                (string)$docleg->dtra_buscar_en,
+                trim((string)($docleg->dtra_gestion ?? ''))
+            );
+
+            if($respaldoUad9){
+                $fuente='uad9';
+                $respuesta=(object)[
+                    'nombre'=>trim((string)($persona->per_apellido.' '.$persona->per_nombre)),
+                    'titulo'=>trim((string)($respaldoUad9->tit_titulo ?? '')),
+                    'numero'=>(string)($respaldoUad9->tit_nro_titulo ?? $docleg->dtra_numero),
+                    'gestion'=>(string)($respaldoUad9->tit_gestion ?? $docleg->dtra_gestion),
+                    'tipo'=>Funciones::DocumentoSitra((string)$docleg->dtra_buscar_en),
+                ];
+            }
+        }
+
+        return view('servicios.tra_legalizacion.verificacion_sitra', compact('respuesta','persona','docleg','documento','fuente'));
     }
     public function g_docleg(Request $form){
         /* cuadis = 'c' hace referencia a los del cuadis que no pagan valorados*/
@@ -268,7 +302,14 @@ class TramiteLegalizacionController extends Controller
             $numeroDoc=$form['numero'];
 
             if($a=='db' || $a=='ca' || $a=='da' || $a=='tp'){
-                $respuesta=TramiteLegalizacionController::verificarSitra($persona->per_ci,$form['numero'],$tramita->tre_buscar_en);
+                try {
+                    $respuesta=TramiteLegalizacionController::verificarSitra($persona->per_ci,$form['numero'],$tramita->tre_buscar_en);
+                } catch (\Throwable $e) {
+                    $respuesta=(object)[];
+                }
+                if(!is_object($respuesta)){
+                    $respuesta=(object)[];
+                }
                 $nombre=$persona->per_apellido." ".$persona->per_nombre;
                 $documento=Funciones::DocumentoSitra($tramita->tre_buscar_en);
 
@@ -291,7 +332,13 @@ class TramiteLegalizacionController extends Controller
                         $verificar_sitra='0';
                     }else{
                         if($nombreSitra=="" && $tipoSitra=="" && $numeroSitra==""){
-                            $verificar_sitra='2';
+                            $respaldoUad9=$this->buscarRespaldoInternoSitra(
+                                (int)$datosTramita->id_per,
+                                (string)$numeroDoc,
+                                (string)$tramita->tre_buscar_en,
+                                trim((string)($form['gestion'] ?? ''))
+                            );
+                            $verificar_sitra=$respaldoUad9 ? '0' : '2';
                         }else{
                             $verificar_sitra='1';
                         }
@@ -523,6 +570,7 @@ class TramiteLegalizacionController extends Controller
     {
         $data=$request->validate([
             'numero'=>['nullable','string','max:20'],
+            'gestion'=>['nullable','string','max:4'],
             'tipo'=>['nullable','integer'],
             'buscar_en'=>['nullable','string','max:20'],
         ]);
@@ -546,6 +594,7 @@ class TramiteLegalizacionController extends Controller
         }
 
         $numero=trim((string)($data['numero'] ?? ''));
+        $gestion=trim((string)($data['gestion'] ?? ''));
         if($numero==='' || $numero==='-'){
             return response()->json([
                 'ok'=>true,
@@ -573,14 +622,15 @@ class TramiteLegalizacionController extends Controller
             ]);
         }
 
+        $sitraDisponible=true;
         try {
             $respuesta=$this->verificarSitra((string)$persona->per_ci,$numero,$buscarEn);
         } catch (\Throwable $e) {
-            return response()->json([
-                'ok'=>false,
-                'aplica'=>true,
-                'message'=>'No se pudo consultar SITRA.',
-            ],422);
+            $sitraDisponible=false;
+            $respuesta=(object)[];
+        }
+        if(!is_object($respuesta)){
+            $respuesta=(object)[];
         }
 
         $nombre=trim((string)(($persona->per_apellido ?? '').' '.($persona->per_nombre ?? '')));
@@ -600,6 +650,21 @@ class TramiteLegalizacionController extends Controller
         if($nombresCoinciden && $tipoLocal===$tipoSitraNormalizado && $numeroLocal===$numeroSitra){
             $estado='0';
         }elseif($nombreSitra==='' && $tipoSitraNormalizado==='' && $numeroSitra===''){
+            $respaldoUad9=$this->buscarRespaldoInternoSitra((int)$tramita->id_per,$numero,$buscarEn,$gestion);
+            if($respaldoUad9){
+                return response()->json([
+                    'ok'=>true,
+                    'aplica'=>true,
+                    'estado'=>'0',
+                    'fuente'=>'uad9',
+                    'nombre'=>$nombre,
+                    'titulo'=>(string)($respaldoUad9->tit_titulo ?? ''),
+                    'tipo'=>strtoupper($buscarEn),
+                    'numero'=>(string)($respaldoUad9->tit_nro_titulo ?? $numero),
+                    'gestion'=>(string)($respaldoUad9->tit_gestion ?? $gestion),
+                    'message'=>'Validado con respaldo interno UAD9'.($sitraDisponible ? '' : ' (SITRA no disponible)').'.',
+                ]);
+            }
             $estado='2';
         }
 
@@ -607,6 +672,7 @@ class TramiteLegalizacionController extends Controller
             'ok'=>true,
             'aplica'=>true,
             'estado'=>$estado,
+            'fuente'=>'sitra',
             'nombre'=>$nombreSitra,
             'titulo'=>$tituloSitra,
             'tipo'=>$tipoSitra,
@@ -1060,6 +1126,30 @@ class TramiteLegalizacionController extends Controller
         }
 
         return strpos($local,$sitra)!==false || strpos($sitra,$local)!==false;
+    }
+
+    private function buscarRespaldoInternoSitra(int $idPer, string $numero, string $buscarEn, string $gestion=''): ?Titulo
+    {
+        if($idPer<=0 || trim($numero)==='' || trim($buscarEn)===''){
+            return null;
+        }
+
+        $query=Titulo::where('id_per','=',$idPer)
+            ->where('tit_nro_titulo','=',trim($numero));
+
+        if(trim($gestion)!==''){
+            $query->where('tit_gestion','=',trim($gestion));
+        }
+
+        if($buscarEn==='da'){
+            $query->whereIn('tit_tipo',['da','ca']);
+        }elseif($buscarEn==='tpos'){
+            $query->whereIn('tit_tipo',['tpos','di']);
+        }else{
+            $query->where('tit_tipo','=',$buscarEn);
+        }
+
+        return $query->first();
     }
     public function obs_docleg($cod_dtra){
         $docleg=DB::table('d_tramitas')->join('tramites','d_tramitas.cod_tre','=','tramites.cod_tre')

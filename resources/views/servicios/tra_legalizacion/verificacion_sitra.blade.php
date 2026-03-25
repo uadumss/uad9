@@ -27,6 +27,10 @@
                 <span class="font-weight-bold">Tipo Documento :</span> <span>{{\App\Models\Funciones::nombre_titulo($docleg->dtra_buscar_en)}}</span>
             </span>
             <br/>
+            <span class="text-info font-italic" style="font-size: 0.85em">
+                Fuente: {{strtoupper($fuente ?? 'sitra')}}
+            </span>
+            <br/>
             <br/>
                 <div class="row">
                     @if($docleg->dtra_verificacion_sitra==0)
@@ -75,7 +79,7 @@
                 </div>
                 <br/>
             @if($docleg->dtra_verificacion_sitra==0)
-                <div class="text-success font-italic font-weight-bold border border-success rounded col-md-3" style="font-size: 1.2em">Verificacion Correcta</div>
+                <div class="text-success font-italic font-weight-bold border border-success rounded col-md-5" style="font-size: 1.2em">Verificacion Correcta {{($fuente ?? 'sitra')==='uad9' ? '(Respaldo UAD9)' : '(SITRA)'}} </div>
             @else
                 <div class="text-danger font-italic font-weight-bold border border-danger rounded col-md-3" style="font-size: 1.2em">INCORRECTO</div>
             @endif
