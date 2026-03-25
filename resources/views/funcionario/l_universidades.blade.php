@@ -47,7 +47,7 @@
 
     <div class="row">
         <!-- UNIVERSIDADES PÚBLICAS -->
-        <div class="col-lg-4 mb-4">
+        <div class="col-12 mb-4">
             <div class="card border-left-primary shadow h-100 py-2">
                 <div class="card-body">
                     <div class="text-primary font-weight-bold text-uppercase mb-3">
@@ -59,7 +59,7 @@
                                 <tr>
                                     <th>Nombre</th>
                                     <th>Sigla</th>
-                                    <th style="width: 70px;">Acciones</th>
+                                    <th style="width: 70px;">Opciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -70,13 +70,12 @@
                                             <span class="badge badge-primary">{{ $uni->sigla }}</span>
                                         </td>
                                         <td>
-                                            <button class="btn btn-sm btn-info" type="button" 
-                                                onclick="editarUniversidad({{ $uni->id }}, '{{ $uni->nombre }}', '{{ $uni->sigla }}', '{{ $uni->tipo }}')">
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" onclick="return editarUniversidad({{ $uni->id }}, '{{ $uni->nombre }}', '{{ $uni->sigla }}', '{{ $uni->tipo }}')" title="Editar universidad">
                                                 <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-danger" onclick="confirmarEliminar({{ $uni->id }})">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                                            </a>
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-danger" onclick="confirmarEliminar({{ $uni->id }}); return false;" title="Eliminar universidad">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </a>
                                         </td>
                                     </tr>
                                 @empty
@@ -92,7 +91,7 @@
         </div>
 
         <!-- UNIVERSIDADES PRIVADAS -->
-        <div class="col-lg-4 mb-4">
+        <div class="col-12 mb-4">
             <div class="card border-left-success shadow h-100 py-2">
                 <div class="card-body">
                     <div class="text-success font-weight-bold text-uppercase mb-3">
@@ -104,7 +103,7 @@
                                 <tr>
                                     <th>Nombre</th>
                                     <th>Sigla</th>
-                                    <th style="width: 70px;">Acciones</th>
+                                    <th style="width: 70px;">Opciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -115,13 +114,12 @@
                                             <span class="badge badge-success">{{ $uni->sigla }}</span>
                                         </td>
                                         <td>
-                                            <button class="btn btn-sm btn-info" type="button" 
-                                                onclick="editarUniversidad({{ $uni->id }}, '{{ $uni->nombre }}', '{{ $uni->sigla }}', '{{ $uni->tipo }}')">
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" onclick="return editarUniversidad({{ $uni->id }}, '{{ $uni->nombre }}', '{{ $uni->sigla }}', '{{ $uni->tipo }}')" title="Editar universidad">
                                                 <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-danger" onclick="confirmarEliminar({{ $uni->id }})">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                                            </a>
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-danger" onclick="confirmarEliminar({{ $uni->id }}); return false;" title="Eliminar universidad">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </a>
                                         </td>
                                     </tr>
                                 @empty
@@ -137,7 +135,7 @@
         </div>
 
         <!-- UNIVERSIDADES EXTRANJERAS -->
-        <div class="col-lg-4 mb-4">
+        <div class="col-12 mb-4">
             <div class="card border-left-warning shadow h-100 py-2">
                 <div class="card-body">
                     <div class="text-warning font-weight-bold text-uppercase mb-3">
@@ -149,7 +147,7 @@
                                 <tr>
                                     <th>Nombre</th>
                                     <th>Sigla</th>
-                                    <th style="width: 70px;">Acciones</th>
+                                    <th style="width: 70px;">Opciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -160,13 +158,12 @@
                                             <span class="badge badge-warning">{{ $uni->sigla }}</span>
                                         </td>
                                         <td>
-                                            <button class="btn btn-sm btn-info" type="button" 
-                                                onclick="editarUniversidad({{ $uni->id }}, '{{ $uni->nombre }}', '{{ $uni->sigla }}', '{{ $uni->tipo }}')">
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" onclick="return editarUniversidad({{ $uni->id }}, '{{ $uni->nombre }}', '{{ $uni->sigla }}', '{{ $uni->tipo }}')" title="Editar universidad">
                                                 <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-danger" onclick="confirmarEliminar({{ $uni->id }})">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                                            </a>
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-danger" onclick="confirmarEliminar({{ $uni->id }}); return false;" title="Eliminar universidad">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </a>
                                         </td>
                                     </tr>
                                 @empty
@@ -272,38 +269,56 @@
     </div>
 </div>
 
+<!-- MODAL CONFIRMAR ELIMINACIÓN -->
+<div class="modal fade" id="modalConfirmarEliminar" tabindex="-1" role="dialog" aria-labelledby="modalLabelEliminar" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-danger">
+                <h5 class="modal-title text-white" id="modalLabelEliminar"><i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación</h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">¿Estás seguro de que deseas eliminar esta universidad? <strong>Esta acción no se puede deshacer.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="confirmarEliminacionModal()">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+// Limpiar backdrop al cargar
 $(document).ready(function() {
-    // Limpiar completamente al cargar
+    // Resetear body completamente
     $('body').removeClass('modal-open');
     $('.modal-backdrop').remove();
-    $('body').css('overflow', 'auto');
+    
+    // Prevenir que data-toggle/data-target agregue backdrops
+    $('#modalNuevaUniversidad').on('show.bs.modal', function () {
+        $('.modal-backdrop').remove();
+    });
 });
 
 function abrirModalNueva() {
-    // Limpiar
+    // Limpiar ANY Modal
     $('body').removeClass('modal-open');
-    $('.modal-backdrop').remove();
-    $('body').css('overflow', 'auto');
     $('.modal').modal('hide');
+    $('.modal-backdrop').remove();
     
-    // Limpiar campos
-    document.getElementById('nombre').value = '';
-    document.getElementById('sigla').value = '';
-    document.getElementById('tipo').value = '';
-    
-    // Abrir
     setTimeout(function() {
         $('#modalNuevaUniversidad').modal('show');
-    }, 50);
+    }, 100);
 }
 
 function editarUniversidad(id, nombre, sigla, tipo) {
-    // Limpiar
+    // Limpiar completamente
     $('body').removeClass('modal-open');
-    $('.modal-backdrop').remove();
-    $('body').css('overflow', 'auto');
     $('.modal').modal('hide');
+    $('.modal-backdrop').remove();
     
     // Rellenar formulario
     document.getElementById('nombreEdit').value = nombre;
@@ -311,45 +326,66 @@ function editarUniversidad(id, nombre, sigla, tipo) {
     document.getElementById('tipoEdit').value = tipo;
     document.getElementById('formEditar').action = "{{url('actualizar universidad')}}/" + id;
     
-    // Abrir
+    // Esperar a que se oculten los modales
     setTimeout(function() {
+        $('body').removeClass('modal-open');
+        $('.modal-backdrop').remove();
         $('#modalEditarUniversidad').modal('show');
-    }, 50);
+    }, 100);
+    
+    return false;
 }
 
 function confirmarEliminar(id) {
-    if(confirm('¿Estás seguro de que deseas eliminar esta universidad?')) {
-        var form = document.createElement('form');
-        form.method = 'POST';
-        form.action = "{{url('eliminar universidad')}}/" + id;
-        
-        var csrf = document.createElement('input');
-        csrf.type = 'hidden';
-        csrf.name = '_token';
-        csrf.value = '{{csrf_token()}}';
-        form.appendChild(csrf);
-        
-        var method = document.createElement('input');
-        method.type = 'hidden';
-        method.name = '_method';
-        method.value = 'DELETE';
-        form.appendChild(method);
-        
-        document.body.appendChild(form);
-        form.submit();
-    }
+    // Guardar el ID en una variable global
+    window.idUniversidadAEliminar = id;
+    
+    // Limpiar completamente
+    $('body').removeClass('modal-open');
+    $('.modal').modal('hide');
+    $('.modal-backdrop').remove();
+    
+    // Mostrar modal de confirmación
+    setTimeout(function() {
+        $('body').removeClass('modal-open');
+        $('.modal-backdrop').remove();
+        $('#modalConfirmarEliminar').modal('show');
+    }, 100);
+    
+    return false;
 }
 
-// Limpiar cuando se cierre un modal
-$(document).on('hidden.bs.modal', '.modal', function() {
-    $('body').removeClass('modal-open');
-    $('.modal-backdrop').remove();
-    $('body').css('overflow', 'auto');
-});
+function confirmarEliminacionModal() {
+    var id = window.idUniversidadAEliminar;
+    
+    var form = document.createElement('form');
+    form.method = 'POST';
+    form.action = "{{url('eliminar universidad')}}/" + id;
+    
+    var csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = '_token';
+    csrf.value = '{{csrf_token()}}';
+    form.appendChild(csrf);
+    
+    var method = document.createElement('input');
+    method.type = 'hidden';
+    method.name = '_method';
+    method.value = 'DELETE';
+    form.appendChild(method);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
 
-// Prevenir que se agregue backdrop
-$(document).on('show.bs.modal', '.modal', function() {
-    $('.modal-backdrop').remove();
+// Limpiar cuando cierre CUALQUIER modal
+$(document).on('hidden.bs.modal', function () {
+    setTimeout(function() {
+        if ($('.modal:visible').length === 0) {
+            $('body').removeClass('modal-open').css('overflow', '');
+            $('.modal-backdrop').remove();
+        }
+    }, 50);
 });
 </script>
 @endsection

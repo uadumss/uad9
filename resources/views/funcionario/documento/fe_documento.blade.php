@@ -66,7 +66,26 @@
                                 <tr>
                                     <th class="text-right font-italic text-dark">Universidad:</th>
                                     <td class="border-bottom border-dark">
-                                        <input type="text" class="form-control form-control-sm border-0" name="universidad" id="universidad" />
+                                        <select class="form-control form-control-sm border-0" name="universidad" id="universidad">
+                                            <option value="">Seleccionar...</option>
+                                            @php
+                                                $universidades = \App\Models\Universidad::orderByRaw("CASE WHEN tipo='Pública' THEN 1 WHEN tipo='Privada' THEN 2 WHEN tipo='Extranjera' THEN 3 ELSE 4 END")->orderBy('nombre')->get();
+                                                $tiposProcessados = [];
+                                            @endphp
+                                            @foreach($universidades as $uni)
+                                                @if(!in_array($uni->tipo, $tiposProcessados))
+                                                    @if(!empty($tiposProcessados))
+                                                        </optgroup>
+                                                    @endif
+                                                    <optgroup label="Universidad {{ $uni->tipo }}">
+                                                    @php $tiposProcessados[] = $uni->tipo; @endphp
+                                                @endif
+                                                <option value="{{ $uni->sigla }}">{{ $uni->nombre }} ({{ $uni->sigla }})</option>
+                                                @if($loop->last)
+                                                        </optgroup>
+                                                @endif
+                                            @endforeach
+                                        </select>
                                     </td>
                                 </tr>
                                 <tr>
@@ -189,7 +208,28 @@
                                 <tr>
                                     <th class="text-right font-italic text-dark">Universidad:</th>
                                     <td class="border-bottom border-dark">
-                                        <input type="text" class="form-control form-control-sm border-0" value="{{$documento->doc_universidad}}" name="universidad" id="universidad" />
+                                        <select class="form-control form-control-sm border-0" name="universidad" id="universidad">
+                                            <option value="{{ $documento->doc_universidad }}">{{ $documento->doc_universidad }}</option>
+                                            @php
+                                                $universidades = \App\Models\Universidad::orderByRaw("CASE WHEN tipo='Pública' THEN 1 WHEN tipo='Privada' THEN 2 WHEN tipo='Extranjera' THEN 3 ELSE 4 END")->orderBy('nombre')->get();
+                                                $tiposProcessados = [];
+                                            @endphp
+                                            @foreach($universidades as $uni)
+                                                @if($uni->sigla !== $documento->doc_universidad)
+                                                    @if(!in_array($uni->tipo, $tiposProcessados))
+                                                        @if(!empty($tiposProcessados))
+                                                            </optgroup>
+                                                        @endif
+                                                        <optgroup label="Universidad {{ $uni->tipo }}">
+                                                        @php $tiposProcessados[] = $uni->tipo; @endphp
+                                                    @endif
+                                                    <option value="{{ $uni->sigla }}">{{ $uni->nombre }} ({{ $uni->sigla }})</option>
+                                                    @if($loop->last)
+                                                            </optgroup>
+                                                    @endif
+                                                @endif
+                                            @endforeach
+                                        </select>
                                     </td>
                                 </tr>
                                 <tr>
