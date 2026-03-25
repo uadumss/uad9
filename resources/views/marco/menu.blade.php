@@ -229,6 +229,9 @@
                     <a class="collapse-item" href="{{url('listar funcionario/docente')}}"><i class="fas fa-chalkboard-teacher"></i> Docentes</a>
                     <a class="collapse-item" href="{{url('listar funcionario/administrativo')}}"><i class="fas fa-user-alt"></i> Administrativos</a>
                     <a class="collapse-item" href="{{url('reporte dya')}}"><i class="fas fa-chart-pie"></i> Reporte</a>
+                    @can('listar universidades - dya')
+                    <a class="collapse-item" href="{{url('listar universidades')}}"><i class="fas fa-graduation-cap"></i> Universidades</a>
+                    @endcan
                 </div>
             </div>
         </li>
