@@ -10,6 +10,7 @@ use App\Models\Funcionario;
 use App\Models\Nacionalidad;
 use App\Models\Titularidad;
 use App\Models\Trabaja;
+use App\Models\Universidad;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Excel;
@@ -557,5 +558,77 @@ class FuncionarioController extends Controller
         }
 
         return response()->json(['existe' => false]);
+    }
+
+    /**
+     * Listar todas las universidades (públicas, privadas y extranjeras)
+     */
+    public function listar_universidades(){
+        $universidadesPublicas = Universidad::where('tipo', 'Pública')->get();
+        $universidadesPrivadas = Universidad::where('tipo', 'Privada')->get();
+        $universidadesExtranjeras = Universidad::where('tipo', 'Extranjera')->get();
+
+        return view('funcionario.l_universidades', compact('universidadesPublicas', 'universidadesPrivadas', 'universidadesExtranjeras'));
+    }
+
+    /**
+     * Crear nueva universidad
+     */
+    public function crear_universidad(Request $request)
+    {
+        $request->validate([
+            'nombre' => 'required|unique:universidades',
+            'sigla' => 'required|unique:universidades',
+            'tipo' => 'required|in:Pública,Privada,Extranjera'
+        ]);
+
+        Universidad::create([
+            'nombre' => $request->nombre,
+            'sigla' => $request->sigla,
+            'tipo' => $request->tipo
+        ]);
+
+        return redirect('listar universidades')->with('exito', 'Universidad creada exitosamente');
+    }
+
+    /**
+     * Actualizar universidad
+     */
+    public function actualizar_universidad(Request $request, $id)
+    {
+        $universidad = Universidad::find($id);
+        
+        if (!$universidad) {
+            return redirect('listar universidades')->with('error', 'Universidad no encontrada');
+        }
+
+        $request->validate([
+            'nombre' => 'required|unique:universidades,nombre,'.$id,
+            'sigla' => 'required|unique:universidades,sigla,'.$id,
+            'tipo' => 'required|in:Pública,Privada,Extranjera'
+        ]);
+
+        $universidad->update([
+            'nombre' => $request->nombre,
+            'sigla' => $request->sigla,
+            'tipo' => $request->tipo
+        ]);
+
+        return redirect('listar universidades')->with('exito', 'Universidad actualizada exitosamente');
+    }
+
+    /**
+     * Eliminar universidad
+     */
+    public function eliminar_universidad($id)
+    {
+        $universidad = Universidad::find($id);
+        
+        if (!$universidad) {
+            return redirect('listar universidades')->with('error', 'Universidad no encontrada');
+        }
+
+        $universidad->delete();
+        return redirect('listar universidades')->with('exito', 'Universidad eliminada exitosamente');
     }
 }
