@@ -169,7 +169,7 @@ class TramiteLegalizacionController extends Controller
     }
     public function g_traleg(Request $form){
         //return $form['ci'];
-	    $form->validate([
+    	$form->validate([
                 'ci'=>'required',
                 'nombre'=>'required',
                 'apellido'=>'required',
@@ -279,10 +279,18 @@ class TramiteLegalizacionController extends Controller
                  * 2=No existe en el sitra
                  */
                 if($form['numero']!='-'){
-                    if($nombre==$respuesta->nombre && $documento==$respuesta->tipo && $numeroDoc==$respuesta->numero){
+                    $nombreSitra = trim((string)($respuesta->nombre ?? ''));
+                    $tipoSitra = strtolower(trim((string)($respuesta->tipo ?? '')));
+                    $numeroSitra = trim((string)($respuesta->numero ?? ''));
+                    $nombreLocal = trim((string)$nombre);
+                    $tipoLocal = strtolower(trim((string)$documento));
+                    $numeroLocal = trim((string)$numeroDoc);
+
+                    $nombresCoinciden=$this->nombresCompatibles($nombreLocal,$nombreSitra);
+                    if($nombresCoinciden && $tipoLocal==$tipoSitra && $numeroLocal==$numeroSitra){
                         $verificar_sitra='0';
                     }else{
-                        if($respuesta->nombre=="" && $respuesta->tipo=="" && $respuesta->numero==""){
+                        if($nombreSitra=="" && $tipoSitra=="" && $numeroSitra==""){
                             $verificar_sitra='2';
                         }else{
                             $verificar_sitra='1';
@@ -509,6 +517,102 @@ class TramiteLegalizacionController extends Controller
         }
 
         return response()->json($validacion);
+    }
+
+    public function validar_sitra_previa(Request $request, $cod_tra)
+    {
+        $data=$request->validate([
+            'numero'=>['nullable','string','max:20'],
+            'tipo'=>['nullable','integer'],
+            'buscar_en'=>['nullable','string','max:20'],
+        ]);
+
+        $tramita=Tramita::find($cod_tra);
+        if(!$tramita || !$tramita->id_per){
+            return response()->json([
+                'ok'=>true,
+                'aplica'=>false,
+                'message'=>'SITRA: primero registre los datos personales.',
+            ]);
+        }
+
+        $persona=Persona::find($tramita->id_per);
+        if(!$persona || !$persona->per_ci){
+            return response()->json([
+                'ok'=>true,
+                'aplica'=>false,
+                'message'=>'SITRA: CI no válido para consulta.',
+            ]);
+        }
+
+        $numero=trim((string)($data['numero'] ?? ''));
+        if($numero==='' || $numero==='-'){
+            return response()->json([
+                'ok'=>true,
+                'aplica'=>false,
+                'message'=>'SITRA: pendiente.',
+            ]);
+        }
+
+        $buscarEn='';
+        if(!empty($data['tipo'])){
+            $tipoDoc=Tramite::find((int)$data['tipo']);
+            if($tipoDoc){
+                $buscarEn=(string)($tipoDoc->tre_buscar_en ?? '');
+            }
+        }
+        if($buscarEn==='' && !empty($data['buscar_en'])){
+            $buscarEn=explode('-', (string)$data['buscar_en'])[0] ?? '';
+        }
+
+        if(!in_array($buscarEn,['db','ca','da','tp'],true)){
+            return response()->json([
+                'ok'=>true,
+                'aplica'=>false,
+                'message'=>'SITRA: no aplica para este tipo.',
+            ]);
+        }
+
+        try {
+            $respuesta=$this->verificarSitra((string)$persona->per_ci,$numero,$buscarEn);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'ok'=>false,
+                'aplica'=>true,
+                'message'=>'No se pudo consultar SITRA.',
+            ],422);
+        }
+
+        $nombre=trim((string)(($persona->per_apellido ?? '').' '.($persona->per_nombre ?? '')));
+        $documento=Funciones::DocumentoSitra($buscarEn);
+        $nombreSitra=trim((string)($respuesta->nombre ?? ''));
+        $tituloSitra=trim((string)($respuesta->titulo ?? ''));
+        $tipoSitra=trim((string)($respuesta->tipo ?? ''));
+        $tipoSitraNormalizado=strtolower($tipoSitra);
+        $numeroSitra=trim((string)($respuesta->numero ?? ''));
+        $gestionSitra=trim((string)($respuesta->gestion ?? ''));
+        $nombreLocal=trim((string)$nombre);
+        $tipoLocal=strtolower(trim((string)$documento));
+        $numeroLocal=trim((string)$numero);
+
+        $estado='1';
+        $nombresCoinciden=$this->nombresCompatibles($nombreLocal,$nombreSitra);
+        if($nombresCoinciden && $tipoLocal===$tipoSitraNormalizado && $numeroLocal===$numeroSitra){
+            $estado='0';
+        }elseif($nombreSitra==='' && $tipoSitraNormalizado==='' && $numeroSitra===''){
+            $estado='2';
+        }
+
+        return response()->json([
+            'ok'=>true,
+            'aplica'=>true,
+            'estado'=>$estado,
+            'nombre'=>$nombreSitra,
+            'titulo'=>$tituloSitra,
+            'tipo'=>$tipoSitra,
+            'numero'=>$numeroSitra,
+            'gestion'=>$gestionSitra,
+        ]);
     }
 
     private function validarRecaudacionLegalizacion(
@@ -940,6 +1044,22 @@ class TramiteLegalizacionController extends Controller
         $valor=str_replace(['Á','É','Í','Ó','Ú'],['A','E','I','O','U'],$valor);
         $valor=preg_replace('/\s+/', ' ', $valor);
         return (string)$valor;
+    }
+
+    private function nombresCompatibles(string $nombreLocal, string $nombreSitra): bool
+    {
+        $local=$this->normalizarTexto($nombreLocal);
+        $sitra=$this->normalizarTexto($nombreSitra);
+
+        if($local==='' || $sitra===''){
+            return false;
+        }
+
+        if($local===$sitra){
+            return true;
+        }
+
+        return strpos($local,$sitra)!==false || strpos($sitra,$local)!==false;
     }
     public function obs_docleg($cod_dtra){
         $docleg=DB::table('d_tramitas')->join('tramites','d_tramitas.cod_tre','=','tramites.cod_tre')

@@ -405,6 +405,8 @@
                                             <th class="text-right font-italic">Validación:</th>
                                             <td class="border-bottom border-dark">
                                                 <small class="text-muted" data-campo="estado-validacion">Pendiente de validación</small>
+                                                <br>
+                                                <small class="text-muted" data-campo="estado-sitra">SITRA: pendiente</small>
                                             </td>
                                         </tr>
                                         <tr><th class="text-right font-italic">Nro. Título:</th>
@@ -412,6 +414,7 @@
                                                 <div class="input-group ">
                                                     <input name="numero" required class="form-control col-md-2 form-control-sm border " pattern="[0-9]{1,6}"> &nbsp;&nbsp;
                                                     / &nbsp;&nbsp;<input name="gestion" required class="form-control col-md-2 form-control-sm border" pattern="[0-9]{1,4}"> &nbsp;&nbsp;(e.j. 1999)
+                                                    &nbsp;&nbsp;<a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-campo="estado-sitra-icon" title="No existe en el sitra" onclick="abrirModalSitraFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
                                                 </div>
                                             </td>
                                         </tr>
@@ -508,6 +511,7 @@
                                                 <div class="input-group ">
                                                     &nbsp;&nbsp;  &nbsp;&nbsp;<input name="numero" class="form-control col-md-2 form-control-sm border "> &nbsp;&nbsp;
                                                     / &nbsp;&nbsp;<input name="gestion" required class="form-control col-md-2 form-control-sm border" pattern="[0-9]{1,4}"> &nbsp;&nbsp;(e.j. 1999)
+                                                    &nbsp;&nbsp;<a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-campo="estado-sitra-icon" title="No existe en el sitra" onclick="abrirModalSitraFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
                                                                         &nbsp;&nbsp;&nbsp;&nbsp;
                                                     <span class="font-weight-bold text-dark float-right">
                                                         Supletorio : <input type="checkbox" name="supletorio">
@@ -539,6 +543,8 @@
                                             <th class="text-right font-italic">Validación:</th>
                                             <td class="border-bottom border-dark">
                                                 <small class="text-muted" data-campo="estado-validacion">Pendiente de validación</small>
+                                                <br>
+                                                <small class="text-muted" data-campo="estado-sitra">SITRA: pendiente</small>
                                             </td>
                                         </tr>
                                     </table>
@@ -568,6 +574,19 @@
             display: block;
             font-size: 0.9rem;
             line-height: 1.4;
+        }
+
+        [data-campo="estado-sitra"] {
+            display: none;
+            font-size: 0.86rem;
+            line-height: 1.3;
+        }
+
+        [data-campo="estado-sitra-icon"] {
+            display: inline-block;
+            margin-left: .45rem;
+            vertical-align: middle;
+            line-height: 1;
         }
 
         [data-campo="estado-validacion"].text-success {
@@ -681,6 +700,8 @@
                         .removeClass('text-danger text-muted')
                         .addClass('text-success')
                         .text(msg);
+
+                    programarValidacionSitra(formulario);
                 },
                 error: function(xhr){
                     var msg='No hay conexión. Intente en unos momentos.';
@@ -692,6 +713,8 @@
                         .removeClass('text-success text-muted')
                         .addClass('text-danger')
                         .text(msg);
+
+                    programarValidacionSitra(formulario);
                 }
             });
         }
@@ -712,6 +735,205 @@
             }
 
             enviar1(formulario,ruta,panel);
+        }
+
+        function actualizarEstadoSitra(formulario,clase,mensaje){
+            var estado=formulario.find('[data-campo="estado-sitra"]');
+            var icono=formulario.find('[data-campo="estado-sitra-icon"]');
+            if(!estado.length){
+                return;
+            }
+            estado.removeClass('text-danger text-success text-muted').addClass(clase).text(mensaje);
+
+            if(icono.length){
+                icono.removeClass('text-danger text-success text-secondary text-muted');
+                if(clase==='text-success'){
+                    icono.attr('title','Verificado en el sitra');
+                    icono.addClass('text-success').html('<i class="fas fa-check-circle"></i>');
+                }else if(clase==='text-danger'){
+                    icono.attr('title','No existe en el sitra');
+                    icono.addClass('text-danger').html('<i class="fas fa-minus-circle"></i>');
+                }else{
+                    icono.attr('title','Pendiente');
+                    icono.addClass('text-secondary').html('<i class="fas fa-minus-circle"></i>');
+                }
+            }
+        }
+
+        function limpiarSitraFormulario(form){
+            form.removeData('sitra-response');
+            form.removeData('sitra-estado');
+        }
+
+        function abrirModalSitraFormulario(trigger){
+            var form=$(trigger).closest('form');
+            var resp=form.data('sitra-response') || null;
+            var estado=form.data('sitra-estado') || '';
+
+            var nombreSistema='';
+            var numeroSistema=(form.find('input[name="numero"]').val() || '').trim();
+            var tipoSistema='';
+
+            if($('#apellido').length || $('#nombre').length){
+                nombreSistema=(($('#apellido').val() || '').trim()+' '+($('#nombre').val() || '').trim()).trim();
+            }
+
+            var buscarEn=(form.find('select[name="buscar_en"]').val() || '').trim();
+            if(buscarEn===''){
+                var tipoTexto=form.find('select[data-campo="tipo-legalizacion"] option:selected').text() || '';
+                tipoSistema=tipoTexto.trim();
+            }else{
+                tipoSistema=buscarEn.toUpperCase();
+            }
+
+            function esc(v){
+                return String(v || '-')
+                    .replace(/&/g,'&amp;')
+                    .replace(/</g,'&lt;')
+                    .replace(/>/g,'&gt;')
+                    .replace(/"/g,'&quot;')
+                    .replace(/'/g,'&#39;');
+            }
+
+            var detalle='';
+            if(resp){
+                detalle='<table class="col-md-12">'
+                    +'<tr><th class="text-right">Nombre:</th><th class="text-dark text-left border-bottom border-danger pl-3">'+esc(resp.nombre || '')+'</th></tr>'
+                    +'<tr><th class="text-right">Título:</th><th class="text-dark text-left border-bottom border-danger pl-3">'+esc(resp.titulo || '')+'</th></tr>'
+                    +'<tr><th class="text-right">Número:</th><th class="text-dark text-left border-bottom border-danger pl-3">'+esc(resp.numero || '')+'</th></tr>'
+                    +'<tr><th class="text-right">Gestión:</th><th class="text-dark text-left border-bottom border-danger pl-3">'+esc(resp.gestion || '-')+'</th></tr>'
+                    +'<tr><th class="text-right">Tipo documento:</th><th class="text-dark text-left border-bottom border-danger pl-3">'+esc(resp.tipo || '')+'</th></tr>'
+                    +'</table>';
+            }else{
+                detalle='<p>No hay datos de verificación SITRA para mostrar todavía.</p>';
+            }
+
+            var esOk=(estado==='0');
+            var claseCaja=esOk ? 'alert-success' : 'alert-danger';
+            var icono=esOk ? '<h1><i class="fas fa-check-circle"></i></h1>' : '<h1><i class="fas fa-minus-circle"></i></h1>';
+            var claseIcono=esOk ? 'text-success' : 'text-danger';
+            var mensajeFinal='INCORRECTO';
+            if(estado==='0'){
+                mensajeFinal='Verificacion Correcta';
+            }else if(estado==='1'){
+                mensajeFinal='Existe en SITRA, pero no coincide';
+            }else if(estado==='2'){
+                mensajeFinal='No existe en SITRA';
+            }else{
+                mensajeFinal='Pendiente de verificación';
+            }
+
+            var html=''
+                +'<div class="modal-dialog modal-lg" role="document" id="panel_docleg">'
+                +'  <div class="modal-content '+(esOk?'border-bottom-primary':'border-bottom-danger')+' shadow-lg">'
+                +'    <div class="modal-header '+(esOk?'bg-verde-oscuro':'bg-danger')+'">'
+                +'      <h5 class="modal-title text-white"><img src="{{url('img/icon/eliminar.png')}}">&nbsp;&nbsp;Verificación en el sitra</h5>'
+                +'      <button class="close" type="button" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>'
+                +'    </div>'
+                +'    <div class="modal-body">'
+                +'      <span class="font-italic">Verificación de trámite: </span><br/><br/>'
+                +'      <span class="text-dark font-weight-bold">Datos:</span><br/>'
+                +'      <span class="text-dark font-italic" style="font-size: 0.8em">'
+                +'        <span class="font-weight-bold">Nombre :</span> <span>'+esc(nombreSistema)+'</span> | '
+                +'        <span class="font-weight-bold">Nro. Título :</span> <span>'+esc(numeroSistema)+'</span> | '
+                +'        <span class="font-weight-bold">Tipo Documento :</span> <span>'+esc(tipoSistema)+'</span>'
+                +'      </span><br/><br/>'
+                +'      <div class="row">'
+                +'        <div class="font-weight-bold '+claseCaja+' shadow text-center centrar_bloque col-md-9 p-2">'+detalle+'</div>'
+                +'        <div class="pt-2 col-md-2 '+claseIcono+' font-weight-bolder text-left">'+icono+'</div>'
+                +'      </div><br/>'
+                +'      <div class="'+(esOk?'text-success border border-success':'text-danger border border-danger')+' font-italic font-weight-bold rounded col-md-5" style="font-size: 1.1em">'+esc(mensajeFinal)+'</div>'
+                +'    </div>'
+                +'    <div class="modal-footer"><button class="btn btn-secondary" type="button" data-dismiss="modal">Cerrar</button></div>'
+                +'  </div>'
+                +'</div>';
+
+            $('#panel_docleg').html(html);
+            $('#docleg').modal('show');
+        }
+
+        function validarSitraEnFormulario(formulario){
+            var form=$(formulario);
+            if(!form.length){
+                return;
+            }
+
+            var numero=(form.find('input[name="numero"]').val() || '').trim();
+            var codTipo=(form.find('input[data-campo="tipo-legalizacion-hidden"]').val() || '').trim();
+            var buscarEn=(form.find('select[name="buscar_en"]').val() || '').trim();
+
+            if(numero==='' || numero==='-'){
+                limpiarSitraFormulario(form);
+                actualizarEstadoSitra(form,'text-muted','SITRA: pendiente');
+                return;
+            }
+
+            if(codTipo==='' && buscarEn===''){
+                limpiarSitraFormulario(form);
+                actualizarEstadoSitra(form,'text-muted','SITRA: seleccione/valide tipo para consultar');
+                return;
+            }
+
+            actualizarEstadoSitra(form,'text-muted','SITRA: verificando...');
+
+            $.ajax({
+                url: "{{url('validar sitra legalizacion/'.$tramite->cod_tra)}}",
+                type: 'POST',
+                data: {
+                    _token: form.find('input[name="_token"]').val(),
+                    numero: numero,
+                    tipo: codTipo,
+                    buscar_en: buscarEn
+                },
+                success: function(resp){
+                    if(!resp || resp.aplica===false){
+                        limpiarSitraFormulario(form);
+                        actualizarEstadoSitra(form,'text-muted',resp && resp.message ? resp.message : 'SITRA: no aplica para este tipo');
+                        return;
+                    }
+
+                    form.data('sitra-response',resp);
+                    form.data('sitra-estado',resp.estado || '');
+
+                    if(resp.estado==='0'){
+                        actualizarEstadoSitra(form,'text-success','SITRA: coincide');
+                        return;
+                    }
+                    if(resp.estado==='2'){
+                        actualizarEstadoSitra(form,'text-danger','SITRA: no existe');
+                        return;
+                    }
+                    if(resp.estado==='1'){
+                        actualizarEstadoSitra(form,'text-danger','SITRA: existe, pero no coincide');
+                        return;
+                    }
+
+                    actualizarEstadoSitra(form,'text-muted',resp.message || 'SITRA: sin datos para validar');
+                },
+                error: function(xhr){
+                    limpiarSitraFormulario(form);
+                    var msg='SITRA: no disponible en este momento';
+                    if(xhr.responseJSON && xhr.responseJSON.message){
+                        msg='SITRA: '+xhr.responseJSON.message;
+                    }
+                    actualizarEstadoSitra(form,'text-danger',msg);
+                }
+            });
+        }
+
+        function programarValidacionSitra(formulario){
+            var form=$(formulario);
+            if(!form.length){
+                return;
+            }
+            var timer=form.data('timer-sitra');
+            if(timer){
+                clearTimeout(timer);
+            }
+            timer=setTimeout(function(){
+                validarSitraEnFormulario(form);
+            },400);
+            form.data('timer-sitra',timer);
         }
 
         function normalizarTexto(texto){
@@ -799,10 +1021,17 @@
                 if($(this).find('input[name="control"]').length){
                     sincronizarCamposObligatorios($(this));
                 }
+                if($(this).find('[data-campo="estado-sitra"]').length){
+                    programarValidacionSitra($(this));
+                }
             });
 
             $(document).on('change','form input[name="cuadis"]',function(){
                 sincronizarCamposObligatorios($(this).closest('form'));
+            });
+
+            $(document).on('input change','form input[name="numero"], form input[name="gestion"], form select[name="buscar_en"], form input[data-campo="tipo-legalizacion-hidden"]',function(){
+                programarValidacionSitra($(this).closest('form'));
             });
         });
 
