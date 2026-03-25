@@ -221,4 +221,26 @@ class UniversidadHelper
                 return 'badge-secondary';
         }
     }
+
+    /**
+     * Resalta el texto de búsqueda en el contenido
+     */
+    public static function highlightText($content, $search)
+    {
+        if (empty($search) || empty($content)) {
+            return htmlspecialchars($content);
+        }
+
+        // Escapar el contenido para seguridad
+        $content = htmlspecialchars($content);
+        $search = htmlspecialchars($search);
+
+        // Crear patrón de búsqueda insensible a mayúsculas/minúsculas
+        $pattern = '/' . preg_quote($search, '/') . '/i';
+
+        // Reemplazar con span de resaltado
+        $highlighted = preg_replace($pattern, '<span class="bg-warning text-dark px-1 rounded">$0</span>', $content);
+
+        return $highlighted;
+    }
 }
