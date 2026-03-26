@@ -246,12 +246,14 @@
                                             <a href="#" class="btn btn-light btn-circle btn-sm text-success" data-target="#docleg" data-toggle="modal" onclick="cargarDatos('{{url("verificacion sitra/".$d->cod_dtra)}}','panel_docleg')"
                                                title="Verificado en el sitra"><i class="fas fa-check-circle"></i>
                                             </a>
+                                        @elseif($d->dtra_verificacion_sitra=='1' || $d->dtra_verificacion_sitra=='2')
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-target="#docleg" data-toggle="modal" onclick="cargarDatos('{{url("verificacion sitra/".$d->cod_dtra)}}','panel_docleg')"
+                                               title="Verificación no válida en SITRA/SID"><i class="fas fa-minus-circle"></i>
+                                            </a>
                                         @else
-                                            @if($d->dtra_verificacion_sitra=='2')
-                                                <a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-target="#docleg" data-toggle="modal" onclick="cargarDatos('{{url("verificacion sitra/".$d->cod_dtra)}}','panel_docleg')"
-                                                   title="No existe en el sitra"><i class="fas fa-minus-circle"></i>
-                                                </a>
-                                            @endif
+                                            <span class="btn btn-light btn-circle btn-sm text-secondary" title="SITRA/SID pendiente">
+                                                <i class="fas fa-minus-circle"></i>
+                                            </span>
                                         @endif
                                     </td>
                                     <!--<td>if($d->dtra_estado_doc==0 || $d->dtra_estado_doc==4 )
@@ -774,8 +776,11 @@
             if(!etiqueta.length){
                 return;
             }
-            if(String(fuente || '').toLowerCase()==='uad9'){
-                etiqueta.text('Respaldo UAD9');
+            var fuenteNormalizada=String(fuente || '').toLowerCase();
+            if(fuenteNormalizada==='sid'){
+                etiqueta.text('SID');
+            }else if(fuenteNormalizada==='sitra_sid'){
+                etiqueta.text('SITRA y SID');
             }else{
                 etiqueta.text('');
             }
@@ -786,6 +791,7 @@
             var resp=form.data('sitra-response') || null;
             var estado=form.data('sitra-estado') || '';
             var fuente=(form.data('sitra-fuente') || '').toString().toLowerCase();
+            var nombreSistemaBase=@json(trim((string)(($tramite->per_apellido ?? '').' '.($tramite->per_nombre ?? ''))));
 
             var nombreSistema='';
             var numeroSistema=(form.find('input[name="numero"]').val() || '').trim();
@@ -793,6 +799,14 @@
 
             if($('#apellido').length || $('#nombre').length){
                 nombreSistema=(($('#apellido').val() || '').trim()+' '+($('#nombre').val() || '').trim()).trim();
+            }
+
+            if(nombreSistema===''){
+                nombreSistema=(nombreSistemaBase || '').toString().trim();
+            }
+
+            if(nombreSistema==='' && resp && resp.nombre){
+                nombreSistema=(resp.nombre || '').toString().trim();
             }
 
             var buscarEn=(form.find('select[name="buscar_en"]').val() || '').trim();
@@ -813,7 +827,7 @@
             }
 
             var detalle='';
-            if(resp){
+            if(resp && estado==='0'){
                 detalle='<table class="col-md-12">'
                     +'<tr><th class="text-right">Nombre:</th><th class="text-dark text-left border-bottom border-danger pl-3">'+esc(resp.nombre || '')+'</th></tr>'
                     +'<tr><th class="text-right">Título:</th><th class="text-dark text-left border-bottom border-danger pl-3">'+esc(resp.titulo || '')+'</th></tr>'
@@ -821,6 +835,10 @@
                     +'<tr><th class="text-right">Gestión:</th><th class="text-dark text-left border-bottom border-danger pl-3">'+esc(resp.gestion || '-')+'</th></tr>'
                     +'<tr><th class="text-right">Tipo documento:</th><th class="text-dark text-left border-bottom border-danger pl-3">'+esc(resp.tipo || '')+'</th></tr>'
                     +'</table>';
+            }else if(estado==='1'){
+                detalle='<p>El documento existe en SITRA, pero los datos no coinciden.</p>';
+            }else if(estado==='2'){
+                detalle='<p>No se encuentra el documento registrado en SITRA ni en SID.</p>';
             }else{
                 detalle='<p>No hay datos de verificación SITRA para mostrar todavía.</p>';
             }
@@ -835,7 +853,7 @@
             }else if(estado==='1'){
                 mensajeFinal='Existe en SITRA, pero no coincide';
             }else if(estado==='2'){
-                mensajeFinal='No existe en SITRA';
+                mensajeFinal='No existe en SITRA ni SID';
             }else{
                 mensajeFinal='Pendiente de verificación';
             }
@@ -855,7 +873,8 @@
                 +'        <span class="font-weight-bold">Nro. Título :</span> <span>'+esc(numeroSistema)+'</span> | '
                 +'        <span class="font-weight-bold">Tipo Documento :</span> <span>'+esc(tipoSistema)+'</span>'
                 +'      </span><br/>'
-                + (fuente==='uad9' ? '<span class="text-info font-italic" style="font-size:0.85em">Fuente: Respaldo interno UAD9</span><br/>' : '')
+                + (fuente==='sid' ? '<span class="text-info font-italic" style="font-size:0.85em">Fuente: SID</span><br/>' : '')
+                + (fuente==='sitra_sid' ? '<span class="text-info font-italic" style="font-size:0.85em">Fuente: SITRA y SID</span><br/>' : '')
                 +'      <br/>'
                 +'      <div class="row">'
                 +'        <div class="font-weight-bold '+claseCaja+' shadow text-center centrar_bloque col-md-9 p-2">'+detalle+'</div>'
@@ -921,7 +940,7 @@
                         return;
                     }
                     if(resp.estado==='2'){
-                        actualizarEstadoSitra(form,'text-danger','SITRA: no existe');
+                        actualizarEstadoSitra(form,'text-danger','SITRA/SID: no existe');
                         return;
                     }
                     if(resp.estado==='1'){
