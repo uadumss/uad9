@@ -22,7 +22,7 @@ class FuncionarioController extends Controller
         $search = trim($request->input('q',''));
 
         $funcionarios = DB::table('doc_adm.funcionarios')
-            ->select('cod_fun','fun_nombre','fun_ci','fun_sexo','fun_telefonos','fun_email','fun_fecha_ingreso','fun_nacionalidad','cod_nac','fun_obs','fun_folder')
+            ->select('cod_fun','fun_nombre','fun_ci','fun_sexo','fun_telefonos','fun_email','fun_fecha_ingreso','fun_nacionalidad','cod_nac','fun_obs','fun_folder','fun_habilitado')
             ->where(function($query) use ($tipoFun) {
                 $query->where('fun_doc_adm','=',$tipoFun)
                     ->orWhere('fun_doc_adm','=','E');
@@ -63,6 +63,11 @@ class FuncionarioController extends Controller
         return view('funcionario.fe_funcionario',compact('funcionario','cod_fun','nacionalidad','carreras','carrera','pais'));
     }
     public function g_funcionario(Request $form){
+
+        // Sincronizar secuencia de PostgreSQL si es necesario
+        if(!isset($form['cf'])){
+            DB::statement("SELECT setval('doc_adm.funcionarios_cod_fun_seq', COALESCE((SELECT MAX(cod_fun) FROM doc_adm.funcionarios) + 1, 1))");
+        }
 
         // Normalizar CI y validar clave única por CI + tipo de funcionario
         $ci = strtoupper(trim($form['ci']));
@@ -130,6 +135,7 @@ class FuncionarioController extends Controller
                 'fun_ddu'=>$ddu,
                 'fun_facultad'=>$form['facultad'],
                 'fun_carrera'=>$form['carrera1'],
+                'fun_habilitado'=>true,
             ]);
             if($form['folder']=='on'){
                 $funcionario->fun_folder='t';
