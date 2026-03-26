@@ -307,7 +307,7 @@ class TramiteLegalizacionController extends Controller
             $verificar_sitra=in_array($a,['db','ca','da','tp'],true) ? '2' : '';
             $numeroDoc=$form['numero'];
 
-            if($a=='db' || $a=='ca' || $a=='da' || $a=='tp' || $a=='re' || $a=='su'){
+            if(!in_array($datosTramita->tra_tipo_tramite,['E','F'],true) && ($a=='db' || $a=='ca' || $a=='da' || $a=='tp' || $a=='re' || $a=='su')){
                 try {
                     $respuesta=TramiteLegalizacionController::verificarSitra($persona->per_ci,$form['numero'],$buscarEnSitra);
                 } catch (\Throwable $e) {
@@ -587,6 +587,14 @@ class TramiteLegalizacionController extends Controller
                 'ok'=>true,
                 'aplica'=>false,
                 'message'=>'SITRA: primero registre los datos personales.',
+            ]);
+        }
+
+        if(in_array($tramita->tra_tipo_tramite,['E','F'],true)){
+            return response()->json([
+                'ok'=>true,
+                'aplica'=>false,
+                'message'=>'SITRA: no aplica para trámite Consejo/Confrontación.',
             ]);
         }
 

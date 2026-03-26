@@ -215,7 +215,9 @@
                         <table class="col-md-12 table table-sm table-hover table-dark">
                             <tr class="bg-gradient-secondary text-white p-2">
                                 <th>Nº</th>
-                                <th>Sitra</th>
+                                @if(!in_array($tramite->tra_tipo_tramite,['E','F']))
+                                    <th>Sitra</th>
+                                @endif
                                 <!--<th>Estado</th>-->
                                 <th>Nombre</th>
 
@@ -242,20 +244,22 @@
                                         @endif
                                     @endif
                                     <td>{{$i}}</td>
-                                    <td>@if($d->dtra_verificacion_sitra=='0')
-                                            <a href="#" class="btn btn-light btn-circle btn-sm text-success" data-target="#docleg" data-toggle="modal" onclick="cargarDatos('{{url("verificacion sitra/".$d->cod_dtra)}}','panel_docleg')"
-                                               title="Verificado en el sitra"><i class="fas fa-check-circle"></i>
-                                            </a>
-                                        @elseif($d->dtra_verificacion_sitra=='1' || $d->dtra_verificacion_sitra=='2')
-                                            <a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-target="#docleg" data-toggle="modal" onclick="cargarDatos('{{url("verificacion sitra/".$d->cod_dtra)}}','panel_docleg')"
-                                               title="Verificación no válida en SITRA/SID"><i class="fas fa-minus-circle"></i>
-                                            </a>
-                                        @else
-                                            <span class="btn btn-light btn-circle btn-sm text-secondary" title="SITRA/SID pendiente">
-                                                <i class="fas fa-minus-circle"></i>
-                                            </span>
-                                        @endif
-                                    </td>
+                                    @if(!in_array($tramite->tra_tipo_tramite,['E','F']))
+                                        <td>@if($d->dtra_verificacion_sitra=='0')
+                                                <a href="#" class="btn btn-light btn-circle btn-sm text-success" data-target="#docleg" data-toggle="modal" onclick="cargarDatos('{{url("verificacion sitra/".$d->cod_dtra)}}','panel_docleg')"
+                                                   title="Verificado en el sitra"><i class="fas fa-check-circle"></i>
+                                                </a>
+                                            @elseif($d->dtra_verificacion_sitra=='1' || $d->dtra_verificacion_sitra=='2')
+                                                <a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-target="#docleg" data-toggle="modal" onclick="cargarDatos('{{url("verificacion sitra/".$d->cod_dtra)}}','panel_docleg')"
+                                                   title="Verificación no válida en SITRA/SID"><i class="fas fa-minus-circle"></i>
+                                                </a>
+                                            @else
+                                                <span class="btn btn-light btn-circle btn-sm text-secondary" title="SITRA/SID pendiente">
+                                                    <i class="fas fa-minus-circle"></i>
+                                                </span>
+                                            @endif
+                                        </td>
+                                    @endif
                                     <!--<td>if($d->dtra_estado_doc==0 || $d->dtra_estado_doc==4 )
                                             <div class="border border-success font-weight-bold text-success rounded pl-2" ><?php echo \App\Http\Controllers\TramiteLegalizacionController::estado($d->dtra_estado_doc)?></div>
                                         else
@@ -514,8 +518,10 @@
                                                 <div class="input-group ">
                                                     &nbsp;&nbsp;  &nbsp;&nbsp;<input name="numero" class="form-control col-md-2 form-control-sm border "> &nbsp;&nbsp;
                                                     / &nbsp;&nbsp;<input name="gestion" required class="form-control col-md-2 form-control-sm border" pattern="[0-9]{1,4}"> &nbsp;&nbsp;(e.j. 1999)
-                                                    &nbsp;&nbsp;<a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-campo="estado-sitra-icon" title="No existe en el sitra" onclick="abrirModalSitraFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
-                                                    <span class="ml-1 text-info font-italic" data-campo="sitra-fuente"></span>
+                                                    @if(!in_array($tramite->tra_tipo_tramite,['E','F']))
+                                                        &nbsp;&nbsp;<a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-campo="estado-sitra-icon" title="No existe en el sitra" onclick="abrirModalSitraFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
+                                                        <span class="ml-1 text-info font-italic" data-campo="sitra-fuente"></span>
+                                                    @endif
                                                                         &nbsp;&nbsp;&nbsp;&nbsp;
                                                     <span class="font-weight-bold text-dark float-right">
                                                         Supletorio : <input type="checkbox" name="supletorio">
@@ -547,8 +553,10 @@
                                             <th class="text-right font-italic">Validación:</th>
                                             <td class="border-bottom border-dark">
                                                 <small class="text-muted" data-campo="estado-validacion">Pendiente de validación</small>
-                                                <br>
-                                                <small class="text-muted" data-campo="estado-sitra">SITRA: pendiente</small>
+                                                @if(!in_array($tramite->tra_tipo_tramite,['E','F']))
+                                                    <br>
+                                                    <small class="text-muted" data-campo="estado-sitra">SITRA: pendiente</small>
+                                                @endif
                                             </td>
                                         </tr>
                                     </table>
@@ -896,6 +904,10 @@
                 return;
             }
 
+            if(!form.find('[data-campo="estado-sitra"]').length){
+                return;
+            }
+
             var numero=(form.find('input[name="numero"]').val() || '').trim();
             var codTipo=(form.find('input[data-campo="tipo-legalizacion-hidden"]').val() || '').trim();
             var buscarEn=(form.find('select[name="buscar_en"]').val() || '').trim();
@@ -1071,7 +1083,10 @@
             });
 
             $(document).on('input change','form input[name="numero"], form input[name="gestion"], form select[name="buscar_en"], form input[data-campo="tipo-legalizacion-hidden"]',function(){
-                programarValidacionSitra($(this).closest('form'));
+                var form=$(this).closest('form');
+                if(form.find('[data-campo="estado-sitra"]').length){
+                    programarValidacionSitra(form);
+                }
             });
         });
 
