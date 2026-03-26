@@ -27,6 +27,10 @@
                 <span class="font-weight-bold">Tipo Documento :</span> <span>{{\App\Models\Funciones::nombre_titulo($docleg->dtra_buscar_en)}}</span>
             </span>
             <br/>
+            <span class="text-info font-italic" style="font-size: 0.85em">
+                Fuente: {{strtoupper($fuente ?? 'sitra')}}
+            </span>
+            <br/>
             <br/>
                 <div class="row">
                     @if($docleg->dtra_verificacion_sitra==0)
@@ -35,25 +39,25 @@
                            <table class="col-md-12">
                                     <tr>
                                         <th class="text-right ">Nombre:</th>
-                                        <th class="text-dark text-left border-bottom border-danger pl-3">{{$respuesta->nombre}}</th>
+                                        <th class="text-dark text-left border-bottom border-danger pl-3">{{$respuesta->nombre ?? '-'}}</th>
                                     </tr>
                                     <tr>
                                         <th class="text-right ">Título:</th>
-                                        <th class="text-dark text-left border-bottom border-danger pl-3">{{$respuesta->titulo}}</th>
+                                        <th class="text-dark text-left border-bottom border-danger pl-3">{{$respuesta->titulo ?? '-'}}</th>
                                     </tr>
                                     <tr>
                                         <th class="text-right ">Número:</th>
-                                        <th class="text-dark text-left border-bottom border-danger pl-3">{{$respuesta->numero}}</th>
+                                        <th class="text-dark text-left border-bottom border-danger pl-3">{{$respuesta->numero ?? '-'}}</th>
                                     </tr>
 
                                     <tr>
                                         <th class="text-right ">Gestión:</th>
-                                        <th class="text-dark text-left border-bottom border-danger pl-3">{{$respuesta->gestion}}</th>
+                                        <th class="text-dark text-left border-bottom border-danger pl-3">{{$respuesta->gestion ?? '-'}}</th>
                                     </tr>
 
                                     <tr>
                                         <th class="text-right ">Tipo documento:</th>
-                                        <th class="text-dark text-left border-bottom border-danger pl-3">{{$respuesta->tipo}}</th>
+                                        <th class="text-dark text-left border-bottom border-danger pl-3">{{$respuesta->tipo ?? '-'}}</th>
                                     </tr>
                                 </table>
                         </div>
@@ -63,7 +67,11 @@
                     @else
                         <div class="font-weight-bold alert-danger shadow text-center centrar_bloque col-md-9 p-2" >
                             <div>
-                               <p>No se encuentra el documento registrado en el Sistema SITRA</p>
+                                @if($docleg->dtra_verificacion_sitra==1)
+                                    <p>El documento existe en SITRA, pero los datos no coinciden.</p>
+                                @else
+                                    <p>No se encuentra el documento registrado en el Sistema SITRA.</p>
+                                @endif
                             </div>
                         </div>
                         <div class="pt-2 col-md-2 text-danger font-weight-bolder text-left"><h1><i class="fas fa-minus-circle"></i></h1></div>
@@ -71,7 +79,7 @@
                 </div>
                 <br/>
             @if($docleg->dtra_verificacion_sitra==0)
-                <div class="text-success font-italic font-weight-bold border border-success rounded col-md-3" style="font-size: 1.2em">Verificacion Correcta</div>
+                <div class="text-success font-italic font-weight-bold border border-success rounded col-md-5" style="font-size: 1.2em">Verificacion Correcta {{($fuente ?? 'sitra')==='uad9' ? '(Respaldo UAD9)' : '(SITRA)'}} </div>
             @else
                 <div class="text-danger font-italic font-weight-bold border border-danger rounded col-md-3" style="font-size: 1.2em">INCORRECTO</div>
             @endif

@@ -7,20 +7,29 @@
             </button>
         </div>
         <div class="modal-body" style="font-size: smaller">
-            @if(Session::has('exito'))
+            @if(Session::has('exitoagregar'))
                 <div class="alert alert-success alert-dismissible">
                     <button type="button" class="close" data-dismiss="alert" aria-label="close">
                         <span aria-hidden="true">&times;</span>
                     </button>
-                    <span class="font-weight-bold">{!! session('exito') !!}</span>
+                    <span class="font-weight-bold">{!! session('exitoagregar') !!}</span>
                 </div>
             @endif
+                @if(Session::has('erroragregar'))
+                    <div class="alert alert-success alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-label="close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                        <span class="font-weight-bold">{!! session('erroragregar') !!}</span>
+                    </div>
+                @endif
+
             <div class="bg-primary centrar_bloque p-1 col-md-7 rounded shadow">
                 <h6 class="text-white text-center">Formulario para editar tramite de apostilla</h6>
             </div>
             <hr class="sidebar-divider"/>
             <div class="row">
-                <div class="col-md-4">
+                <div class="col-md-3">
 
                         <div class="shadow-sm p-2 col-md-7 centrar_bloque">
                             <span class="text-primary font-weight-bold"> TRÁMITE</span>
@@ -190,17 +199,18 @@
                 </div>
                 <!-- ================================LISTA DE DOCUMENTOS====================================-->
                 @if($cod_apos!=0)
-                <div class="col-md-5 pl-3 border shadow pt-2">
+                <div class="col-md-6 pl-3 border shadow pt-2">
                     <span class="text-danger font-italic font-weight-bold" style="font-size: 16px">* Trámites seleccionados</span>
 
                     <div id="panel_lista_tramites_apostilla" class="overflow-auto" style="height: 400px;">
-                        <table class="col-md-12 table table-sm table-hover table-info rounded" style="font-size: 12px">
+                        <table class="col-md-12 table table-sm table-hover table-info rounded" style="font-size: 11px">
                             <tr class="bg-gradient-info text-white p-2">
                                 <th>Nº</th>
                                 <th>Sitra</th>
                                 <th>Nombre</th>
                                 <th>N° trámite</th>
                                 <th>N° Documento</th>
+                                <th>Valorado</th>
                                 <th>Opciones</th>
                             </tr>
                             <?php $i=1?>
@@ -210,7 +220,9 @@
                                     <td></td>
                                     <td>{{$d->lis_nombre}}</td>
                                     <td>{{$d->dapo_numero}}</td>
-                                    <td>{{$d->dapo_numero_documento."/".$d->dapo_gestion_documento}}</td>
+                                    <td><span class="font-weight-bolder">{{$d->dapo_numero_documento}}</span>{{" / ".$d->dapo_gestion_documento}}</td>
+                                    <td class="bg-gray-200 text-right"><span class="font-weight-bolder">{{$d->dapo_valorado_preimpreso}}</span>{{" / ".$d->dapo_valorado_gestion}}</td>
+
                                     <td>
                                         @can('quitar doumento - apo')
                                             @if($tramite_apostilla->apos_estado<=1)
@@ -266,22 +278,12 @@
                                         <tr>
                                             <td class="border-bottom">{{$i}}</td>
                                             <td class="border-bottom">
-                                                @if($a->lis_tipo!='')
+
                                                     <a href="#tramite_apostilla" class="text-primary" data-toggle="modal"
                                                        onclick="cargarDatos('{{url("agregar tramite lista apostilla/$a->cod_lis/$cod_apos")}}','panel_tramite_apostilla');"
                                                        title="Agregar trámite">{{$a->lis_alias}}
                                                     </a>
-                                                @else
-                                                    <form id="form_agregar_tramite{{$i}}">
-                                                        @csrf
-                                                        <input type="hidden" name="cl" value="{{$a->cod_lis}}">
-                                                        <input type="hidden" name="ca" value="{{$tramite_apostilla->cod_apos}}">
-                                                    </form>
-                                                    <a href="#" class="text-dark"
-                                                       onclick="enviar('form_agregar_tramite{{$i}}','{{url("guardar agregar tramite apostilla/")}}','panel_lista_tramites_apostilla');cargarDatos('{{url("listar tramite apostilla tabla/".date('Y-m-d',strtotime($tramite_apostilla->apos_fecha_ingreso)))}}','panel_tabla_tramites')"
-                                                       title="Agregar trámite">{{$a->lis_alias}}
-                                                    </a>
-                                                @endif
+
                                             </td>
                                         </tr>
                                             <?php $i++;?>

@@ -44,7 +44,6 @@ require __DIR__ . '/Usuario.php';
 require __DIR__ . '/Configuracion.php';
 require __DIR__ . '/Claustros.php';
 
-
 Auth::routes();
 
 //================RENDIMIENTO
