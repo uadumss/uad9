@@ -27,42 +27,116 @@ class PermisosController extends Controller
             return view('permisos.l_permisos',compact('usuario','vista','num','permisos','subsistema','totalPermisos','objetos','permisosUsuario'));
     }
     public function guardar_permiso(Request $form){
-        $permiso=Permission::all()->where('name','=',$form['permiso']);
-        if(sizeof($permiso)<1){
-            //dd($form);
-            //Permission::create(['name'=>'hola']);
-            $creado=Permission::create([
-                'name'=>$form['permiso'],
-                'guard_name'=>'api',
-                'objeto'=>$form['objeto'],
-                'leyenda'=>$form['leyenda'],
-            ]);
-            //dd($creado);
-            PermisosController::asignarAlAdministrador($form['permiso']);
-            \Session::flash('exito','El permiso se creó satisfactoriamente');
-        }else{
-            \Session::flash('error','El permiso =>'.$form['permiso'].' Ya existe');
+        try {
+            $permiso=Permission::all()->where('name','=',$form['permiso']);
+            $exito = true;
+            $mensaje = 'El permiso se creó satisfactoriamente';
+            
+            if(sizeof($permiso)<1){
+                //dd($form);
+                //Permission::create(['name'=>'hola']);
+                $creado=Permission::create([
+                    'name'=>$form['permiso'],
+                    'guard_name'=>'api',
+                    'objeto'=>$form['objeto'],
+                    'leyenda'=>$form['leyenda'],
+                ]);
+                if (!$creado || !$creado->id) {
+                    throw new \Exception('Error al crear el permiso en la base de datos');
+                }
+                //dd($creado);
+                PermisosController::asignarAlAdministrador($form['permiso']);
+            }else{
+                $exito = false;
+                $mensaje = 'El permiso =>'.$form['permiso'].' Ya existe';
+            }
+            
+            if ($form->expectsJson() || $form->ajax()) {
+                return response()->json([
+                    'exito' => $exito,
+                    'mensaje' => $mensaje,
+                    'redirect' => url('listar permisos/'.$form['id'].'/'.$form['num'])
+                ]);
+            }
+            
+            if($exito) {
+                \Session::flash('exito', $mensaje);
+            } else {
+                \Session::flash('error', $mensaje);
+            }
+            return redirect('listar permisos/'.$form['id'].'/'.$form['num']);
+        } catch (\Exception $e) {
+            if ($form->expectsJson() || $form->ajax()) {
+                return response()->json([
+                    'exito' => false,
+                    'mensaje' => 'Error: ' . $e->getMessage()
+                ], 500);
+            }
+            throw $e;
         }
-        return redirect('listar permisos/'.$form['id'].'/'.$form['num']);
     }
     public function guardar_objeto(Request $form){
-        $objeto=Objeto::all()
-            ->where('obj_nombre','=',$form['objeto'])
-            ->where('obj_subsistema','=',$form['subsistema']);
-        if(sizeof($objeto)<1) {
+        try {
+            // Validar primero
             $form->validate([
+               'objeto' => 'required|string',
                'subsistema'=>['required', Rule::in(
                    ['Diplomas y Títulos', 'Resoluciones','Apostilla','Docente Administrativo','Servicios','Administracion','Resoluciones RCF - RCC','No atentado','Claustros'])],
             ]);
-            Objeto::create([
-                'obj_nombre' => $form['objeto'],
-                'obj_subsistema' => $form['subsistema'],
-            ]);
-            \Session::flash('exito','El objeto se creó satisfactoriamente');
-        }else{
-            \Session::flash('error','El objeto =>'.$form['objeto'].' Ya existe');
+            
+            $objeto=Objeto::all()
+                ->where('obj_nombre','=',$form['objeto'])
+                ->where('obj_subsistema','=',$form['subsistema']);
+            $exito = true;
+            $mensaje = 'El objeto se creó satisfactoriamente';
+            
+            if(sizeof($objeto)<1) {
+                $nuevoObjeto = Objeto::create([
+                    'obj_nombre' => $form['objeto'],
+                    'obj_subsistema' => $form['subsistema'],
+                ]);
+                if (!$nuevoObjeto || !$nuevoObjeto->cod_obj) {
+                    throw new \Exception('Error al crear el objeto en la base de datos');
+                }
+            }else{
+                $exito = false;
+                $mensaje = 'El objeto =>'.$form['objeto'].' Ya existe';
+            }
+            
+            if ($form->expectsJson() || $form->ajax()) {
+                return response()->json([
+                    'exito' => $exito,
+                    'mensaje' => $mensaje,
+                    'redirect' => url('listar permisos/'.$form['id'].'/'.$form['num'])
+                ]);
+            }
+            
+            if($exito) {
+                \Session::flash('exito', $mensaje);
+            } else {
+                \Session::flash('error', $mensaje);
+            }
+            return redirect('listar permisos/'.$form['id'].'/'.$form['num']);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($form->expectsJson() || $form->ajax()) {
+                $mensajes = implode(', ', array_reduce($e->errors(), function($carry, $item) {
+                    return array_merge($carry, $item);
+                }, []));
+                return response()->json([
+                    'exito' => false,
+                    'mensaje' => 'Error de validación: ' . $mensajes
+                ], 422);
+            }
+            throw $e;
+        } catch (\Exception $e) {
+            if ($form->expectsJson() || $form->ajax()) {
+                return response()->json([
+                    'exito' => false,
+                    'mensaje' => 'Error: ' . $e->getMessage()
+                ], 500);
+            }
+            throw $e;
         }
-        return redirect('listar permisos/'.$form['id'].'/'.$form['num']);
     }
     public function obtPermisos($subsistema){
         $permisos=DB::table('seguridad.permissions')
