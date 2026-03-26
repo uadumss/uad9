@@ -981,7 +981,9 @@ class ApostillaController extends Controller
             }
 
             $codigoCuenta=(string)($fila['codigo_cuenta'] ?? '');
-            $tramiteSugerido=$this->buscarTramiteApostillaPorCuenta($codigoCuenta);
+            $nombreCuentaRecaudaciones = (string)($fila['cuenta'] ?? '');
+            
+            $tramiteSugerido=$this->buscarTramiteApostillaPorCuenta($codigoCuenta, $nombreCuentaRecaudaciones);
             if(!$tramiteSugerido){
                 $mensajeCuentaInvalida='La cuenta del valorado no corresponde al tipo de trámite actual.';
                 continue;
@@ -1162,7 +1164,7 @@ class ApostillaController extends Controller
         ];
     }
 
-    private function buscarTramiteApostillaPorCuenta(string $codigoCuenta): ?Lista_doc_apostilla
+    private function buscarTramiteApostillaPorCuenta(string $codigoCuenta, string $nombreCuenta = ''): ?Lista_doc_apostilla
     {
         $cuentaPago=$this->normalizarNumero($codigoCuenta);
         if($cuentaPago===''){
@@ -1170,11 +1172,32 @@ class ApostillaController extends Controller
         }
 
         $lista=Lista_doc_apostilla::where('lis_hab','=','t')->get();
+        $coincidencias = [];
+        
         foreach($lista as $item){
             $cuentaItem=$this->normalizarNumero((string)($item->lis_cuenta ?? ''));
             if($cuentaItem!=='' && $cuentaItem===$cuentaPago){
-                return $item;
+                $coincidencias[] = $item;
             }
+        }
+
+        if(count($coincidencias) === 1){
+            return $coincidencias[0];
+        } elseif(count($coincidencias) > 1 && $nombreCuenta !== '') {
+            $nombreCuenta = strtoupper(trim($nombreCuenta));
+            $mejorCoincidencia = null;
+            $mayorSimilitud = -1;
+
+            foreach($coincidencias as $item){
+                $nombreTramite = strtoupper(trim($item->lis_nombre));
+                similar_text($nombreCuenta, $nombreTramite, $porcentaje);
+
+                if($porcentaje > $mayorSimilitud){
+                    $mayorSimilitud = $porcentaje;
+                    $mejorCoincidencia = $item;
+                }
+            }
+            return $mejorCoincidencia;
         }
 
         return null;

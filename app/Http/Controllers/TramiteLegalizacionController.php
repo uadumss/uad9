@@ -797,13 +797,34 @@ class TramiteLegalizacionController extends Controller
             }
 
             $codigoCuenta=(string)($fila['codigo_cuenta'] ?? '');
-            $tramiteSugerido=Tramite::where('tre_hab','=','t')
-                ->where('tre_tipo','=',$tipoTramite)
+            $nombreCuentaRecaudaciones=strtoupper(trim((string)($fila['cuenta'] ?? '')));
+
+            $tramitesSugeridos=Tramite::where('tre_hab','=','t')
                 ->where('tre_numero_cuenta','=',$codigoCuenta)
-                ->first();
+                ->get();
+
+            $tramiteSugerido=null;
+            if($tramitesSugeridos->count() === 1){
+                $tramiteSugerido = $tramitesSugeridos->first();
+            } elseif($tramitesSugeridos->count() > 1) {
+                $mayorSimilitud = -1;
+                foreach($tramitesSugeridos as $tramiteCand){
+                    $nombreTramite = strtoupper(trim($tramiteCand->tre_nombre));
+                    similar_text($nombreCuentaRecaudaciones, $nombreTramite, $porcentaje);
+                    if($porcentaje > $mayorSimilitud){
+                        $mayorSimilitud = $porcentaje;
+                        $tramiteSugerido = $tramiteCand;
+                    }
+                }
+            }
 
             if(!$tramiteSugerido){
                 $mensajeCuentaInvalida='La cuenta del valorado no corresponde al tipo de trámite actual.';
+                continue;
+            }
+
+            if($tramiteSugerido->tre_tipo !== $tipoTramite){
+                $mensajeCuentaInvalida='El valorado corresponde a "'.$tramiteSugerido->tre_nombre.'", por lo que no es válido en esta sección.';
                 continue;
             }
 
