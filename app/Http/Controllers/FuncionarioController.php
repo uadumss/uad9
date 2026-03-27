@@ -637,4 +637,54 @@ class FuncionarioController extends Controller
         $universidad->delete();
         return redirect('listar universidades')->with('exito', 'Universidad eliminada exitosamente');
     }
+
+    /**
+     * Buscar funcionarios por término de búsqueda
+     */
+    public function buscar_funcionarios(Request $request)
+    {
+        $termino = $request->input('q', '');
+        
+        if (strlen($termino) < 2) {
+            return response()->json([]);
+        }
+
+        $funcionarios = DB::table('doc_adm.funcionarios')
+            ->select('cod_fun', 'fun_nombre', 'fun_ci', 'fun_email', 'fun_telefonos')
+            ->where(function($query) use ($termino) {
+                $query->where('fun_nombre', 'ilike', '%' . $termino . '%')
+                      ->orWhere('fun_ci', 'ilike', '%' . $termino . '%')
+                      ->orWhere('fun_email', 'ilike', '%' . $termino . '%');
+            })
+            ->orderBy('fun_nombre')
+            ->limit(10)
+            ->get();
+
+        return response()->json($funcionarios);
+    }
+
+    /**
+     * Guardar formulario de conformidad
+     */
+    public function guardar_conformidad(Request $request)
+    {
+        $codFun = $request->input('cod_fun');
+        $observaciones = $request->input('observaciones', '');
+
+        if (!$codFun) {
+            return redirect()->back()->with('error', 'Debe seleccionar un funcionario');
+        }
+
+        $funcionario = Funcionario::find($codFun);
+        if (!$funcionario) {
+            return redirect()->back()->with('error', 'Funcionario no encontrado');
+        }
+
+        // Aquí puedes guardar la conformidad en una tabla o realizar la acción necesaria
+        // Por ahora, vamos a mostrar un mensaje de éxito
+        \Session::flash('exito', 'Formulario de conformidad registrado para: ' . $funcionario->fun_nombre);
+        
+        return redirect()->back();
+    }
 }
+

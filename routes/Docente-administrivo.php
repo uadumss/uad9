@@ -44,6 +44,11 @@ Route::group(['middleware'=>['permission:acceder al sistema - dya']],function(){
     Route::get('reporte dya',[FuncionarioController::class,'fe_reporte']);
     Route::post('procesar reporte dya',[FuncionarioController::class,'procesar_reporte']);
     
+    // =======================CONFORMIDAD
+    Route::get('buscar-funcionarios',[FuncionarioController::class,'buscar_funcionarios']);
+    Route::post('guardar-conformidad',[FuncionarioController::class,'guardar_conformidad']);
+    //
+    
     // =======================UNIVERSIDADES
     Route::get('listar universidades',[FuncionarioController::class,'listar_universidades'])->middleware('permission:listar universidades - dya');
     Route::post('crear universidad',[FuncionarioController::class,'crear_universidad'])->middleware('permission:listar universidades - dya');
