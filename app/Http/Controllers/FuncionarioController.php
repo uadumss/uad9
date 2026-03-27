@@ -687,4 +687,3 @@ class FuncionarioController extends Controller
         return redirect()->back();
     }
 }
-}
