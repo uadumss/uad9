@@ -725,6 +725,7 @@
             
             if(!control){
                 limpiarTipoLegalizacion(formulario);
+                limpiarPtagSugerido(formulario);
                 formulario.find('input[data-campo="preimpreso-api"]').val('');
                 formulario.find('input[data-campo="gestion-api"]').val('');
                 limpiarSitraFormulario(formulario);
@@ -749,6 +750,7 @@
                     if(!resp.ok){
                         okInput.val('0');
                         limpiarTipoLegalizacion(formulario);
+                        limpiarPtagSugerido(formulario);
                         formulario.find('input[data-campo="preimpreso-api"]').val('');
                         formulario.find('input[data-campo="gestion-api"]').val('');
                         limpiarSitraFormulario(formulario);
@@ -762,6 +764,7 @@
 
                     autoseleccionarTipoLegalizacion(formulario,resp);
                     sincronizarTipoLegalizacion(formulario);
+                    aplicarPtagSugerido(formulario,resp);
                     formulario.find('input[data-campo="preimpreso-api"]').val(resp.preimpreso || '');
                     okInput.val('1');
 
@@ -785,6 +788,7 @@
                     }
                     okInput.val('0');
                     limpiarTipoLegalizacion(formulario);
+                    limpiarPtagSugerido(formulario);
                     formulario.find('input[data-campo="preimpreso-api"]').val('');
                     formulario.find('input[data-campo="gestion-api"]').val('');
                     limpiarSitraFormulario(formulario);
@@ -1206,6 +1210,33 @@
             formulario.find('input[data-campo="tipo-legalizacion-hidden"]').val('');
         }
 
+        function aplicarPtagSugerido(formulario,resp){
+            var check=formulario.find('input[name="ptaang"]');
+            if(!check.length){
+                return;
+            }
+            var sugerido=!!(resp && resp.ptag_auto);
+            if(sugerido){
+                check.prop('checked',true);
+                check.attr('data-ptag-lock','1');
+                check.attr('title','PTAG detectado desde la cuenta de recaudación');
+                return;
+            }
+
+            check.removeAttr('data-ptag-lock');
+            check.removeAttr('title');
+        }
+
+        function limpiarPtagSugerido(formulario){
+            var check=formulario.find('input[name="ptaang"]');
+            if(!check.length){
+                return;
+            }
+            check.removeAttr('data-ptag-lock');
+            check.removeAttr('title');
+            check.prop('checked',false);
+        }
+
         function programarValidacionControl(inputControl){
             var form=$(inputControl).closest('form');
             if(!form.length){
@@ -1251,6 +1282,11 @@
                 if(form.find('[data-campo="estado-sitra"]').length){
                     programarValidacionSitra(form);
                 }
+            });
+
+            $(document).on('click change','form input[name="ptaang"][data-ptag-lock="1"]',function(e){
+                e.preventDefault();
+                $(this).prop('checked',true);
             });
         });
 

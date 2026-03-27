@@ -931,25 +931,8 @@ class TramiteLegalizacionController extends Controller
 
             $codigoCuenta=(string)($fila['codigo_cuenta'] ?? '');
             $nombreCuentaRecaudaciones=strtoupper(trim((string)($fila['cuenta'] ?? '')));
-
-            $tramitesSugeridos=Tramite::where('tre_hab','=','t')
-                ->where('tre_numero_cuenta','=',$codigoCuenta)
-                ->get();
-
-            $tramiteSugerido=null;
-            if($tramitesSugeridos->count() === 1){
-                $tramiteSugerido = $tramitesSugeridos->first();
-            } elseif($tramitesSugeridos->count() > 1) {
-                $mayorSimilitud = -1;
-                foreach($tramitesSugeridos as $tramiteCand){
-                    $nombreTramite = strtoupper(trim($tramiteCand->tre_nombre));
-                    similar_text($nombreCuentaRecaudaciones, $nombreTramite, $porcentaje);
-                    if($porcentaje > $mayorSimilitud){
-                        $mayorSimilitud = $porcentaje;
-                        $tramiteSugerido = $tramiteCand;
-                    }
-                }
-            }
+            $tramiteSugerido=$this->buscarTramiteSugeridoDesdeFilaRecaudacion((array)$fila,$tipoTramite);
+            $ptagAuto=$this->esCuentaVerifAutentPtag($nombreCuentaRecaudaciones,$tipoTramite);
 
             if(!$tramiteSugerido){
                 $nombreCuenta=trim((string)$nombreCuentaRecaudaciones);
@@ -992,6 +975,7 @@ class TramiteLegalizacionController extends Controller
                 'preimpreso'=>$preimpresoApi,
                 'tipo_legalizacion_sugerido'=>$tramiteSugerido->cod_tre,
                 'nombre_tipo_legalizacion_sugerido'=>$tramiteSugerido->tre_nombre,
+                'ptag_auto'=>$ptagAuto,
             ];
         }
 
@@ -1327,6 +1311,124 @@ class TramiteLegalizacionController extends Controller
 
         similar_text($xs!=='' ? $xs : $x, $ys!=='' ? $ys : $y, $porcentaje);
         return $porcentaje>=88;
+    }
+
+    private function buscarTramiteSugeridoDesdeFilaRecaudacion(array $fila, string $tipoTramite): ?Tramite
+    {
+        $codigoCuenta=trim((string)($fila['codigo_cuenta'] ?? ''));
+        $nombreCuenta=trim((string)($fila['cuenta'] ?? ''));
+
+        if($codigoCuenta!==''){
+            $tramitesPorCuenta=Tramite::where('tre_hab','=','t')
+                ->where('tre_numero_cuenta','=',$codigoCuenta)
+                ->get();
+
+            if($tramitesPorCuenta->count()===1){
+                return $tramitesPorCuenta->first();
+            }
+
+            if($tramitesPorCuenta->count()>1){
+                $mejor=null;
+                $mejorScore=-1;
+                foreach($tramitesPorCuenta as $tramiteCand){
+                    $score=$this->puntajeSimilitudCuentaTramite($nombreCuenta,(string)$tramiteCand->tre_nombre);
+                    if($score>$mejorScore){
+                        $mejorScore=$score;
+                        $mejor=$tramiteCand;
+                    }
+                }
+                if($mejor){
+                    return $mejor;
+                }
+            }
+        }
+
+        if($nombreCuenta===''){
+            return null;
+        }
+
+        // Fallback para cuentas no registradas en BD (p.ej. VERIF. Y AUTENT. ...)
+        // que semánticamente corresponden a legalizaciones/PTAG.
+        $candidatos=Tramite::where('tre_hab','=','t')
+            ->where('tre_tipo','=',$tipoTramite)
+            ->get();
+
+        $mejor=null;
+        $mejorScore=-1;
+        foreach($candidatos as $tramiteCand){
+            $score=$this->puntajeSimilitudCuentaTramite($nombreCuenta,(string)$tramiteCand->tre_nombre);
+            if($score>$mejorScore){
+                $mejorScore=$score;
+                $mejor=$tramiteCand;
+            }
+        }
+
+        if($mejor && $mejorScore>=86){
+            return $mejor;
+        }
+
+        return null;
+    }
+
+    private function puntajeSimilitudCuentaTramite(string $nombreCuenta, string $nombreTramite): float
+    {
+        $cuentaComp=$this->normalizarTextoComparacionCuenta($nombreCuenta);
+        $tramiteComp=$this->normalizarTextoComparacionCuenta($nombreTramite);
+
+        if($cuentaComp==='' || $tramiteComp===''){
+            return 0.0;
+        }
+
+        if($cuentaComp===$tramiteComp){
+            return 100.0;
+        }
+
+        similar_text($cuentaComp,$tramiteComp,$porcentaje);
+        return (float)$porcentaje;
+    }
+
+    private function normalizarTextoComparacionCuenta(string $valor): string
+    {
+        $v=$this->normalizarTexto($valor);
+        $v=preg_replace('/[^A-Z0-9 ]+/', ' ', $v) ?? '';
+
+        $reemplazos=[
+            '/\bVERIFICACION\b/' => ' ',
+            '/\bVERIF\b/' => ' ',
+            '/\bAUTENTICACION\b/' => ' ',
+            '/\bAUTENT\b/' => ' ',
+            '/\bLEGALIZACION\b/' => ' ',
+            '/\bLEG\b/' => ' ',
+            '/\bDE\b/' => ' ',
+            '/\bDEL\b/' => ' ',
+            '/\bLA\b/' => ' ',
+            '/\bEL\b/' => ' ',
+            '/\bY\b/' => ' ',
+        ];
+
+        foreach($reemplazos as $patron=>$reemplazo){
+            $v=preg_replace($patron,$reemplazo,$v) ?? $v;
+        }
+
+        $v=preg_replace('/\s+/', ' ', trim($v)) ?? '';
+        return (string)$v;
+    }
+
+    private function esCuentaVerifAutentPtag(string $nombreCuenta, string $tipoTramite): bool
+    {
+        if($tipoTramite!=='L'){
+            return false;
+        }
+
+        $texto=$this->normalizarTexto($nombreCuenta);
+        if($texto===''){
+            return false;
+        }
+
+        $tieneVerif=(strpos($texto,'VERIF')!==false || strpos($texto,'VERIFICACION')!==false);
+        $tieneAutent=(strpos($texto,'AUTENT')!==false || strpos($texto,'AUTENTICACION')!==false);
+
+        return $tieneVerif && $tieneAutent;
     }
 
     private function nombresCompatibles(string $nombreLocal, string $nombreSitra): bool

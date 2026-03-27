@@ -55,23 +55,23 @@
                         @can('crear traleg - srv')
                             @if($fecha==(date('Y-m-d')))
                                 <a class="btn btn-outline-info btn-sm text-dark shadow-sm" data-target="#traleg" data-toggle="modal"
-                                   onclick="generarNumero('L','generar numero','panel_traleg');setTimeout(function () {$('#traleg').modal('hide');}, 1500); ">
+                                              onclick="generarNumero('L','generar numero','panel_traleg');">
                                     <i class="fas fa-plus"></i> Legalización</a>
                                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                                 <a class="btn btn-outline-info btn-sm text-dark shadow-sm" data-target="#traleg" data-toggle="modal"
-                                   onclick="generarNumero('C','generar numero','panel_traleg');setTimeout(function () {$('#traleg').modal('hide');}, 1500); ">
+                                              onclick="generarNumero('C','generar numero','panel_traleg');">
                                     <i class="fas fa-plus"></i> Certificación</a>
                                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                                 <a class="btn btn-outline-info btn-sm text-dark shadow-sm" data-target="#traleg" data-toggle="modal"
-                                              onclick="generarNumero('F','generar numero','panel_traleg');setTimeout(function () {$('#traleg').modal('hide');}, 1500); ">
+                                              onclick="generarNumero('F','generar numero','panel_traleg');">
                                     <i class="fas fa-plus"></i> Confrontación</a>
                                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                                 <a class="btn btn-outline-info btn-sm text-dark shadow-sm" data-target="#traleg" data-toggle="modal"
-                                   onclick="generarNumero('B','generar numero busqueda/','panel_traleg');setTimeout(function () {$('#traleg').modal('hide');}, 1500); ">
+                                              onclick="generarNumero('B','generar numero busqueda/','panel_traleg');">
                                     <i class="fas fa-plus"></i> Busqueda</a>
                                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                                 <a class="btn btn-outline-info btn-sm text-dark shadow-sm" data-target="#traleg" data-toggle="modal"
-                                   onclick="generarNumero('E','generar numero/','panel_traleg');setTimeout(function () {$('#traleg').modal('hide');}, 1500); ">
+                                              onclick="generarNumero('E','generar numero/','panel_traleg');">
                                     <i class="fas fa-plus"></i> Consejo</a>
                                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                                 <a class="btn btn-outline-info btn-sm text-dark shadow-sm" data-target="#traleg" data-toggle="modal"
@@ -254,6 +254,11 @@
                 success: function (resp) {
                     $('#'+panel).html(resp);
                     cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
+                    var nuevoCodTra=$('#'+panel).find('[data-campo="nuevo-cod-tra"]').val();
+                    if(nuevoCodTra){
+                        var rutaEdicion="{{url('datos tramite legalizacion')}}"+'/'+nuevoCodTra;
+                        cargarDatos(rutaEdicion,panel);
+                    }
                 },
                 error: function (data) {
                     $('#'+panel).html("<span class='text-white font-weight-bold bg-danger rounded p-1'>Ocurrio un error, probablemente no tenga permisos para esta acción</span>");
