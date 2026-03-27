@@ -51,8 +51,10 @@
                     <h5 class=""><i class="fas fa-university"></i>&nbsp;Funcionarios</h5>
 
                     <div>
+                        @can('crear funcionarios - dya')
                         <a href="" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#docente"
                         onclick="cargarDatos('{{url('fe_funcionario/0')}}','panel_docente')">+ Funcionario</a>
+                        @endcan
 
                         <a href="" class="btn btn-sm btn-success" data-toggle="modal" data-target="#conformidad"
                         onclick="abrirFormularioConformidad()"><i class="fas fa-file-alt"></i> + Formulario de conformidad</a>
