@@ -63,7 +63,7 @@
                                     <i class="fas fa-plus"></i> Certificación</a>
                                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                                 <a class="btn btn-outline-info btn-sm text-dark shadow-sm" data-target="#traleg" data-toggle="modal"
-                                   onclick="generarNumero('F','generar numero confrontacion/','panel_traleg')">
+                                              onclick="generarNumero('F','generar numero','panel_traleg');setTimeout(function () {$('#traleg').modal('hide');}, 1500); ">
                                     <i class="fas fa-plus"></i> Confrontación</a>
                                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                                 <a class="btn btn-outline-info btn-sm text-dark shadow-sm" data-target="#traleg" data-toggle="modal"

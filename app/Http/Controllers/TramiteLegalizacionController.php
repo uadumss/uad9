@@ -265,6 +265,11 @@ class TramiteLegalizacionController extends Controller
         return view('servicios.tra_legalizacion.verificacion_sitra', compact('respuesta','persona','docleg','documento','fuente'));
     }
     public function g_docleg(Request $form){
+        $datosTramita=Tramita::find($form['ctra']);
+        if($datosTramita && $datosTramita->tra_tipo_tramite=='F' && !isset($form['cdtra'])){
+            return $this->guardarConfrontacionDesdeEdicion($form,$datosTramita);
+        }
+
         /* cuadis = 'c' hace referencia a los del cuadis que no pagan valorados*/
         $cuadis='';
         if($form['cuadis']!='on'){
@@ -277,6 +282,23 @@ class TramiteLegalizacionController extends Controller
         }
         if(!isset($form['cdtra'])){
             $datosTramita=Tramita::find($form['ctra']);
+            if(!$datosTramita || !$datosTramita->id_per){
+                \Session::flash('error','Debe registrar primero los datos personales (CI) del trámite.');
+                return redirect('datos tramite legalizacion/'.$form['ctra']);
+            }
+
+            if($datosTramita->tra_tipo_tramite=='F'){
+                $yaTieneDocumento=D_tramita::where('cod_tra','=',$form['ctra'])->exists();
+                if($yaTieneDocumento){
+                    \Session::flash('error','Confrontación permite un solo trámite por registro.');
+                    return redirect('datos tramite legalizacion/'.$form['ctra']);
+                }
+                if(empty($form['documentos'])){
+                    \Session::flash('error','Seleccione el documento de confrontación.');
+                    return redirect('datos tramite legalizacion/'.$form['ctra']);
+                }
+            }
+
             $persona=Persona::find($datosTramita->id_per);
             $preimpreso=trim((string)($form['reimpresion'] ?? ''));
             $verificacionRecaudacion=['ok'=>true];
@@ -522,7 +544,7 @@ class TramiteLegalizacionController extends Controller
                     \Session::flash('error','El título '.$form['numero'].'/'.$form['gestion'].' No corresponde a la persona');
                 }
             }
-            if($datosTramita->tra_tipo_tramite=='B'){
+            if($datosTramita->tra_tipo_tramite=='B' || $datosTramita->tra_tipo_tramite=='F'){
                 D_confrontacion::create([
                     'dcon_doc'=>$form['documentos'],
                     'cod_dtra'=>$tramite->cod_dtra,
@@ -532,6 +554,98 @@ class TramiteLegalizacionController extends Controller
 
         }
         return redirect('datos tramite legalizacion/'.$form['ctra']);
+    }
+
+    private function guardarConfrontacionDesdeEdicion(Request $form, Tramita $datosTramita)
+    {
+        if(!$datosTramita->id_per){
+            \Session::flash('error','Debe registrar primero los datos personales (CI) del trámite.');
+            return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
+        }
+
+        $yaTieneDocumento=D_tramita::where('cod_tra','=',$datosTramita->cod_tra)->exists();
+        if($yaTieneDocumento){
+            \Session::flash('error','Confrontación permite un solo trámite por registro.');
+            return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
+        }
+
+        $tipoSeleccionado=$form->input('tipo',$form->input('tramite'));
+        $form->merge([
+            'tipo'=>$tipoSeleccionado,
+        ]);
+
+        $form->validate([
+            'tipo'=>'required|integer',
+            'control'=>'required|integer',
+        ]);
+
+        $persona=Persona::find($datosTramita->id_per);
+        if(!$persona || !$persona->per_ci){
+            \Session::flash('error','El CI no es válido para consultar.');
+            return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
+        }
+
+        $verificacionRecaudacion=$this->validarRecaudacionLegalizacion(
+            (string)$form['control'],
+            (string)$persona->per_ci,
+            $datosTramita->tra_tipo_tramite,
+            (int)$persona->id_per,
+            '',
+            (int)$datosTramita->cod_tra
+        );
+
+        if(!$verificacionRecaudacion['ok']){
+            \Session::flash('error',$verificacionRecaudacion['message']);
+            return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
+        }
+
+        $documentosSeleccionados=[];
+        foreach(['ci','cn','lm','ce','pa','lc'] as $doc){
+            if($form[$doc]){
+                $documentosSeleccionados[]=$form[$doc];
+            }
+        }
+
+        if(count($documentosSeleccionados)===0){
+            \Session::flash('error','Seleccione al menos un documento de confrontación.');
+            return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
+        }
+
+        $año_tramita=date('Y',strtotime($datosTramita->tra_fecha_solicitud));
+        $numero_tramite=DB::table('d_tramitas')->where('dtra_gestion_tramite','=',$año_tramita)->max('dtra_numero_tramite');
+        $numero_tramite=((int)$numero_tramite)+1;
+
+        $dTramite=D_tramita::create([
+            'cod_tre'=>$form['tipo'],
+            'cod_tra'=>$datosTramita->cod_tra,
+            'dtra_tipo'=>'F',
+            'dtra_control'=>$form['control'],
+            'dtra_valorado'=>$form['control'],
+            'dtra_numero_tramite'=>$numero_tramite,
+            'dtra_gestion_tramite'=>$año_tramita,
+            'dtra_fecha_recojo'=>date('d/m/Y H:i:s'),
+            'dtra_fecha_firma'=>date('d/m/Y H:i:s'),
+            'dtra_estado_doc'=>'4',
+            'dtra_entregado'=>'t',
+        ]);
+
+        $errorUso='';
+        if(!$this->registrarUsoRecaudacion($verificacionRecaudacion,(int)$datosTramita->cod_tra,(int)$dTramite->cod_dtra,$errorUso)){
+            $dTramite->delete();
+            \Session::flash('error',$errorUso);
+            return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
+        }
+
+        foreach($documentosSeleccionados as $doc){
+            D_confrontacion::create([
+                'dcon_doc'=>$doc,
+                'cod_dtra'=>$dTramite->cod_dtra,
+            ]);
+        }
+
+        SessionController::write('C','',json_encode($dTramite),'d_tramitas','3',$dTramite->cod_dtra);
+        \Session::flash('exito','Se ha creado exitosamente el trámite');
+        return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
     }
 
     public function validar_valorado_recaudaciones(Request $request, $cod_tra)

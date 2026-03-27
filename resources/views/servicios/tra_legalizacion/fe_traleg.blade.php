@@ -455,11 +455,16 @@
                         </div>
                     @endif
 
-                    @if($tramite->id_per!='' && ($tramite->tra_tipo_tramite=='L' || $tramite->tra_tipo_tramite=='C' || $tramite->tra_tipo_tramite=='E' ))
+                    @if($tramite->id_per!='' && in_array($tramite->tra_tipo_tramite,['L','C','E','F']))
+                        @php $puedeAgregarDoc = !($tramite->tra_tipo_tramite=='F' && count($documentos)>0); @endphp
                         <br/>
                     <hr class="sidebar-divider"/>
                         <!--==============================Añadir Documentos=================-->
-                    <button id="btnNuevoTra" class="btn btn-sm btn-primary float-right" onclick="$('#divNueTram').show(500); $('#btnNuevoTra').hide(500);"> + Trámite</button><br/>
+                    @if($puedeAgregarDoc)
+                        <button id="btnNuevoTra" class="btn btn-sm btn-primary float-right" onclick="$('#divNueTram').show(500); $('#btnNuevoTra').hide(500);"> + Trámite</button><br/>
+                    @else
+                        <span class="text-info font-italic float-right" style="font-size:.85em">Confrontación permite un solo trámite por registro.</span><br/>
+                    @endif
                     <div class="shadow-sm" id="divNueTram" style="display: none">
 
                         <a onclick="$('#divNueTram').hide(500);$('#btnNuevoTra').show(500); " id="ocultar" style="float:right" class="mr-2">
@@ -473,13 +478,14 @@
                                     <h6 class="text-dark text-center font-weight-bold">Añadir documento</h6>
                                 </div>
 
-                                <form id="form_docleg">
+                                @if($tramite->tra_tipo_tramite=='F')
+                                <form id="form_docleg_f">
                                     @csrf
-                                    <table>
+                                    <table class="col-md-12">
                                         <tr>
-                                            <th class="text-right font-italic ">Tipo de legalización :</th>
+                                            <th class="text-right font-italic">Tipo de legalización :</th>
                                             <td class="border-bottom border-dark">
-                                                <select class="custom-select custom-select-sm border-0 " data-campo="tipo-legalizacion" disabled>
+                                                <select class="custom-select custom-select-sm border-0" data-campo="tipo-legalizacion" disabled>
                                                     <option value="" selected></option>
                                                     @foreach($lista_tramites as $l)
                                                         <option value="{{$l->cod_tre}}">{{$l->tre_nombre}}</option>
@@ -488,6 +494,66 @@
                                                 <input type="hidden" name="tipo" data-campo="tipo-legalizacion-hidden" value="">
                                             </td>
                                         </tr>
+                                        <tr>
+                                            <th class="text-right font-italic">Nro. Control :</th>
+                                            <td class="border-bottom border-dark">
+                                                <input class="form-control form-control-sm border-0" name="control" required oninput="programarValidacionControl(this)">
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th class="text-right font-italic" valign="top">Documentos :</th>
+                                            <td class="border-bottom border-dark">
+                                                <div><label><input type="checkbox" name="ci" value="ci"> Cédula de identidad</label></div>
+                                                <div><label><input type="checkbox" name="cn" value="cn"> Certificado de nacimiento</label></div>
+                                                <div><label><input type="checkbox" name="lm" value="lm"> Libreta de servicio militar</label></div>
+                                                <div><label><input type="checkbox" name="ce" value="ce"> Carnet de extranjería</label></div>
+                                                <div><label><input type="checkbox" name="pa" value="pa"> Pasaporte</label></div>
+                                                <div><label><input type="checkbox" name="lc" value="lc"> Libreta de colegio</label></div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    <div data-campo="estado-validacion" class="mt-2"></div>
+                                    <input type="hidden" name="ctra" value="{{$tramite->cod_tra}}">
+                                    <input type="hidden" data-campo="ci-tramite" value="{{$tramite->per_ci}}">
+                                    <input type="hidden" data-campo="validacion-recaudacion-ok" value="0">
+                                </form>
+                                <br/>
+                                <a href="#" class="btn btn-sm btn-primary float-right mr-4" onclick="crearConfrontacionConValidacion('form_docleg_f','{{url('g_docleg')}}','panel_traleg')"
+                                   title="Editar legalización">+ Crear </a>
+                                <br/><br/>
+                                @else
+                                <form id="form_docleg">
+                                    @csrf
+                                    <table>
+                                        <tr>
+                                            <th class="text-right font-italic ">Tipo de legalización :</th>
+                                            <td class="border-bottom border-dark">
+                                                <select class="custom-select custom-select-sm border-0 " data-campo="tipo-legalizacion" disabled>
+                                                    @if($tramite->tra_tipo_tramite!='F')
+                                                        <option value="" selected></option>
+                                                    @endif
+                                                    @foreach($lista_tramites as $l)
+                                                        <option value="{{$l->cod_tre}}" @if($tramite->tra_tipo_tramite=='F' && $loop->first) selected @endif>{{$l->tre_nombre}}</option>
+                                                    @endforeach
+                                                </select>
+                                                <input type="hidden" name="tipo" data-campo="tipo-legalizacion-hidden" value="">
+                                            </td>
+                                        </tr>
+                                        @if($tramite->tra_tipo_tramite=='F')
+                                            <tr>
+                                                <th class="text-right font-italic ">Documento :</th>
+                                                <td class="border-bottom border-dark">
+                                                    <select class="custom-select custom-select-sm border-0" name="documentos" required>
+                                                        <option value="ci">Cédula de identidad</option>
+                                                        <option value="cn">Certificado de nacimiento</option>
+                                                        <option value="lm">Libreta de servicio militar</option>
+                                                        <option value="ce">Carnet de extranjería</option>
+                                                        <option value="pa">Pasaporte</option>
+                                                        <option value="lc">Libreta de colegio</option>
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                        @endif
                                         <tr>
                                             <th class="text-right font-italic ">Tipo de trámite :</th>
                                             <td class="border-bottom border-dark">
@@ -555,6 +621,7 @@
                                 <a href="#" class="btn btn-sm btn-primary float-right mr-4" onclick="crearDoclegConValidacion('form_docleg','{{url('g_docleg')}}','panel_traleg')"
                                    title="Editar legalización">+ Crear </a>
                                 <br/><br/>
+                                @endif
                             </div>
                     </div>
                     @endif
@@ -750,6 +817,23 @@
             var validado=form.find('[data-campo="validacion-recaudacion-ok"]').val()==='1';
 
             if(!cuadis && !validado){
+                $('#error_datos_span').html('Valide el número de control primero.');
+                $('#error_datos').show();
+                setTimeout(function () {
+                    $('#error_datos').hide(500);
+                }, 4000);
+                return;
+            }
+
+            enviar1(formulario,ruta,panel);
+        }
+
+        function crearConfrontacionConValidacion(formulario,ruta,panel){
+            var form=$('#'+formulario);
+            sincronizarCamposObligatorios(form);
+            var validado=form.find('[data-campo="validacion-recaudacion-ok"]').val()==='1';
+
+            if(!validado){
                 $('#error_datos_span').html('Valide el número de control primero.');
                 $('#error_datos').show();
                 setTimeout(function () {
