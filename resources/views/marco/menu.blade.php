@@ -201,12 +201,21 @@
             <div id="collapsedya" class="collapse" aria-labelledby="headingUtilities" data-parent="#accordionSidebar">
                 <div class="bg-white py-2 collapse-inner rounded">
                     <h6 class="collapse-header">Opciones:</h6>
+
+                    @can('crear funcionario - dya')
+                    <a class="collapse-item btn btn-primary mb-2" href="{{ url('crear funcionario') }}">
+                    <i class="fas fa-plus"></i> + Funcionario
+                    </a>
+                    @endcan
+
                     <a class="collapse-item" href="{{url('listar funcionario/docente')}}"><i class="fas fa-chalkboard-teacher"></i> Docentes</a>
                     <a class="collapse-item" href="{{url('listar funcionario/administrativo')}}"><i class="fas fa-user-alt"></i> Administrativos</a>
                     <a class="collapse-item" href="{{url('reporte dya')}}"><i class="fas fa-chart-pie"></i> Reporte</a>
+                    
                     @can('listar universidades - dya')
                     <a class="collapse-item" href="{{url('listar universidades')}}"><i class="fas fa-graduation-cap"></i> Universidades</a>
                     @endcan
+                    
                 </div>
             </div>
         </li>

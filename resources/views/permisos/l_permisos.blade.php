@@ -179,7 +179,7 @@
                     </div>
                     <div class="modal-footer">
                         <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancelar</button>
-                        <a href="#" class="btn btn-primary" onclick="enviar('form_permiso','{{url("guardar permiso")}}','panel');$('#nuevoPermiso').modal('hide')"> Guardar</a>
+                        <a href="#" class="btn btn-primary" onclick="guardarPermisoObjeto('form_permiso','{{url("guardar permiso")}}')"> Guardar</a>
                     </div>
                 </div>
 
@@ -227,7 +227,7 @@
 
                     <div class="modal-footer">
                         <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancelar</button>
-                        <a href="#" class="btn btn-primary" data-toggle="modal" onclick="$('#nuevoObjeto').modal('hide');enviar('form_objeto','{{url("guardar objeto")}}','panel');"> Guardar</a>
+                        <a href="#" class="btn btn-primary" onclick="guardarPermisoObjeto('form_objeto','{{url("guardar objeto")}}')"> Guardar</a>
                     </div>
                 </div>
 
@@ -257,6 +257,78 @@
     </div>
     <!--===========================END ==============================-->
     <script>
+        function guardarPermisoObjeto(formulario, url){
+            $.ajax({
+                type: 'POST',
+                url: url,
+                data: $('#' + formulario).serialize(),
+                dataType: 'json',
+                beforeSend: function() {
+                    // Mostrar indicador de carga
+                },
+                success: function(resp) {
+                    if(resp.exito) {
+                        // Cerrar el modal
+                        $('#nuevoPermiso').modal('hide');
+                        $('#nuevoObjeto').modal('hide');
+                        
+                        // Mostrar temporalmente un mensaje de éxito
+                        var mensaje = '<div class="alert alert-success alert-dismissible" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">' +
+                            '<button type="button" class="close" data-dismiss="alert" aria-label="close"><span aria-hidden="true">&times;</span></button>' +
+                            '<span class="font-weight-bold">' + resp.mensaje + '</span>' +
+                            '</div>';
+                        var $mensaje = $(mensaje);
+                        $('body').append($mensaje);
+                        
+                        // Ocultar el mensaje automáticamente después de 1 segundo
+                        setTimeout(function() {
+                            $mensaje.fadeOut(1000, function() {
+                                $(this).remove();
+                            });
+                        }, 2000);
+                        
+                        // Recargar los permisos/objetos
+                        setTimeout(function() {
+                            cargarDatos(resp.redirect, 'panel');
+                        }, 500);
+                    } else {
+                        // Mostrar error en modal en lugar de alert
+                        var mensajeError = '<div class="alert alert-danger alert-dismissible">' +
+                            '<button type="button" class="close" data-dismiss="alert" aria-label="close"><span aria-hidden="true">&times;</span></button>' +
+                            '<span class="font-weight-bold">Error: ' + resp.mensaje + '</span>' +
+                            '</div>';
+                        var modal = $('#nuevoPermiso').is(':visible') ? '#nuevoPermiso' : '#nuevoObjeto';
+                        $(modal).find('.modal-body').prepend(mensajeError);
+                    }
+                },
+                error: function(xhr) {
+                    var mensaje = 'Error desconocido al guardar';
+                    var modal = '#nuevoPermiso';
+                    
+                    if(xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.mensaje) {
+                        mensaje = xhr.responseJSON.mensaje;
+                    } else if(xhr.status === 500 && xhr.responseJSON && xhr.responseJSON.mensaje) {
+                        mensaje = xhr.responseJSON.mensaje;
+                    } else if(xhr.responseJSON && xhr.responseJSON.error) {
+                        mensaje = xhr.responseJSON.error;
+                    } else if(xhr.statusText) {
+                        mensaje = xhr.statusText + ': Verifica que los campos estén correctos';
+                    }
+                    
+                    if($('#nuevoObjeto').is(':visible')) {
+                        modal = '#nuevoObjeto';
+                    }
+                    
+                    var mensajeError = '<div class="alert alert-danger alert-dismissible">' +
+                        '<button type="button" class="close" data-dismiss="alert" aria-label="close"><span aria-hidden="true">&times;</span></button>' +
+                        '<span class="font-weight-bold">Error: ' + mensaje + '</span>' +
+                        '</div>';
+                    $(modal).find('.modal-body').prepend(mensajeError);
+                }
+            });
+            return false;
+        }
+
         function procesar(check){
             $('#procesarPermiso').modal('show');
             var data="check="+check.prop('checked')+"&val="+check.val()+"&id={{$usuario->id}}";
