@@ -10,9 +10,11 @@ use App\Models\T_observacion;
 use App\Models\Titularidad;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use Maatwebsite\Excel\Concerns\{Importable, ToModel, WithHeadingRow, WithValidation, WithChunkReading};
+use Maatwebsite\Excel\Concerns\{Importable, ToModel, WithHeadingRow, WithValidation, WithChunkReading, WithEvents};
+use Maatwebsite\Excel\Events\AfterImport;
+use Carbon\Carbon;
 
-class ImportarTitularidad implements ToModel, WithHeadingRow, WithValidation, WithChunkReading
+class ImportarTitularidad implements ToModel, WithHeadingRow, WithValidation, WithChunkReading, WithEvents
 {
     /**
     * @param array $row
@@ -48,12 +50,25 @@ class ImportarTitularidad implements ToModel, WithHeadingRow, WithValidation, Wi
                 'fun_carrera' => $rowNormalizado['actividad'] ?? '',
                 'fun_facultad' => $rowNormalizado['da'] ?? '',
                 'fun_estado' => 'A',
+                'fun_fecha_importacion' => Carbon::now(),
+                'fun_habilitado' => true,
             ];
             
-            $funcionario = Funcionario::firstOrCreate(
-                ['fun_ci' => $rowNormalizado['ci']],
-                $datosActualizacion
-            );
+            $existe = Funcionario::where('fun_ci', $rowNormalizado['ci'])->exists();
+
+            if ($existe) {
+                // Ya existe, solo actualiza la fecha de importación y estado de habilitado
+                Funcionario::where('fun_ci', $rowNormalizado['ci'])->update([
+                    'fun_fecha_importacion' => Carbon::now(),
+                    'fun_habilitado' => true,
+                ]);
+            } else {
+                // No existe, crea con todos los datos
+                Funcionario::create(array_merge(
+                    ['fun_ci' => $rowNormalizado['ci']],
+                    $datosActualizacion
+                ));
+            }
 
             return null;
         } catch (\Exception $e) {
@@ -71,6 +86,16 @@ class ImportarTitularidad implements ToModel, WithHeadingRow, WithValidation, Wi
     {
         return [
 
+        ];
+    }
+
+    public function registerEvents(): array
+    {
+        return [
+            AfterImport::class => function(AfterImport $event) {
+                // Sincronizar secuencia de PostgreSQL después de importar
+                DB::statement("SELECT setval('doc_adm.funcionarios_cod_fun_seq', COALESCE((SELECT MAX(cod_fun) FROM doc_adm.funcionarios) + 1, 1))");
+            },
         ];
     }
 }

@@ -17,9 +17,8 @@ class SessionController extends Controller
      * 1 =>Sistema de Diplomas y Titulos
      * 2 =>Sistema de Resoluciones
      * 3 =>Sistema de Servicios
-     *  =>Sistema de Servicios
      *
-     * 8 => Administracion
+     *  =>Sistema de Apostilla
      */
     public function l_usuario($bloqueado){
         $usuarios=User::all()->where('unidad','=','Archivos')->where('bloqueado','=',$bloqueado)->sortBy('name');

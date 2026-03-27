@@ -90,6 +90,7 @@
                                         <th class="">Fecha Ingreso</th>
                                         <th class="">Nacionalidad</th>
                                         <th class="">Pais Origen</th>
+                                        <th class="">Estado</th>
                                         <th>Opciones</th>
                                     </tr>
                                     </thead>
@@ -128,6 +129,20 @@
                                             @php $nacionalidad=$f->fun_nacionalidad=='B'?'Boliviano':'Extranjero' @endphp
                                                 <td>{!! \App\Helpers\UniversidadHelper::highlightText($nacionalidad, $search) !!}</td>
                                             <td>{!! \App\Helpers\UniversidadHelper::highlightText($f->cod_nac, $search) !!}</td>
+                                            <td>
+                                                @php
+                                                    $estado = $f->fun_habilitado ?? null;
+                                                @endphp
+                                                @if($estado === null)
+                                                    <span class="badge badge-warning">No está actualizado</span>
+                                                @elseif($estado === false || $estado === 0 || $estado === 'f')
+                                                    <span class="badge badge-danger">Inactivo</span>
+                                                @elseif($estado === true || $estado === 1 || $estado === 't')
+                                                    <span class="badge badge-success">Activo</span>
+                                                @else
+                                                    <span class="badge badge-warning">No está actualizado</span>
+                                                @endif
+                                            </td>
                                             <td>
                                                 <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#docente" data-toggle="modal" onclick="cargarDatos('{{url('fe_funcionario/'.$f->cod_fun)}}','panel_docente')"
                                                    title="Editar funcionario"><i class="fas fa-edit"></i>

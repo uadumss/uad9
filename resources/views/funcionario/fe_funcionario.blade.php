@@ -291,6 +291,21 @@
                                     </td>
                                 </tr>
 
+                                <tr>
+                                    <th class="text-right font-italic text-dark">Estado:</th>
+                                    <td class="border-bottom border-dark">
+                                        <select class="form-control border-0 form-control-sm" name="estado">
+                                            @if($funcionario->fun_habilitado === true || $funcionario->fun_habilitado === 1 || $funcionario->fun_habilitado === 't')
+                                                <option value="1">Activo</option>
+                                                <option value="0">Inactivo</option>
+                                            @else
+                                                <option value="0">Inactivo</option>
+                                                <option value="1">Activo</option>
+                                            @endif
+                                        </select>
+                                    </td>
+                                </tr>
+
                             </table>
                         </div>
                     </div>
