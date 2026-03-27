@@ -400,13 +400,11 @@
                                             <th class="text-right font-italic"> Nº control valorado: </th>
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group">
-                                                    <input type="text" class=" form-control form-control-sm" name="control" required oninput="programarValidacionControl(this)" onchange="programarValidacionControl(this)">
+                                                    <input type="text" class=" form-control form-control-sm" name="control" required oninput="programarValidacionControl(this)">
                                                     &nbsp;&nbsp;&nbsp;&nbsp;<span class="font-italic text-dark font-weight-bold"> CUADIS :
                                                             <input type="checkbox" name="cuadis" />
                                                         </span>&nbsp;&nbsp;
                                                 </div>
-                                                <div data-campo="estado-validacion" class="mt-2"></div>
-                                                <div data-campo="estado-sitra" class="mt-2"></div>
                                             </td>
                                         </tr>
                                         <tr><th class="text-right font-italic">Nro. Título:</th>
@@ -442,6 +440,8 @@
                                             </td>
                                         </tr>
                                     </table>
+                                    <div data-campo="estado-validacion" class="mt-2"></div>
+                                    <div data-campo="estado-sitra" class="mt-2"></div>
                                     <input type="hidden" name="ctra" value="{{$tramite->cod_tra}}">
                                     <input type="hidden" name="tipo_tramite" value="t">
                                     <input type="hidden" name="tipo" data-campo="tipo-legalizacion-hidden" value="">
@@ -527,14 +527,10 @@
                                             <th class="text-right font-italic ">Nro. Control:</th>
                                             <td class="border-bottom border-dark input-group">
                                                 <div class="input-group">
-                                                    <input class="form-control form-control-sm border-0" required name="control" oninput="programarValidacionControl(this)" onchange="programarValidacionControl(this)" />
+                                                    <input class="form-control form-control-sm border-0" required name="control" oninput="programarValidacionControl(this)" />
                                                     <span class="text-primary font-weight-bold font-italic"> Reintegro : &nbsp;</span>
                                                     <input class="form-control form-control-sm border" required name="reintegro" />
                                                 </div>
-                                                <div data-campo="estado-validacion" class="mt-2"></div>
-                                                @if(!in_array($tramite->tra_tipo_tramite,['E','F']))
-                                                    <div data-campo="estado-sitra" class="mt-2"></div>
-                                                @endif
                                             </td>
                                         </tr>
                                         <tr>
@@ -548,6 +544,10 @@
                                             </td>
                                         </tr>
                                     </table>
+                                    <div data-campo="estado-validacion" class="mt-2"></div>
+                                    @if(!in_array($tramite->tra_tipo_tramite,['E','F']))
+                                        <div data-campo="estado-sitra" class="mt-2"></div>
+                                    @endif
                                     <input type="hidden" name="ctra" value="{{$tramite->cod_tra}}">
                                     <input type="hidden" data-campo="validacion-recaudacion-ok" value="0">
                                 </form>
@@ -574,12 +574,16 @@
             display: block;
             font-size: 0.9rem;
             line-height: 1.4;
+            width: 100%;
+            max-width: 100%;
         }
 
         [data-campo="estado-sitra"] {
             display: none;
             font-size: 0.86rem;
             line-height: 1.3;
+            width: 100%;
+            max-width: 100%;
         }
 
         [data-campo="estado-sitra-icon"] {
@@ -593,6 +597,13 @@
         [data-campo="estado-sitra"] .alert {
             font-size: 0.86rem;
             border-radius: .25rem;
+            width: 100%;
+            max-width: 100%;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            max-height: 5.5rem;
+            overflow-y: auto;
         }
     </style>
 
@@ -641,7 +652,7 @@
         function validarControlRecaudaciones(inputControl){
             var formulario=$(inputControl).closest('form');
             sincronizarCamposObligatorios(formulario);
-            var control=formulario.find('input[name="control"]').val();
+            var control=($.trim(formulario.find('input[name="control"]').val()) || '');
             var okInput=formulario.find('[data-campo="validacion-recaudacion-ok"]');
             okInput.val('0');
             
@@ -652,6 +663,8 @@
                 limpiarSitraFormulario(formulario);
                 actualizarEstadoSitra(formulario,'text-muted','SITRA: pendiente');
                 limpiarEstadoValidacion(formulario);
+                formulario.removeData('control-validado-ok');
+                formulario.removeData('control-validado-valor');
                 return;
             }
 
@@ -673,8 +686,10 @@
                         formulario.find('input[data-campo="gestion-api"]').val('');
                         limpiarSitraFormulario(formulario);
                         actualizarEstadoSitra(formulario,'text-muted','SITRA: pendiente');
-                        var msg=resp.message || 'No se pudo validar el comprobante';
+                        var msg=armarMensajeValidacionRecaudacion(resp,'No se pudo validar el comprobante');
                         actualizarEstadoValidacion(formulario,'error',msg);
+                        formulario.removeData('control-validado-ok');
+                        formulario.removeData('control-validado-valor');
                         return;
                     }
 
@@ -691,6 +706,8 @@
                         msg+=' - Caja '+resp.cajero;
                     }
                     actualizarEstadoValidacion(formulario,'ok',msg);
+                    formulario.data('control-validado-ok',1);
+                    formulario.data('control-validado-valor',control);
 
                     programarValidacionSitra(formulario);
                 },
@@ -706,10 +723,24 @@
                     limpiarSitraFormulario(formulario);
                     actualizarEstadoSitra(formulario,'text-muted','SITRA: pendiente');
                     actualizarEstadoValidacion(formulario,'error',msg);
+                    formulario.removeData('control-validado-ok');
+                    formulario.removeData('control-validado-valor');
 
                     programarValidacionSitra(formulario);
                 }
             });
+        }
+
+        function armarMensajeValidacionRecaudacion(resp,mensajePorDefecto){
+            if(!resp){
+                return mensajePorDefecto;
+            }
+            var mensajeBase=(resp.message || mensajePorDefecto || '').toString().trim();
+            var detalle=(resp.detalle || '').toString().trim();
+            if(detalle===''){
+                return mensajeBase;
+            }
+            return mensajeBase+' '+detalle;
         }
 
         function crearDoclegConValidacion(formulario,ruta,panel){
@@ -1096,6 +1127,14 @@
             if(!form.length){
                 return;
             }
+            var control=($.trim(form.find('input[name="control"]').val()) || '');
+            var controlOk=form.data('control-validado-ok')===1;
+            var controlPrevio=(form.data('control-validado-valor') || '').toString();
+
+            if(control!=='' && controlOk && controlPrevio===control){
+                return;
+            }
+
             var timer=form.data('timer-control');
             if(timer){
                 clearTimeout(timer);

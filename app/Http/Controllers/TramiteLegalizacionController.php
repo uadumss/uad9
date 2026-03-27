@@ -838,12 +838,29 @@ class TramiteLegalizacionController extends Controller
             }
 
             if(!$tramiteSugerido){
-                $mensajeCuentaInvalida='La cuenta del valorado no corresponde al tipo de trámite actual.';
+                $nombreCuenta=trim((string)$nombreCuentaRecaudaciones);
+                if($nombreCuenta!==''){
+                    $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite. Cuenta: "'.$nombreCuenta.'".';
+                }else{
+                    $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite.';
+                }
                 continue;
             }
 
             if($tramiteSugerido->tre_tipo !== $tipoTramite){
-                $mensajeCuentaInvalida='El valorado corresponde a "'.$tramiteSugerido->tre_nombre.'", por lo que no es válido en esta sección.';
+                $nombreCuenta=trim((string)$nombreCuentaRecaudaciones);
+                $nombreTramiteSugerido=trim((string)$tramiteSugerido->tre_nombre);
+                $sonSimilares=$this->textosCuentaMuySimilares($nombreCuenta,$nombreTramiteSugerido);
+
+                if($nombreCuenta!=='' && !$sonSimilares){
+                    $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite. Cuenta: "'.$nombreCuenta.'". Corresponde a: "'.$nombreTramiteSugerido.'".';
+                } elseif($nombreTramiteSugerido!==''){
+                    $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite. Corresponde a: "'.$nombreTramiteSugerido.'".';
+                } elseif($nombreCuenta!==''){
+                    $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite. Cuenta: "'.$nombreCuenta.'".';
+                } else {
+                    $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite.';
+                }
                 continue;
             }
 
@@ -1150,6 +1167,52 @@ class TramiteLegalizacionController extends Controller
         $valor=str_replace(['Á','É','Í','Ó','Ú'],['A','E','I','O','U'],$valor);
         $valor=preg_replace('/\s+/', ' ', $valor);
         return (string)$valor;
+    }
+
+    private function textosCuentaMuySimilares(string $a, string $b): bool
+    {
+        $normalizarComparacion=function(string $texto): string {
+            $t=$this->normalizarTexto($texto);
+            $t=preg_replace('/[^A-Z0-9 ]+/', ' ', $t) ?? '';
+            $t=preg_replace('/\s+/', ' ', trim($t)) ?? '';
+            return (string)$t;
+        };
+
+        $singularizar=function(string $texto): string {
+            if($texto===''){
+                return '';
+            }
+            $palabras=explode(' ', $texto);
+            foreach($palabras as &$palabra){
+                if(strlen($palabra)>3){
+                    $palabra=preg_replace('/(ES|S)$/', '', $palabra) ?? $palabra;
+                }
+            }
+            return implode(' ', $palabras);
+        };
+
+        $x=$normalizarComparacion($a);
+        $y=$normalizarComparacion($b);
+        if($x==='' || $y===''){
+            return false;
+        }
+
+        if($x===$y){
+            return true;
+        }
+
+        if(strpos($x,$y)!==false || strpos($y,$x)!==false){
+            return true;
+        }
+
+        $xs=$singularizar($x);
+        $ys=$singularizar($y);
+        if($xs!=='' && $ys!=='' && ($xs===$ys || strpos($xs,$ys)!==false || strpos($ys,$xs)!==false)){
+            return true;
+        }
+
+        similar_text($xs!=='' ? $xs : $x, $ys!=='' ? $ys : $y, $porcentaje);
+        return $porcentaje>=88;
     }
 
     private function nombresCompatibles(string $nombreLocal, string $nombreSitra): bool
