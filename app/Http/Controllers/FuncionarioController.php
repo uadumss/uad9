@@ -680,8 +680,7 @@ class FuncionarioController extends Controller
             return redirect()->back()->with('error', 'Funcionario no encontrado');
         }
 
-        // Aquí puedes guardar la conformidad en una tabla o realizar la acción necesaria
-        // Por ahora, vamos a mostrar un mensaje de éxito
+ 
         \Session::flash('exito', 'Formulario de conformidad registrado para: ' . $funcionario->fun_nombre);
         
         return redirect()->back();
