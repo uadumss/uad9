@@ -201,9 +201,12 @@
                                             </td>
                                             <td>{{$d->doc_numero_revalida}}</td>
                                             <td>
+                                                @can('editar documento - dya')
                                                 <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_documento/'.$d['cod_doc'].'/'.$d->cod_fun)}}','panel_documento')"
                                                    title="Editar documento"><i class="fas fa-edit"></i>
                                                 </a>
+                                                @endcan
+
                                                 @if($d->doc_obs=='t')
                                                     <a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_observacion documento/'.$d['cod_doc'])}}','panel_documento')"
                                                         title="Observar Documento"><i class="fas fa-eye"></i>
@@ -213,9 +216,12 @@
                                                        title="Observar Documento"><i class="fas fa-eye"></i>
                                                     </a>
                                                 @endif
+
+                                                @can('eliminar documento - dya')
                                                 <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_eliminar documento/'.$d->cod_doc.'/'.$d->cod_fun)}}','panel_documento')"
                                                    title="Eliminar documento"><i class="text-danger fas fa-trash-alt"></i>
                                                 </a>
+                                                @endcan
                                                 @if($d->doc_pdf)
                                                     <a href="{{url('ver pdf documento/'.$d->cod_doc)}}" class="btn btn-light btn-circle btn-sm text-success" title="Ver PDF" target="_blank"><i class="fas fa-file-pdf"></i></a>
                                                     <a href="{{url('descargar pdf documento/'.$d->cod_doc)}}" class="btn btn-light btn-circle btn-sm text-info" title="Descargar PDF"><i class="fas fa-download"></i></a>

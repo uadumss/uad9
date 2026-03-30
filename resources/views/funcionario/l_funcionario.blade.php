@@ -144,6 +144,8 @@
                                                     <span class="badge badge-warning">No está actualizado</span>
                                                 @endif
                                             </td>
+                                            <td>                                                
+                                                @can('editar funcionario - dya')
                                             <td class="text-center">
                                                 @if($f->fun_env_dpa === true || $f->fun_env_dpa === 1 || $f->fun_env_dpa === 't')
                                                     <i class='fas fa-check-circle text-success' title="Enviado"></i>
@@ -155,6 +157,8 @@
                                                 <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#docente" data-toggle="modal" onclick="cargarDatos('{{url('fe_funcionario/'.$f->cod_fun)}}','panel_docente')"
                                                    title="Editar funcionario"><i class="fas fa-edit"></i>
                                                 </a>
+                                                @endcan
+                
                                                 <a href="{{url('listar documentos funcionario/'.$f->cod_fun)}}" class="btn btn-light btn-circle btn-sm text-primary" title="Mostrar documentos">
                                                     <i class="fas fa-arrow-alt-circle-right"></i>
                                                 </a>
@@ -169,9 +173,11 @@
                                                     </a>
                                                 @endif
 
+                                                @can('eliminar funcionario - dya')
                                                 <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#docente" data-toggle="modal" onclick="cargarDatos('{{url('fe_eliminar funcionario/'.$f->cod_fun)}}','panel_docente')"
                                                    title="Eliminar funcionario"><i class="text-danger fas fa-trash-alt"></i>
                                                 </a>
+                                                @endcan
 
                                             </td>
                                         </tr>
