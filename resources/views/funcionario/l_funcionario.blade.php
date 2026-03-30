@@ -91,6 +91,7 @@
                                         <th class="">Nacionalidad</th>
                                         <th class="">Pais Origen</th>
                                         <th class="">Estado</th>
+                                        <th class="">Enviado a la DPA</th>
                                         <th>Opciones</th>
                                     </tr>
                                     </thead>
@@ -141,6 +142,13 @@
                                                     <span class="badge badge-success">Activo</span>
                                                 @else
                                                     <span class="badge badge-warning">No está actualizado</span>
+                                                @endif
+                                            </td>
+                                            <td class="text-center">
+                                                @if($f->fun_env_dpa === true || $f->fun_env_dpa === 1 || $f->fun_env_dpa === 't')
+                                                    <i class='fas fa-check-circle text-success' title="Enviado"></i>
+                                                @else
+                                                    <i class='fas fa-minus-circle text-danger' title="No enviado"></i>
                                                 @endif
                                             </td>
                                             <td>

@@ -24,6 +24,10 @@ Route::group(['middleware'=>['permission:acceder al sistema - dya']],function(){
     //descargar pdf documento
     Route::get('descargar pdf documento/{cod_doc}',[DocumentoController::class,'descargar_pdf_documento']);
     Route::get('ver pdf documento/{cod_doc}',[DocumentoController::class,'ver_pdf_documento']);
+    Route::get('fe_enviar dpa/{cod_fun}',[DocumentoController::class,'fe_enviar_dpa']);
+    Route::post('enviar dpa',[DocumentoController::class,'enviar_dpa']);
+    Route::get('ver pdf envio dpa/{cod_fun}',[DocumentoController::class,'ver_pdf_envio_dpa']);
+    Route::get('descargar pdf envio dpa/{cod_fun}',[DocumentoController::class,'descargar_pdf_envio_dpa']);
 
 //=================OBSERVACION A DOCUMENTOS=============
     Route::get('fe_observacion documento/{cod_doc}',[DocumentoController::class,'fe_obs_documento']);

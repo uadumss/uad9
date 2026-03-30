@@ -69,7 +69,10 @@ class DocumentoController extends Controller
                     $nombreOriginal = pathinfo($form->file('pdf')->getClientOriginalName(), PATHINFO_FILENAME);
                     $extension = $form->file('pdf')->getClientOriginalExtension();
                     $nombreArchivo = 'documento-' . $form['cd'] . '-' . date('Y-m-d_H-i-s') . '-' . $nombreOriginal . '.' . $extension;
-                    $ruta = 'documentos/';
+                    $ruta = 'documentos';
+                    if(!Storage::disk('public')->exists($ruta)){
+                        Storage::disk('public')->makeDirectory($ruta);
+                    }
                     Storage::disk('public')->putFileAs($ruta, $form->file('pdf'), $nombreArchivo);
                     $documento->doc_pdf = $nombreArchivo;
                 }
@@ -109,10 +112,20 @@ class DocumentoController extends Controller
                 $nombreOriginal = pathinfo($form->file('pdf')->getClientOriginalName(), PATHINFO_FILENAME);
                 $extension = $form->file('pdf')->getClientOriginalExtension();
                 $nombreArchivo = 'documento-' . $documento->cod_doc . '-' . date('Y-m-d_H-i-s') . '-' . $nombreOriginal . '.' . $extension;
-                $ruta = 'documentos/';
+                $ruta = 'documentos';
+                if(!Storage::disk('public')->exists($ruta)){
+                    Storage::disk('public')->makeDirectory($ruta);
+                }
                 Storage::disk('public')->putFileAs($ruta, $form->file('pdf'), $nombreArchivo);
                 $documento->doc_pdf = $nombreArchivo;
                 $documento->save();
+            }
+
+            // Si se agrega un nuevo diploma/titulo, se invalida el envio anterior a la DPA.
+            $funcionario = Funcionario::find($form['cf']);
+            if($funcionario){
+                $funcionario->fun_env_dpa = false;
+                $funcionario->save();
             }
             
             \Session::flash('exito','Se ha creado exitosamente el documento');
@@ -307,6 +320,81 @@ class DocumentoController extends Controller
             return redirect()->back()->with('error','El archivo PDF no se encontró');
         }
         return response()->file($rutaArchivo, ['Content-Type' => 'application/pdf']);
+    }
+
+    public function fe_enviar_dpa($cod_fun){
+        $funcionario = Funcionario::find($cod_fun);
+        if(!$funcionario){
+            return redirect()->back()->with('error','No se encontró el funcionario');
+        }
+        return view('funcionario.documento.fe_enviar_dpa', compact('funcionario', 'cod_fun'));
+    }
+
+    public function enviar_dpa(Request $form){
+        $form->validate([
+            'cod_fun' => 'required|integer',
+            'pdf_control' => 'required|file|mimes:pdf|max:5120',
+            'confirmar_envio' => 'required|accepted',
+        ],[
+            'pdf_control.required' => 'Debe adjuntar el PDF de control de envio.',
+            'pdf_control.mimes' => 'El archivo debe estar en formato PDF.',
+            'pdf_control.max' => 'El PDF no debe superar los 5MB.',
+            'confirmar_envio.accepted' => 'Debe confirmar el envio a la DPA.',
+        ]);
+
+        $funcionario = Funcionario::find($form['cod_fun']);
+        if(!$funcionario){
+            return redirect()->back()->with('error','No se encontró el funcionario');
+        }
+
+        $ruta = 'dpa_envios';
+        if(!Storage::disk('public')->exists($ruta)){
+            Storage::disk('public')->makeDirectory($ruta);
+        }
+
+        if($funcionario->fun_pdf_env_dpa && Storage::disk('public')->exists($ruta.'/'.$funcionario->fun_pdf_env_dpa)){
+            Storage::disk('public')->delete($ruta.'/'.$funcionario->fun_pdf_env_dpa);
+        }
+
+        $nombreOriginal = pathinfo($form->file('pdf_control')->getClientOriginalName(), PATHINFO_FILENAME);
+        $extension = $form->file('pdf_control')->getClientOriginalExtension();
+        $nombreArchivo = 'envio-dpa-' . $funcionario->cod_fun . '-' . date('Y-m-d_H-i-s') . '-' . $nombreOriginal . '.' . $extension;
+        Storage::disk('public')->putFileAs($ruta, $form->file('pdf_control'), $nombreArchivo);
+
+        $funcionario->fun_env_dpa = true;
+        $funcionario->fun_pdf_env_dpa = $nombreArchivo;
+        $funcionario->save();
+
+        \Session::flash('exito','Se registró el envio a la DPA correctamente.');
+        return redirect('listar documentos funcionario/'.$funcionario->cod_fun);
+    }
+
+    public function ver_pdf_envio_dpa($cod_fun){
+        $funcionario = Funcionario::find($cod_fun);
+        if(!$funcionario || !$funcionario->fun_pdf_env_dpa){
+            return redirect()->back()->with('error','No existe PDF de control de envio a la DPA.');
+        }
+
+        $rutaArchivo = storage_path('app/public/dpa_envios/'.$funcionario->fun_pdf_env_dpa);
+        if(!file_exists($rutaArchivo)){
+            return redirect()->back()->with('error','El archivo PDF de control no se encontró.');
+        }
+
+        return response()->file($rutaArchivo, ['Content-Type' => 'application/pdf']);
+    }
+
+    public function descargar_pdf_envio_dpa($cod_fun){
+        $funcionario = Funcionario::find($cod_fun);
+        if(!$funcionario || !$funcionario->fun_pdf_env_dpa){
+            return redirect()->back()->with('error','No existe PDF de control de envio a la DPA.');
+        }
+
+        $rutaArchivo = storage_path('app/public/dpa_envios/'.$funcionario->fun_pdf_env_dpa);
+        if(!file_exists($rutaArchivo)){
+            return redirect()->back()->with('error','El archivo PDF de control no se encontró.');
+        }
+
+        return response()->download($rutaArchivo, $funcionario->fun_pdf_env_dpa);
     }
 
     public function importar_docente(Request $form){
