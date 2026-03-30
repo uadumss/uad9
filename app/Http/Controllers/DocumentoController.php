@@ -19,15 +19,107 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class DocumentoController extends Controller
 {
+    private function normalizeFuncionarioDocAdmType($funcionario){
+        return strtoupper(trim((string)($funcionario->fun_doc_adm ?? '')));
+    }
+
+    private function isTrueFlag($value){
+        return $value === true || $value === 1 || $value === 't' || $value === '1';
+    }
+
+    private function getPendingObservationDocIdsByFuncionario($cod_fun){
+        return DB::table('doc_adm.d_observacions as o')
+            ->join('doc_adm.documentos as d', 'o.cod_doc', '=', 'd.cod_doc')
+            ->where('d.cod_fun', '=', $cod_fun)
+            ->where(function($query){
+                $query->whereNull('o.od_solucion')
+                    ->orWhereRaw("TRIM(o.od_solucion) = ''");
+            })
+            ->pluck('o.cod_doc')
+            ->unique()
+            ->toArray();
+    }
+
+    private function refreshObservationStatusForDocument($cod_doc){
+        $documento = Documento::find($cod_doc);
+        if(!$documento){
+            return;
+        }
+
+        $hasPending = DB::table('doc_adm.d_observacions')
+            ->where('cod_doc', '=', $cod_doc)
+            ->where(function($query){
+                $query->whereNull('od_solucion')
+                    ->orWhereRaw("TRIM(od_solucion) = ''");
+            })
+            ->exists();
+
+        $documento->doc_obs = $hasPending ? 't' : 'f';
+        $documento->save();
+
+        $funcionario = Funcionario::find($documento->cod_fun);
+        if($funcionario){
+            $funcionarioHasPending = DB::table('doc_adm.d_observacions as o')
+                ->join('doc_adm.documentos as d', 'o.cod_doc', '=', 'd.cod_doc')
+                ->where('d.cod_fun', '=', $funcionario->cod_fun)
+                ->where(function($query){
+                    $query->whereNull('o.od_solucion')
+                        ->orWhereRaw("TRIM(o.od_solucion) = ''");
+                })
+                ->exists();
+
+            $funcionario->fun_obs = $funcionarioHasPending ? 't' : 'f';
+            $funcionario->save();
+        }
+    }
+
     public function l_documentos($cod_fun){
         $funcionario=Funcionario::find($cod_fun);
-        $documentos=Documento::all()->where('cod_fun','=',$cod_fun)->sortBy('doc_tipo');
+        $funcionarioTipo = $this->normalizeFuncionarioDocAdmType($funcionario);
+        $requiresEduSuperior = $funcionarioTipo === 'D' || $funcionarioTipo === 'E';
+        $documentos=Documento::where('cod_fun','=',$cod_fun)->orderBy('doc_tipo')->get();
+        $pendingObsDocIds = $this->getPendingObservationDocIdsByFuncionario($cod_fun);
         $titularidades=DB::table('doc_adm.titularidads')
             ->leftJoin('carreras','titularidads.cod_car','=','carreras.cod_car')
             ->leftJoin('facultads','carreras.cod_fac','=','facultads.cod_fac')
             ->select('titularidads.*','car_nombre','fac_nombre','fac_abreviacion')
             ->where('cod_fun','=',$cod_fun)->get();
-        return view('funcionario.documento.l_documento',compact('funcionario','documentos','cod_fun','titularidades'));
+
+        $enviosDpa = DB::table('doc_adm.envio_dpas')
+            ->where('cod_fun', '=', $cod_fun)
+            ->orderBy('cod_env_dpa')
+            ->get();
+
+        $enviosDpaDocumentos = DB::table('doc_adm.envio_dpa_detalles as ded')
+            ->join('doc_adm.envio_dpas as ed', 'ded.cod_env_dpa', '=', 'ed.cod_env_dpa')
+            ->join('doc_adm.documentos as d', 'ded.cod_doc', '=', 'd.cod_doc')
+            ->select(
+                'ded.cod_env_dpa',
+                'd.cod_doc',
+                'd.doc_tipo',
+                'd.doc_titulo',
+                'd.doc_grado',
+                'd.doc_universidad',
+                'd.doc_fecha_emision'
+            )
+            ->where('ed.cod_fun', '=', $cod_fun)
+            ->orderBy('ded.cod_env_dpa')
+            ->get()
+            ->groupBy('cod_env_dpa');
+
+        $documentosDisponiblesEnvio = $documentos->reject(function($doc) use ($pendingObsDocIds){
+            return in_array($doc->cod_doc, $pendingObsDocIds)
+                || $this->isTrueFlag($doc->doc_obs)
+                || $this->isTrueFlag($doc->doc_enviado_dpa);
+        });
+        $hasPreviousDpaEnvio = $enviosDpa->count() > 0;
+        $hasDocumentosHabilitados = $documentosDisponiblesEnvio->count() > 0;
+        $requiredDocs = $this->getRequiredDocuments($funcionario);
+        $hasDpaCandidates = $hasPreviousDpaEnvio
+            ? $hasDocumentosHabilitados
+            : ($hasDocumentosHabilitados && $this->verifyRequiredDocuments($cod_fun, $funcionario));
+
+        return view('funcionario.documento.l_documento',compact('funcionario','documentos','cod_fun','titularidades','enviosDpa','enviosDpaDocumentos','hasDpaCandidates','requiredDocs','pendingObsDocIds','hasPreviousDpaEnvio','requiresEduSuperior'));
     }
     public function fe_documento($cod_doc,$cod_fun){
         $documento='';
@@ -174,6 +266,7 @@ class DocumentoController extends Controller
             $obs->od_solucion=$form['obs'];
             $obs->od_fecha_solucion=date('d/m/Y');
             $obs->save();
+            $this->refreshObservationStatusForDocument($form['cd']);
             \Session::flash('exito','Se ha guardado exitosamente la correción');
         }else{
             if($form['obs']!=''){
@@ -182,13 +275,7 @@ class DocumentoController extends Controller
                     'od_obs'=>$form['obs'],
                     'od_fecha'=>date('d/m/Y'),
                 ]);
-                $documento=Documento::find($form['cd']);
-                $documento->doc_obs='t';
-                $documento->save();
-
-                $funcionario=Funcionario::find($documento['cod_fun']);
-                $funcionario->fun_obs='t';
-                $funcionario->save();
+                $this->refreshObservationStatusForDocument($form['cd']);
 
                 \Session::flash('exito','Se ha guardado exitosamente la observacion');
             }else{
@@ -198,26 +285,29 @@ class DocumentoController extends Controller
         return redirect('fe_observacion documento/'.$form['cd']);
     }
     public function e_obs_documento(Request $form){
+        $codDoc = null;
         if(isset($form['co'])){
             $obs=D_observacion::find($form['co']);
-            $obs->delete();
-            $cantObs=D_observacion::all()->where('cod_tit','=',$obs->cod_tit);
-            if(sizeof($cantObs)<1){
-
-                $documento=Documento::find($obs->cod_doc);
-                $documento->doc_obs='f';
-                $documento->save();
-
-                $funcionario=Funcionario::find($documento->cod_fun);
-                $funcionario->fun_obs='f';
-                $funcionario->save();
+            if(!$obs){
+                \Session::flash('error','No se encontró la observación.');
+                return redirect()->back();
             }
+            $codDoc = $obs->cod_doc;
+            $obs->delete();
+            $cantObs=D_observacion::where('cod_doc','=',$codDoc)
+                ->where(function($query){
+                    $query->whereNull('od_solucion')
+                        ->orWhereRaw("TRIM(od_solucion) = ''");
+                })
+                ->count();
+            $this->refreshObservationStatusForDocument($codDoc);
 
-            \Session::flash('exito','Se ha eliminado exitosamente la observacion '.sizeof($cantObs));
+            \Session::flash('exito','Se ha eliminado exitosamente la observacion '.$cantObs);
         }else{
             \Session::flash('error','No se puedo eliminar la observación');
+            return redirect()->back();
         }
-        return redirect('fe_observacion documento/'.$obs['cod_doc']);
+        return redirect('fe_observacion documento/'.$codDoc);
     }
     public function fe_documento_titularidad($cod_dt,$cod_fun){
         $titularidad='';
@@ -322,23 +412,82 @@ class DocumentoController extends Controller
         return response()->file($rutaArchivo, ['Content-Type' => 'application/pdf']);
     }
 
+    private function getRequiredDocuments($funcionario){
+        $tipo = $this->normalizeFuncionarioDocAdmType($funcionario);
+        if($tipo === 'D' || $tipo === 'E'){
+            return [
+                ['type' => 'DIPLOMA DE BACHILLER', 'name' => 'Diploma de Bachiller'],
+                ['type' => 'DIPLOMA ACADEMICO', 'name' => 'Diploma Académico'],
+                ['type' => 'TITULO PROFESIONAL', 'name' => 'Título Profesional'],
+                ['edu_superior' => true, 'name' => 'Diplomado/Postgrado en Educación Superior']
+            ];
+        }else{
+            return [
+                ['type' => 'DIPLOMA DE BACHILLER', 'name' => 'Diploma de Bachiller'],
+                ['type' => 'DIPLOMA ACADEMICO', 'name' => 'Diploma Académico'],
+                ['type' => 'TITULO PROFESIONAL', 'name' => 'Título Profesional']
+            ];
+        }
+    }
+
+    private function verifyRequiredDocuments($cod_fun, $funcionario){
+        $required = $this->getRequiredDocuments($funcionario);
+        $pendingObsDocIds = $this->getPendingObservationDocIdsByFuncionario($cod_fun);
+        $documentos = Documento::where('cod_fun', '=', $cod_fun)->get()->reject(function($doc) use ($pendingObsDocIds){
+            return in_array($doc->cod_doc, $pendingObsDocIds);
+        });
+
+        foreach($required as $req){
+            if(isset($req['type'])){
+                $found = $documentos->filter(function($doc) use ($req){
+                    return strtoupper(trim($doc->doc_tipo)) === strtoupper(trim($req['type']));
+                })->first();
+                if(!$found) return false;
+            }else if(isset($req['edu_superior'])){
+                $found = $documentos->where('doc_edu_superior', 't')->first();
+                if(!$found) return false;
+            }
+        }
+        return true;
+    }
+
     public function fe_enviar_dpa($cod_fun){
         $funcionario = Funcionario::find($cod_fun);
         if(!$funcionario){
             return redirect()->back()->with('error','No se encontró el funcionario');
         }
-        return view('funcionario.documento.fe_enviar_dpa', compact('funcionario', 'cod_fun'));
+
+        $pendingObsDocIds = $this->getPendingObservationDocIdsByFuncionario($cod_fun);
+        $documentos = Documento::where('cod_fun', '=', $cod_fun)
+            ->orderBy('doc_tipo')
+            ->orderBy('doc_titulo')
+            ->get()
+            ->reject(function($doc) use ($pendingObsDocIds){
+                return in_array($doc->cod_doc, $pendingObsDocIds)
+                    || $this->isTrueFlag($doc->doc_obs)
+                    || $this->isTrueFlag($doc->doc_enviado_dpa);
+            });
+
+        if($documentos->count() < 1){
+            return redirect()->back()->with('error','El funcionario no tiene diplomas o titulos disponibles para enviar a la DPA.');
+        }
+
+        return view('funcionario.documento.fe_enviar_dpa', compact('funcionario', 'cod_fun', 'documentos'));
     }
 
     public function enviar_dpa(Request $form){
         $form->validate([
             'cod_fun' => 'required|integer',
             'pdf_control' => 'required|file|mimes:pdf|max:5120',
+            'documentos_envio' => 'required|array|min:1',
+            'documentos_envio.*' => 'integer',
             'confirmar_envio' => 'required|accepted',
         ],[
             'pdf_control.required' => 'Debe adjuntar el PDF de control de envio.',
             'pdf_control.mimes' => 'El archivo debe estar en formato PDF.',
             'pdf_control.max' => 'El PDF no debe superar los 5MB.',
+            'documentos_envio.required' => 'Debe seleccionar al menos un diploma o titulo para el envio.',
+            'documentos_envio.min' => 'Debe seleccionar al menos un diploma o titulo para el envio.',
             'confirmar_envio.accepted' => 'Debe confirmar el envio a la DPA.',
         ]);
 
@@ -347,13 +496,39 @@ class DocumentoController extends Controller
             return redirect()->back()->with('error','No se encontró el funcionario');
         }
 
+        $documentosSeleccionados = Documento::where('cod_fun', '=', $funcionario->cod_fun)
+            ->whereIn('cod_doc', $form['documentos_envio'])
+            ->get();
+
+        if($documentosSeleccionados->count() < 1){
+            return redirect()->back()->with('error','No se encontraron documentos validos para el envio a la DPA.');
+        }
+
+        $pendingObsDocIds = $this->getPendingObservationDocIdsByFuncionario($funcionario->cod_fun);
+        $conObservacion = $documentosSeleccionados->first(function($doc) use ($pendingObsDocIds){
+            return in_array($doc->cod_doc, $pendingObsDocIds);
+        });
+        if($conObservacion){
+            return redirect()->back()->with('error','No se puede enviar a la DPA documentos que tienen observaciones pendientes.');
+        }
+
+        $conObservacionFlag = $documentosSeleccionados->first(function($doc){
+            return $this->isTrueFlag($doc->doc_obs);
+        });
+        if($conObservacionFlag){
+            return redirect()->back()->with('error','No se puede enviar a la DPA documentos que tienen observaciones pendientes.');
+        }
+
+        $conEnvioPrevio = $documentosSeleccionados->first(function($doc){
+            return $this->isTrueFlag($doc->doc_enviado_dpa);
+        });
+        if($conEnvioPrevio){
+            return redirect()->back()->with('error','No se puede reenviar a la DPA un título que ya fue enviado anteriormente.');
+        }
+
         $ruta = 'dpa_envios';
         if(!Storage::disk('public')->exists($ruta)){
             Storage::disk('public')->makeDirectory($ruta);
-        }
-
-        if($funcionario->fun_pdf_env_dpa && Storage::disk('public')->exists($ruta.'/'.$funcionario->fun_pdf_env_dpa)){
-            Storage::disk('public')->delete($ruta.'/'.$funcionario->fun_pdf_env_dpa);
         }
 
         $nombreOriginal = pathinfo($form->file('pdf_control')->getClientOriginalName(), PATHINFO_FILENAME);
@@ -361,21 +536,46 @@ class DocumentoController extends Controller
         $nombreArchivo = 'envio-dpa-' . $funcionario->cod_fun . '-' . date('Y-m-d_H-i-s') . '-' . $nombreOriginal . '.' . $extension;
         Storage::disk('public')->putFileAs($ruta, $form->file('pdf_control'), $nombreArchivo);
 
-        $funcionario->fun_env_dpa = true;
-        $funcionario->fun_pdf_env_dpa = $nombreArchivo;
+        $documentosSeleccionados = $documentosSeleccionados->pluck('cod_doc')->toArray();
+
+        $codEnvio = DB::table('doc_adm.envio_dpas')->insertGetId([
+            'cod_fun' => $funcionario->cod_fun,
+            'env_pdf_control' => $nombreArchivo,
+            'env_fecha' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ], 'cod_env_dpa');
+
+        $detalles = [];
+        foreach($documentosSeleccionados as $codDoc){
+            $detalles[] = [
+                'cod_env_dpa' => $codEnvio,
+                'cod_doc' => $codDoc,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+        DB::table('doc_adm.envio_dpa_detalles')->insert($detalles);
+
+        Documento::whereIn('cod_doc', $documentosSeleccionados)->update(['doc_enviado_dpa' => true]);
+
+        if(!$funcionario->fun_env_dpa){
+            $funcionario->fun_env_dpa = true;
+            $funcionario->fun_pdf_env_dpa = $nombreArchivo;
+        }
         $funcionario->save();
 
         \Session::flash('exito','Se registró el envio a la DPA correctamente.');
         return redirect('listar documentos funcionario/'.$funcionario->cod_fun);
     }
 
-    public function ver_pdf_envio_dpa($cod_fun){
-        $funcionario = Funcionario::find($cod_fun);
-        if(!$funcionario || !$funcionario->fun_pdf_env_dpa){
+    public function ver_pdf_envio_dpa($cod_env_dpa){
+        $envio = DB::table('doc_adm.envio_dpas')->where('cod_env_dpa', '=', $cod_env_dpa)->first();
+        if(!$envio || !$envio->env_pdf_control){
             return redirect()->back()->with('error','No existe PDF de control de envio a la DPA.');
         }
 
-        $rutaArchivo = storage_path('app/public/dpa_envios/'.$funcionario->fun_pdf_env_dpa);
+        $rutaArchivo = storage_path('app/public/dpa_envios/'.$envio->env_pdf_control);
         if(!file_exists($rutaArchivo)){
             return redirect()->back()->with('error','El archivo PDF de control no se encontró.');
         }
@@ -383,18 +583,18 @@ class DocumentoController extends Controller
         return response()->file($rutaArchivo, ['Content-Type' => 'application/pdf']);
     }
 
-    public function descargar_pdf_envio_dpa($cod_fun){
-        $funcionario = Funcionario::find($cod_fun);
-        if(!$funcionario || !$funcionario->fun_pdf_env_dpa){
+    public function descargar_pdf_envio_dpa($cod_env_dpa){
+        $envio = DB::table('doc_adm.envio_dpas')->where('cod_env_dpa', '=', $cod_env_dpa)->first();
+        if(!$envio || !$envio->env_pdf_control){
             return redirect()->back()->with('error','No existe PDF de control de envio a la DPA.');
         }
 
-        $rutaArchivo = storage_path('app/public/dpa_envios/'.$funcionario->fun_pdf_env_dpa);
+        $rutaArchivo = storage_path('app/public/dpa_envios/'.$envio->env_pdf_control);
         if(!file_exists($rutaArchivo)){
             return redirect()->back()->with('error','El archivo PDF de control no se encontró.');
         }
 
-        return response()->download($rutaArchivo, $funcionario->fun_pdf_env_dpa);
+        return response()->download($rutaArchivo, $envio->env_pdf_control);
     }
 
     public function importar_docente(Request $form){

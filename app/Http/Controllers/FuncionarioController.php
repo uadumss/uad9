@@ -23,6 +23,13 @@ class FuncionarioController extends Controller
 
         $funcionarios = DB::table('doc_adm.funcionarios')
             ->select('cod_fun','fun_nombre','fun_ci','fun_sexo','fun_telefonos','fun_email','fun_fecha_ingreso','fun_nacionalidad','cod_nac','fun_obs','fun_folder','fun_habilitado','fun_env_dpa')
+            ->selectRaw("EXISTS (
+                SELECT 1
+                FROM doc_adm.documentos d
+                JOIN doc_adm.d_observacions o ON o.cod_doc = d.cod_doc
+                WHERE d.cod_fun = doc_adm.funcionarios.cod_fun
+                AND (o.od_solucion IS NULL OR TRIM(o.od_solucion) = '')
+            ) as has_pending_obs")
             ->where(function($query) use ($tipoFun) {
                 $query->where('fun_doc_adm','=',$tipoFun)
                     ->orWhere('fun_doc_adm','=','E');

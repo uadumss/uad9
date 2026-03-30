@@ -87,10 +87,10 @@
                                 @endif
                             </span>
                         </span>
-                        @if($funcionario->fun_pdf_env_dpa)
+                        @if($enviosDpa->count() > 0)
                             <div class="mt-2" style="font-size: 0.85em">
                                 <span class="text-primary font-italic">Fecha de envio a la DPA : </span>
-                                <span class="text-dark font-weight-bold">{{ now()->format('d/m/Y') }}</span>
+                                <span class="text-dark font-weight-bold">{{ isset($enviosDpa[0]) ? date('d/m/Y H:i',strtotime($enviosDpa[0]->env_fecha)) : '' }}</span>
                             </div>
                         @endif
 
@@ -153,13 +153,17 @@
                                         <th style="cursor: pointer; user-select: none;">Tipo Univ. <span class="sort-indicator"></span></th>
                                         <th style="cursor: pointer; user-select: none;">Educación Superior <span class="sort-indicator"></span></th>
                                         <th style="cursor: pointer; user-select: none;">Reválida <span class="sort-indicator"></span></th>
+                                        <th>Enviado DPA</th>
                                         <th>Opciones</th>
                                     </tr>
                                     </thead>
                                     <tbody>
                                     <?php $j=1;?>
                                     @foreach($documentos as $d)
-                                        @if($d->doc_obs!='t')
+                                        @php
+                                            $tieneObsPendiente = in_array($d->cod_doc, $pendingObsDocIds ?? []);
+                                        @endphp
+                                        @if(!$tieneObsPendiente)
                                             <tr>
                                         @else
                                             <tr class="alert-danger">
@@ -199,6 +203,13 @@
                                                 @endif
                                             </td>
                                             <td>{{$d->doc_numero_revalida}}</td>
+                                            <td class="text-center">
+                                                @if($d->doc_enviado_dpa === true || $d->doc_enviado_dpa === 1 || $d->doc_enviado_dpa === 't')
+                                                    <i class='fas fa-check-circle text-success' title="Ya enviado"></i>
+                                                @else
+                                                    <i class='fas fa-minus-circle text-danger' title="No enviado"></i>
+                                                @endif
+                                            </td>
                                             <td>
                                                 @can('editar documento - dya')
                                                 <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_documento/'.$d['cod_doc'].'/'.$d->cod_fun)}}','panel_documento')"
@@ -206,7 +217,7 @@
                                                 </a>
                                                 @endcan
 
-                                                @if($d->doc_obs=='t')
+                                                @if($tieneObsPendiente)
                                                     <a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_observacion documento/'.$d['cod_doc'])}}','panel_documento')"
                                                         title="Observar Documento"><i class="fas fa-eye"></i>
                                                     </a>
@@ -233,22 +244,88 @@
                                     </tbody>
                                 </table>
                                 <div class="mt-3 text-right">
-                                    @if(!($funcionario->fun_env_dpa === true || $funcionario->fun_env_dpa === 1 || $funcionario->fun_env_dpa === 't'))
+                                    @if($hasDpaCandidates)
                                         <a href="#" class="btn btn-sm btn-success" data-target="#documento" data-toggle="modal"
                                            onclick="cargarDatos('{{url('fe_enviar dpa/'.$cod_fun)}}','panel_documento')">
-                                            <i class="fas fa-paper-plane"></i> Enviar a la DPA
+                                            <i class="fas fa-paper-plane"></i> Nuevo envio a la DPA
                                         </a>
-                                    @endif
-
-                                    @if($funcionario->fun_pdf_env_dpa)
-                                        <a href="{{url('ver pdf envio dpa/'.$cod_fun)}}" class="btn btn-sm btn-outline-success" target="_blank">
-                                            <i class="fas fa-file-pdf"></i> Ver PDF envio DPA
-                                        </a>
-                                        <a href="{{url('descargar pdf envio dpa/'.$cod_fun)}}" class="btn btn-sm btn-outline-info">
-                                            <i class="fas fa-download"></i> Descargar PDF envio DPA
-                                        </a>
+                                    @else
+                                        <button class="btn btn-sm btn-success" disabled title="No se puede enviar a la DPA con el estado actual de documentos">
+                                            <i class="fas fa-paper-plane"></i> Nuevo envio a la DPA
+                                        </button>
+                                        @if(!$hasPreviousDpaEnvio)
+                                            <small class="d-block mt-1 text-muted">{{$requiresEduSuperior ? 'Primer envío requiere: Diploma de Bachiller, Diploma Académico, Título Profesional + Postgrado/Diplomado en Educación Superior' : 'Primer envío requiere: Diploma de Bachiller, Diploma Académico, Título Profesional'}}</small>
+                                        @else
+                                            <small class="d-block mt-1 text-muted">No hay documentos pendientes para reenvío (revise observaciones pendientes en caso contrario).</small>
+                                        @endif
                                     @endif
                                 </div>
+
+                                <hr class="sidebar-divider">
+                                <div class="bg-primary centrar_bloque p-1 col-md-4 rounded shadow">
+                                    <h5 class="text-white text-center">Historial de envios a la DPA</h5>
+                                </div>
+
+                                @if($enviosDpa->count() > 0)
+                                    <ul class="nav nav-tabs mt-3" id="enviosDpaTab" role="tablist">
+                                        @foreach($enviosDpa as $idx => $env)
+                                            <li class="nav-item" role="presentation">
+                                                <a class="nav-link {{$idx===0?'active':''}}" id="envio-tab-{{$env->cod_env_dpa}}" data-toggle="tab" href="#envio-{{$env->cod_env_dpa}}" role="tab">
+                                                    Envio #{{$idx + 1}} - {{date('d/m/Y',strtotime($env->env_fecha))}}
+                                                </a>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+
+                                    <div class="tab-content border border-top-0 p-3" id="enviosDpaTabContent">
+                                        @foreach($enviosDpa as $idx => $env)
+                                            <div class="tab-pane fade {{$idx===0?'show active':''}}" id="envio-{{$env->cod_env_dpa}}" role="tabpanel">
+                                                <div class="mb-2 d-flex justify-content-between align-items-center">
+                                                    <span class="text-primary font-italic">Fecha de envio: <span class="text-dark font-weight-bold">{{date('d/m/Y H:i',strtotime($env->env_fecha))}}</span></span>
+                                                    <span>
+                                                        <a href="{{url('ver pdf envio dpa/'.$env->cod_env_dpa)}}" class="btn btn-sm btn-outline-success" target="_blank">
+                                                            <i class="fas fa-file-pdf"></i> Ver PDF envio DPA
+                                                        </a>
+                                                        <a href="{{url('descargar pdf envio dpa/'.$env->cod_env_dpa)}}" class="btn btn-sm btn-outline-info">
+                                                            <i class="fas fa-download"></i> Descargar PDF envio DPA
+                                                        </a>
+                                                    </span>
+                                                </div>
+
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm table-bordered" style="font-size: 0.82em">
+                                                        <thead class="bg-gray-600 text-white">
+                                                            <tr>
+                                                                <th>Nº</th>
+                                                                <th>Tipo</th>
+                                                                <th>Titulo</th>
+                                                                <th>Grado</th>
+                                                                <th>Universidad</th>
+                                                                <th>Fecha emision</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                        @php $k=1; @endphp
+                                                        @foreach(($enviosDpaDocumentos[$env->cod_env_dpa] ?? collect()) as $docEnv)
+                                                            <tr>
+                                                                <td>{{$k}}</td>
+                                                                <td>{{$docEnv->doc_tipo}}</td>
+                                                                <td>{{$docEnv->doc_titulo}}</td>
+                                                                <td>{{$docEnv->doc_grado}}</td>
+                                                                <td>{{$docEnv->doc_universidad}}</td>
+                                                                <td>{{ $docEnv->doc_fecha_emision ? date('d/m/Y',strtotime($docEnv->doc_fecha_emision)) : '' }}</td>
+                                                            </tr>
+                                                            @php $k++; @endphp
+                                                        @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <div class="alert alert-info mt-3 mb-0">No hay envios registrados a la DPA para este funcionario.</div>
+                                @endif
                     </div>
                 </div>
             </div>
