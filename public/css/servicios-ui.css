@@ -1,0 +1,349 @@
+/*
+ * Responsive helpers for Servicios and Apostilla.
+ * Apostilla keeps original look: only layout adaptation rules apply.
+ */
+
+/* Shared helpers */
+.modulo-ui .servicios-required-label {
+    position: relative;
+}
+
+.modulo-ui .servicios-required-star {
+    color: #c62828;
+    font-weight: 700;
+    margin-left: 0.18rem;
+}
+
+.modulo-ui td.input-group,
+.modulo-ui th.input-group {
+    display: table-cell !important;
+    width: auto !important;
+    position: static !important;
+    padding: 0.3rem 0.45rem !important;
+}
+
+.modulo-ui td.input-group > .input-group,
+.modulo-ui th.input-group > .input-group {
+    display: flex;
+    width: 100%;
+}
+
+.modulo-ui .input-group > .form-control,
+.modulo-ui .input-group > .custom-select {
+    min-width: 0;
+}
+
+/* Servicios: visual normalization */
+.servicios-ui .modal-content,
+.servicios-ui .card {
+    border-radius: 0.45rem;
+}
+
+.servicios-ui .modal-header,
+.servicios-ui .card-header {
+    padding-top: 0.62rem;
+    padding-bottom: 0.62rem;
+}
+
+.servicios-ui .modal-body,
+.servicios-ui .card-body {
+    line-height: 1.34;
+}
+
+.servicios-ui .modal-body .row > [class*="col-"],
+.servicios-ui .card-body .row > [class*="col-"] {
+    min-width: 0;
+}
+
+.servicios-ui form {
+    margin-bottom: 0;
+}
+
+.servicios-ui .is-invalid,
+.servicios-ui .form-control.is-invalid,
+.servicios-ui .custom-select.is-invalid {
+    border-color: #d9534f !important;
+    box-shadow: 0 0 0 0.12rem rgba(217, 83, 79, 0.12) !important;
+}
+
+.servicios-ui .form-control,
+.servicios-ui .custom-select,
+.servicios-ui textarea.form-control {
+    border-radius: 0.4rem;
+    border-color: #cfdae8;
+}
+
+.servicios-ui .form-control.form-control-sm,
+.servicios-ui .custom-select.custom-select-sm,
+.servicios-ui select.form-control-sm {
+    min-height: 2.02rem;
+    font-size: 0.84rem;
+}
+
+.servicios-ui textarea.form-control {
+    min-height: 4.8rem;
+    resize: vertical;
+}
+
+.servicios-ui .form-control:focus,
+.servicios-ui .custom-select:focus,
+.servicios-ui textarea.form-control:focus {
+    border-color: #7aa2d6;
+    box-shadow: 0 0 0 0.13rem rgba(36, 99, 235, 0.14);
+}
+
+.servicios-ui .table td,
+.servicios-ui .table th {
+    vertical-align: middle;
+}
+
+.servicios-ui .table-responsive {
+    overflow-x: auto;
+}
+
+.servicios-ui table#dataTable th,
+.servicios-ui table#dataTable td,
+.servicios-ui table#dataListaTramite th,
+.servicios-ui table#dataListaTramite td {
+    white-space: nowrap;
+}
+
+.servicios-ui .ui-radio-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    white-space: normal;
+}
+
+.servicios-ui .ui-radio-line input[type="radio"] {
+    margin-top: 0;
+}
+
+.servicios-ui .ui-placeholder {
+    color: #7f8a98;
+    font-style: italic;
+    font-size: 0.82rem;
+}
+
+.servicios-ui .ui-modal-traleg .modal-body {
+    font-size: 0.86rem !important;
+}
+
+.servicios-ui .ui-modal-traleg form table {
+    width: 100%;
+    max-width: 100%;
+    table-layout: fixed;
+}
+
+.servicios-ui .ui-modal-traleg .ui-form-layout > .col-md-4 > form table th,
+.servicios-ui .ui-modal-traleg #editarApoderado form table th {
+    width: 43%;
+    padding-right: 0.5rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #344256;
+}
+
+.servicios-ui .ui-modal-traleg .ui-form-layout > .col-md-4 > form table td,
+.servicios-ui .ui-modal-traleg #editarApoderado form table td {
+    width: 57%;
+}
+
+.servicios-ui .ui-modal-traleg table td,
+.servicios-ui .ui-modal-traleg table th {
+    overflow-wrap: anywhere;
+}
+
+.servicios-ui .ui-listado-servicios-principal .input-group {
+    align-items: center;
+    gap: 0.28rem;
+}
+
+/* Apostilla: responsive only, keep original style */
+.apostilla-ui .modal-body .row > [class*="col-"],
+.apostilla-ui .card-body .row > [class*="col-"] {
+    min-width: 0;
+}
+
+.apostilla-ui .table-responsive,
+.apostilla-ui .modal-body .overflow-auto,
+.apostilla-ui .card-body .overflow-auto {
+    overflow-x: auto;
+}
+
+.apostilla-ui .card-body > .row > .col-md-9 .input-group,
+.apostilla-ui .card-body > .row > .col-md-3 .input-group {
+    align-items: center;
+    gap: 0.28rem;
+}
+
+.apostilla-ui table#dataTable th,
+.apostilla-ui table#dataTable td {
+    white-space: nowrap;
+}
+
+.apostilla-ui .apo-edit-layout > [class*="apo-col-"] {
+    min-width: 0;
+}
+
+.apostilla-ui .apo-edit-layout > .apo-col-left table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.apostilla-ui .apo-edit-layout > .apo-col-left table th {
+    width: 42%;
+    white-space: nowrap;
+}
+
+.apostilla-ui .apo-edit-layout > .apo-col-left table td {
+    width: 58%;
+}
+
+.apostilla-ui .apo-edit-layout > .apo-col-left:only-child {
+    max-width: 34rem;
+}
+
+.apostilla-ui #panel_lista_tramites_apostilla,
+.apostilla-ui .apo-col-right > .border.rounded.overflow-auto {
+    max-width: 100%;
+}
+
+.apostilla-ui #panel_lista_tramites_apostilla table {
+    width: 100%;
+    min-width: 730px;
+}
+
+.apostilla-ui #dataListaTramite {
+    width: 100% !important;
+    min-width: 340px;
+}
+
+.apostilla-ui #dataListaTramite th:first-child,
+.apostilla-ui #dataListaTramite td:first-child {
+    width: 56px;
+    white-space: nowrap;
+}
+
+.apostilla-ui #dataListaTramite th:last-child,
+.apostilla-ui #dataListaTramite td:last-child {
+    white-space: nowrap;
+}
+
+.apostilla-ui .apo-col-right > span:first-child {
+    display: block;
+    line-height: 1.2;
+}
+
+@media (min-width: 992px) {
+    .servicios-ui .modal-dialog.modal-xl,
+    .apostilla-ui .modal-dialog.modal-xl {
+        max-width: min(96vw, 1320px);
+    }
+
+    .servicios-ui .ui-modal-traleg .ui-form-layout {
+        display: flex;
+        flex-wrap: nowrap;
+    }
+
+    .servicios-ui .ui-modal-traleg .ui-form-layout > .col-md-4 {
+        flex: 0 0 34%;
+        max-width: 34%;
+    }
+
+    .servicios-ui .ui-modal-traleg .ui-form-layout > .col-md-8 {
+        flex: 0 0 66%;
+        max-width: 66%;
+    }
+}
+
+@media (min-width: 1500px) {
+    .apostilla-ui .apo-edit-layout {
+        display: grid;
+        grid-template-columns: minmax(290px, 30%) minmax(520px, 47%) minmax(300px, 23%);
+        gap: 0.7rem;
+        align-items: start;
+    }
+
+    .apostilla-ui .apo-edit-layout > .apo-col-left,
+    .apostilla-ui .apo-edit-layout > .apo-col-center,
+    .apostilla-ui .apo-edit-layout > .apo-col-right {
+        max-width: none;
+        flex: initial;
+        margin-top: 0;
+        padding-left: 0.35rem !important;
+        padding-right: 0.35rem !important;
+    }
+
+    .apostilla-ui #panel_lista_tramites_apostilla {
+        height: 400px !important;
+    }
+
+    .apostilla-ui .apo-col-right > .border.rounded.overflow-auto {
+        height: 530px !important;
+    }
+}
+
+@media (min-width: 1200px) and (max-width: 1499.98px) {
+    .apostilla-ui .apo-edit-layout {
+        display: grid;
+        grid-template-columns: minmax(290px, 34%) minmax(520px, 66%);
+        gap: 0.65rem;
+        align-items: start;
+    }
+
+    .apostilla-ui .apo-edit-layout > .apo-col-left,
+    .apostilla-ui .apo-edit-layout > .apo-col-center {
+        max-width: none;
+        flex: initial;
+        margin-top: 0;
+        padding-left: 0.35rem !important;
+        padding-right: 0.35rem !important;
+    }
+
+    .apostilla-ui .apo-edit-layout > .apo-col-right {
+        grid-column: 1 / -1;
+        margin-top: 0.4rem;
+        padding-left: 0.35rem !important;
+        padding-right: 0.35rem !important;
+    }
+
+    .apostilla-ui .apo-col-right > .border.rounded.overflow-auto {
+        height: 320px !important;
+    }
+}
+
+@media (min-width: 992px) and (max-width: 1199.98px) {
+    .servicios-ui .ui-listado-servicios-principal .card-body > .row > .col-md-3 .input-group,
+    .apostilla-ui .card-body > .row > .col-md-3 .input-group {
+        display: flex;
+        flex-wrap: wrap;
+        row-gap: 0.3rem;
+    }
+
+    .servicios-ui .ui-listado-servicios-principal .card-body > .row > .col-md-3 .input-group > .form-control,
+    .apostilla-ui .card-body > .row > .col-md-3 .input-group > .form-control {
+        flex: 1 1 100%;
+    }
+
+    .apostilla-ui .apo-edit-layout {
+        display: grid;
+        grid-template-columns: minmax(260px, 1fr);
+        gap: 0.6rem;
+    }
+
+    .apostilla-ui .apo-edit-layout > .apo-col-left,
+    .apostilla-ui .apo-edit-layout > .apo-col-center,
+    .apostilla-ui .apo-edit-layout > .apo-col-right {
+        grid-column: 1 / -1;
+        max-width: none;
+        flex: initial;
+        margin-top: 0;
+        padding-left: 0.25rem !important;
+        padding-right: 0.25rem !important;
+    }
+
+    .apostilla-ui .apo-col-right > .border.rounded.overflow-auto {
+        height: 290px !important;
+    }
+}

@@ -36,7 +36,7 @@
             </ul>
         </div>
     @endif
-    <div class="card shadow mb-4">
+    <div class="card shadow mb-4 ui-listado-servicios-principal">
         <div class="card-header py-3 alert-primary">
             <div class="d-sm-flex align-items-center justify-content-between">
                 <h5 class=""><i class="fas fa-book"></i>&nbsp;&nbsp; LEGALIZACIONES</h5>

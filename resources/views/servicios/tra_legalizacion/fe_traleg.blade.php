@@ -1,5 +1,5 @@
     <?php $fecha=date('Y-m-d',strtotime($tramite->tra_fecha_solicitud))?>
-    <div class="modal-content border-bottom-primary" xmlns="http://www.w3.org/1999/html">
+    <div class="modal-content border-bottom-primary ui-modal-traleg" xmlns="http://www.w3.org/1999/html">
         <div class="modal-header bg-primary">
             <h5 class="modal-title font-weight-bolder text-white" id="exampleModalLabel"><i class="fas fa-book"></i> Legalización </h5>
             <button class="close text-white" type="button" data-dismiss="modal" aria-label="Close">
@@ -16,11 +16,11 @@
                 </div>
             @endif
             <div class="bg-primary centrar_bloque p-1 col-md-7 rounded shadow">
-                <h6 class="text-white text-center">Formulario para editar legalización</h6>
+                <h6 class="text-white text-center mb-0">Formulario para editar legalización</h6>
             </div>
             {{$tipos_array}}
             <hr class="sidebar-divider"/>
-            <div class="row">
+            <div class="row ui-form-layout">
                 <div class="col-md-4">
                     <span class="text-primary font-italic font-weight-bold" style="font-size: 0.8em">* Datos personales</span>
                         <div class="shadow-sm p-2 col-md-5 float-md-right">
@@ -105,7 +105,7 @@
                                         @if($apoderado)
                                             {{$apoderado['apo_ci']}}
                                         @else
-                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                            <span class="ui-placeholder">Sin registro</span>
                                         @endif
                                     </td>
                                 </tr>
@@ -115,7 +115,7 @@
                                         @if($apoderado)
                                             {{$apoderado['apo_apellido']." ".$apoderado['apo_nombre']}}
                                         @else
-                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                            <span class="ui-placeholder">Sin registro</span>
                                         @endif
                                     </td>
                                 </tr>
@@ -128,7 +128,7 @@
                                             @if($tramite->tra_tipo_apoderado=='p')
                                                 Poder notariado
                                             @else
-                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                                <span class="ui-placeholder">Sin registro</span>
                                             @endif
                                         @endif
                                     </td>
@@ -175,18 +175,18 @@
                                             <th class="text-right font-italic" valign="top">Tipo de apoderado : </th>
                                             <td class="border-bottom border-dark">
                                                 @if($tramite->tra_tipo_apoderado=='d')
-                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" checked> Declaración jurada<br/>
-                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p"> Poder notariado
+                                                    <span class="ui-radio-line"><input type="radio" name="tipo" value="d" checked> Declaración jurada</span><br/>
+                                                    <span class="ui-radio-line"><input type="radio" name="tipo" value="p"> Poder notariado</span>
                                                 @else
                                                     @if($tramite->tra_tipo_apoderado=='p')
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d"> Declaración jurada<br/>
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" checked> Poder notariado
+                                                        <span class="ui-radio-line"><input type="radio" name="tipo" value="d"> Declaración jurada</span><br/>
+                                                        <span class="ui-radio-line"><input type="radio" name="tipo" value="p" checked> Poder notariado</span>
                                                     @else
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d"> Declaración jurada<br/>
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p"> Poder notariado
+                                                        <span class="ui-radio-line"><input type="radio" name="tipo" value="d"> Declaración jurada</span><br/>
+                                                        <span class="ui-radio-line"><input type="radio" name="tipo" value="p"> Poder notariado</span>
                                                     @endif
                                             @endif
-
+                                            </td>
                                         </tr>
                                     </table>
                                     <br/>
@@ -636,6 +636,39 @@
     </div>
 
     <style>
+        /* Mejora acotada: solo panel de creación */
+        #divNueTram {
+            border-radius: .45rem;
+            border: 1px solid #d9dee5;
+            background: #fff;
+            padding: .75rem .75rem .45rem;
+        }
+
+        #divNueTram table th {
+            font-size: .82rem;
+            color: #2f3e4e;
+            white-space: nowrap;
+            vertical-align: middle;
+            padding-top: .35rem;
+            padding-bottom: .35rem;
+        }
+
+        #divNueTram table td {
+            padding-top: .3rem;
+            padding-bottom: .3rem;
+            vertical-align: middle;
+        }
+
+        #divNueTram .form-control,
+        #divNueTram .custom-select {
+            min-height: 2rem;
+            border-radius: .35rem;
+        }
+
+        #divNueTram .btn {
+            border-radius: .4rem;
+        }
+
         /* Estilos para estados de validación */
         [data-campo="estado-validacion"] {
             display: block;
