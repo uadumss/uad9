@@ -833,7 +833,7 @@ class TramiteLegalizacionController extends Controller
         if($baseUrl==='' || $token===''){
             return $this->respuestaErrorValidacionLegalizacion(
                 'SISTEMA_NO_CONFIGURADO',
-                'Sistema no configurado. Contacte al ITS.'
+                'El sistema de recaudaciones no esta configurado. Contacte al area de sistemas.'
             );
         }
 
@@ -1028,6 +1028,32 @@ class TramiteLegalizacionController extends Controller
     {
         $mensajeApi=trim($mensajeApi);
         $msgNorm=mb_strtolower($mensajeApi);
+
+        if(
+            strpos($msgNorm,'configuracion')!==false ||
+            strpos($msgNorm,'configuración')!==false ||
+            strpos($msgNorm,'services/.env')!==false ||
+            strpos($msgNorm,'sistema no configurado')!==false
+        ){
+            return [
+                'code'=>'SISTEMA_NO_CONFIGURADO',
+                'message'=>'El sistema de recaudaciones no esta configurado. Contacte al area de sistemas.',
+            ];
+        }
+
+        if(
+            strpos($msgNorm,'comunicacion')!==false ||
+            strpos($msgNorm,'comunicación')!==false ||
+            strpos($msgNorm,'error en la comunicacion con la api de recaudaciones')!==false ||
+            strpos($msgNorm,'la api de recaudaciones respondio con error')!==false ||
+            strpos($msgNorm,'error inesperado en recaudaciones')!==false ||
+            strpos($msgNorm,'timeout')!==false
+        ){
+            return [
+                'code'=>'API_NO_DISPONIBLE',
+                'message'=>'No se pudo conectar con recaudaciones. Intente nuevamente en unos minutos.',
+            ];
+        }
 
         if(
             $mensajeApi==='' ||
