@@ -201,6 +201,10 @@
                                                 <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_eliminar documento/'.$d->cod_doc.'/'.$d->cod_fun)}}','panel_documento')"
                                                    title="Eliminar documento"><i class="text-danger fas fa-trash-alt"></i>
                                                 </a>
+                                                @if($d->doc_pdf)
+                                                    <a href="{{asset('storage/documentos/'.$d->doc_pdf)}}" class="btn btn-light btn-circle btn-sm text-success" title="Ver PDF" target="_blank"><i class="fas fa-file-pdf"></i></a>
+                                                    <a href="{{url('descargar pdf documento/'.$d->cod_doc)}}" class="btn btn-light btn-circle btn-sm text-info" title="Descargar PDF"><i class="fas fa-download"></i></a>
+                                                @endif
 
                                             </td>
                                         </tr>

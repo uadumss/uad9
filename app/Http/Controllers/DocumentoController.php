@@ -57,9 +57,37 @@ class DocumentoController extends Controller
                 $documento->doc_edu_superior=$superior;
                 $documento->doc_numero_revalida=$form['revalida'];
                 $documento->doc_grado=$form['grado'];
+                
+                // Procesar el PDF si se adjuntó uno
+                if($form->hasFile('pdf')){
+                    // Eliminar el PDF anterior si existe
+                    if($documento->doc_pdf && Storage::disk('public')->exists('documentos/'.$documento->doc_pdf)){
+                        Storage::disk('public')->delete('documentos/'.$documento->doc_pdf);
+                    }
+                    
+                    // Guardar el nuevo PDF
+                    $nombreOriginal = pathinfo($form->file('pdf')->getClientOriginalName(), PATHINFO_FILENAME);
+                    $extension = $form->file('pdf')->getClientOriginalExtension();
+                    $nombreArchivo = 'documento-' . $form['cd'] . '-' . date('Y-m-d_H-i-s') . '-' . $nombreOriginal . '.' . $extension;
+                    $ruta = 'documentos/';
+                    Storage::disk('public')->putFileAs($ruta, $form->file('pdf'), $nombreArchivo);
+                    $documento->doc_pdf = $nombreArchivo;
+                }
+                
                 $documento->save();
             \Session::flash('exito','Se ha guardado exitosamente los datos');
         }else{
+            // Variables para el nuevo documento
+            $nombreArchivoPdf = null;
+            
+            // Procesar el PDF si se adjuntó uno
+            if($form->hasFile('pdf')){
+                $nombreOriginal = pathinfo($form->file('pdf')->getClientOriginalName(), PATHINFO_FILENAME);
+                $extension = $form->file('pdf')->getClientOriginalExtension();
+                // Usar un valor temporal para el nombre del archivo (se actualizará con el ID real)
+                $nombreArchivoPdf = 'documento-temp-' . date('Y-m-d_H-i-s') . '-' . $nombreOriginal . '.' . $extension;
+            }
+            
             $documento=Documento::create([
                 'cod_fun'=>$form['cf'],
                 'doc_titulo'=>$form['titulo'],
@@ -73,8 +101,20 @@ class DocumentoController extends Controller
                 'doc_edu_superior'=>$superior,
                 'doc_grado'=>$form['grado'],
                 'doc_numero_revalida'=>$form['revalida'],
-
+                'doc_pdf'=>$nombreArchivoPdf,
             ]);
+            
+            // Si hay PDF, actualizar el nombre del archivo con el ID real del documento
+            if($form->hasFile('pdf')){
+                $nombreOriginal = pathinfo($form->file('pdf')->getClientOriginalName(), PATHINFO_FILENAME);
+                $extension = $form->file('pdf')->getClientOriginalExtension();
+                $nombreArchivo = 'documento-' . $documento->cod_doc . '-' . date('Y-m-d_H-i-s') . '-' . $nombreOriginal . '.' . $extension;
+                $ruta = 'documentos/';
+                Storage::disk('public')->putFileAs($ruta, $form->file('pdf'), $nombreArchivo);
+                $documento->doc_pdf = $nombreArchivo;
+                $documento->save();
+            }
+            
             \Session::flash('exito','Se ha creado exitosamente el documento');
         }
         return redirect('listar documentos funcionario/'.$form['cf']);
@@ -95,6 +135,12 @@ class DocumentoController extends Controller
             'cd'=>'required'
         ]);
         $documento=documento::find($form['cd']);
+        
+        // Eliminar el PDF si existe
+        if($documento->doc_pdf && Storage::disk('public')->exists('documentos/'.$documento->doc_pdf)){
+            Storage::disk('public')->delete('documentos/'.$documento->doc_pdf);
+        }
+        
         DB::delete('delete from doc_adm.d_observacions where cod_doc='.$form['cd']);
         $cod_fun=$documento->cod_fun;
         $documento->delete();
@@ -239,6 +285,30 @@ class DocumentoController extends Controller
         \Session::flash("exito","Se ha eliminado correctamente el documento de titularidad");
         return redirect('listar documentos funcionario/'.$cod_fun);
     }
+    public function descargar_pdf_documento($cod_doc){
+        $documento=Documento::find($cod_doc);
+        if(!$documento || !$documento->doc_pdf){
+            return redirect()->back()->with('error','El documento no tiene archivo PDF');
+        }
+        $rutaArchivo = storage_path('app/public/documentos/'.$documento->doc_pdf);
+        if(!file_exists($rutaArchivo)){
+            return redirect()->back()->with('error','El archivo PDF no se encontró');
+        }
+        return response()->download($rutaArchivo, $documento->doc_pdf);
+    }
+    
+    public function ver_pdf_documento($cod_doc){
+        $documento=Documento::find($cod_doc);
+        if(!$documento || !$documento->doc_pdf){
+            return redirect()->back()->with('error','El documento no tiene archivo PDF');
+        }
+        $rutaArchivo = storage_path('app/public/documentos/'.$documento->doc_pdf);
+        if(!file_exists($rutaArchivo)){
+            return redirect()->back()->with('error','El archivo PDF no se encontró');
+        }
+        return response()->file($rutaArchivo, ['Content-Type' => 'application/pdf']);
+    }
+
     public function importar_docente(Request $form){
 
         try {

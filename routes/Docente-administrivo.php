@@ -21,6 +21,9 @@ Route::group(['middleware'=>['permission:acceder al sistema - dya']],function(){
     //eliminar documento
     Route::get('fe_eliminar documento/{cod_doc}/{cod_fun}',[DocumentoController::class,'fe_eli_documento']);
     Route::post('eli_documento',[DocumentoController::class,'eli_documento']);
+    //descargar pdf documento
+    Route::get('descargar pdf documento/{cod_doc}',[DocumentoController::class,'descargar_pdf_documento']);
+    Route::get('ver pdf documento/{cod_doc}',[DocumentoController::class,'ver_pdf_documento']);
 
 //=================OBSERVACION A DOCUMENTOS=============
     Route::get('fe_observacion documento/{cod_doc}',[DocumentoController::class,'fe_obs_documento']);
