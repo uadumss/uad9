@@ -77,8 +77,23 @@
                                         case 'A': echo 'ADMINISTRATIVO'; break;
                                     }
                                 @endphp
+                            </span> |
+                            <span class="text-primary font-italic">Enviado a la DPA : </span>
+                            <span class="text-dark font-weight-bold">
+                                @if($funcionario->fun_env_dpa === true || $funcionario->fun_env_dpa === 1 || $funcionario->fun_env_dpa === 't')
+                                    <i class='fas fa-check-circle text-success'></i>
+                                @else
+                                    <i class='fas fa-minus-circle text-danger'></i>
+                                @endif
                             </span>
                         </span>
+                        @if($funcionario->fun_pdf_env_dpa)
+                            <div class="mt-2" style="font-size: 0.85em">
+                                <span class="text-primary font-italic">Control de envio DPA:</span>
+                                <a href="{{url('ver pdf envio dpa/'.$cod_fun)}}" class="btn btn-light btn-circle btn-sm text-success" title="Ver PDF Control" target="_blank"><i class="fas fa-file-pdf"></i></a>
+                                <a href="{{url('descargar pdf envio dpa/'.$cod_fun)}}" class="btn btn-light btn-circle btn-sm text-info" title="Descargar PDF Control"><i class="fas fa-download"></i></a>
+                            </div>
+                        @endif
 
                         <table class="table table-sm table-hover" width="100%" cellspacing="0" style="font-size: 0.8em">
                             <thead>
@@ -207,6 +222,10 @@
                                                    title="Eliminar documento"><i class="text-danger fas fa-trash-alt"></i>
                                                 </a>
                                                 @endcan
+                                                @if($d->doc_pdf)
+                                                    <a href="{{url('ver pdf documento/'.$d->cod_doc)}}" class="btn btn-light btn-circle btn-sm text-success" title="Ver PDF" target="_blank"><i class="fas fa-file-pdf"></i></a>
+                                                    <a href="{{url('descargar pdf documento/'.$d->cod_doc)}}" class="btn btn-light btn-circle btn-sm text-info" title="Descargar PDF"><i class="fas fa-download"></i></a>
+                                                @endif
 
                                             </td>
                                         </tr>
@@ -214,6 +233,23 @@
                                     @endforeach
                                     </tbody>
                                 </table>
+                                <div class="mt-3 text-right">
+                                    @if(!($funcionario->fun_env_dpa === true || $funcionario->fun_env_dpa === 1 || $funcionario->fun_env_dpa === 't'))
+                                        <a href="#" class="btn btn-sm btn-success" data-target="#documento" data-toggle="modal"
+                                           onclick="cargarDatos('{{url('fe_enviar dpa/'.$cod_fun)}}','panel_documento')">
+                                            <i class="fas fa-paper-plane"></i> Enviar a la DPA
+                                        </a>
+                                    @endif
+
+                                    @if($funcionario->fun_pdf_env_dpa)
+                                        <a href="{{url('ver pdf envio dpa/'.$cod_fun)}}" class="btn btn-sm btn-outline-success" target="_blank">
+                                            <i class="fas fa-file-pdf"></i> Ver PDF envio DPA
+                                        </a>
+                                        <a href="{{url('descargar pdf envio dpa/'.$cod_fun)}}" class="btn btn-sm btn-outline-info">
+                                            <i class="fas fa-download"></i> Descargar PDF envio DPA
+                                        </a>
+                                    @endif
+                                </div>
                     </div>
                 </div>
             </div>

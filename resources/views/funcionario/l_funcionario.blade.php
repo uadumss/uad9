@@ -91,6 +91,7 @@
                                         <th class="">Nacionalidad</th>
                                         <th class="">Pais Origen</th>
                                         <th class="">Estado</th>
+                                        <th class="">Enviado a la DPA</th>
                                         <th>Opciones</th>
                                     </tr>
                                     </thead>
@@ -145,6 +146,14 @@
                                             </td>
                                             <td>                                                
                                                 @can('editar funcionario - dya')
+                                            <td class="text-center">
+                                                @if($f->fun_env_dpa === true || $f->fun_env_dpa === 1 || $f->fun_env_dpa === 't')
+                                                    <i class='fas fa-check-circle text-success' title="Enviado"></i>
+                                                @else
+                                                    <i class='fas fa-minus-circle text-danger' title="No enviado"></i>
+                                                @endif
+                                            </td>
+                                            <td>
                                                 <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#docente" data-toggle="modal" onclick="cargarDatos('{{url('fe_funcionario/'.$f->cod_fun)}}','panel_docente')"
                                                    title="Editar funcionario"><i class="fas fa-edit"></i>
                                                 </a>
