@@ -89,9 +89,8 @@
                         </span>
                         @if($funcionario->fun_pdf_env_dpa)
                             <div class="mt-2" style="font-size: 0.85em">
-                                <span class="text-primary font-italic">Control de envio DPA:</span>
-                                <a href="{{url('ver pdf envio dpa/'.$cod_fun)}}" class="btn btn-light btn-circle btn-sm text-success" title="Ver PDF Control" target="_blank"><i class="fas fa-file-pdf"></i></a>
-                                <a href="{{url('descargar pdf envio dpa/'.$cod_fun)}}" class="btn btn-light btn-circle btn-sm text-info" title="Descargar PDF Control"><i class="fas fa-download"></i></a>
+                                <span class="text-primary font-italic">Fecha de envio a la DPA : </span>
+                                <span class="text-dark font-weight-bold">{{ now()->format('d/m/Y') }}</span>
                             </div>
                         @endif
 

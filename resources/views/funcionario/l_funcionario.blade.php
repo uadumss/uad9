@@ -144,8 +144,6 @@
                                                     <span class="badge badge-warning">No está actualizado</span>
                                                 @endif
                                             </td>
-                                            <td>                                                
-                                                @can('editar funcionario - dya')
                                             <td class="text-center">
                                                 @if($f->fun_env_dpa === true || $f->fun_env_dpa === 1 || $f->fun_env_dpa === 't')
                                                     <i class='fas fa-check-circle text-success' title="Enviado"></i>
@@ -154,6 +152,7 @@
                                                 @endif
                                             </td>
                                             <td>
+                                                @can('editar funcionario - dya')
                                                 <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#docente" data-toggle="modal" onclick="cargarDatos('{{url('fe_funcionario/'.$f->cod_fun)}}','panel_docente')"
                                                    title="Editar funcionario"><i class="fas fa-edit"></i>
                                                 </a>
