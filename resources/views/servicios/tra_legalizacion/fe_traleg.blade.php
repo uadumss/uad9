@@ -369,8 +369,10 @@
                     @can('crear docleg - srv')
                     <!--Solo cuando es BUSQUEDA SE MUESTRA EL FORMULARIO-->
                     @if($tramite->id_per!='' && $tramite->tra_tipo_tramite=='B')
-                        <button id="btnNuevoTra" class="btn btn-sm btn-primary float-right" onclick="$('#divNueTram').show(500); $('#btnNuevoTra').hide(500);"> + Trámite</button><br/>
-                        <div class="shadow-sm border col-md-10 float-right" id="divNueTram" style="display: none">
+                        <div class="text-right mb-2">
+                            <button id="btnNuevoTra" class="btn btn-sm btn-primary" onclick="$('#divNueTram').show(500); $('#btnNuevoTra').hide(500);"> + Trámite</button>
+                        </div>
+                        <div class="shadow-sm border col-md-10 ui-agregar-tramite-wrap" id="divNueTram" style="display: none">
                             <a onclick="$('#divNueTram').hide(500);$('#btnNuevoTra').show(500); " id="ocultar" style="float:right" class="mr-2">
                                 <i class="fas fa-minus-circle text-danger"></i></a>
                             <br/>
@@ -381,7 +383,7 @@
                                     <h6 class="text-dark text-center font-weight-bold">Añadir documento para Búsqueda</h6>
                                 </div>
                             <br/>
-                            <div class="col-md-11 float-right">
+                            <div class="col-md-11 mx-auto">
                                 <form id="form_docleg">
                                     @csrf
                                     <table>
@@ -401,18 +403,20 @@
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group">
                                                     <input type="text" class=" form-control form-control-sm" name="control" required oninput="programarValidacionControl(this)">
-                                                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="font-italic text-dark font-weight-bold"> CUADIS :
+                                                    <span class="font-italic text-dark font-weight-bold ml-3">CUADIS :
                                                             <input type="checkbox" name="cuadis" />
-                                                        </span>&nbsp;&nbsp;
+                                                        </span>
                                                 </div>
                                             </td>
                                         </tr>
                                         <tr><th class="text-right font-italic">Nro. Título:</th>
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group ">
-                                                    <input name="numero" required class="form-control col-md-2 form-control-sm border " pattern="[0-9]{1,6}"> &nbsp;&nbsp;
-                                                    / &nbsp;&nbsp;<input name="gestion" required class="form-control col-md-2 form-control-sm border" pattern="[0-9]{1,4}"> &nbsp;&nbsp;(e.j. 1999)
-                                                    &nbsp;&nbsp;<a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-campo="estado-sitra-icon" title="No existe en el sitra" onclick="abrirModalSitraFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
+                                                    <input name="numero" required class="form-control col-md-2 form-control-sm border" pattern="[0-9]{1,6}">
+                                                    <span class="mx-2">/</span>
+                                                    <input name="gestion" required class="form-control col-md-2 form-control-sm border" pattern="[0-9]{1,4}">
+                                                    <span class="ml-2 mr-1 text-muted">(e.j. 1999)</span>
+                                                    <a href="#" class="btn btn-light btn-circle btn-sm text-danger ml-2" data-campo="estado-sitra-icon" title="No existe en el sitra" onclick="abrirModalSitraFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
                                                     <span class="ml-1 text-info font-italic" data-campo="sitra-fuente"></span>
                                                 </div>
                                             </td>
@@ -448,8 +452,10 @@
                                     <input type="hidden" name="reimpresion" data-campo="preimpreso-api" value="">
                                     <input type="hidden" data-campo="validacion-recaudacion-ok" value="0">
                                 </form>
-                                <a href="#" class="btn btn-sm btn-primary float-right mr-4" onclick="crearDoclegConValidacion('form_docleg','{{url('g_docleg')}}','panel_traleg')"
-                                   title="Editar legalización">+ Crear </a>
+                                <div class="text-right mt-2 mb-2">
+                                    <a href="#" class="btn btn-sm btn-primary" onclick="crearDoclegConValidacion('form_docleg','{{url('g_docleg')}}','panel_traleg')"
+                                       title="Editar legalización">+ Crear </a>
+                                </div>
                                 <br/><br/>
                             </div>
                         </div>
@@ -461,11 +467,13 @@
                     <hr class="sidebar-divider"/>
                         <!--==============================Añadir Documentos=================-->
                     @if($puedeAgregarDoc)
-                        <button id="btnNuevoTra" class="btn btn-sm btn-primary float-right" onclick="$('#divNueTram').show(500); $('#btnNuevoTra').hide(500);"> + Trámite</button><br/>
+                        <div class="text-right mb-2">
+                            <button id="btnNuevoTra" class="btn btn-sm btn-primary" onclick="$('#divNueTram').show(500); $('#btnNuevoTra').hide(500);"> + Trámite</button>
+                        </div>
                     @else
                         <span class="text-info font-italic float-right" style="font-size:.85em">Confrontación permite un solo trámite por registro.</span><br/>
                     @endif
-                    <div class="shadow-sm" id="divNueTram" style="display: none">
+                    <div class="shadow-sm ui-agregar-tramite-wrap" id="divNueTram" style="display: none">
 
                         <a onclick="$('#divNueTram').hide(500);$('#btnNuevoTra').show(500); " id="ocultar" style="float:right" class="mr-2">
                             <i class="fas fa-minus-circle text-danger"></i></a>
@@ -518,8 +526,10 @@
                                     <input type="hidden" data-campo="validacion-recaudacion-ok" value="0">
                                 </form>
                                 <br/>
-                                <a href="#" class="btn btn-sm btn-primary float-right mr-4" onclick="crearConfrontacionConValidacion('form_docleg_f','{{url('g_docleg')}}','panel_traleg')"
-                                   title="Editar legalización">+ Crear </a>
+                                          <div class="text-right mt-2 mb-2">
+                                                <a href="#" class="btn btn-sm btn-primary" onclick="crearConfrontacionConValidacion('form_docleg_f','{{url('g_docleg')}}','panel_traleg')"
+                                                    title="Editar legalización">+ Crear </a>
+                                          </div>
                                 <br/><br/>
                                 @else
                                 <form id="form_docleg">
@@ -557,33 +567,32 @@
                                         <tr>
                                             <th class="text-right font-italic ">Tipo de trámite :</th>
                                             <td class="border-bottom border-dark">
-                                                <input type="radio" name="tipo_tramite" checked value="f"> EXTERNO  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                                <input type="radio" name="tipo_tramite" value="t"> INTERNO
-                                                &nbsp;&nbsp;
-                                                <span class="font-weight-bold text-danger" style="font-size: 20px">|</span>
-                                                &nbsp;&nbsp;
+                                                <span class="mr-4"><input type="radio" name="tipo_tramite" checked value="f"> EXTERNO</span>
+                                                <span class="mr-3"><input type="radio" name="tipo_tramite" value="t"> INTERNO</span>
+                                                <span class="font-weight-bold text-danger mx-2" style="font-size: 20px">|</span>
                                                 @if($tramite->tra_tipo_tramite=='L')
-                                                    <span class="font-weight-bold text-dark font-italic">&nbsp;&nbsp;PTAG : &nbsp;&nbsp;
+                                                    <span class="font-weight-bold text-dark font-italic mr-3">PTAG :
                                                             <input type="checkbox" name="ptaang">
                                                         </span>
                                                 @endif
-                                                &nbsp;&nbsp;<span class="font-italic text-dark font-weight-bold"> CUADIS :
+                                                <span class="font-italic text-dark font-weight-bold">CUADIS :
                                                             <input type="checkbox" name="cuadis" />
-                                                        </span>&nbsp;&nbsp;
+                                                        </span>
                                             </td>
                                         </tr>
                                         <tr>
                                             <th class="text-right font-italic ">Nro. Título o Resolución:</th>
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group ">
-                                                    &nbsp;&nbsp;  &nbsp;&nbsp;<input name="numero" class="form-control col-md-2 form-control-sm border "> &nbsp;&nbsp;
-                                                    / &nbsp;&nbsp;<input name="gestion" required class="form-control col-md-2 form-control-sm border" pattern="[0-9]{1,4}"> &nbsp;&nbsp;(e.j. 1999)
+                                                    <input name="numero" class="form-control col-md-2 form-control-sm border">
+                                                    <span class="mx-2">/</span>
+                                                    <input name="gestion" required class="form-control col-md-2 form-control-sm border" pattern="[0-9]{1,4}">
+                                                    <span class="ml-2 mr-1 text-muted">(e.j. 1999)</span>
                                                     @if(!in_array($tramite->tra_tipo_tramite,['E','F']))
-                                                        &nbsp;&nbsp;<a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-campo="estado-sitra-icon" title="No existe en el sitra" onclick="abrirModalSitraFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
+                                                        <a href="#" class="btn btn-light btn-circle btn-sm text-danger ml-2" data-campo="estado-sitra-icon" title="No existe en el sitra" onclick="abrirModalSitraFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
                                                         <span class="ml-1 text-info font-italic" data-campo="sitra-fuente"></span>
                                                     @endif
-                                                                        &nbsp;&nbsp;&nbsp;&nbsp;
-                                                    <span class="font-weight-bold text-dark float-right">
+                                                    <span class="font-weight-bold text-dark ml-3">
                                                         Supletorio : <input type="checkbox" name="supletorio">
                                                     </span>
                                                 </div>
@@ -594,7 +603,7 @@
                                             <td class="border-bottom border-dark input-group">
                                                 <div class="input-group">
                                                     <input class="form-control form-control-sm border-0" required name="control" oninput="programarValidacionControl(this)" />
-                                                    <span class="text-primary font-weight-bold font-italic"> Reintegro : &nbsp;</span>
+                                                    <span class="text-primary font-weight-bold font-italic ml-2 mr-1">Reintegro :</span>
                                                     <input class="form-control form-control-sm border" required name="reintegro" />
                                                 </div>
                                             </td>
@@ -604,7 +613,7 @@
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group">
                                                     <input class="form-control form-control-sm" name="valorado_bus" />
-                                                    &nbsp;&nbsp;<span class="font-italic font-weight-bold"> Nro. control Reimpresión : </span>&nbsp;&nbsp;
+                                                    <span class="font-italic font-weight-bold ml-2 mr-2">Nro. control Reimpresión :</span>
                                                     <input class="form-control form-control-sm" name="reimpresion" data-campo="preimpreso-api" readonly />
                                                 </div>
                                             </td>
@@ -618,8 +627,10 @@
                                     <input type="hidden" data-campo="validacion-recaudacion-ok" value="0">
                                 </form>
                                 <br/>
-                                <a href="#" class="btn btn-sm btn-primary float-right mr-4" onclick="crearDoclegConValidacion('form_docleg','{{url('g_docleg')}}','panel_traleg')"
-                                   title="Editar legalización">+ Crear </a>
+                                <div class="text-right mt-2 mb-2">
+                                    <a href="#" class="btn btn-sm btn-primary" onclick="crearDoclegConValidacion('form_docleg','{{url('g_docleg')}}','panel_traleg')"
+                                       title="Editar legalización">+ Crear </a>
+                                </div>
                                 <br/><br/>
                                 @endif
                             </div>
@@ -642,6 +653,73 @@
             border: 1px solid #d9dee5;
             background: #fff;
             padding: .75rem .75rem .45rem;
+            float: none !important;
+            margin-left: 0 !important;
+            margin-right: auto !important;
+            width: 100%;
+            clear: both;
+        }
+
+        #divNueTram > div {
+            clear: both;
+        }
+
+        #divNueTram form,
+        #divNueTram table {
+            width: 100% !important;
+            text-align: left !important;
+        }
+
+        #divNueTram .col-md-11 {
+            float: none !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            max-width: 100%;
+            flex: 0 0 100%;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        #divNueTram #form_docleg,
+        #divNueTram #form_docleg_f {
+            width: 100%;
+            max-width: 100%;
+            float: none !important;
+            margin-left: 0 !important;
+            margin-right: auto !important;
+        }
+
+        #divNueTram #form_docleg table,
+        #divNueTram #form_docleg_f table {
+            width: 100% !important;
+            table-layout: auto;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+
+        #divNueTram #form_docleg .text-right,
+        #divNueTram #form_docleg_f .text-right {
+            text-align: left !important;
+        }
+
+        #divNueTram .input-group {
+            justify-content: flex-start !important;
+        }
+
+        #divNueTram #form_docleg th,
+        #divNueTram #form_docleg_f th {
+            width: 1%;
+            text-align: left !important;
+            padding-left: 0.35rem;
+            padding-right: 0.45rem;
+            white-space: nowrap;
+        }
+
+        #divNueTram #form_docleg td,
+        #divNueTram #form_docleg_f td {
+            width: auto;
+            text-align: left !important;
+            padding-left: 0.1rem;
         }
 
         #divNueTram table th {

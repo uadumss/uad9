@@ -932,7 +932,7 @@ class TramiteLegalizacionController extends Controller
             $codigoCuenta=(string)($fila['codigo_cuenta'] ?? '');
             $nombreCuentaRecaudaciones=strtoupper(trim((string)($fila['cuenta'] ?? '')));
             $tramiteSugerido=$this->buscarTramiteSugeridoDesdeFilaRecaudacion((array)$fila,$tipoTramite);
-            $ptagAuto=$this->esCuentaVerifAutentPtag($nombreCuentaRecaudaciones,$tipoTramite);
+            $ptagAuto=$this->esCuentaVerifAutentPtag($nombreCuentaRecaudaciones,$tipoTramite,$tramiteSugerido);
 
             if(!$tramiteSugerido){
                 $nombreCuenta=trim((string)$nombreCuentaRecaudaciones);
@@ -1414,9 +1414,18 @@ class TramiteLegalizacionController extends Controller
         return (string)$v;
     }
 
-    private function esCuentaVerifAutentPtag(string $nombreCuenta, string $tipoTramite): bool
+    private function esCuentaVerifAutentPtag(string $nombreCuenta, string $tipoTramite, ?Tramite $tramiteSugerido=null): bool
     {
         if($tipoTramite!=='L'){
+            return false;
+        }
+
+        if(!$tramiteSugerido){
+            return false;
+        }
+
+        $buscarEnSugerido=strtolower(trim((string)($tramiteSugerido->tre_buscar_en ?? '')));
+        if(!in_array($buscarEnSugerido,['da','db'],true)){
             return false;
         }
 
@@ -1427,8 +1436,22 @@ class TramiteLegalizacionController extends Controller
 
         $tieneVerif=(strpos($texto,'VERIF')!==false || strpos($texto,'VERIFICACION')!==false);
         $tieneAutent=(strpos($texto,'AUTENT')!==false || strpos($texto,'AUTENTICACION')!==false);
+        if(!($tieneVerif && $tieneAutent)){
+            return false;
+        }
 
-        return $tieneVerif && $tieneAutent;
+        $esAcademico=(strpos($texto,'ACADEM')!==false);
+        $esBachiller=(strpos($texto,'BACHILLER')!==false);
+
+        if($buscarEnSugerido==='da'){
+            return $esAcademico;
+        }
+
+        if($buscarEnSugerido==='db'){
+            return $esBachiller;
+        }
+
+        return false;
     }
 
     private function nombresCompatibles(string $nombreLocal, string $nombreSitra): bool

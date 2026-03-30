@@ -159,6 +159,36 @@
     gap: 0.28rem;
 }
 
+.servicios-ui .ui-modal-traleg .ui-form-layout {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.servicios-ui .ui-modal-traleg .ui-agregar-tramite-wrap {
+    float: none !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+.servicios-ui .ui-modal-traleg .ui-agregar-tramite-wrap > .col-md-11 {
+    float: none !important;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.servicios-ui .ui-modal-traleg #divNueTram.col-md-10.float-right,
+.servicios-ui .ui-modal-traleg #divNueTram > .col-md-11.float-right {
+    float: none !important;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.servicios-ui .ui-modal-traleg #divNueTram table {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 /* Apostilla: responsive only, keep original style */
 .apostilla-ui .modal-body .row > [class*="col-"],
 .apostilla-ui .card-body .row > [class*="col-"] {
