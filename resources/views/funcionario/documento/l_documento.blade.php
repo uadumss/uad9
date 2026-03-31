@@ -44,7 +44,6 @@
             </ul>
         </div>
     @endif
-
     <div class="card">
         <div class="card shadow mb-4">
             <div class="card-header py-3 alert-primary col-md-12">
@@ -57,9 +56,6 @@
                            onclick="cargarDatos('{{url('fe_documento/0/'.$cod_fun)}}','panel_documento')">+ Documento</a>
                         <a href="" class="btn btn-sm btn-primary float-right mr-1" data-toggle="modal" data-target="#documento"
                            onclick="cargarDatos('{{url('fe_documento titularidad/0/'.$cod_fun)}}','panel_documento')">+ Titularidad</a>
-                        <a href="" class="btn btn-sm btn-primary float-right mr-1" data-toggle="modal" data-target="#documento" onclick="cargarDatos('{{url('fe_conformidad/'.$cod_fun)}}','panel_documento')">
-                            <i class="fas fa-file-alt"></i> + Formulario de conformidad
-                        </a>
                     </div>
                 </div>
             </div>
@@ -98,7 +94,6 @@
                             </div>
                         @endif
 
-                        <!-- TABLA TITULARIDADES -->
                         <table class="table table-sm table-hover" width="100%" cellspacing="0" style="font-size: 0.8em">
                             <thead>
                             <tr class="bg-gray-600 text-white">
@@ -114,8 +109,8 @@
                             </tr>
                             </thead>
                             <?php $j=1;?>
-                            <tbody>
-                                @foreach($titularidades as $d)
+
+                            <tbody> @foreach($titularidades as $d)
                                     <tr>
                                         <td>{{$j}}</td>
                                         <td>{{$d->dt_categoria}}</td>
@@ -130,96 +125,23 @@
                                         </td>
                                         <td>{{$d->dt_numero_resolucion}}</td>
                                         <td>
-                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_documento titularidad/'.$d->cod_dt.'/'.$d->cod_fun)}}','panel_documento')" title="Editar titularidad"><i class="fas fa-edit"></i></a>
-                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_eliminar titularidad/'.$d->cod_dt.'/'.$d->cod_fun)}}','panel_documento')" title="Eliminar titularidad"><i class="text-danger fas fa-trash-alt"></i></a>
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_documento titularidad/'.$d->cod_dt.'/'.$d->cod_fun)}}','panel_documento')"
+                                               title="Editar titularidad"><i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_eliminar titularidad/'.$d->cod_dt.'/'.$d->cod_fun)}}','panel_documento')"
+                                               title="Eliminar titularidad"><i class="text-danger fas fa-trash-alt"></i>
+                                            </a>
                                         </td>
                                     </tr>
                                     <?php $j++;?>
-                                @endforeach
+                                    @endforeach
                             </tbody>
                         </table>
 
-                        <!-- TABLA DOCUMENTOS -->
                         <div class="bg-primary centrar_bloque p-1 col-md-3 rounded shadow">
                             <h5 class="text-white text-center">Lista de Diplomas y Títulos</h5>
                         </div>
                         <hr class="sidebar-divider">
-                        <table class="table table-sm table-hover sortable-table" width="100%" cellspacing="0" style="font-size: 0.8em" id="tablaDocumentos">
-                            <thead>
-                                <tr class="bg-gray-600 text-white">
-                                    <th>Nº</th>
-                                    <th>Tipo</th>
-                                    <th>Título</th>
-                                    <th>Grado</th>
-                                    <th>Universidad</th>
-                                    <th>Tipo Univ.</th>
-                                    <th>Educación Superior</th>
-                                    <th>Reválida</th>
-                                    <th>Opciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php $j=1;?>
-                                @foreach($documentos as $d)
-                                    <tr class="{{$d->doc_obs=='t'?'alert-danger':''}}">
-                                        <td>{{$j}}</td>
-                                        <td>{{$d->doc_tipo}}</td>
-                                        <td>
-                                            <span class="font-weight-bold text-dark">{{$d->doc_titulo}}</span><br/>
-                                            <span style="font-size: 0.9em">
-                                                <span class="text-primary font-italic">Gestión : </span><span class="text-dark">{{$d->doc_gestion}}</span> |
-                                                <span class="text-primary font-italic">Legalizado : </span>
-                                                {!! $d->doc_legalizado=='t'? "<i class='fas fa-check-circle text-success'></i>":"<i class='fas fa-minus-circle text-danger'></i>" !!} |
-                                                <span class="text-primary font-italic">Verificado : </span>
-                                                {!! $d->doc_verificado=='t'? "<i class='fas fa-check-circle text-success'></i>":"<i class='fas fa-minus-circle text-danger'></i>" !!} |
-                                                <span class="text-primary font-italic">Fecha emisión : </span>
-                                                {{ $d->doc_fecha_emision ? date('d/m/Y',strtotime($d->doc_fecha_emision)) : '' }}
-                                            </span>
-                                        </td>
-                                        <td>{{$d->doc_grado}}</td>
-                                        <td>{{$d->doc_universidad}}</td>
-                                        <td><span class="badge badge-{{ \App\Helpers\UniversidadHelper::getTipoUniversidad($d->doc_universidad) === 'Pública' ? 'success' : (\App\Helpers\UniversidadHelper::getTipoUniversidad($d->doc_universidad) === 'Privada' ? 'warning' : 'info') }}">{{ \App\Helpers\UniversidadHelper::getTipoUniversidad($d->doc_universidad) }}</span></td>
-                                        <td>
-                                            @if($d->doc_edu_superior=='t')
-                                                <span class="bg-success text-white rounded font-italic pr-1 pl-1 font-weight-bold"> Docencia </span>
-                                            @endif
-                                        </td>
-                                        <td>{{$d->doc_numero_revalida}}</td>
-                                        <td>
-                                            @can('editar documento - dya')
-                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_documento/'.$d['cod_doc'].'/'.$d->cod_fun)}}','panel_documento')" title="Editar documento"><i class="fas fa-edit"></i></a>
-                                            @endcan
-                                            <a href="#" class="btn btn-light btn-circle btn-sm text-{{$d->doc_obs=='t'?'danger':'primary'}}" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_observacion documento/'.$d['cod_doc'])}}','panel_documento')" title="Observar Documento"><i class="fas fa-eye"></i></a>
-                                            @can('eliminar documento - dya')
-                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_eliminar documento/'.$d->cod_doc.'/'.$d->cod_fun)}}','panel_documento')" title="Eliminar documento"><i class="text-danger fas fa-trash-alt"></i></a>
-                                            @endcan
-                                            @if($d->doc_pdf)
-                                                <a href="{{url('ver pdf documento/'.$d->cod_doc)}}" class="btn btn-light btn-circle btn-sm text-success" title="Ver PDF" target="_blank"><i class="fas fa-file-pdf"></i></a>
-                                                <a href="{{url('descargar pdf documento/'.$d->cod_doc)}}" class="btn btn-light btn-circle btn-sm text-info" title="Descargar PDF"><i class="fas fa-download"></i></a>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                    <?php $j++;?>
-                                @endforeach
-                            </tbody>
-                        </table>
-
-                        <div class="mt-3 text-right">
-                            @if(!($funcionario->fun_env_dpa === true || $funcionario->fun_env_dpa === 1 || $funcionario->fun_env_dpa === 't'))
-                                <a href="#" class="btn btn-sm btn-success" data-target="#documento" data-toggle="modal"
-                                   onclick="cargarDatos('{{url('fe_enviar dpa/'.$cod_fun)}}','panel_documento')">
-                                    <i class="fas fa-paper-plane"></i> Enviar a la DPA
-                                </a>
-                            @endif
-                            @if($funcionario->fun_pdf_env_dpa)
-                                <a href="{{url('ver pdf envio dpa/'.$cod_fun)}}" class="btn btn-sm btn-outline-success" target="_blank">
-                                    <i class="fas fa-file-pdf"></i> Ver PDF envio DPA
-                                </a>
-                                <a href="{{url('descargar pdf envio dpa/'.$cod_fun)}}" class="btn btn-sm btn-outline-info">
-                                    <i class="fas fa-download"></i> Descargar PDF envio DPA
-                                </a>
-                            @endif
-                        </div>
                                 <table class="table table-sm table-hover sortable-table" width="100%" cellspacing="0" style="font-size: 0.8em" id="tablaDocumentos">
                                     <thead>
                                     <tr class="bg-gray-600 text-white">
@@ -395,35 +317,18 @@
                 </div>
             </div>
         </div>
-    </div>
 
     @can('acceder al sistema - dya')
-        <!-- MODAL DOCUMENTO -->
-        <div class="modal fade" id="documento" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-md" role="document" id="panel_documento" style="max-width: 700px;">
-            </div>
-        </div>
+        <!--===========================MODAL DOCENTE===================-->
+            <div class="modal fade" id="documento" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-xl" role="document" id="panel_documento">
 
+                </div>
+            </div>
+            <!--===========================END ==============================-->
     @endcan
 
 <script>
-function cargarDatos(ruta,panel){
-    $.ajax({
-        url: ruta,
-        type: 'GET',
-        data: '',
-        success: function(resp) {
-            $('#' + panel).html(resp);
-        },
-        error: function() {
-            alert('No se puede ejecutar la petición');
-        }
-    });
-}
-
-// Script para ordenar la tabla de documentos
-
-// Script para ordenar la tabla de documentos
 document.addEventListener('DOMContentLoaded', function() {
     const table = document.getElementById('tablaDocumentos');
     const headers = table.querySelectorAll('th');
@@ -462,15 +367,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        // Limpiar indicadores de todas las columnas
         table.querySelectorAll('.sort-indicator').forEach(indicator => {
             indicator.textContent = '';
         });
 
-        const indicator = ascending ? ' ↑' : ' ↓';
-        header.querySelector('.sort-indicator') ? header.querySelector('.sort-indicator').textContent = indicator : header.insertAdjacentHTML('beforeend', `<span class="sort-indicator">${indicator}</span>`);
+        // Agregar indicador a la columna actual
+        const indicator = header.querySelector('.sort-indicator');
+        indicator.textContent = ascending ? ' ↑' : ' ↓';
 
+        // Re-insertar las filas ordenadas
         rows.forEach(row => tbody.appendChild(row));
     }
 });
 </script>
+
 @endsection
