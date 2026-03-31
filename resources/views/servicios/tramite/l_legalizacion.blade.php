@@ -154,12 +154,12 @@
         </div>
     </div>
     <!--===========================MODAL NUEVA LEGALIZACION===================-->
-    <div class="modal fade" id="Tramite" style="z-index: 1500;" role="dialog" aria-hidden="true">
+    <div class="modal fade" id="Tramite" style="z-index: 1500;" role="dialog" aria-hidden="true" data-backdrop="false">
             <div class="modal-dialog modal-xl" role="document" id="panel_tramite">
 
             </div>
     </div>
-    <div class="modal fade" id="glosa" style="z-index: 1500;" role="dialog" aria-hidden="true">
+    <div class="modal fade" id="glosa" style="z-index: 1500;" role="dialog" aria-hidden="true" data-backdrop="false">
         <div class="modal-dialog modal-xl" role="document" id="panel_glosa">
 
         </div>

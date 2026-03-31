@@ -191,7 +191,7 @@
     </div>
 
     <!--===========================MODAL TRALEG===================-->
-    <div class="modal fade" id="apostilla" style="z-index: 1500" role="dialog" aria-hidden="false">
+    <div class="modal fade" id="apostilla" data-backdrop="false" style="z-index: 1500" role="dialog" aria-hidden="false">
         <div class="modal-dialog modal-xl" role="document" id="panel_apostilla">
 
         </div>
@@ -199,7 +199,7 @@
     <!--===========================END===================-->
 
     <!-- ================== MODAL DOCLEG ====================-->
-    <div class="modal fade" id="tramite_apostilla" role="dialog" style="z-index: 3000; margin-top: 40px;">
+    <div class="modal fade" id="tramite_apostilla" data-backdrop="false" role="dialog" style="z-index: 3000; margin-top: 40px;">
         <div class="modal-dialog modal-xl" role="document" id="panel_tramite_apostilla">
 
         </div>

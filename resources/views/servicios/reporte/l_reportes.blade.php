@@ -72,14 +72,14 @@
     </div>
 
     <!--===========================MODAL TRALEG===================-->
-    <div class="modal fade"  id="reporte" role="dialog"  aria-hidden="false" >
+    <div class="modal fade"  id="reporte" role="dialog"  aria-hidden="false" data-backdrop="false">
         <div class="modal-dialog modal-xl" role="document" id="panel_reporte">
 
         </div>
     </div>
     <!--===========================END===================-->
     <!--===========================MODAL TRALEG===================-->
-    <div class="modal fade" style="z-index: 1500 " id="detalle" role="dialog"  aria-hidden="false" >
+    <div class="modal fade" style="z-index: 1500 " id="detalle" role="dialog"  aria-hidden="false" data-backdrop="false">
         <div class="modal-dialog modal-xl" role="document" id="panel_detalle">
 
         </div>
