@@ -315,55 +315,62 @@
 .apostilla-ui #panel_lista_tramites_apostilla table {
     width: 100%;
     min-width: 0;
-    table-layout: fixed;
+    table-layout: auto;
+}
+
+.apostilla-ui #panel_lista_tramites_apostilla {
+    overflow-x: hidden !important;
 }
 
 .apostilla-ui #panel_lista_tramites_apostilla th,
 .apostilla-ui #panel_lista_tramites_apostilla td {
     white-space: normal;
     overflow-wrap: anywhere;
+    word-break: break-word;
     vertical-align: middle;
+    padding: 0.28rem 0.32rem;
 }
 
 .apostilla-ui #panel_lista_tramites_apostilla th:nth-child(1),
 .apostilla-ui #panel_lista_tramites_apostilla td:nth-child(1) {
-    width: 5%;
+    width: 6%;
     white-space: nowrap;
 }
 
 .apostilla-ui #panel_lista_tramites_apostilla th:nth-child(2),
 .apostilla-ui #panel_lista_tramites_apostilla td:nth-child(2) {
-    width: 43%;
+    width: 30%;
 }
 
 .apostilla-ui #panel_lista_tramites_apostilla th:nth-child(3),
 .apostilla-ui #panel_lista_tramites_apostilla td:nth-child(3) {
     width: 12%;
-    white-space: nowrap;
+    white-space: normal;
 }
 
 .apostilla-ui #panel_lista_tramites_apostilla th:nth-child(4),
 .apostilla-ui #panel_lista_tramites_apostilla td:nth-child(4) {
-    width: 16%;
-    white-space: nowrap;
+    width: 20%;
+    white-space: normal;
 }
 
 .apostilla-ui #panel_lista_tramites_apostilla th:nth-child(5),
 .apostilla-ui #panel_lista_tramites_apostilla td:nth-child(5) {
-    width: 16%;
-    white-space: nowrap;
+    width: 20%;
+    white-space: normal;
 }
 
 .apostilla-ui #panel_lista_tramites_apostilla th:nth-child(6),
 .apostilla-ui #panel_lista_tramites_apostilla td:nth-child(6) {
-    width: 8%;
+    width: 12%;
     white-space: nowrap;
     text-align: center;
 }
 
 .apostilla-ui #dataListaTramite {
     width: 100% !important;
-    min-width: 340px;
+    min-width: 0;
+    table-layout: auto;
 }
 
 .apostilla-ui #dataListaTramite th:first-child,
@@ -374,7 +381,35 @@
 
 .apostilla-ui #dataListaTramite th:last-child,
 .apostilla-ui #dataListaTramite td:last-child {
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.apostilla-ui .apo-table-responsive-text {
+    font-size: clamp(0.8rem, 0.22vw + 0.74rem, 0.95rem);
+}
+
+.apostilla-ui .apo-table-responsive-text th {
+    font-size: clamp(0.8rem, 0.24vw + 0.74rem, 0.98rem);
+}
+
+.apostilla-ui .apo-col-center > span,
+.apostilla-ui .apo-col-right > span,
+.apostilla-ui .apo-col-left .text-primary.font-weight-bold {
+    font-size: clamp(0.9rem, 0.45vw + 0.72rem, 1.05rem) !important;
+}
+
+.apostilla-ui .btn.btn-sm {
+    font-size: clamp(0.8rem, 0.18vw + 0.74rem, 0.92rem);
+}
+
+.apostilla-ui #apostilla .modal-body,
+.apostilla-ui #tramite_apostilla .modal-body {
+    font-size: clamp(0.86rem, 0.25vw + 0.78rem, 1rem) !important;
+}
+
+.apostilla-ui #panel_lista_tramites_apostilla tr.bg-gradient-info th {
+    line-height: 1.2;
 }
 
 .apostilla-ui .apo-col-right > span:first-child {
@@ -500,4 +535,143 @@
         height: 290px !important;
     }
 
+}
+
+/* Apostilla: mantener 3 columnas estables en escritorio */
+@media (min-width: 992px) {
+    .apostilla-ui .apo-edit-layout {
+        display: grid !important;
+        grid-template-columns: minmax(250px, 28%) minmax(420px, 44%) minmax(250px, 28%) !important;
+        gap: 0.65rem;
+        align-items: start;
+    }
+
+    .apostilla-ui .apo-edit-layout > .apo-col-left,
+    .apostilla-ui .apo-edit-layout > .apo-col-center,
+    .apostilla-ui .apo-edit-layout > .apo-col-right {
+        grid-column: auto !important;
+        max-width: none;
+        flex: initial;
+        margin-top: 0;
+        padding-left: 0.35rem !important;
+        padding-right: 0.35rem !important;
+    }
+
+    .apostilla-ui .apo-col-right > .border.rounded.overflow-auto {
+        height: 530px !important;
+    }
+}
+
+/* Apostilla: acabado visual fino */
+.apostilla-ui .modal-content {
+    border: 1px solid #dbe4f2;
+    border-radius: 0.6rem;
+    box-shadow: 0 10px 28px rgba(24, 45, 84, 0.12);
+}
+
+.apostilla-ui .modal-header {
+    padding-top: 0.58rem;
+    padding-bottom: 0.58rem;
+}
+
+.apostilla-ui .modal-body {
+    line-height: 1.35;
+    color: #2f3a4c;
+}
+
+.apostilla-ui .apo-col-left .shadow-sm,
+.apostilla-ui .apo-col-center.border.shadow,
+.apostilla-ui .apo-col-right .border.rounded.overflow-auto {
+    border-color: #dfe7f3 !important;
+    border-radius: 0.5rem !important;
+    box-shadow: 0 4px 14px rgba(22, 48, 92, 0.08) !important;
+    background: #fff;
+}
+
+.apostilla-ui .bg-primary,
+.apostilla-ui .bg-verde-oscuro {
+    background: linear-gradient(135deg, #4469cc 0%, #3a5ec0 100%) !important;
+}
+
+.apostilla-ui .bg-gradient-primary {
+    background: linear-gradient(135deg, #456bd0 0%, #385bb8 100%) !important;
+}
+
+.apostilla-ui .bg-gradient-info {
+    background: linear-gradient(135deg, #27a9c3 0%, #1f91aa 100%) !important;
+}
+
+.apostilla-ui .apo-table-responsive-text {
+    font-size: clamp(0.82rem, 0.15vw + 0.78rem, 0.92rem);
+}
+
+.apostilla-ui .apo-table-responsive-text th {
+    font-size: clamp(0.79rem, 0.16vw + 0.75rem, 0.9rem);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.apostilla-ui #panel_lista_tramites_apostilla table th,
+.apostilla-ui #panel_lista_tramites_apostilla table td {
+    border-top-color: #e8eef8;
+}
+
+.apostilla-ui #panel_lista_tramites_apostilla .bg-gradient-info th {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+}
+
+.apostilla-ui #panel_lista_tramites_apostilla table tbody tr:hover {
+    background: #f7fbff;
+}
+
+.apostilla-ui .btn.btn-sm {
+    border-radius: 0.32rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+}
+
+.apostilla-ui .btn-primary {
+    background-color: #3f64c6;
+    border-color: #3f64c6;
+}
+
+.apostilla-ui .btn-primary:hover,
+.apostilla-ui .btn-primary:focus {
+    background-color: #3557b2;
+    border-color: #3557b2;
+}
+
+.apostilla-ui .btn-danger {
+    background-color: #d94f5d;
+    border-color: #d94f5d;
+}
+
+.apostilla-ui .btn-danger:hover,
+.apostilla-ui .btn-danger:focus {
+    background-color: #c84250;
+    border-color: #c84250;
+}
+
+.apostilla-ui .text-danger.font-italic.font-weight-bold {
+    color: #d14a3e !important;
+    font-weight: 600 !important;
+}
+
+.apostilla-ui hr.sidebar-divider {
+    margin-top: 0.6rem;
+    margin-bottom: 0.8rem;
+    border-top: 1px solid #e8eef8;
+}
+
+@media (max-width: 1199.98px) {
+    .apostilla-ui .modal-content {
+        border-radius: 0.45rem;
+    }
+
+    .apostilla-ui .apo-col-left .shadow-sm,
+    .apostilla-ui .apo-col-center.border.shadow,
+    .apostilla-ui .apo-col-right .border.rounded.overflow-auto {
+        box-shadow: 0 3px 10px rgba(22, 48, 92, 0.06) !important;
+    }
 }

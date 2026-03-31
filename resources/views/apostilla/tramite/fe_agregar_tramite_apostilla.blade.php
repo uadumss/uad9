@@ -18,8 +18,8 @@
                 <h6 class="text-white text-center">Formulario para agregar tramite de apostilla</h6>
             </div>
             <hr class="sidebar-divider"/>
-            <div class="row">
-                <div class="col-md-4">
+            <div class="row apo-edit-layout">
+                <div class="col-md-3 apo-col-left">
 
                    <div class="shadow-sm p-2 col-md-7 centrar_bloque">
                         <span class="text-primary font-weight-bold"> TRÁMITE</span>
@@ -79,7 +79,7 @@
                     <br/>
                 </div>
                 <!-- ================================LISTA DE DOCUMENTOS====================================-->
-                <div class="col-md-7 pl-3 border shadow pt-2">
+                <div class="col-md-6 pl-3 border shadow pt-2 apo-col-center">
                     <span class="text-danger font-italic font-weight-bold" style="font-size: 16px">* Caracteristicas hhhhhdel trámite</span>
                     <br/>
                     <br/>
@@ -87,7 +87,7 @@
                     <br/>
                     <form id="form_agregar_tramite">
                         @csrf
-                        <table class="">
+                        <table class="w-100">
                             <tr>
                                 <th class="text-dark font-italic">Nombre del trámite : </th>
                                 <td class="border-bottom border-dark">
@@ -141,6 +141,21 @@
                     <div id="validacion-resultado" class="mt-2"></div>
                     <br/>
 
+                </div>
+                <div class="col-md-3 pt-2 apo-col-right">
+                    <span class="text-danger font-italic font-weight-bold" style="font-size: 16px">* Resumen del trámite</span>
+                    <div class="border rounded p-2 bg-light mt-1" style="font-size: 12px;">
+                        <div><span class="font-weight-bold">Tipo:</span> {{$apostilla->lis_alias}}</div>
+                        <div><span class="font-weight-bold">Cuenta:</span> {{$apostilla->lis_cuenta}}</div>
+                        <div><span class="font-weight-bold">Monto:</span> Bs. {{$apostilla->lis_monto}}</div>
+                        <div><span class="font-weight-bold">N° UAD:</span> {{$tramite_apostilla->apos_numero}}</div>
+                    </div>
+                    <div class="mt-2 border rounded p-2">
+                        <span class="font-weight-bold text-primary">Nota</span>
+                        <div class="text-muted" style="font-size: 12px;">
+                            Verifica el número de control y la gestión antes de guardar.
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -204,7 +204,7 @@
                     <span class="text-danger font-italic font-weight-bold" style="font-size: 16px">* Trámites seleccionados</span>
 
                     <div id="panel_lista_tramites_apostilla" class="overflow-auto" style="height: 400px;">
-                        <table class="col-md-12 table table-sm table-hover table-info rounded" style="font-size: 11px">
+                        <table class="table table-sm table-hover table-info rounded apo-table-responsive-text">
                             <tr class="bg-gradient-info text-white p-2">
                                 <th>Nº</th>
                                 <th>Nombre</th>
@@ -261,9 +261,9 @@
                 <div class="col-md-3 pt-2 apo-col-right">
                     <span class="text-danger font-italic font-weight-bold" style="font-size: 16px">* Lista de trámites de apostilla</span>
                     <div class="border rounded overflow-auto" style="height: 530px;">
-                        <div class="table-responsive col-md-12">
+                        <div class="table-responsive">
                             @if($tramite_apostilla->apos_estado<2)
-                            <table class="col-md-12 table-hover" style="font-size: 12px;" id="dataListaTramite">
+                            <table class="table-hover apo-table-responsive-text" id="dataListaTramite">
                                 <thead>
                                 <tr class="bg-gradient-primary text-white pl-2" style="height: 30px">
                                     <th class="text-center">N°</th>
