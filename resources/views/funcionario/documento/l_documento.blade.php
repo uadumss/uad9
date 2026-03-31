@@ -130,21 +130,23 @@
                                         </td>
                                         <td>{{$d->dt_numero_resolucion}}</td>
                                         <td>
-                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_documento titularidad/'.$d->cod_dt.'/'.$d->cod_fun)}}','panel_documento')" title="Editar titularidad"><i class="fas fa-edit"></i></a>
-                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_eliminar titularidad/'.$d->cod_dt.'/'.$d->cod_fun)}}','panel_documento')" title="Eliminar titularidad"><i class="text-danger fas fa-trash-alt"></i></a>
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_documento titularidad/'.$d->cod_dt.'/'.$d->cod_fun)}}','panel_documento')" 
+                                            title="Editar titularidad"><i class="fas fa-edit"></i></a>
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_eliminar titularidad/'.$d->cod_dt.'/'.$d->cod_fun)}}','panel_documento')" 
+                                            title="Eliminar titularidad"><i class="text-danger fas fa-trash-alt"></i>
+                                            </a>
                                         </td>
                                     </tr>
                                     <?php $j++;?>
                                 @endforeach
                             </tbody>
                         </table>
-
                         <!-- TABLA DOCUMENTOS -->
                         <div class="bg-primary centrar_bloque p-1 col-md-3 rounded shadow">
                             <h5 class="text-white text-center">Lista de Diplomas y Títulos</h5>
                         </div>
                         <hr class="sidebar-divider">
-                        <table class="table table-sm table-hover sortable-table" width="100%" cellspacing="0" style="font-size: 0.8em" id="tablaDocumentos">
+                        {{--<table class="table table-sm table-hover sortable-table" width="100%" cellspacing="0" style="font-size: 0.8em" id="tablaDocumentos">
                             <thead>
                                 <tr class="bg-gray-600 text-white">
                                     <th>Nº</th>
@@ -157,7 +159,7 @@
                                     <th>Reválida</th>
                                     <th>Opciones</th>
                                 </tr>
-                            </thead>
+                            </thead> 
                             <tbody>
                                 <?php $j=1;?>
                                 @foreach($documentos as $d)
@@ -219,7 +221,7 @@
                                     <i class="fas fa-download"></i> Descargar PDF envio DPA
                                 </a>
                             @endif
-                        </div>
+                        </div>--}}
                                 <table class="table table-sm table-hover sortable-table" width="100%" cellspacing="0" style="font-size: 0.8em" id="tablaDocumentos">
                                     <thead>
                                     <tr class="bg-gray-600 text-white">
