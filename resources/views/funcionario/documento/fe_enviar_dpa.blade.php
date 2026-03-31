@@ -22,6 +22,24 @@
                 </p>
 
                 <div class="form-group mb-3">
+                    <label class="font-weight-bold text-dark">Titulos/Diplomas a enviar</label>
+                    <div class="border rounded p-2" style="max-height: 220px; overflow-y: auto;">
+                        @foreach($documentos as $d)
+                            <div class="custom-control custom-checkbox mb-1">
+                                <input type="checkbox" class="custom-control-input" id="doc_envio_{{$d->cod_doc}}" name="documentos_envio[]" value="{{$d->cod_doc}}" checked>
+                                <label class="custom-control-label" for="doc_envio_{{$d->cod_doc}}">
+                                    <span class="font-weight-bold">{{$d->doc_tipo}}</span> - {{$d->doc_titulo}}
+                                    @if($d->doc_enviado_dpa === true || $d->doc_enviado_dpa === 1 || $d->doc_enviado_dpa === 't')
+                                        <span class="badge badge-success ml-1">Ya enviado</span>
+                                    @endif
+                                </label>
+                            </div>
+                        @endforeach
+                    </div>
+                    <small class="form-text text-muted">Puede desmarcar los titulos que no seran enviados en esta remision.</small>
+                </div>
+
+                <div class="form-group mb-3">
                     <label class="font-weight-bold text-dark">PDF de control de envio</label>
                     <input type="file" class="form-control-file" name="pdf_control" accept="application/pdf,.pdf" required>
                     <small class="form-text text-muted">Solo archivos PDF. Maximo 5 MB.</small>

@@ -72,7 +72,7 @@
                                                         <input type="hidden" name="co" value="{{$o->cod_od}}">
                                                     </form>
                                                     <div class=float-right>
-                                                        <button class="btn btn-sm btn-primary" onclick="enviar('formObs{{$i}}','{{url('g_obs_documento')}}','panel_documento')">Guardar</button>
+                                                        <button class="btn btn-sm btn-primary" onclick="enviar('formObs{{$i}}','{{url('g_obs_documento')}}','panel_documento', true)">Guardar</button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -82,9 +82,9 @@
                                                 <span style="font-size: 0.8em;" class="text-dark font-weight-bold">{{date('d/m/Y',strtotime($o->od_fecha_solucion))}}</span> </div>
                                             <div class="justify-content-center">{{$o->od_solucion}}</div>
 
-                                                <div class="text-right">
-                                                    <a class="btn btn-danger btn-sm  text-white " data-toggle="collapse" href="#solucion{{$i}}" role="button"
-                                                       aria-expanded="false" aria-controls="collapseExample" onclick="enviar('eliminarObs{{$i}}','{{url('e_obs_documento')}}','panel_documento')">
+                                                                     <div class="text-right">
+                                                                     <a class="btn btn-danger btn-sm  text-white " data-toggle="collapse" href="#solucion{{$i}}" role="button"
+                                                                         aria-expanded="false" aria-controls="collapseExample" onclick="enviar('eliminarObs{{$i}}','{{url('e_obs_documento')}}','panel_documento', true)">
                                                         Eliminar <i class="fas fa-trash-alt"></i>
                                                     </a>
                                                     <form id="eliminarObs{{$i}}" method="POST">
@@ -121,12 +121,13 @@
                         <input type="hidden" name="cd" value="{{$documento->cod_doc}}">
                     </form>
                     <div class=float-right>
-                        <button class="btn btn-sm btn-primary" onclick="enviar('formObs','{{url('g_obs_documento')}}','panel_documento')">Guardar</button>
+                        <button class="btn btn-sm btn-primary" onclick="enviar('formObs','{{url('g_obs_documento')}}','panel_documento', true)">Guardar</button>
                     </div>
                 </div>
             @endcan
             <script>
-                function enviar(formulario,ruta,panel){
+                function enviar(formulario,ruta,panel,recargarDespues){
+                    recargarDespues = recargarDespues === true;
                     //$.ajaxSetup({ headers: {'X-CSRF-TOKEN': token}});
                     $.ajax({
                         type: "POST",
@@ -135,6 +136,11 @@
                         success: function(resp)
                         {
                             $('#'+panel).html(resp);
+                            if(recargarDespues){
+                                setTimeout(function(){
+                                    window.location.reload();
+                                }, 200);
+                            }
                         }
                     });
                 }

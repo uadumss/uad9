@@ -262,7 +262,7 @@ class RecaudacionesController extends Controller
         if ($baseUrl === '' || $token === '') {
             return response()->json([
                 'ok' => false,
-                'message' => 'Configuracion de recaudaciones incompleta en services/.env',
+                'message' => 'El sistema de recaudaciones no esta configurado. Contacte al area de sistemas.',
             ], 500);
         }
 

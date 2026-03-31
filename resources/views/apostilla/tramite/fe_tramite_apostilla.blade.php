@@ -28,8 +28,8 @@
                 <h6 class="text-white text-center">Formulario para editar tramite de apostilla</h6>
             </div>
             <hr class="sidebar-divider"/>
-            <div class="row">
-                <div class="col-md-3">
+            <div class="row apo-edit-layout">
+                <div class="col-md-3 apo-col-left">
 
                         <div class="shadow-sm p-2 col-md-7 centrar_bloque">
                             <span class="text-primary font-weight-bold"> TRÁMITE</span>
@@ -81,7 +81,6 @@
                                     <td class="border-bottom border-dark">
                                         <input class="form-control form-control-sm border-0" placeholder=""
                                                name="ci_apoderado" onchange="cargarDatosApoderado(this.value)" /></td>
-                                    </td>
                                 </tr>
                                 <tr>
                                     <th class="text-right font-italic">Apellidos : </th>
@@ -100,6 +99,7 @@
                                     <td class="border-bottom border-dark">
                                             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" checked> Declaración jurada<br/>
                                             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p"> Poder notariado
+                                    </td>
                                 </tr>
                             </table>
 
@@ -156,6 +156,7 @@
                                                     &nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" checked> Poder notariado
                                         @endif
                                         @endif
+                                            </td>
                                     </tr>
                                 @else
                                     @can('editar apoderado - apo')
@@ -164,7 +165,6 @@
                                         <td class="border-bottom border-dark">
                                             <input class="form-control form-control-sm border-0" placeholder=""
                                                    name="ci_apoderado" onchange="cargarDatosApoderado(this.value)" /></td>
-                                        </td>
                                     </tr>
                                     <tr>
                                         <th class="text-right font-italic">Apellidos : </th>
@@ -183,6 +183,7 @@
                                         <td class="border-bottom border-dark">
                                             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;    <input type="radio" name="tipo" value="d" checked> Declaración jurada<br/>
                                             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p"> Poder notariado
+                                        </td>
                                     </tr>
                                     @endcan
                             @endif
@@ -199,14 +200,13 @@
                 </div>
                 <!-- ================================LISTA DE DOCUMENTOS====================================-->
                 @if($cod_apos!=0)
-                <div class="col-md-6 pl-3 border shadow pt-2">
+                <div class="col-md-6 pl-3 border shadow pt-2 apo-col-center">
                     <span class="text-danger font-italic font-weight-bold" style="font-size: 16px">* Trámites seleccionados</span>
 
                     <div id="panel_lista_tramites_apostilla" class="overflow-auto" style="height: 400px;">
                         <table class="col-md-12 table table-sm table-hover table-info rounded" style="font-size: 11px">
                             <tr class="bg-gradient-info text-white p-2">
                                 <th>Nº</th>
-                                <th>Sitra</th>
                                 <th>Nombre</th>
                                 <th>N° trámite</th>
                                 <th>N° Documento</th>
@@ -217,7 +217,6 @@
                             @foreach($detalle_apostilla as $d)
                                 <tr>
                                     <td>{{$i}}</td>
-                                    <td></td>
                                     <td>{{$d->lis_nombre}}</td>
                                     <td>{{$d->dapo_numero}}</td>
                                     <td><span class="font-weight-bolder">{{$d->dapo_numero_documento}}</span>{{" / ".$d->dapo_gestion_documento}}</td>
@@ -259,7 +258,7 @@
                     @endcan
 
                 </div>
-                <div class="col-md-3 pt-2">
+                <div class="col-md-3 pt-2 apo-col-right">
                     <span class="text-danger font-italic font-weight-bold" style="font-size: 16px">* Lista de trámites de apostilla</span>
                     <div class="border rounded overflow-auto" style="height: 530px;">
                         <div class="table-responsive col-md-12">

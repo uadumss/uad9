@@ -1,5 +1,5 @@
     <?php $fecha=date('Y-m-d',strtotime($tramite->tra_fecha_solicitud))?>
-    <div class="modal-content border-bottom-primary" xmlns="http://www.w3.org/1999/html">
+    <div class="modal-content border-bottom-primary ui-modal-traleg" xmlns="http://www.w3.org/1999/html">
         <div class="modal-header bg-primary">
             <h5 class="modal-title font-weight-bolder text-white" id="exampleModalLabel"><i class="fas fa-book"></i> Legalización </h5>
             <button class="close text-white" type="button" data-dismiss="modal" aria-label="Close">
@@ -16,11 +16,11 @@
                 </div>
             @endif
             <div class="bg-primary centrar_bloque p-1 col-md-7 rounded shadow">
-                <h6 class="text-white text-center">Formulario para editar legalización</h6>
+                <h6 class="text-white text-center mb-0">Formulario para editar legalización</h6>
             </div>
             {{$tipos_array}}
             <hr class="sidebar-divider"/>
-            <div class="row">
+            <div class="row ui-form-layout">
                 <div class="col-md-4">
                     <span class="text-primary font-italic font-weight-bold" style="font-size: 0.8em">* Datos personales</span>
                         <div class="shadow-sm p-2 col-md-5 float-md-right">
@@ -105,7 +105,7 @@
                                         @if($apoderado)
                                             {{$apoderado['apo_ci']}}
                                         @else
-                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                            <span class="ui-placeholder">Sin registro</span>
                                         @endif
                                     </td>
                                 </tr>
@@ -115,7 +115,7 @@
                                         @if($apoderado)
                                             {{$apoderado['apo_apellido']." ".$apoderado['apo_nombre']}}
                                         @else
-                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                            <span class="ui-placeholder">Sin registro</span>
                                         @endif
                                     </td>
                                 </tr>
@@ -128,7 +128,7 @@
                                             @if($tramite->tra_tipo_apoderado=='p')
                                                 Poder notariado
                                             @else
-                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                                <span class="ui-placeholder">Sin registro</span>
                                             @endif
                                         @endif
                                     </td>
@@ -175,18 +175,18 @@
                                             <th class="text-right font-italic" valign="top">Tipo de apoderado : </th>
                                             <td class="border-bottom border-dark">
                                                 @if($tramite->tra_tipo_apoderado=='d')
-                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" checked> Declaración jurada<br/>
-                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p"> Poder notariado
+                                                    <span class="ui-radio-line"><input type="radio" name="tipo" value="d" checked> Declaración jurada</span><br/>
+                                                    <span class="ui-radio-line"><input type="radio" name="tipo" value="p"> Poder notariado</span>
                                                 @else
                                                     @if($tramite->tra_tipo_apoderado=='p')
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d"> Declaración jurada<br/>
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" checked> Poder notariado
+                                                        <span class="ui-radio-line"><input type="radio" name="tipo" value="d"> Declaración jurada</span><br/>
+                                                        <span class="ui-radio-line"><input type="radio" name="tipo" value="p" checked> Poder notariado</span>
                                                     @else
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d"> Declaración jurada<br/>
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p"> Poder notariado
+                                                        <span class="ui-radio-line"><input type="radio" name="tipo" value="d"> Declaración jurada</span><br/>
+                                                        <span class="ui-radio-line"><input type="radio" name="tipo" value="p"> Poder notariado</span>
                                                     @endif
                                             @endif
-
+                                            </td>
                                         </tr>
                                     </table>
                                     <br/>
@@ -215,7 +215,9 @@
                         <table class="col-md-12 table table-sm table-hover table-dark">
                             <tr class="bg-gradient-secondary text-white p-2">
                                 <th>Nº</th>
-                                <th>Sitra</th>
+                                @if(!in_array($tramite->tra_tipo_tramite,['E','F']))
+                                    <th>Sitra</th>
+                                @endif
                                 <!--<th>Estado</th>-->
                                 <th>Nombre</th>
 
@@ -242,18 +244,22 @@
                                         @endif
                                     @endif
                                     <td>{{$i}}</td>
-                                    <td>@if($d->dtra_verificacion_sitra=='0')
-                                            <a href="#" class="btn btn-light btn-circle btn-sm text-success" data-target="#docleg" data-toggle="modal" onclick="cargarDatos('{{url("verificacion sitra/".$d->cod_dtra)}}','panel_docleg')"
-                                               title="Verificado en el sitra"><i class="fas fa-check-circle"></i>
-                                            </a>
-                                        @else
-                                            @if($d->dtra_verificacion_sitra=='2')
-                                                <a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-target="#docleg" data-toggle="modal" onclick="cargarDatos('{{url("verificacion sitra/".$d->cod_dtra)}}','panel_docleg')"
-                                                   title="No existe en el sitra"><i class="fas fa-minus-circle"></i>
+                                    @if(!in_array($tramite->tra_tipo_tramite,['E','F']))
+                                        <td>@if($d->dtra_verificacion_sitra=='0')
+                                                <a href="#" class="btn btn-light btn-circle btn-sm text-success" data-target="#docleg" data-toggle="modal" onclick="cargarDatos('{{url("verificacion sitra/".$d->cod_dtra)}}','panel_docleg')"
+                                                   title="Verificado en el sitra"><i class="fas fa-check-circle"></i>
                                                 </a>
+                                            @elseif($d->dtra_verificacion_sitra=='1' || $d->dtra_verificacion_sitra=='2')
+                                                <a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-target="#docleg" data-toggle="modal" onclick="cargarDatos('{{url("verificacion sitra/".$d->cod_dtra)}}','panel_docleg')"
+                                                   title="Verificación no válida en SITRA/SID"><i class="fas fa-minus-circle"></i>
+                                                </a>
+                                            @else
+                                                <span class="btn btn-light btn-circle btn-sm text-secondary" title="SITRA/SID pendiente">
+                                                    <i class="fas fa-minus-circle"></i>
+                                                </span>
                                             @endif
-                                        @endif
-                                    </td>
+                                        </td>
+                                    @endif
                                     <!--<td>if($d->dtra_estado_doc==0 || $d->dtra_estado_doc==4 )
                                             <div class="border border-success font-weight-bold text-success rounded pl-2" ><?php echo \App\Http\Controllers\TramiteLegalizacionController::estado($d->dtra_estado_doc)?></div>
                                         else
@@ -308,7 +314,7 @@
                                                     @else
                                                         @can('deshacer generado glosa - srv')
                                                             @if($tramite->tra_tipo_tramite=='L' ||$tramite->tra_tipo_tramite=='C')
-                                                                <a href="#traleg" class="btn btn-light btn-circle btn-sm font-weight-bold"  onclick="cargarDatos('{{url("cambiar interno docleg/".$d->cod_dtra)}}','panel_traleg')"
+                                                                <a href="#traleg" class="btn btn-light btn-circle btn-sm font-weight-bold btn-interno-ext"  onclick="cargarDatos('{{url("cambiar interno docleg/".$d->cod_dtra)}}','panel_traleg')"
                                                                    title="Cambiar destino de trámite">
                                                                     @if($d->dtra_interno=='t')
                                                                         <span class="text-danger">Int</span>
@@ -363,8 +369,10 @@
                     @can('crear docleg - srv')
                     <!--Solo cuando es BUSQUEDA SE MUESTRA EL FORMULARIO-->
                     @if($tramite->id_per!='' && $tramite->tra_tipo_tramite=='B')
-                        <button id="btnNuevoTra" class="btn btn-sm btn-primary float-right" onclick="$('#divNueTram').show(500); $('#btnNuevoTra').hide(500);"> + Trámite</button><br/>
-                        <div class="shadow-sm border col-md-10 float-right" id="divNueTram" style="display: none">
+                        <div class="text-right mb-2">
+                            <button id="btnNuevoTra" class="btn btn-sm btn-primary" onclick="$('#divNueTram').show(500); $('#btnNuevoTra').hide(500);"> + Trámite</button>
+                        </div>
+                        <div class="shadow-sm border col-md-10 ui-agregar-tramite-wrap" id="divNueTram" style="display: none">
                             <a onclick="$('#divNueTram').hide(500);$('#btnNuevoTra').show(500); " id="ocultar" style="float:right" class="mr-2">
                                 <i class="fas fa-minus-circle text-danger"></i></a>
                             <br/>
@@ -375,7 +383,7 @@
                                     <h6 class="text-dark text-center font-weight-bold">Añadir documento para Búsqueda</h6>
                                 </div>
                             <br/>
-                            <div class="col-md-11 float-right">
+                            <div class="col-md-11 mx-auto">
                                 <form id="form_docleg">
                                     @csrf
                                     <table>
@@ -394,27 +402,21 @@
                                             <th class="text-right font-italic"> Nº control valorado: </th>
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group">
-                                                    <input type="text" class=" form-control form-control-sm" name="control" required onchange="validarControlRecaudaciones(this)">
-                                                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="font-italic text-dark font-weight-bold"> CUADIS :
+                                                    <input type="text" class=" form-control form-control-sm" name="control" required oninput="programarValidacionControl(this)">
+                                                    <span class="font-italic text-dark font-weight-bold ml-3">CUADIS :
                                                             <input type="checkbox" name="cuadis" />
-                                                        </span>&nbsp;&nbsp;
+                                                        </span>
                                                 </div>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <th class="text-right font-italic">Validación:</th>
-                                            <td class="border-bottom border-dark">
-                                                <small class="text-muted" data-campo="estado-validacion">Pendiente de validación</small>
-                                                <br>
-                                                <small class="text-muted" data-campo="estado-sitra">SITRA: pendiente</small>
                                             </td>
                                         </tr>
                                         <tr><th class="text-right font-italic">Nro. Título:</th>
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group ">
-                                                    <input name="numero" required class="form-control col-md-2 form-control-sm border " pattern="[0-9]{1,6}"> &nbsp;&nbsp;
-                                                    / &nbsp;&nbsp;<input name="gestion" required class="form-control col-md-2 form-control-sm border" pattern="[0-9]{1,4}"> &nbsp;&nbsp;(e.j. 1999)
-                                                    &nbsp;&nbsp;<a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-campo="estado-sitra-icon" title="No existe en el sitra" onclick="abrirModalSitraFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
+                                                    <input name="numero" required class="form-control col-md-2 form-control-sm border" pattern="[0-9]{1,6}">
+                                                    <span class="mx-2">/</span>
+                                                    <input name="gestion" required class="form-control col-md-2 form-control-sm border" pattern="[0-9]{1,4}">
+                                                    <span class="ml-2 mr-1 text-muted">(e.j. 1999)</span>
+                                                    <a href="#" class="btn btn-light btn-circle btn-sm text-danger ml-2" data-campo="estado-sitra-icon" title="No existe en el sitra" onclick="abrirModalSitraFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
                                                     <span class="ml-1 text-info font-italic" data-campo="sitra-fuente"></span>
                                                 </div>
                                             </td>
@@ -442,25 +444,36 @@
                                             </td>
                                         </tr>
                                     </table>
+                                    <div data-campo="estado-validacion" class="mt-2"></div>
+                                    <div data-campo="estado-sitra" class="mt-2"></div>
                                     <input type="hidden" name="ctra" value="{{$tramite->cod_tra}}">
                                     <input type="hidden" name="tipo_tramite" value="t">
                                     <input type="hidden" name="tipo" data-campo="tipo-legalizacion-hidden" value="">
                                     <input type="hidden" name="reimpresion" data-campo="preimpreso-api" value="">
                                     <input type="hidden" data-campo="validacion-recaudacion-ok" value="0">
                                 </form>
-                                <a href="#" class="btn btn-sm btn-primary float-right mr-4" onclick="crearDoclegConValidacion('form_docleg','{{url('g_docleg')}}','panel_traleg')"
-                                   title="Editar legalización">+ Crear </a>
+                                <div class="text-right mt-2 mb-2">
+                                    <a href="#" class="btn btn-sm btn-primary" onclick="crearDoclegConValidacion('form_docleg','{{url('g_docleg')}}','panel_traleg')"
+                                       title="Editar legalización">+ Crear </a>
+                                </div>
                                 <br/><br/>
                             </div>
                         </div>
                     @endif
 
-                    @if($tramite->id_per!='' && ($tramite->tra_tipo_tramite=='L' || $tramite->tra_tipo_tramite=='C' || $tramite->tra_tipo_tramite=='E' ))
+                    @if($tramite->id_per!='' && in_array($tramite->tra_tipo_tramite,['L','C','E','F']))
+                        @php $puedeAgregarDoc = !($tramite->tra_tipo_tramite=='F' && count($documentos)>0); @endphp
                         <br/>
                     <hr class="sidebar-divider"/>
                         <!--==============================Añadir Documentos=================-->
-                    <button id="btnNuevoTra" class="btn btn-sm btn-primary float-right" onclick="$('#divNueTram').show(500); $('#btnNuevoTra').hide(500);"> + Trámite</button><br/>
-                    <div class="shadow-sm" id="divNueTram" style="display: none">
+                    @if($puedeAgregarDoc)
+                        <div class="text-right mb-2">
+                            <button id="btnNuevoTra" class="btn btn-sm btn-primary" onclick="$('#divNueTram').show(500); $('#btnNuevoTra').hide(500);"> + Trámite</button>
+                        </div>
+                    @else
+                        <span class="text-info font-italic float-right" style="font-size:.85em">Confrontación permite un solo trámite por registro.</span><br/>
+                    @endif
+                    <div class="shadow-sm ui-agregar-tramite-wrap" id="divNueTram" style="display: none">
 
                         <a onclick="$('#divNueTram').hide(500);$('#btnNuevoTra').show(500); " id="ocultar" style="float:right" class="mr-2">
                             <i class="fas fa-minus-circle text-danger"></i></a>
@@ -473,13 +486,14 @@
                                     <h6 class="text-dark text-center font-weight-bold">Añadir documento</h6>
                                 </div>
 
-                                <form id="form_docleg">
+                                @if($tramite->tra_tipo_tramite=='F')
+                                <form id="form_docleg_f">
                                     @csrf
-                                    <table>
+                                    <table class="col-md-12">
                                         <tr>
-                                            <th class="text-right font-italic ">Tipo de legalización :</th>
+                                            <th class="text-right font-italic">Tipo de legalización :</th>
                                             <td class="border-bottom border-dark">
-                                                <select class="custom-select custom-select-sm border-0 " data-campo="tipo-legalizacion" disabled>
+                                                <select class="custom-select custom-select-sm border-0" data-campo="tipo-legalizacion" disabled>
                                                     <option value="" selected></option>
                                                     @foreach($lista_tramites as $l)
                                                         <option value="{{$l->cod_tre}}">{{$l->tre_nombre}}</option>
@@ -489,33 +503,96 @@
                                             </td>
                                         </tr>
                                         <tr>
+                                            <th class="text-right font-italic">Nro. Control :</th>
+                                            <td class="border-bottom border-dark">
+                                                <input class="form-control form-control-sm border-0" name="control" required oninput="programarValidacionControl(this)">
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th class="text-right font-italic" valign="top">Documentos :</th>
+                                            <td class="border-bottom border-dark">
+                                                <div><label><input type="checkbox" name="ci" value="ci"> Cédula de identidad</label></div>
+                                                <div><label><input type="checkbox" name="cn" value="cn"> Certificado de nacimiento</label></div>
+                                                <div><label><input type="checkbox" name="lm" value="lm"> Libreta de servicio militar</label></div>
+                                                <div><label><input type="checkbox" name="ce" value="ce"> Carnet de extranjería</label></div>
+                                                <div><label><input type="checkbox" name="pa" value="pa"> Pasaporte</label></div>
+                                                <div><label><input type="checkbox" name="lc" value="lc"> Libreta de colegio</label></div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    <div data-campo="estado-validacion" class="mt-2"></div>
+                                    <input type="hidden" name="ctra" value="{{$tramite->cod_tra}}">
+                                    <input type="hidden" data-campo="ci-tramite" value="{{$tramite->per_ci}}">
+                                    <input type="hidden" data-campo="validacion-recaudacion-ok" value="0">
+                                </form>
+                                <br/>
+                                          <div class="text-right mt-2 mb-2">
+                                                <a href="#" class="btn btn-sm btn-primary" onclick="crearConfrontacionConValidacion('form_docleg_f','{{url('g_docleg')}}','panel_traleg')"
+                                                    title="Editar legalización">+ Crear </a>
+                                          </div>
+                                <br/><br/>
+                                @else
+                                <form id="form_docleg">
+                                    @csrf
+                                    <table>
+                                        <tr>
+                                            <th class="text-right font-italic ">Tipo de legalización :</th>
+                                            <td class="border-bottom border-dark">
+                                                <select class="custom-select custom-select-sm border-0 " data-campo="tipo-legalizacion" disabled>
+                                                    @if($tramite->tra_tipo_tramite!='F')
+                                                        <option value="" selected></option>
+                                                    @endif
+                                                    @foreach($lista_tramites as $l)
+                                                        <option value="{{$l->cod_tre}}" @if($tramite->tra_tipo_tramite=='F' && $loop->first) selected @endif>{{$l->tre_nombre}}</option>
+                                                    @endforeach
+                                                </select>
+                                                <input type="hidden" name="tipo" data-campo="tipo-legalizacion-hidden" value="">
+                                            </td>
+                                        </tr>
+                                        @if($tramite->tra_tipo_tramite=='F')
+                                            <tr>
+                                                <th class="text-right font-italic ">Documento :</th>
+                                                <td class="border-bottom border-dark">
+                                                    <select class="custom-select custom-select-sm border-0" name="documentos" required>
+                                                        <option value="ci">Cédula de identidad</option>
+                                                        <option value="cn">Certificado de nacimiento</option>
+                                                        <option value="lm">Libreta de servicio militar</option>
+                                                        <option value="ce">Carnet de extranjería</option>
+                                                        <option value="pa">Pasaporte</option>
+                                                        <option value="lc">Libreta de colegio</option>
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                        @endif
+                                        <tr>
                                             <th class="text-right font-italic ">Tipo de trámite :</th>
                                             <td class="border-bottom border-dark">
-                                                <input type="radio" name="tipo_tramite" checked value="f"> EXTERNO  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                                <input type="radio" name="tipo_tramite" value="t"> INTERNO
-                                                &nbsp;&nbsp;
-                                                <span class="font-weight-bold text-danger" style="font-size: 20px">|</span>
-                                                &nbsp;&nbsp;
+                                                <span class="mr-4"><input type="radio" name="tipo_tramite" checked value="f"> EXTERNO</span>
+                                                <span class="mr-3"><input type="radio" name="tipo_tramite" value="t"> INTERNO</span>
+                                                <span class="font-weight-bold text-danger mx-2" style="font-size: 20px">|</span>
                                                 @if($tramite->tra_tipo_tramite=='L')
-                                                    <span class="font-weight-bold text-dark font-italic">&nbsp;&nbsp;PTAG : &nbsp;&nbsp;
+                                                    <span class="font-weight-bold text-dark font-italic mr-3">PTAG :
                                                             <input type="checkbox" name="ptaang">
                                                         </span>
                                                 @endif
-                                                &nbsp;&nbsp;<span class="font-italic text-dark font-weight-bold"> CUADIS :
+                                                <span class="font-italic text-dark font-weight-bold">CUADIS :
                                                             <input type="checkbox" name="cuadis" />
-                                                        </span>&nbsp;&nbsp;
+                                                        </span>
                                             </td>
                                         </tr>
                                         <tr>
                                             <th class="text-right font-italic ">Nro. Título o Resolución:</th>
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group ">
-                                                    &nbsp;&nbsp;  &nbsp;&nbsp;<input name="numero" class="form-control col-md-2 form-control-sm border "> &nbsp;&nbsp;
-                                                    / &nbsp;&nbsp;<input name="gestion" required class="form-control col-md-2 form-control-sm border" pattern="[0-9]{1,4}"> &nbsp;&nbsp;(e.j. 1999)
-                                                    &nbsp;&nbsp;<a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-campo="estado-sitra-icon" title="No existe en el sitra" onclick="abrirModalSitraFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
-                                                    <span class="ml-1 text-info font-italic" data-campo="sitra-fuente"></span>
-                                                                        &nbsp;&nbsp;&nbsp;&nbsp;
-                                                    <span class="font-weight-bold text-dark float-right">
+                                                    <input name="numero" class="form-control col-md-2 form-control-sm border">
+                                                    <span class="mx-2">/</span>
+                                                    <input name="gestion" required class="form-control col-md-2 form-control-sm border" pattern="[0-9]{1,4}">
+                                                    <span class="ml-2 mr-1 text-muted">(e.j. 1999)</span>
+                                                    @if(!in_array($tramite->tra_tipo_tramite,['E','F']))
+                                                        <a href="#" class="btn btn-light btn-circle btn-sm text-danger ml-2" data-campo="estado-sitra-icon" title="No existe en el sitra" onclick="abrirModalSitraFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
+                                                        <span class="ml-1 text-info font-italic" data-campo="sitra-fuente"></span>
+                                                    @endif
+                                                    <span class="font-weight-bold text-dark ml-3">
                                                         Supletorio : <input type="checkbox" name="supletorio">
                                                     </span>
                                                 </div>
@@ -525,8 +602,8 @@
                                             <th class="text-right font-italic ">Nro. Control:</th>
                                             <td class="border-bottom border-dark input-group">
                                                 <div class="input-group">
-                                                    <input class="form-control form-control-sm border-0" required name="control" onchange="validarControlRecaudaciones(this)" />
-                                                    <span class="text-primary font-weight-bold font-italic"> Reintegro : &nbsp;</span>
+                                                    <input class="form-control form-control-sm border-0" required name="control" oninput="programarValidacionControl(this)" />
+                                                    <span class="text-primary font-weight-bold font-italic ml-2 mr-1">Reintegro :</span>
                                                     <input class="form-control form-control-sm border" required name="reintegro" />
                                                 </div>
                                             </td>
@@ -536,27 +613,26 @@
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group">
                                                     <input class="form-control form-control-sm" name="valorado_bus" />
-                                                    &nbsp;&nbsp;<span class="font-italic font-weight-bold"> Nro. control Reimpresión : </span>&nbsp;&nbsp;
+                                                    <span class="font-italic font-weight-bold ml-2 mr-2">Nro. control Reimpresión :</span>
                                                     <input class="form-control form-control-sm" name="reimpresion" data-campo="preimpreso-api" readonly />
                                                 </div>
                                             </td>
                                         </tr>
-                                        <tr>
-                                            <th class="text-right font-italic">Validación:</th>
-                                            <td class="border-bottom border-dark">
-                                                <small class="text-muted" data-campo="estado-validacion">Pendiente de validación</small>
-                                                <br>
-                                                <small class="text-muted" data-campo="estado-sitra">SITRA: pendiente</small>
-                                            </td>
-                                        </tr>
                                     </table>
+                                    <div data-campo="estado-validacion" class="mt-2"></div>
+                                    @if(!in_array($tramite->tra_tipo_tramite,['E','F']))
+                                        <div data-campo="estado-sitra" class="mt-2"></div>
+                                    @endif
                                     <input type="hidden" name="ctra" value="{{$tramite->cod_tra}}">
                                     <input type="hidden" data-campo="validacion-recaudacion-ok" value="0">
                                 </form>
                                 <br/>
-                                <a href="#" class="btn btn-sm btn-primary float-right mr-4" onclick="crearDoclegConValidacion('form_docleg','{{url('g_docleg')}}','panel_traleg')"
-                                   title="Editar legalización">+ Crear </a>
+                                <div class="text-right mt-2 mb-2">
+                                    <a href="#" class="btn btn-sm btn-primary" onclick="crearDoclegConValidacion('form_docleg','{{url('g_docleg')}}','panel_traleg')"
+                                       title="Editar legalización">+ Crear </a>
+                                </div>
                                 <br/><br/>
+                                @endif
                             </div>
                     </div>
                     @endif
@@ -571,17 +647,121 @@
     </div>
 
     <style>
+        /* Mejora acotada: solo panel de creación */
+        #divNueTram {
+            border-radius: .45rem;
+            border: 1px solid #d9dee5;
+            background: #fff;
+            padding: .75rem .75rem .45rem;
+            float: none !important;
+            margin-left: 0 !important;
+            margin-right: auto !important;
+            width: 100%;
+            clear: both;
+        }
+
+        #divNueTram > div {
+            clear: both;
+        }
+
+        #divNueTram form,
+        #divNueTram table {
+            width: 100% !important;
+            text-align: left !important;
+        }
+
+        #divNueTram .col-md-11 {
+            float: none !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            max-width: 100%;
+            flex: 0 0 100%;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        #divNueTram #form_docleg,
+        #divNueTram #form_docleg_f {
+            width: 100%;
+            max-width: 100%;
+            float: none !important;
+            margin-left: 0 !important;
+            margin-right: auto !important;
+        }
+
+        #divNueTram #form_docleg table,
+        #divNueTram #form_docleg_f table {
+            width: 100% !important;
+            table-layout: auto;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+
+        #divNueTram #form_docleg .text-right,
+        #divNueTram #form_docleg_f .text-right {
+            text-align: left !important;
+        }
+
+        #divNueTram .input-group {
+            justify-content: flex-start !important;
+        }
+
+        #divNueTram #form_docleg th,
+        #divNueTram #form_docleg_f th {
+            width: 1%;
+            text-align: left !important;
+            padding-left: 0.35rem;
+            padding-right: 0.45rem;
+            white-space: nowrap;
+        }
+
+        #divNueTram #form_docleg td,
+        #divNueTram #form_docleg_f td {
+            width: auto;
+            text-align: left !important;
+            padding-left: 0.1rem;
+        }
+
+        #divNueTram table th {
+            font-size: .82rem;
+            color: #2f3e4e;
+            white-space: nowrap;
+            vertical-align: middle;
+            padding-top: .35rem;
+            padding-bottom: .35rem;
+        }
+
+        #divNueTram table td {
+            padding-top: .3rem;
+            padding-bottom: .3rem;
+            vertical-align: middle;
+        }
+
+        #divNueTram .form-control,
+        #divNueTram .custom-select {
+            min-height: 2rem;
+            border-radius: .35rem;
+        }
+
+        #divNueTram .btn {
+            border-radius: .4rem;
+        }
+
         /* Estilos para estados de validación */
         [data-campo="estado-validacion"] {
             display: block;
             font-size: 0.9rem;
             line-height: 1.4;
+            width: 100%;
+            max-width: 100%;
         }
 
         [data-campo="estado-sitra"] {
             display: none;
             font-size: 0.86rem;
             line-height: 1.3;
+            width: 100%;
+            max-width: 100%;
         }
 
         [data-campo="estado-sitra-icon"] {
@@ -591,16 +771,17 @@
             line-height: 1;
         }
 
-        [data-campo="estado-validacion"].text-success {
-            color: #28a745;
-        }
-
-        [data-campo="estado-validacion"].text-danger {
-            color: #dc3545;
-        }
-
-        [data-campo="estado-validacion"].text-muted {
-            color: #6c757d;
+        [data-campo="estado-validacion"] .alert,
+        [data-campo="estado-sitra"] .alert {
+            font-size: 0.86rem;
+            border-radius: .25rem;
+            width: 100%;
+            max-width: 100%;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            max-height: 5.5rem;
+            overflow-y: auto;
         }
     </style>
 
@@ -649,23 +830,24 @@
         function validarControlRecaudaciones(inputControl){
             var formulario=$(inputControl).closest('form');
             sincronizarCamposObligatorios(formulario);
-            var control=formulario.find('input[name="control"]').val();
+            var control=($.trim(formulario.find('input[name="control"]').val()) || '');
             var okInput=formulario.find('[data-campo="validacion-recaudacion-ok"]');
-            var estado=formulario.find('[data-campo="estado-validacion"]');
             okInput.val('0');
             
             if(!control){
-                estado
-                    .removeClass('text-success text-muted')
-                    .addClass('text-danger')
-                    .html('Escriba el número de control');
+                limpiarTipoLegalizacion(formulario);
+                limpiarPtagSugerido(formulario);
+                formulario.find('input[data-campo="preimpreso-api"]').val('');
+                formulario.find('input[data-campo="gestion-api"]').val('');
+                limpiarSitraFormulario(formulario);
+                actualizarEstadoSitra(formulario,'text-muted','SITRA: pendiente');
+                limpiarEstadoValidacion(formulario);
+                formulario.removeData('control-validado-ok');
+                formulario.removeData('control-validado-valor');
                 return;
             }
 
-            estado
-                .removeClass('text-danger text-success')
-                .addClass('text-muted')
-                .text('Verificando...');
+            actualizarEstadoValidacion(formulario,'loading','Verificando...');
             
             $.ajax({
                 url: "{{url('validar valorado recaudaciones/'.$tramite->cod_tra)}}",
@@ -678,16 +860,22 @@
                 success: function(resp){
                     if(!resp.ok){
                         okInput.val('0');
-                        var msg=resp.message || 'No se pudo validar el comprobante';
-                        estado
-                            .removeClass('text-success text-muted')
-                            .addClass('text-danger')
-                            .text(msg);
+                        limpiarTipoLegalizacion(formulario);
+                        limpiarPtagSugerido(formulario);
+                        formulario.find('input[data-campo="preimpreso-api"]').val('');
+                        formulario.find('input[data-campo="gestion-api"]').val('');
+                        limpiarSitraFormulario(formulario);
+                        actualizarEstadoSitra(formulario,'text-muted','SITRA: pendiente');
+                        var msg=armarMensajeValidacionRecaudacion(resp,'No se pudo validar el comprobante');
+                        actualizarEstadoValidacion(formulario,'error',msg);
+                        formulario.removeData('control-validado-ok');
+                        formulario.removeData('control-validado-valor');
                         return;
                     }
 
                     autoseleccionarTipoLegalizacion(formulario,resp);
                     sincronizarTipoLegalizacion(formulario);
+                    aplicarPtagSugerido(formulario,resp);
                     formulario.find('input[data-campo="preimpreso-api"]').val(resp.preimpreso || '');
                     okInput.val('1');
 
@@ -698,10 +886,9 @@
                     if(resp.cajero){
                         msg+=' - Caja '+resp.cajero;
                     }
-                    estado
-                        .removeClass('text-danger text-muted')
-                        .addClass('text-success')
-                        .text(msg);
+                    actualizarEstadoValidacion(formulario,'ok',msg);
+                    formulario.data('control-validado-ok',1);
+                    formulario.data('control-validado-valor',control);
 
                     programarValidacionSitra(formulario);
                 },
@@ -711,14 +898,31 @@
                         msg=xhr.responseJSON.message;
                     }
                     okInput.val('0');
-                    estado
-                        .removeClass('text-success text-muted')
-                        .addClass('text-danger')
-                        .text(msg);
+                    limpiarTipoLegalizacion(formulario);
+                    limpiarPtagSugerido(formulario);
+                    formulario.find('input[data-campo="preimpreso-api"]').val('');
+                    formulario.find('input[data-campo="gestion-api"]').val('');
+                    limpiarSitraFormulario(formulario);
+                    actualizarEstadoSitra(formulario,'text-muted','SITRA: pendiente');
+                    actualizarEstadoValidacion(formulario,'error',msg);
+                    formulario.removeData('control-validado-ok');
+                    formulario.removeData('control-validado-valor');
 
                     programarValidacionSitra(formulario);
                 }
             });
+        }
+
+        function armarMensajeValidacionRecaudacion(resp,mensajePorDefecto){
+            if(!resp){
+                return mensajePorDefecto;
+            }
+            var mensajeBase=(resp.message || mensajePorDefecto || '').toString().trim();
+            var detalle=(resp.detalle || '').toString().trim();
+            if(detalle===''){
+                return mensajeBase;
+            }
+            return mensajeBase+' '+detalle;
         }
 
         function crearDoclegConValidacion(formulario,ruta,panel){
@@ -739,13 +943,36 @@
             enviar1(formulario,ruta,panel);
         }
 
+        function crearConfrontacionConValidacion(formulario,ruta,panel){
+            var form=$('#'+formulario);
+            sincronizarCamposObligatorios(form);
+            var validado=form.find('[data-campo="validacion-recaudacion-ok"]').val()==='1';
+
+            if(!validado){
+                $('#error_datos_span').html('Valide el número de control primero.');
+                $('#error_datos').show();
+                setTimeout(function () {
+                    $('#error_datos').hide(500);
+                }, 4000);
+                return;
+            }
+
+            enviar1(formulario,ruta,panel);
+        }
+
         function actualizarEstadoSitra(formulario,clase,mensaje){
             var estado=formulario.find('[data-campo="estado-sitra"]');
             var icono=formulario.find('[data-campo="estado-sitra-icon"]');
             if(!estado.length){
                 return;
             }
-            estado.removeClass('text-danger text-success text-muted').addClass(clase).text(mensaje);
+            var tipo='loading';
+            if(clase==='text-success'){
+                tipo='ok';
+            }else if(clase==='text-danger'){
+                tipo='error';
+            }
+            renderEstadoEnAlerta(estado,tipo,mensaje);
 
             if(icono.length){
                 icono.removeClass('text-danger text-success text-secondary text-muted');
@@ -762,6 +989,37 @@
             }
         }
 
+        function renderEstadoEnAlerta(contenedor,tipo,mensaje){
+            if(!contenedor || !contenedor.length){
+                return;
+            }
+            var clase='alert-info';
+            var texto=String(mensaje || '')
+                .replace(/&/g,'&amp;')
+                .replace(/</g,'&lt;')
+                .replace(/>/g,'&gt;')
+                .replace(/"/g,'&quot;')
+                .replace(/'/g,'&#39;');
+            if(tipo==='ok'){
+                clase='alert-success';
+            }else if(tipo==='error'){
+                clase='alert-danger';
+            }
+            contenedor.html('<div class="alert '+clase+' py-2 mb-0">'+texto+'</div>');
+        }
+
+        function actualizarEstadoValidacion(formulario,tipo,mensaje){
+            var estado=formulario.find('[data-campo="estado-validacion"]');
+            renderEstadoEnAlerta(estado,tipo,mensaje);
+        }
+
+        function limpiarEstadoValidacion(formulario){
+            var estado=formulario.find('[data-campo="estado-validacion"]');
+            if(estado.length){
+                estado.html('');
+            }
+        }
+
         function limpiarSitraFormulario(form){
             form.removeData('sitra-response');
             form.removeData('sitra-estado');
@@ -774,8 +1032,11 @@
             if(!etiqueta.length){
                 return;
             }
-            if(String(fuente || '').toLowerCase()==='uad9'){
-                etiqueta.text('Respaldo UAD9');
+            var fuenteNormalizada=String(fuente || '').toLowerCase();
+            if(fuenteNormalizada==='sid'){
+                etiqueta.text('SID');
+            }else if(fuenteNormalizada==='sitra_sid'){
+                etiqueta.text('SITRA y SID');
             }else{
                 etiqueta.text('');
             }
@@ -786,6 +1047,7 @@
             var resp=form.data('sitra-response') || null;
             var estado=form.data('sitra-estado') || '';
             var fuente=(form.data('sitra-fuente') || '').toString().toLowerCase();
+            var nombreSistemaBase=@json(trim((string)(($tramite->per_apellido ?? '').' '.($tramite->per_nombre ?? ''))));
 
             var nombreSistema='';
             var numeroSistema=(form.find('input[name="numero"]').val() || '').trim();
@@ -793,6 +1055,14 @@
 
             if($('#apellido').length || $('#nombre').length){
                 nombreSistema=(($('#apellido').val() || '').trim()+' '+($('#nombre').val() || '').trim()).trim();
+            }
+
+            if(nombreSistema===''){
+                nombreSistema=(nombreSistemaBase || '').toString().trim();
+            }
+
+            if(nombreSistema==='' && resp && resp.nombre){
+                nombreSistema=(resp.nombre || '').toString().trim();
             }
 
             var buscarEn=(form.find('select[name="buscar_en"]').val() || '').trim();
@@ -813,7 +1083,7 @@
             }
 
             var detalle='';
-            if(resp){
+            if(resp && estado==='0'){
                 detalle='<table class="col-md-12">'
                     +'<tr><th class="text-right">Nombre:</th><th class="text-dark text-left border-bottom border-danger pl-3">'+esc(resp.nombre || '')+'</th></tr>'
                     +'<tr><th class="text-right">Título:</th><th class="text-dark text-left border-bottom border-danger pl-3">'+esc(resp.titulo || '')+'</th></tr>'
@@ -821,6 +1091,10 @@
                     +'<tr><th class="text-right">Gestión:</th><th class="text-dark text-left border-bottom border-danger pl-3">'+esc(resp.gestion || '-')+'</th></tr>'
                     +'<tr><th class="text-right">Tipo documento:</th><th class="text-dark text-left border-bottom border-danger pl-3">'+esc(resp.tipo || '')+'</th></tr>'
                     +'</table>';
+            }else if(estado==='1'){
+                detalle='<p>El documento existe en SITRA, pero los datos no coinciden.</p>';
+            }else if(estado==='2'){
+                detalle='<p>No se encuentra el documento registrado en SITRA ni en SID.</p>';
             }else{
                 detalle='<p>No hay datos de verificación SITRA para mostrar todavía.</p>';
             }
@@ -835,7 +1109,7 @@
             }else if(estado==='1'){
                 mensajeFinal='Existe en SITRA, pero no coincide';
             }else if(estado==='2'){
-                mensajeFinal='No existe en SITRA';
+                mensajeFinal='No existe en SITRA ni SID';
             }else{
                 mensajeFinal='Pendiente de verificación';
             }
@@ -855,7 +1129,8 @@
                 +'        <span class="font-weight-bold">Nro. Título :</span> <span>'+esc(numeroSistema)+'</span> | '
                 +'        <span class="font-weight-bold">Tipo Documento :</span> <span>'+esc(tipoSistema)+'</span>'
                 +'      </span><br/>'
-                + (fuente==='uad9' ? '<span class="text-info font-italic" style="font-size:0.85em">Fuente: Respaldo interno UAD9</span><br/>' : '')
+                + (fuente==='sid' ? '<span class="text-info font-italic" style="font-size:0.85em">Fuente: SID</span><br/>' : '')
+                + (fuente==='sitra_sid' ? '<span class="text-info font-italic" style="font-size:0.85em">Fuente: SITRA y SID</span><br/>' : '')
                 +'      <br/>'
                 +'      <div class="row">'
                 +'        <div class="font-weight-bold '+claseCaja+' shadow text-center centrar_bloque col-md-9 p-2">'+detalle+'</div>'
@@ -874,6 +1149,10 @@
         function validarSitraEnFormulario(formulario){
             var form=$(formulario);
             if(!form.length){
+                return;
+            }
+
+            if(!form.find('[data-campo="estado-sitra"]').length){
                 return;
             }
 
@@ -921,7 +1200,7 @@
                         return;
                     }
                     if(resp.estado==='2'){
-                        actualizarEstadoSitra(form,'text-danger','SITRA: no existe');
+                        actualizarEstadoSitra(form,'text-danger','SITRA/SID: no existe');
                         return;
                     }
                     if(resp.estado==='1'){
@@ -1034,6 +1313,69 @@
             }
         }
 
+        function limpiarTipoLegalizacion(formulario){
+            var select=formulario.find('select[data-campo="tipo-legalizacion"]');
+            if(select.length){
+                select.val('');
+            }
+            formulario.find('input[data-campo="tipo-legalizacion-hidden"]').val('');
+        }
+
+        function aplicarPtagSugerido(formulario,resp){
+            var check=formulario.find('input[name="ptaang"]');
+            if(!check.length){
+                return;
+            }
+            var sugerido=!!(resp && resp.ptag_auto);
+            if(sugerido){
+                check.prop('checked',true);
+                check.attr('data-ptag-lock','1');
+                check.attr('title','PTAG detectado desde la cuenta de recaudación');
+                return;
+            }
+
+            check.removeAttr('data-ptag-lock');
+            check.removeAttr('title');
+        }
+
+        function limpiarPtagSugerido(formulario){
+            var check=formulario.find('input[name="ptaang"]');
+            if(!check.length){
+                return;
+            }
+            check.removeAttr('data-ptag-lock');
+            check.removeAttr('title');
+            check.prop('checked',false);
+        }
+
+        function programarValidacionControl(inputControl){
+            var form=$(inputControl).closest('form');
+            if(!form.length){
+                return;
+            }
+            var control=($.trim(form.find('input[name="control"]').val()) || '');
+            var controlOk=form.data('control-validado-ok')===1;
+            var controlPrevio=(form.data('control-validado-valor') || '').toString();
+
+            if(control!=='' && controlOk && controlPrevio===control){
+                return;
+            }
+
+            // Limpiar preimpreso si el control cambió (bug fix: preimpreso quedaba del control anterior)
+            if(controlPrevio!=='' && control!==controlPrevio){
+                form.find('input[name="reimpresion"]').val('');
+            }
+
+            var timer=form.data('timer-control');
+            if(timer){
+                clearTimeout(timer);
+            }
+            timer=setTimeout(function(){
+                validarControlRecaudaciones(inputControl);
+            },350);
+            form.data('timer-control',timer);
+        }
+
         $(function(){
             $('form').each(function(){
                 if($(this).find('select[data-campo="tipo-legalizacion"]').length){
@@ -1052,7 +1394,15 @@
             });
 
             $(document).on('input change','form input[name="numero"], form input[name="gestion"], form select[name="buscar_en"], form input[data-campo="tipo-legalizacion-hidden"]',function(){
-                programarValidacionSitra($(this).closest('form'));
+                var form=$(this).closest('form');
+                if(form.find('[data-campo="estado-sitra"]').length){
+                    programarValidacionSitra(form);
+                }
+            });
+
+            $(document).on('click change','form input[name="ptaang"][data-ptag-lock="1"]',function(e){
+                e.preventDefault();
+                $(this).prop('checked',true);
             });
         });
 

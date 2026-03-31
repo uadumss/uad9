@@ -28,7 +28,14 @@
             </span>
             <br/>
             <span class="text-info font-italic" style="font-size: 0.85em">
-                Fuente: {{strtoupper($fuente ?? 'sitra')}}
+                Fuente:
+                @if(($fuente ?? 'sitra')==='sid')
+                    SID
+                @elseif(($fuente ?? 'sitra')==='sitra_sid')
+                    SITRA y SID
+                @else
+                    SITRA
+                @endif
             </span>
             <br/>
             <br/>
@@ -70,7 +77,7 @@
                                 @if($docleg->dtra_verificacion_sitra==1)
                                     <p>El documento existe en SITRA, pero los datos no coinciden.</p>
                                 @else
-                                    <p>No se encuentra el documento registrado en el Sistema SITRA.</p>
+                                    <p>No se encuentra el documento registrado en SITRA ni en SID.</p>
                                 @endif
                             </div>
                         </div>
@@ -79,7 +86,7 @@
                 </div>
                 <br/>
             @if($docleg->dtra_verificacion_sitra==0)
-                <div class="text-success font-italic font-weight-bold border border-success rounded col-md-5" style="font-size: 1.2em">Verificacion Correcta {{($fuente ?? 'sitra')==='uad9' ? '(Respaldo UAD9)' : '(SITRA)'}} </div>
+                <div class="text-success font-italic font-weight-bold border border-success rounded col-md-5" style="font-size: 1.2em">Verificacion Correcta {{($fuente ?? 'sitra')==='sid' ? '(SID)' : '(SITRA)'}} </div>
             @else
                 <div class="text-danger font-italic font-weight-bold border border-danger rounded col-md-3" style="font-size: 1.2em">INCORRECTO</div>
             @endif

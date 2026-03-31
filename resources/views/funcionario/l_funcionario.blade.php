@@ -95,11 +95,14 @@
                                     <tbody>
                                     <?php $j=1;?>
                                     @foreach($funcionarios as $f)
-                                        @if($f->fun_obs!='t')
+                                        @php
+                                            $hasPendingObs = $f->has_pending_obs === true || $f->has_pending_obs === 1 || $f->has_pending_obs === 't';
+                                        @endphp
+                                        @if(!$hasPendingObs)
                                             <tr>
                                         @else
                                             @if($f->fun_folder!='t')
-                                                <tr class="bg-warning">
+                                                <tr class="alert-danger">
                                             @else
                                                 <tr class="alert-danger">
                                             @endif
@@ -158,8 +161,8 @@
                                                 <a href="{{url('listar documentos funcionario/'.$f->cod_fun)}}" class="btn btn-light btn-circle btn-sm text-primary" title="Mostrar documentos">
                                                     <i class="fas fa-arrow-alt-circle-right"></i>
                                                 </a>
-                                                @if($f->fun_obs=='t')
-                                                    <a href="" class="btn btn-light btn-circle btn-sm text-danger" title="Ver Observacion">
+                                                @if($hasPendingObs)
+                                                    <a href="{{url('listar documentos funcionario/'.$f->cod_fun)}}" class="btn btn-light btn-circle btn-sm text-danger" title="Ver observaciones del funcionario">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
                                                 @endif

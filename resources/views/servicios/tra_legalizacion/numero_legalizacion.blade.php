@@ -7,6 +7,7 @@
             </button>
         </div>
         <div class="modal-body">
+            <input type="hidden" data-campo="nuevo-cod-tra" value="{{$tramite->cod_tra}}">
             <div class="bg-primary centrar_bloque p-1 col-md-7 rounded shadow">
                 <h6 class="text-white text-center">  Número de trámite</h6>
             </div>
