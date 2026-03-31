@@ -223,7 +223,7 @@
     <!--===========================END ==============================-->
 
     <!--===========================MODAL EDITAR TOMO===================-->
-    <div class="modal fade" id="editarlegalizacion" style="z-index:1500;" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal fade" id="editarlegalizacion" style="z-index:1500;" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-backdrop="false">
         <div class="modal-dialog modal-xl" role="document" id="panel_editar">
 
         </div>

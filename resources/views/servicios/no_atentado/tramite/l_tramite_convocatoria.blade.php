@@ -166,7 +166,7 @@
     </div>
 
     <!--===========================MODAL TRALEG===================-->
-    <div class="modal fade" id="Noatentado" style="z-index: 1500" role="dialog" aria-hidden="false">
+    <div class="modal fade" id="Noatentado" style="z-index: 1500" role="dialog" aria-hidden="false" data-backdrop="false">
         <div class="modal-dialog modal-xl" role="document" id="panel_noatentado">
 
         </div>
@@ -174,7 +174,7 @@
     <!--===========================END===================-->
 
     <!-- ================== MODAL DOCLEG ====================-->
-    <div class="modal fade" id="Noatentado_agregar" role="dialog" style="z-index: 3000; margin-top: 40px;">
+    <div class="modal fade" id="Noatentado_agregar" role="dialog" style="z-index: 3000; margin-top: 40px;" data-backdrop="false">
         <div class="modal-dialog modal-xl" role="document" id="panel_agregar">
 
         </div>

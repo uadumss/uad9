@@ -188,14 +188,14 @@
     </div>
 
     <!--===========================MODAL TRALEG===================-->
-    <div class="modal fade" id="traleg" role="dialog" style="z-index: 1500"  aria-hidden="false">
+    <div class="modal fade" id="traleg" role="dialog" style="z-index: 1500"  aria-hidden="false" data-backdrop="false">
         <div class="modal-dialog modal-xl" role="document" id="panel_traleg">
 
         </div>
     </div>
     <!--===========================END===================-->
     <!-- ================== MODAL DOCLEG ====================-->
-    <div class="modal fade" id="docleg" role="dialog" style="z-index: 3000">
+    <div class="modal fade" id="docleg" role="dialog" style="z-index: 3000" data-backdrop="false">
         <div class="modal-dialog modal-xl" role="document" id="panel_docleg">
 
         </div>
