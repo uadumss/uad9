@@ -56,9 +56,6 @@
                         onclick="cargarDatos('{{url('fe_funcionario/0')}}','panel_docente')">+ Funcionario</a>
                         @endcan
 
-                        <a href="" class="btn btn-sm btn-success" data-toggle="modal" data-target="#conformidad"
-                        onclick="abrirFormularioConformidad()"><i class="fas fa-file-alt"></i> + Formulario de conformidad</a>
-
                         <a href="" class="btn btn-sm btn-outline-info text-dark" data-toggle="modal" data-target="#nuevaImportacion"><i class="fas fa-upload"> Nueva importación</i></a>
                     </div>
                 </div>
@@ -177,6 +174,14 @@
                                                    title="Eliminar funcionario"><i class="text-danger fas fa-trash-alt"></i>
                                                 </a>
                                                 @endcan
+
+                                                {{--<a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#conformidad" data-toggle="modal" onclick="abrirFormularioConformidad()"
+                                                   title="+Formulario de conformidad"><i class="text-success fas fa-file-alt"></i>
+                                                </a>
+
+                                                <a href="" class="btn btn-sm btn-success" data-toggle="modal" data-target="#conformidad"
+                                                onclick="abrirFormularioConformidad()"><i class="text-success fas fa-file-alt"></i>
+                                                </a>--}}
 
                                             </td>
                                         </tr>
@@ -333,7 +338,7 @@
                 }
             });
 
-            // Búsqueda de funcionarios para conformidad
+            {{--// Búsqueda de funcionarios para conformidad
             const nombreConformidadInput = document.getElementById('nombreConformidad');
             const resultadosBusquedaDiv = document.getElementById('resultadosBusqueda');
             const btnBuscarConformidad = document.getElementById('btnBuscarConformidad');
@@ -417,5 +422,6 @@
                 }
                 document.getElementById('formConformidad').submit();
             });
+            --}}
         </script>
 @endsection
