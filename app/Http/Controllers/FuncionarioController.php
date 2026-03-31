@@ -69,16 +69,6 @@ class FuncionarioController extends Controller
 
         return view('funcionario.fe_funcionario',compact('funcionario','cod_fun','nacionalidad','carreras','carrera','pais'));
     }
-
-    public function fe_conformidad($cod_fun){
-        $funcionario = null;
-        if($cod_fun != 0){
-            $funcionario = Funcionario::find($cod_fun);
-        }
-
-        return view('funcionario.fe_conformidad', compact('funcionario', 'cod_fun'));
-    }
-
     public function g_funcionario(Request $form){
 
         // Sincronizar secuencia de PostgreSQL si es necesario
@@ -687,10 +677,6 @@ class FuncionarioController extends Controller
     {
         $codFun = $request->input('cod_fun');
         $observaciones = $request->input('observaciones', '');
-        $ser = $request->input('ser', '');
-        $facultad = $request->input('facultad', '');
-        $carrera = $request->input('carrera', '');
-        $fecha = $request->input('fecha', '');
 
         if (!$codFun) {
             return redirect()->back()->with('error', 'Debe seleccionar un funcionario');
@@ -701,7 +687,7 @@ class FuncionarioController extends Controller
             return redirect()->back()->with('error', 'Funcionario no encontrado');
         }
 
-        // TODO: Guardar los datos en la base si se requiere (actualmente solo se informa)
+ 
         \Session::flash('exito', 'Formulario de conformidad registrado para: ' . $funcionario->fun_nombre);
         
         return redirect()->back();
