@@ -105,7 +105,7 @@
                                             <tr>
                                         @else
                                             @if($f->fun_folder!='t')
-                                                <tr class="bg-warning">
+                                                <tr class="alert-danger">
                                             @else
                                                 <tr class="alert-danger">
                                             @endif

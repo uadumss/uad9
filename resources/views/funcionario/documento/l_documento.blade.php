@@ -160,14 +160,7 @@
                                     <tbody>
                                     <?php $j=1;?>
                                     @foreach($documentos as $d)
-                                        @php
-                                            $tieneObsPendiente = in_array($d->cod_doc, $pendingObsDocIds ?? []);
-                                        @endphp
-                                        @if(!$tieneObsPendiente)
-                                            <tr>
-                                        @else
-                                            <tr class="alert-danger">
-                                        @endif
+                                        <tr class="{{ in_array($d->cod_doc, $pendingObsDocIds) ? 'table-danger' : '' }}">
                                             <td>{{$j}}</td>
                                             <td>{{$d->doc_tipo}}</td>
                                             <td>
@@ -217,15 +210,9 @@
                                                 </a>
                                                 @endcan
 
-                                                @if($tieneObsPendiente)
-                                                    <a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_observacion documento/'.$d['cod_doc'])}}','panel_documento')"
-                                                        title="Observar Documento"><i class="fas fa-eye"></i>
-                                                    </a>
-                                                @else
-                                                    <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_observacion documento/'.$d['cod_doc'])}}','panel_documento')"
-                                                       title="Observar Documento"><i class="fas fa-eye"></i>
-                                                    </a>
-                                                @endif
+                                                <a href="#" class="btn btn-light btn-circle btn-sm {{ in_array($d->cod_doc, $pendingObsDocIds) ? 'text-danger' : 'text-primary' }}" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_observacion documento/'.$d['cod_doc'])}}','panel_documento')"
+                                                   title="Observar Documento"><i class="fas fa-eye"></i>
+                                                </a>
 
                                                 @can('eliminar documento - dya')
                                                 <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_eliminar documento/'.$d->cod_doc.'/'.$d->cod_fun)}}','panel_documento')"
@@ -254,7 +241,7 @@
                                             <i class="fas fa-paper-plane"></i> Nuevo envio a la DPA
                                         </button>
                                         @if(!$hasPreviousDpaEnvio)
-                                            <small class="d-block mt-1 text-muted">{{$requiresEduSuperior ? 'Primer envío requiere: Diploma de Bachiller, Diploma Académico, Título Profesional + Postgrado/Diplomado en Educación Superior' : 'Primer envío requiere: Diploma de Bachiller, Diploma Académico, Título Profesional'}}</small>
+                                            <small class="d-block mt-1 text-muted">Debe subir al menos 1 documento para realizar el primer envío a la DPA</small>
                                         @else
                                             <small class="d-block mt-1 text-muted">No hay documentos pendientes para reenvío (revise observaciones pendientes en caso contrario).</small>
                                         @endif

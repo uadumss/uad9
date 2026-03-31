@@ -78,7 +78,6 @@ class DocumentoController extends Controller
         $funcionarioTipo = $this->normalizeFuncionarioDocAdmType($funcionario);
         $requiresEduSuperior = $funcionarioTipo === 'D' || $funcionarioTipo === 'E';
         $documentos=Documento::where('cod_fun','=',$cod_fun)->orderBy('doc_tipo')->get();
-        $pendingObsDocIds = $this->getPendingObservationDocIdsByFuncionario($cod_fun);
         $titularidades=DB::table('doc_adm.titularidads')
             ->leftJoin('carreras','titularidads.cod_car','=','carreras.cod_car')
             ->leftJoin('facultads','carreras.cod_fac','=','facultads.cod_fac')
@@ -107,19 +106,15 @@ class DocumentoController extends Controller
             ->get()
             ->groupBy('cod_env_dpa');
 
-        $documentosDisponiblesEnvio = $documentos->reject(function($doc) use ($pendingObsDocIds){
-            return in_array($doc->cod_doc, $pendingObsDocIds)
-                || $this->isTrueFlag($doc->doc_obs)
-                || $this->isTrueFlag($doc->doc_enviado_dpa);
+        $documentosDisponiblesEnvio = $documentos->reject(function($doc){
+            return $this->isTrueFlag($doc->doc_enviado_dpa);
         });
         $hasPreviousDpaEnvio = $enviosDpa->count() > 0;
         $hasDocumentosHabilitados = $documentosDisponiblesEnvio->count() > 0;
-        $requiredDocs = $this->getRequiredDocuments($funcionario);
-        $hasDpaCandidates = $hasPreviousDpaEnvio
-            ? $hasDocumentosHabilitados
-            : ($hasDocumentosHabilitados && $this->verifyRequiredDocuments($cod_fun, $funcionario));
+        $pendingObsDocIds = $this->getPendingObservationDocIdsByFuncionario($cod_fun);
+        $hasDpaCandidates = $hasDocumentosHabilitados;
 
-        return view('funcionario.documento.l_documento',compact('funcionario','documentos','cod_fun','titularidades','enviosDpa','enviosDpaDocumentos','hasDpaCandidates','requiredDocs','pendingObsDocIds','hasPreviousDpaEnvio','requiresEduSuperior'));
+        return view('funcionario.documento.l_documento',compact('funcionario','documentos','cod_fun','titularidades','enviosDpa','enviosDpaDocumentos','hasDpaCandidates','hasPreviousDpaEnvio','requiresEduSuperior','pendingObsDocIds'));
     }
     public function fe_documento($cod_doc,$cod_fun){
         $documento='';
@@ -432,10 +427,7 @@ class DocumentoController extends Controller
 
     private function verifyRequiredDocuments($cod_fun, $funcionario){
         $required = $this->getRequiredDocuments($funcionario);
-        $pendingObsDocIds = $this->getPendingObservationDocIdsByFuncionario($cod_fun);
-        $documentos = Documento::where('cod_fun', '=', $cod_fun)->get()->reject(function($doc) use ($pendingObsDocIds){
-            return in_array($doc->cod_doc, $pendingObsDocIds);
-        });
+        $documentos = Documento::where('cod_fun', '=', $cod_fun)->get();
 
         foreach($required as $req){
             if(isset($req['type'])){
@@ -457,15 +449,12 @@ class DocumentoController extends Controller
             return redirect()->back()->with('error','No se encontró el funcionario');
         }
 
-        $pendingObsDocIds = $this->getPendingObservationDocIdsByFuncionario($cod_fun);
         $documentos = Documento::where('cod_fun', '=', $cod_fun)
             ->orderBy('doc_tipo')
             ->orderBy('doc_titulo')
             ->get()
-            ->reject(function($doc) use ($pendingObsDocIds){
-                return in_array($doc->cod_doc, $pendingObsDocIds)
-                    || $this->isTrueFlag($doc->doc_obs)
-                    || $this->isTrueFlag($doc->doc_enviado_dpa);
+            ->reject(function($doc){
+                return $this->isTrueFlag($doc->doc_enviado_dpa);
             });
 
         if($documentos->count() < 1){
@@ -504,20 +493,7 @@ class DocumentoController extends Controller
             return redirect()->back()->with('error','No se encontraron documentos validos para el envio a la DPA.');
         }
 
-        $pendingObsDocIds = $this->getPendingObservationDocIdsByFuncionario($funcionario->cod_fun);
-        $conObservacion = $documentosSeleccionados->first(function($doc) use ($pendingObsDocIds){
-            return in_array($doc->cod_doc, $pendingObsDocIds);
-        });
-        if($conObservacion){
-            return redirect()->back()->with('error','No se puede enviar a la DPA documentos que tienen observaciones pendientes.');
-        }
 
-        $conObservacionFlag = $documentosSeleccionados->first(function($doc){
-            return $this->isTrueFlag($doc->doc_obs);
-        });
-        if($conObservacionFlag){
-            return redirect()->back()->with('error','No se puede enviar a la DPA documentos que tienen observaciones pendientes.');
-        }
 
         $conEnvioPrevio = $documentosSeleccionados->first(function($doc){
             return $this->isTrueFlag($doc->doc_enviado_dpa);
