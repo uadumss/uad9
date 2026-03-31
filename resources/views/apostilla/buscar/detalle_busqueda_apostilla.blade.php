@@ -111,7 +111,6 @@
                     <table class="col-md-12 table table-sm table-hover rounded" style="font-size: 12px">
                         <tr class="bg-gradient-danger text-white p-2">
                             <th>Nº</th>
-                            <th>Sitra</th>
                             <th>Nombre</th>
                             <th>N° trámite</th>
                             <th>N° Documento</th>
@@ -120,7 +119,6 @@
                         @foreach($detalle_apostilla as $d)
                             <tr>
                                 <td>{{$i}}</td>
-                                <td></td>
                                 <td class="font-italic font-weight-bold text-dark">{{$d->lis_nombre}}</td>
                                 <td>{{$d->dapo_numero}}</td>
                                 <td>{{$d->dapo_numero_documento."/".$d->dapo_gestion_documento}}</td>

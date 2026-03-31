@@ -249,7 +249,7 @@ class TramiteLegalizacionController extends Controller
             );
 
             if($respaldoUad9){
-                $fuente='uad9';
+                $fuente='sid';
                 $respuesta=(object)[
                     'nombre'=>trim((string)($persona->per_apellido.' '.$persona->per_nombre)),
                     'titulo'=>trim((string)($respaldoUad9->tit_titulo ?? '')),
@@ -257,12 +257,19 @@ class TramiteLegalizacionController extends Controller
                     'gestion'=>(string)($respaldoUad9->tit_gestion ?? $docleg->dtra_gestion),
                     'tipo'=>Funciones::DocumentoSitra((string)$docleg->dtra_buscar_en),
                 ];
+            }else{
+                $fuente='sitra_sid';
             }
         }
 
         return view('servicios.tra_legalizacion.verificacion_sitra', compact('respuesta','persona','docleg','documento','fuente'));
     }
     public function g_docleg(Request $form){
+        $datosTramita=Tramita::find($form['ctra']);
+        if($datosTramita && $datosTramita->tra_tipo_tramite=='F' && !isset($form['cdtra'])){
+            return $this->guardarConfrontacionDesdeEdicion($form,$datosTramita);
+        }
+
         /* cuadis = 'c' hace referencia a los del cuadis que no pagan valorados*/
         $cuadis='';
         if($form['cuadis']!='on'){
@@ -275,6 +282,23 @@ class TramiteLegalizacionController extends Controller
         }
         if(!isset($form['cdtra'])){
             $datosTramita=Tramita::find($form['ctra']);
+            if(!$datosTramita || !$datosTramita->id_per){
+                \Session::flash('error','Debe registrar primero los datos personales (CI) del trámite.');
+                return redirect('datos tramite legalizacion/'.$form['ctra']);
+            }
+
+            if($datosTramita->tra_tipo_tramite=='F'){
+                $yaTieneDocumento=D_tramita::where('cod_tra','=',$form['ctra'])->exists();
+                if($yaTieneDocumento){
+                    \Session::flash('error','Confrontación permite un solo trámite por registro.');
+                    return redirect('datos tramite legalizacion/'.$form['ctra']);
+                }
+                if(empty($form['documentos'])){
+                    \Session::flash('error','Seleccione el documento de confrontación.');
+                    return redirect('datos tramite legalizacion/'.$form['ctra']);
+                }
+            }
+
             $persona=Persona::find($datosTramita->id_per);
             $preimpreso=trim((string)($form['reimpresion'] ?? ''));
             $verificacionRecaudacion=['ok'=>true];
@@ -296,14 +320,18 @@ class TramiteLegalizacionController extends Controller
             }
 
             $tramita=Tramite::find($form['tipo']);
-            $a=$tramita->tre_buscar_en;
+            $buscarEnSitra=(string)($tramita->tre_buscar_en ?? '');
+            if($datosTramita->tra_tipo_tramite=='B' && !empty($form['buscar_en'])){
+                $buscarEnSitra=explode('-', (string)$form['buscar_en'])[0] ?? '';
+            }
+            $a=strtolower(trim((string)$buscarEnSitra));
             $respuesta="";
-            $verificar_sitra="";
+            $verificar_sitra=in_array($a,['db','ca','da','tp'],true) ? '2' : '';
             $numeroDoc=$form['numero'];
 
-            if($a=='db' || $a=='ca' || $a=='da' || $a=='tp'){
+            if(!in_array($datosTramita->tra_tipo_tramite,['E','F'],true) && ($a=='db' || $a=='ca' || $a=='da' || $a=='tp' || $a=='re' || $a=='su')){
                 try {
-                    $respuesta=TramiteLegalizacionController::verificarSitra($persona->per_ci,$form['numero'],$tramita->tre_buscar_en);
+                    $respuesta=TramiteLegalizacionController::verificarSitra($persona->per_ci,$form['numero'],$buscarEnSitra);
                 } catch (\Throwable $e) {
                     $respuesta=(object)[];
                 }
@@ -311,7 +339,7 @@ class TramiteLegalizacionController extends Controller
                     $respuesta=(object)[];
                 }
                 $nombre=$persona->per_apellido." ".$persona->per_nombre;
-                $documento=Funciones::DocumentoSitra($tramita->tre_buscar_en);
+                $documento=Funciones::DocumentoSitra($buscarEnSitra);
 
                 /*
                  * Verificar en sitra dtra_verificacion_sitra
@@ -335,7 +363,7 @@ class TramiteLegalizacionController extends Controller
                             $respaldoUad9=$this->buscarRespaldoInternoSitra(
                                 (int)$datosTramita->id_per,
                                 (string)$numeroDoc,
-                                (string)$tramita->tre_buscar_en,
+                                (string)$buscarEnSitra,
                                 trim((string)($form['gestion'] ?? ''))
                             );
                             $verificar_sitra=$respaldoUad9 ? '0' : '2';
@@ -365,7 +393,7 @@ class TramiteLegalizacionController extends Controller
                 $buscar_en=explode('-',$tramita->tre_buscar_en);
             }
             $titulo='';
-            if($tramita->tre_buscar_en!='' && $form['numero']!='-'){
+            if($buscarEnSitra!='' && $form['numero']!='-'){
                 if($buscar_en[0]=='tpos'){
                     $titulo=Titulo::where('tit_nro_titulo','=',$form['numero'])
                         ->where('tit_gestion','=',$form['gestion'])
@@ -516,7 +544,7 @@ class TramiteLegalizacionController extends Controller
                     \Session::flash('error','El título '.$form['numero'].'/'.$form['gestion'].' No corresponde a la persona');
                 }
             }
-            if($datosTramita->tra_tipo_tramite=='B'){
+            if($datosTramita->tra_tipo_tramite=='B' || $datosTramita->tra_tipo_tramite=='F'){
                 D_confrontacion::create([
                     'dcon_doc'=>$form['documentos'],
                     'cod_dtra'=>$tramite->cod_dtra,
@@ -526,6 +554,98 @@ class TramiteLegalizacionController extends Controller
 
         }
         return redirect('datos tramite legalizacion/'.$form['ctra']);
+    }
+
+    private function guardarConfrontacionDesdeEdicion(Request $form, Tramita $datosTramita)
+    {
+        if(!$datosTramita->id_per){
+            \Session::flash('error','Debe registrar primero los datos personales (CI) del trámite.');
+            return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
+        }
+
+        $yaTieneDocumento=D_tramita::where('cod_tra','=',$datosTramita->cod_tra)->exists();
+        if($yaTieneDocumento){
+            \Session::flash('error','Confrontación permite un solo trámite por registro.');
+            return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
+        }
+
+        $tipoSeleccionado=$form->input('tipo',$form->input('tramite'));
+        $form->merge([
+            'tipo'=>$tipoSeleccionado,
+        ]);
+
+        $form->validate([
+            'tipo'=>'required|integer',
+            'control'=>'required|integer',
+        ]);
+
+        $persona=Persona::find($datosTramita->id_per);
+        if(!$persona || !$persona->per_ci){
+            \Session::flash('error','El CI no es válido para consultar.');
+            return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
+        }
+
+        $verificacionRecaudacion=$this->validarRecaudacionLegalizacion(
+            (string)$form['control'],
+            (string)$persona->per_ci,
+            $datosTramita->tra_tipo_tramite,
+            (int)$persona->id_per,
+            '',
+            (int)$datosTramita->cod_tra
+        );
+
+        if(!$verificacionRecaudacion['ok']){
+            \Session::flash('error',$verificacionRecaudacion['message']);
+            return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
+        }
+
+        $documentosSeleccionados=[];
+        foreach(['ci','cn','lm','ce','pa','lc'] as $doc){
+            if($form[$doc]){
+                $documentosSeleccionados[]=$form[$doc];
+            }
+        }
+
+        if(count($documentosSeleccionados)===0){
+            \Session::flash('error','Seleccione al menos un documento de confrontación.');
+            return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
+        }
+
+        $año_tramita=date('Y',strtotime($datosTramita->tra_fecha_solicitud));
+        $numero_tramite=DB::table('d_tramitas')->where('dtra_gestion_tramite','=',$año_tramita)->max('dtra_numero_tramite');
+        $numero_tramite=((int)$numero_tramite)+1;
+
+        $dTramite=D_tramita::create([
+            'cod_tre'=>$form['tipo'],
+            'cod_tra'=>$datosTramita->cod_tra,
+            'dtra_tipo'=>'F',
+            'dtra_control'=>$form['control'],
+            'dtra_valorado'=>$form['control'],
+            'dtra_numero_tramite'=>$numero_tramite,
+            'dtra_gestion_tramite'=>$año_tramita,
+            'dtra_fecha_recojo'=>date('d/m/Y H:i:s'),
+            'dtra_fecha_firma'=>date('d/m/Y H:i:s'),
+            'dtra_estado_doc'=>'4',
+            'dtra_entregado'=>'t',
+        ]);
+
+        $errorUso='';
+        if(!$this->registrarUsoRecaudacion($verificacionRecaudacion,(int)$datosTramita->cod_tra,(int)$dTramite->cod_dtra,$errorUso)){
+            $dTramite->delete();
+            \Session::flash('error',$errorUso);
+            return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
+        }
+
+        foreach($documentosSeleccionados as $doc){
+            D_confrontacion::create([
+                'dcon_doc'=>$doc,
+                'cod_dtra'=>$dTramite->cod_dtra,
+            ]);
+        }
+
+        SessionController::write('C','',json_encode($dTramite),'d_tramitas','3',$dTramite->cod_dtra);
+        \Session::flash('exito','Se ha creado exitosamente el trámite');
+        return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
     }
 
     public function validar_valorado_recaudaciones(Request $request, $cod_tra)
@@ -584,6 +704,14 @@ class TramiteLegalizacionController extends Controller
             ]);
         }
 
+        if(in_array($tramita->tra_tipo_tramite,['E','F'],true)){
+            return response()->json([
+                'ok'=>true,
+                'aplica'=>false,
+                'message'=>'SITRA: no aplica para trámite Consejo/Confrontación.',
+            ]);
+        }
+
         $persona=Persona::find($tramita->id_per);
         if(!$persona || !$persona->per_ci){
             return response()->json([
@@ -614,7 +742,7 @@ class TramiteLegalizacionController extends Controller
             $buscarEn=explode('-', (string)$data['buscar_en'])[0] ?? '';
         }
 
-        if(!in_array($buscarEn,['db','ca','da','tp'],true)){
+        if(!in_array($buscarEn,['db','ca','da','tp','re','su'],true)){
             return response()->json([
                 'ok'=>true,
                 'aplica'=>false,
@@ -656,23 +784,28 @@ class TramiteLegalizacionController extends Controller
                     'ok'=>true,
                     'aplica'=>true,
                     'estado'=>'0',
-                    'fuente'=>'uad9',
+                    'fuente'=>'sid',
                     'nombre'=>$nombre,
                     'titulo'=>(string)($respaldoUad9->tit_titulo ?? ''),
                     'tipo'=>strtoupper($buscarEn),
                     'numero'=>(string)($respaldoUad9->tit_nro_titulo ?? $numero),
                     'gestion'=>(string)($respaldoUad9->tit_gestion ?? $gestion),
-                    'message'=>'Validado con respaldo interno UAD9'.($sitraDisponible ? '' : ' (SITRA no disponible)').'.',
+                    'message'=>'Validado con respaldo SID'.($sitraDisponible ? '' : ' (SITRA no disponible)').'.',
                 ]);
             }
             $estado='2';
+        }
+
+        $fuenteRespuesta='sitra';
+        if($estado==='2'){
+            $fuenteRespuesta='sitra_sid';
         }
 
         return response()->json([
             'ok'=>true,
             'aplica'=>true,
             'estado'=>$estado,
-            'fuente'=>'sitra',
+            'fuente'=>$fuenteRespuesta,
             'nombre'=>$nombreSitra,
             'titulo'=>$tituloSitra,
             'tipo'=>$tipoSitra,
@@ -700,7 +833,7 @@ class TramiteLegalizacionController extends Controller
         if($baseUrl==='' || $token===''){
             return $this->respuestaErrorValidacionLegalizacion(
                 'SISTEMA_NO_CONFIGURADO',
-                'Sistema no configurado. Contacte al ITS.'
+                'El sistema de recaudaciones no esta configurado. Contacte al area de sistemas.'
             );
         }
 
@@ -797,13 +930,34 @@ class TramiteLegalizacionController extends Controller
             }
 
             $codigoCuenta=(string)($fila['codigo_cuenta'] ?? '');
-            $tramiteSugerido=Tramite::where('tre_hab','=','t')
-                ->where('tre_tipo','=',$tipoTramite)
-                ->where('tre_numero_cuenta','=',$codigoCuenta)
-                ->first();
+            $nombreCuentaRecaudaciones=strtoupper(trim((string)($fila['cuenta'] ?? '')));
+            $tramiteSugerido=$this->buscarTramiteSugeridoDesdeFilaRecaudacion((array)$fila,$tipoTramite);
+            $ptagAuto=$this->esCuentaVerifAutentPtag($nombreCuentaRecaudaciones,$tipoTramite,$tramiteSugerido);
 
             if(!$tramiteSugerido){
-                $mensajeCuentaInvalida='La cuenta del valorado no corresponde al tipo de trámite actual.';
+                $nombreCuenta=trim((string)$nombreCuentaRecaudaciones);
+                if($nombreCuenta!==''){
+                    $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite. Cuenta: "'.$nombreCuenta.'".';
+                }else{
+                    $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite.';
+                }
+                continue;
+            }
+
+            if($tramiteSugerido->tre_tipo !== $tipoTramite){
+                $nombreCuenta=trim((string)$nombreCuentaRecaudaciones);
+                $nombreTramiteSugerido=trim((string)$tramiteSugerido->tre_nombre);
+                $sonSimilares=$this->textosCuentaMuySimilares($nombreCuenta,$nombreTramiteSugerido);
+
+                if($nombreCuenta!=='' && !$sonSimilares){
+                    $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite. Cuenta: "'.$nombreCuenta.'". Corresponde a: "'.$nombreTramiteSugerido.'".';
+                } elseif($nombreTramiteSugerido!==''){
+                    $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite. Corresponde a: "'.$nombreTramiteSugerido.'".';
+                } elseif($nombreCuenta!==''){
+                    $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite. Cuenta: "'.$nombreCuenta.'".';
+                } else {
+                    $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite.';
+                }
                 continue;
             }
 
@@ -821,6 +975,7 @@ class TramiteLegalizacionController extends Controller
                 'preimpreso'=>$preimpresoApi,
                 'tipo_legalizacion_sugerido'=>$tramiteSugerido->cod_tre,
                 'nombre_tipo_legalizacion_sugerido'=>$tramiteSugerido->tre_nombre,
+                'ptag_auto'=>$ptagAuto,
             ];
         }
 
@@ -873,6 +1028,32 @@ class TramiteLegalizacionController extends Controller
     {
         $mensajeApi=trim($mensajeApi);
         $msgNorm=mb_strtolower($mensajeApi);
+
+        if(
+            strpos($msgNorm,'configuracion')!==false ||
+            strpos($msgNorm,'configuración')!==false ||
+            strpos($msgNorm,'services/.env')!==false ||
+            strpos($msgNorm,'sistema no configurado')!==false
+        ){
+            return [
+                'code'=>'SISTEMA_NO_CONFIGURADO',
+                'message'=>'El sistema de recaudaciones no esta configurado. Contacte al area de sistemas.',
+            ];
+        }
+
+        if(
+            strpos($msgNorm,'comunicacion')!==false ||
+            strpos($msgNorm,'comunicación')!==false ||
+            strpos($msgNorm,'error en la comunicacion con la api de recaudaciones')!==false ||
+            strpos($msgNorm,'la api de recaudaciones respondio con error')!==false ||
+            strpos($msgNorm,'error inesperado en recaudaciones')!==false ||
+            strpos($msgNorm,'timeout')!==false
+        ){
+            return [
+                'code'=>'API_NO_DISPONIBLE',
+                'message'=>'No se pudo conectar con recaudaciones. Intente nuevamente en unos minutos.',
+            ];
+        }
 
         if(
             $mensajeApi==='' ||
@@ -1110,6 +1291,193 @@ class TramiteLegalizacionController extends Controller
         $valor=str_replace(['Á','É','Í','Ó','Ú'],['A','E','I','O','U'],$valor);
         $valor=preg_replace('/\s+/', ' ', $valor);
         return (string)$valor;
+    }
+
+    private function textosCuentaMuySimilares(string $a, string $b): bool
+    {
+        $normalizarComparacion=function(string $texto): string {
+            $t=$this->normalizarTexto($texto);
+            $t=preg_replace('/[^A-Z0-9 ]+/', ' ', $t) ?? '';
+            $t=preg_replace('/\s+/', ' ', trim($t)) ?? '';
+            return (string)$t;
+        };
+
+        $singularizar=function(string $texto): string {
+            if($texto===''){
+                return '';
+            }
+            $palabras=explode(' ', $texto);
+            foreach($palabras as &$palabra){
+                if(strlen($palabra)>3){
+                    $palabra=preg_replace('/(ES|S)$/', '', $palabra) ?? $palabra;
+                }
+            }
+            return implode(' ', $palabras);
+        };
+
+        $x=$normalizarComparacion($a);
+        $y=$normalizarComparacion($b);
+        if($x==='' || $y===''){
+            return false;
+        }
+
+        if($x===$y){
+            return true;
+        }
+
+        if(strpos($x,$y)!==false || strpos($y,$x)!==false){
+            return true;
+        }
+
+        $xs=$singularizar($x);
+        $ys=$singularizar($y);
+        if($xs!=='' && $ys!=='' && ($xs===$ys || strpos($xs,$ys)!==false || strpos($ys,$xs)!==false)){
+            return true;
+        }
+
+        similar_text($xs!=='' ? $xs : $x, $ys!=='' ? $ys : $y, $porcentaje);
+        return $porcentaje>=92;
+    }
+
+    private function buscarTramiteSugeridoDesdeFilaRecaudacion(array $fila, string $tipoTramite): ?Tramite
+    {
+        $codigoCuenta=trim((string)($fila['codigo_cuenta'] ?? ''));
+        $nombreCuenta=trim((string)($fila['cuenta'] ?? ''));
+
+        if($codigoCuenta!==''){
+            $tramitesPorCuenta=Tramite::where('tre_hab','=','t')
+                ->where('tre_numero_cuenta','=',$codigoCuenta)
+                ->get();
+
+            if($tramitesPorCuenta->count()===1){
+                return $tramitesPorCuenta->first();
+            }
+
+            if($tramitesPorCuenta->count()>1){
+                $mejor=null;
+                $mejorScore=-1;
+                foreach($tramitesPorCuenta as $tramiteCand){
+                    $score=$this->puntajeSimilitudCuentaTramite($nombreCuenta,(string)$tramiteCand->tre_nombre);
+                    if($score>$mejorScore){
+                        $mejorScore=$score;
+                        $mejor=$tramiteCand;
+                    }
+                }
+                if($mejor){
+                    return $mejor;
+                }
+            }
+        }
+
+        if($nombreCuenta===''){
+            return null;
+        }
+
+        // Fallback para cuentas no registradas en BD (p.ej. VERIF. Y AUTENT. ...)
+        // que semánticamente corresponden a legalizaciones/PTAG.
+        $candidatos=Tramite::where('tre_hab','=','t')
+            ->where('tre_tipo','=',$tipoTramite)
+            ->get();
+
+        $mejor=null;
+        $mejorScore=-1;
+        foreach($candidatos as $tramiteCand){
+            $score=$this->puntajeSimilitudCuentaTramite($nombreCuenta,(string)$tramiteCand->tre_nombre);
+            if($score>$mejorScore){
+                $mejorScore=$score;
+                $mejor=$tramiteCand;
+            }
+        }
+
+        if($mejor && $mejorScore>=92){
+            return $mejor;
+        }
+
+        return null;
+    }
+
+    private function puntajeSimilitudCuentaTramite(string $nombreCuenta, string $nombreTramite): float
+    {
+        $cuentaComp=$this->normalizarTextoComparacionCuenta($nombreCuenta);
+        $tramiteComp=$this->normalizarTextoComparacionCuenta($nombreTramite);
+
+        if($cuentaComp==='' || $tramiteComp===''){
+            return 0.0;
+        }
+
+        if($cuentaComp===$tramiteComp){
+            return 100.0;
+        }
+
+        similar_text($cuentaComp,$tramiteComp,$porcentaje);
+        return (float)$porcentaje;
+    }
+
+    private function normalizarTextoComparacionCuenta(string $valor): string
+    {
+        $v=$this->normalizarTexto($valor);
+        $v=preg_replace('/[^A-Z0-9 ]+/', ' ', $v) ?? '';
+
+        $reemplazos=[
+            '/\bVERIFICACION\b/' => ' ',
+            '/\bVERIF\b/' => ' ',
+            '/\bAUTENTICACION\b/' => ' ',
+            '/\bAUTENT\b/' => ' ',
+            '/\bLEGALIZACION\b/' => ' ',
+            '/\bLEG\b/' => ' ',
+            '/\bDE\b/' => ' ',
+            '/\bDEL\b/' => ' ',
+            '/\bLA\b/' => ' ',
+            '/\bEL\b/' => ' ',
+            '/\bY\b/' => ' ',
+        ];
+
+        foreach($reemplazos as $patron=>$reemplazo){
+            $v=preg_replace($patron,$reemplazo,$v) ?? $v;
+        }
+
+        $v=preg_replace('/\s+/', ' ', trim($v)) ?? '';
+        return (string)$v;
+    }
+
+    private function esCuentaVerifAutentPtag(string $nombreCuenta, string $tipoTramite, ?Tramite $tramiteSugerido=null): bool
+    {
+        if($tipoTramite!=='L'){
+            return false;
+        }
+
+        if(!$tramiteSugerido){
+            return false;
+        }
+
+        $buscarEnSugerido=strtolower(trim((string)($tramiteSugerido->tre_buscar_en ?? '')));
+        if(!in_array($buscarEnSugerido,['da','db'],true)){
+            return false;
+        }
+
+        $texto=$this->normalizarTexto($nombreCuenta);
+        if($texto===''){
+            return false;
+        }
+
+        $tieneVerif=(strpos($texto,'VERIF')!==false || strpos($texto,'VERIFICACION')!==false);
+        $tieneAutent=(strpos($texto,'AUTENT')!==false || strpos($texto,'AUTENTICACION')!==false);
+        if(!($tieneVerif && $tieneAutent)){
+            return false;
+        }
+
+        $esAcademico=(strpos($texto,'ACADEM')!==false);
+        $esBachiller=(strpos($texto,'BACHILLER')!==false);
+
+        if($buscarEnSugerido==='da'){
+            return $esAcademico;
+        }
+
+        if($buscarEnSugerido==='db'){
+            return $esBachiller;
+        }
+
+        return false;
     }
 
     private function nombresCompatibles(string $nombreLocal, string $nombreSitra): bool

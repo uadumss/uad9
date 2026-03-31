@@ -981,7 +981,9 @@ class ApostillaController extends Controller
             }
 
             $codigoCuenta=(string)($fila['codigo_cuenta'] ?? '');
-            $tramiteSugerido=$this->buscarTramiteApostillaPorCuenta($codigoCuenta);
+            $nombreCuentaRecaudaciones = (string)($fila['cuenta'] ?? '');
+            
+            $tramiteSugerido=$this->buscarTramiteApostillaPorCuenta($codigoCuenta, $nombreCuentaRecaudaciones);
             if(!$tramiteSugerido){
                 $mensajeCuentaInvalida='La cuenta del valorado no corresponde al tipo de trámite actual.';
                 continue;
@@ -1127,6 +1129,32 @@ class ApostillaController extends Controller
         $msgNorm=mb_strtolower($mensajeApi);
 
         if(
+            strpos($msgNorm,'configuracion')!==false ||
+            strpos($msgNorm,'configuración')!==false ||
+            strpos($msgNorm,'services/.env')!==false ||
+            strpos($msgNorm,'sistema no configurado')!==false
+        ){
+            return [
+                'code'=>'SISTEMA_NO_CONFIGURADO',
+                'message'=>'El sistema de recaudaciones no esta configurado. Contacte al area de sistemas.',
+            ];
+        }
+
+        if(
+            strpos($msgNorm,'comunicacion')!==false ||
+            strpos($msgNorm,'comunicación')!==false ||
+            strpos($msgNorm,'error en la comunicacion con la api de recaudaciones')!==false ||
+            strpos($msgNorm,'la api de recaudaciones respondio con error')!==false ||
+            strpos($msgNorm,'error inesperado en recaudaciones')!==false ||
+            strpos($msgNorm,'timeout')!==false
+        ){
+            return [
+                'code'=>'API_NO_DISPONIBLE',
+                'message'=>'No se pudo conectar con recaudaciones. Intente nuevamente en unos minutos.',
+            ];
+        }
+
+        if(
             $mensajeApi==='' ||
             strpos($msgNorm,'not found')!==false ||
             strpos($msgNorm,'no se encuentra')!==false ||
@@ -1162,7 +1190,7 @@ class ApostillaController extends Controller
         ];
     }
 
-    private function buscarTramiteApostillaPorCuenta(string $codigoCuenta): ?Lista_doc_apostilla
+    private function buscarTramiteApostillaPorCuenta(string $codigoCuenta, string $nombreCuenta = ''): ?Lista_doc_apostilla
     {
         $cuentaPago=$this->normalizarNumero($codigoCuenta);
         if($cuentaPago===''){
@@ -1170,11 +1198,32 @@ class ApostillaController extends Controller
         }
 
         $lista=Lista_doc_apostilla::where('lis_hab','=','t')->get();
+        $coincidencias = [];
+        
         foreach($lista as $item){
             $cuentaItem=$this->normalizarNumero((string)($item->lis_cuenta ?? ''));
             if($cuentaItem!=='' && $cuentaItem===$cuentaPago){
-                return $item;
+                $coincidencias[] = $item;
             }
+        }
+
+        if(count($coincidencias) === 1){
+            return $coincidencias[0];
+        } elseif(count($coincidencias) > 1 && $nombreCuenta !== '') {
+            $nombreCuenta = strtoupper(trim($nombreCuenta));
+            $mejorCoincidencia = null;
+            $mayorSimilitud = -1;
+
+            foreach($coincidencias as $item){
+                $nombreTramite = strtoupper(trim($item->lis_nombre));
+                similar_text($nombreCuenta, $nombreTramite, $porcentaje);
+
+                if($porcentaje > $mayorSimilitud){
+                    $mayorSimilitud = $porcentaje;
+                    $mejorCoincidencia = $item;
+                }
+            }
+            return $mejorCoincidencia;
         }
 
         return null;
