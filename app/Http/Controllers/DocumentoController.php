@@ -133,6 +133,7 @@ class DocumentoController extends Controller
 
         if(isset($form['cd'])){
             $documento=Documento::find($form['cd']);
+                $wasEnviadoDpa = $this->isTrueFlag($documento->doc_enviado_dpa);
                 $documento->doc_titulo=$form['titulo'];
                 $documento->doc_tipo=$form['tipo'];
                 $documento->doc_gestion=$form['gestion'];
@@ -163,9 +164,26 @@ class DocumentoController extends Controller
                     Storage::disk('public')->putFileAs($ruta, $form->file('pdf'), $nombreArchivo);
                     $documento->doc_pdf = $nombreArchivo;
                 }
+
+                $hasDocumentChanges = $documento->isDirty();
+                $seInvalidoEnvioDpa = false;
+                if($wasEnviadoDpa && $hasDocumentChanges){
+                    $documento->doc_enviado_dpa = false;
+                    $seInvalidoEnvioDpa = true;
+                }
                 
                 $documento->save();
-            \Session::flash('exito','Se ha guardado exitosamente los datos');
+
+                if($seInvalidoEnvioDpa){
+                    $funcionario = Funcionario::find($documento->cod_fun);
+                    if($funcionario){
+                        $funcionario->fun_env_dpa = false;
+                        $funcionario->save();
+                    }
+                    \Session::flash('exito','Se guardaron los cambios y el documento quedó pendiente de reenvío a la DPA.');
+                }else{
+                    \Session::flash('exito','Se ha guardado exitosamente los datos');
+                }
         }else{
             // Variables para el nuevo documento
             $nombreArchivoPdf = null;
