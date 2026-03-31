@@ -1336,7 +1336,7 @@ class TramiteLegalizacionController extends Controller
         }
 
         similar_text($xs!=='' ? $xs : $x, $ys!=='' ? $ys : $y, $porcentaje);
-        return $porcentaje>=88;
+        return $porcentaje>=92;
     }
 
     private function buscarTramiteSugeridoDesdeFilaRecaudacion(array $fila, string $tipoTramite): ?Tramite
@@ -1389,7 +1389,7 @@ class TramiteLegalizacionController extends Controller
             }
         }
 
-        if($mejor && $mejorScore>=86){
+        if($mejor && $mejorScore>=92){
             return $mejor;
         }
 

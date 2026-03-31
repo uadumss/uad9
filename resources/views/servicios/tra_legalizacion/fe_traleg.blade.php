@@ -314,7 +314,7 @@
                                                     @else
                                                         @can('deshacer generado glosa - srv')
                                                             @if($tramite->tra_tipo_tramite=='L' ||$tramite->tra_tipo_tramite=='C')
-                                                                <a href="#traleg" class="btn btn-light btn-circle btn-sm font-weight-bold"  onclick="cargarDatos('{{url("cambiar interno docleg/".$d->cod_dtra)}}','panel_traleg')"
+                                                                <a href="#traleg" class="btn btn-light btn-circle btn-sm font-weight-bold btn-interno-ext"  onclick="cargarDatos('{{url("cambiar interno docleg/".$d->cod_dtra)}}','panel_traleg')"
                                                                    title="Cambiar destino de trámite">
                                                                     @if($d->dtra_interno=='t')
                                                                         <span class="text-danger">Int</span>
@@ -1359,6 +1359,11 @@
 
             if(control!=='' && controlOk && controlPrevio===control){
                 return;
+            }
+
+            // Limpiar preimpreso si el control cambió (bug fix: preimpreso quedaba del control anterior)
+            if(controlPrevio!=='' && control!==controlPrevio){
+                form.find('input[name="reimpresion"]').val('');
             }
 
             var timer=form.data('timer-control');

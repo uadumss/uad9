@@ -1,5 +1,4 @@
-<div class="modal-dialog modal-xl" role="document" id="panel_tramite_apostilla">
-    <div class="modal-content border-bottom-primary shadow-lg">
+<div class="modal-content border-bottom-primary shadow-lg">
         <div class="modal-header bg-verde-oscuro">
             <h5 class="modal-title font-weight-bolder text-white" id="exampleModalLabel"><i class="fas fa-book"></i> Apostilla </h5>
             <button class="close text-white" type="button" data-dismiss="modal" aria-label="Close">
@@ -150,10 +149,10 @@
             <button type="button" class="btn btn-primary btn-sm" onclick="return submitAgregarApostilla();">+ Agregar </button>
         </div>
     </div>
-</div>
 
 <script>
     let validacionControlOk=false;
+    let controlValidadoValor='';
     let timerValidacionControl=null;
 
     function obtenerNroControlApostilla(){
@@ -221,20 +220,28 @@
         const nroControl=obtenerNroControlApostilla();
         const form=$('#form_agregar_tramite');
         const codLis=(form.find('input[data-campo="tipo-apostilla-hidden"]').val() || '').toString().trim();
+
+        if(nroControl!=='' && validacionControlOk && controlValidadoValor===nroControl){
+            return;
+        }
+
         if(nroControl===''){
             validacionControlOk=false;
+            controlValidadoValor='';
             form.find('[data-campo="validacion-recaudacion-ok"]').val('0');
             setResultadoValidacionApostilla('error','Ingrese el N° de control del pago.');
             return;
         }
         if(codLis===''){
             validacionControlOk=false;
+            controlValidadoValor='';
             form.find('[data-campo="validacion-recaudacion-ok"]').val('0');
             setResultadoValidacionApostilla('error','Seleccione el tipo de apostilla.');
             return;
         }
 
         validacionControlOk=false;
+        controlValidadoValor='';
         form.find('[data-campo="validacion-recaudacion-ok"]').val('0');
         form.find('input[data-campo="preimpreso-api"]').val('');
         form.find('input[data-campo="gestion-api"]').val('');
@@ -248,6 +255,7 @@
 
             form.find('input[data-campo="preimpreso-api"]').val(resp.preimpreso || '');
             validacionControlOk=true;
+            controlValidadoValor=nroControl;
             form.find('[data-campo="validacion-recaudacion-ok"]').val('1');
 
             let msg='Validado. Monto Bs. '+(resp.monto || '0');
@@ -260,12 +268,18 @@
             setResultadoValidacionApostilla('ok',msg);
         },function(msg){
             validacionControlOk=false;
+            controlValidadoValor='';
             form.find('[data-campo="validacion-recaudacion-ok"]').val('0');
             setResultadoValidacionApostilla('error',msg);
         });
     }
 
     function programarValidacionControlApostilla(){
+        const nroControl=obtenerNroControlApostilla();
+        if(nroControl!=='' && validacionControlOk && controlValidadoValor===nroControl){
+            return;
+        }
+
         if(timerValidacionControl!==null){
             clearTimeout(timerValidacionControl);
         }
@@ -291,6 +305,43 @@
             return false;
         }
 
+        if(validacionControlOk && controlValidadoValor===nroControl && form.find('[data-campo="validacion-recaudacion-ok"]').val()==='1'){
+            if((form.find('input[data-campo="gestion-api"]').val() || '').trim()===''){
+                setResultadoValidacionApostilla('error','No se pudo obtener la gestión del pago desde la API.');
+                return false;
+            }
+
+            $.ajax({
+                url:'{{url("guardar agregar tramite apostilla")}}',
+                type:'POST',
+                dataType:'json',
+                headers:{
+                    'Accept':'application/json'
+                },
+                data:form.serialize(),
+                success:function(resp){
+                    if(resp && resp.ok){
+                        cargarDatos('{{url("ajax tabla agregar")}}/'+codApos,'panel_lista_tramites_apostilla');
+                        cargarDatos('{{url("listar tramite apostilla tabla/".date("Y-m-d",strtotime($tramite_apostilla->apos_fecha_ingreso)))}}','panel_tabla_tramites');
+                        $('#tramite_apostilla').modal('hide');
+                        return;
+                    }
+
+                    const msg=(resp && resp.message)
+                        ? resp.message
+                        : 'No se pudo registrar el trámite.';
+                    setResultadoValidacionApostilla('error',msg);
+                },
+                error:function(xhr){
+                    const msg=(xhr.responseJSON && xhr.responseJSON.message)
+                        ? xhr.responseJSON.message
+                        : 'No se pudo registrar el trámite. Intente nuevamente.';
+                    setResultadoValidacionApostilla('error',msg);
+                }
+            });
+            return false;
+        }
+
         setResultadoValidacionApostilla('loading','');
         solicitarValidacionRecaudacion(form,nroControl,codLis,function(respValidacion){
             const anio=extraerAnioDesdeFechaPago(respValidacion.fecha_pago || '');
@@ -299,6 +350,7 @@
             }
             form.find('input[data-campo="preimpreso-api"]').val(respValidacion.preimpreso || '');
             validacionControlOk=true;
+            controlValidadoValor=nroControl;
             form.find('[data-campo="validacion-recaudacion-ok"]').val('1');
 
             if((form.find('input[data-campo="gestion-api"]').val() || '').trim()===''){
@@ -336,26 +388,24 @@
             });
         },function(msg){
             validacionControlOk=false;
+            controlValidadoValor='';
             form.find('[data-campo="validacion-recaudacion-ok"]').val('0');
             setResultadoValidacionApostilla('error',msg);
         });
         return false;
     }
 
-    $(document).on('blur','#nro_control_sid, #nro_control_other',function(){
-        if($(this).val().trim()!==''){
-            autocompletarGestionDesdeApi();
-        }
-    });
-
-    $(document).on('input','#nro_control_sid, #nro_control_other',function(){
-        validacionControlOk=false;
-        $('#form_agregar_tramite').find('[data-campo="validacion-recaudacion-ok"]').val('0');
-        $('#form_agregar_tramite').find('input[data-campo="preimpreso-api"]').val('');
-        $('#form_agregar_tramite').find('input[data-campo="gestion-api"]').val('');
-        $('#validacion-resultado').html('');
-        programarValidacionControlApostilla();
-    });
+    $(document)
+        .off('input.apostillaControl','#nro_control_sid, #nro_control_other')
+        .on('input.apostillaControl','#nro_control_sid, #nro_control_other',function(){
+            validacionControlOk=false;
+            controlValidadoValor='';
+            $('#form_agregar_tramite').find('[data-campo="validacion-recaudacion-ok"]').val('0');
+            $('#form_agregar_tramite').find('input[data-campo="preimpreso-api"]').val('');
+            $('#form_agregar_tramite').find('input[data-campo="gestion-api"]').val('');
+            $('#validacion-resultado').html('');
+            programarValidacionControlApostilla();
+        });
 
     // Tipo fijo del trámite en este formulario (comportamiento original).
 </script>
