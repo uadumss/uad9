@@ -56,8 +56,6 @@
                         onclick="cargarDatos('{{url('fe_funcionario/0')}}','panel_docente')">+ Funcionario</a>
                         @endcan
 
-                        <a href="" class="btn btn-sm btn-success" data-toggle="modal" data-target="#conformidad"
-                        onclick="abrirFormularioConformidad()"><i class="fas fa-file-alt"></i> + Formulario de conformidad</a>
 
                         <a href="" class="btn btn-sm btn-outline-info text-dark" data-toggle="modal" data-target="#nuevaImportacion"><i class="fas fa-upload"> Nueva importación</i></a>
                     </div>
@@ -259,55 +257,6 @@
                 </form>
             </div>
         </div>
-
-        <!--===========================MODAL CONFORMIDAD===================-->
-        <div class="modal fade" id="conformidad" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-md" role="document">
-                <div class="modal-content border-bottom-success">
-                    <div class="modal-header bg-success">
-                        <h5 class="modal-title font-weight-bolder text-white" id="exampleModalLabel"><i class="fas fa-file-alt"></i> Formulario de Conformidad</h5>
-                        <button class="close text-white" type="button" data-dismiss="modal" aria-label="Close">
-                            <span class="text-white" aria-hidden="true">×</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="formConformidad" method="POST" action="{{ url('guardar-conformidad') }}">
-                            @csrf
-                            <div class="form-group">
-                                <label for="nombreConformidad"><strong>Nombre del Funcionario:</strong></label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control" id="nombreConformidad" name="nombre" placeholder="Buscar funcionario..." autocomplete="off" required>
-                                    <div class="input-group-append">
-                                        <button class="btn btn-outline-primary" type="button" id="btnBuscarConformidad">
-                                            <i class="fas fa-search"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <small class="form-text text-muted">Comienza a escribir para buscar...</small>
-                            </div>
-
-                            <div id="resultadosBusqueda" class="list-group mt-2" style="max-height: 300px; overflow-y: auto; display: none;">
-                            </div>
-
-                            <input type="hidden" id="codFuncionarioConformidad" name="cod_fun" value="">
-
-                            <div class="form-group mt-3">
-                                <label for="obsConformidad"><strong>Observaciones:</strong></label>
-                                <textarea class="form-control" id="obsConformidad" name="observaciones" rows="4" placeholder="Ingrese observaciones..."></textarea>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-secondary" type="button" data-dismiss="modal">Cerrar</button>
-                        <button class="btn btn-success" type="button" id="btnGuardarConformidad">
-                            <i class="fas fa-save"></i> Guardar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!--===========================END ==============================-->
-
         <script>
             function cargarDatos(ruta,panel){
                 $.ajax({

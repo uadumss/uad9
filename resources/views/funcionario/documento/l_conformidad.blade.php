@@ -49,15 +49,13 @@
             <div class="card-header py-3 alert-primary col-md-12">
                 <div class="d-sm-flex align-items-center col-md-12">
                     <div class="col-md-6">
-                        <h5 class=""><i class="fas fa-user-circle"></i>&nbsp;Funcionarios</h5>
+                        <h5 class=""><i class="fas fa-user-circle"></i>&nbsp;Funcionario</h5>
                     </div>
                     <div class="col-md-6">
                         <a href="" class="btn btn-sm btn-primary float-right mr-1" data-toggle="modal" data-target="#documento"
                            onclick="cargarDatos('{{url('fe_documento/0/'.$cod_fun)}}','panel_documento')">+ Documento</a>
                         <a href="" class="btn btn-sm btn-primary float-right mr-1" data-toggle="modal" data-target="#documento"
                            onclick="cargarDatos('{{url('fe_documento titularidad/0/'.$cod_fun)}}','panel_documento')">+ Titularidad</a>
-                        <a href="{{ url('listar conformidad funcionario/'.$cod_fun) }}" class="btn btn-sm btn-success"><i class="fas fa-file-alt"></i> + Formulario de conformidad</a>
-
                     </div>
                 </div>
             </div>
@@ -67,10 +65,13 @@
                         <?php  $redireccion=$funcionario->fun_doc_adm=='D'?'docente':'administrativo';?>
                         <a href="{{url('listar funcionario/'.$redireccion)}}" class="btn btn-outline-info btn-sm text-dark mt-1 shadow-sm"><i class="fas fa-arrow-alt-circle-left"></i> Atrás</a>
                         <div class="bg-primary centrar_bloque p-1 col-md-3 rounded shadow">
-                            <h5 class="text-white text-center">Lista Titularidades</h5>
+                            <h5 class="text-white text-center">Formulario de Conformidad</h5>
                         </div>
                         <span style="font-size: 0.85em">
-                            <span class="text-primary font-italic">Funcionario : </span><span class="text-dark font-weight-bold">{{$funcionario->fun_nombre}}</span> |
+                            <span class="text-primary font-italic">Nombre : </span><span class="text-dark font-weight-bold">{{$funcionario->fun_nombre}}</span> |
+                            <span class="text-primary font-italic">CI : </span><span class="text-dark font-weight-bold">{{$funcionario->fun_ci}}</span> |
+                            <span class="text-primary font-italic">Teléfono : </span><span class="text-dark font-weight-bold">{{$funcionario->fun_telefonos}}</span> |
+                            <span class="text-primary font-italic">Email : </span><span class="text-dark font-weight-bold">{{$funcionario->fun_email}}</span> |
                             <span class="text-primary font-italic">Tipo : </span><span class="text-dark font-weight-bold">
                                 @php
                                     switch($funcionario->fun_doc_adm){
@@ -79,16 +80,46 @@
                                         case 'A': echo 'ADMINISTRATIVO'; break;
                                     }
                                 @endphp
-                            </span> |
-                            <span class="text-primary font-italic">Enviado a la DPA : </span>
-                            <span class="text-dark font-weight-bold">
-                                @if($funcionario->fun_env_dpa === true || $funcionario->fun_env_dpa === 1 || $funcionario->fun_env_dpa === 't')
-                                    <i class='fas fa-check-circle text-success'></i>
-                                @else
-                                    <i class='fas fa-minus-circle text-danger'></i>
-                                @endif
                             </span>
                         </span>
+                        <div class="mt-3 mb-4">
+                            <form action="{{ url('guardar-conformidad') }}" method="POST" class="form-row align-items-end">
+                                @csrf
+                                <input type="hidden" name="cod_fun" value="{{ $cod_fun }}">
+
+                                <div class="form-group col-md-3">
+                                    <label class="font-weight-bold">Nombre</label>
+                                    <input type="text" class="form-control" value="{{ $funcionario->fun_nombre }}" readonly>
+                                </div>
+                                <div class="form-group col-md-2">
+                                    <label class="font-weight-bold">CI</label>
+                                    <input type="text" class="form-control" value="{{ $funcionario->fun_ci }}" readonly>
+                                </div>
+                                <div class="form-group col-md-2">
+                                    <label class="font-weight-bold">Teléfono</label>
+                                    <input type="text" class="form-control" value="{{ $funcionario->fun_telefonos }}" readonly>
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label class="font-weight-bold">Email</label>
+                                    <input type="email" class="form-control" value="{{ $funcionario->fun_email }}" readonly>
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label class="font-weight-bold">Facultad</label>
+                                    <input type="text" name="facultad" class="form-control" value="{{ old('facultad', $funcionario->facultad ?? '') }}" placeholder="Facultad">
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label class="font-weight-bold">Carrera</label>
+                                    <input type="text" name="carrera" class="form-control" value="{{ old('carrera', $funcionario->carrera ?? '') }}" placeholder="Carrera">
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <label class="font-weight-bold">Observaciones (opcional)</label>
+                                    <input type="text" name="observaciones" class="form-control" value="{{ old('observaciones') }}" placeholder="Observaciones">
+                                </div>
+                                <div class="form-group col-md-12 text-right">
+                                    <button type="submit" class="btn btn-success">Guardar formulario de conformidad</button>
+                                </div>
+                            </form>
+                        </div>
                         @if($enviosDpa->count() > 0)
                             <div class="mt-2" style="font-size: 0.85em">
                                 <span class="text-primary font-italic">Fecha de envio a la DPA : </span>
@@ -141,7 +172,7 @@
                         </table>
                         <!-- TABLA DOCUMENTOS -->
                         <div class="bg-primary centrar_bloque p-1 col-md-3 rounded shadow">
-                            <h5 class="text-white text-center">Lista de Diplomas y Títulos</h5>
+                            <h5 class="text-white text-center">Documentos añadidos al formulario</h5>
                         </div>
                         <hr class="sidebar-divider">
                                 <table class="table table-sm table-hover sortable-table" width="100%" cellspacing="0" style="font-size: 0.8em" id="tablaDocumentos">
@@ -206,21 +237,21 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                
+                                                @can('editar documento - dya')
                                                 <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_documento/'.$d['cod_doc'].'/'.$d->cod_fun)}}','panel_documento')"
                                                    title="Editar documento"><i class="fas fa-edit"></i>
                                                 </a>
-    
+                                                @endcan
 
                                                 <a href="#" class="btn btn-light btn-circle btn-sm {{ in_array($d->cod_doc, $pendingObsDocIds) ? 'text-danger' : 'text-primary' }}" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_observacion documento/'.$d['cod_doc'])}}','panel_documento')"
                                                    title="Observar Documento"><i class="fas fa-eye"></i>
                                                 </a>
 
-                                                
+                                                @can('eliminar documento - dya')
                                                 <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_eliminar documento/'.$d->cod_doc.'/'.$d->cod_fun)}}','panel_documento')"
                                                    title="Eliminar documento"><i class="text-danger fas fa-trash-alt"></i>
                                                 </a>
-                                                
+                                                @endcan
                                                 @if($d->doc_pdf)
                                                     <a href="{{url('ver pdf documento/'.$d->cod_doc)}}" class="btn btn-light btn-circle btn-sm text-success" title="Ver PDF" target="_blank"><i class="fas fa-file-pdf"></i></a>
                                                     <a href="{{url('descargar pdf documento/'.$d->cod_doc)}}" class="btn btn-light btn-circle btn-sm text-info" title="Descargar PDF"><i class="fas fa-download"></i></a>

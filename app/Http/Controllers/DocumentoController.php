@@ -116,6 +116,55 @@ class DocumentoController extends Controller
 
         return view('funcionario.documento.l_documento',compact('funcionario','documentos','cod_fun','titularidades','enviosDpa','enviosDpaDocumentos','hasDpaCandidates','hasPreviousDpaEnvio','requiresEduSuperior','pendingObsDocIds'));
     }
+
+    public function l_conformidad($cod_fun){
+        $funcionario = Funcionario::find($cod_fun);
+        if (!$funcionario) {
+            return redirect('listar funcionario/docente')->with('error', 'Funcionario no encontrado');
+        }
+
+        $funcionarioTipo = $this->normalizeFuncionarioDocAdmType($funcionario);
+        $requiresEduSuperior = $funcionarioTipo === 'D' || $funcionarioTipo === 'E';
+        $documentos = Documento::where('cod_fun', '=', $cod_fun)->orderBy('doc_tipo')->get();
+        $titularidades = DB::table('doc_adm.titularidads')
+            ->leftJoin('carreras','titularidads.cod_car','=','carreras.cod_car')
+            ->leftJoin('facultads','carreras.cod_fac','=','facultads.cod_fac')
+            ->select('titularidads.*','car_nombre','fac_nombre','fac_abreviacion')
+            ->where('cod_fun', '=', $cod_fun)->get();
+
+        $enviosDpa = DB::table('doc_adm.envio_dpas')
+            ->where('cod_fun', '=', $cod_fun)
+            ->orderBy('cod_env_dpa')
+            ->get();
+
+        $enviosDpaDocumentos = DB::table('doc_adm.envio_dpa_detalles as ded')
+            ->join('doc_adm.envio_dpas as ed', 'ded.cod_env_dpa', '=', 'ed.cod_env_dpa')
+            ->join('doc_adm.documentos as d', 'ded.cod_doc', '=', 'd.cod_doc')
+            ->select(
+                'ded.cod_env_dpa',
+                'd.cod_doc',
+                'd.doc_tipo',
+                'd.doc_titulo',
+                'd.doc_grado',
+                'd.doc_universidad',
+                'd.doc_fecha_emision'
+            )
+            ->where('ed.cod_fun', '=', $cod_fun)
+            ->orderBy('ded.cod_env_dpa')
+            ->get()
+            ->groupBy('cod_env_dpa');
+
+        $documentosDisponiblesEnvio = $documentos->reject(function($doc){
+            return $this->isTrueFlag($doc->doc_enviado_dpa);
+        });
+        $hasPreviousDpaEnvio = $enviosDpa->count() > 0;
+        $hasDocumentosHabilitados = $documentosDisponiblesEnvio->count() > 0;
+        $pendingObsDocIds = $this->getPendingObservationDocIdsByFuncionario($cod_fun);
+        $hasDpaCandidates = $hasDocumentosHabilitados;
+
+        return view('funcionario.documento.l_conformidad', compact('funcionario','documentos','cod_fun','titularidades','enviosDpa','enviosDpaDocumentos','hasDpaCandidates','hasPreviousDpaEnvio','requiresEduSuperior','pendingObsDocIds'));
+    }
+
     public function fe_documento($cod_doc,$cod_fun){
         $documento='';
         if($cod_doc!=0){

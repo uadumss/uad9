@@ -15,6 +15,7 @@ Route::group(['middleware'=>['permission:acceder al sistema - dya']],function(){
     Route::post('g_folder',[FuncionarioController::class,'g_folder']);
 //=======================DOCUMENTOS=====================
     Route::get('listar documentos funcionario/{cod_fun}',[DocumentoController::class,'l_documentos']);
+    Route::get('listar conformidad funcionario/{cod_fun}',[DocumentoController::class,'l_conformidad']);
     //editar documento
     Route::get('fe_documento/{cod_doc}/{cod_fun}',[DocumentoController::class,'fe_documento']);
     Route::post('g_documento/',[DocumentoController::class,'g_documento']);
