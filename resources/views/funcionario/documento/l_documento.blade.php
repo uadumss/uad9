@@ -137,7 +137,7 @@
                                     @endforeach
                             </tbody>
                         </table>
-
+                        <!-- TABLA DOCUMENTOS -->
                         <div class="bg-primary centrar_bloque p-1 col-md-3 rounded shadow">
                             <h5 class="text-white text-center">Lista de Diplomas y Títulos</h5>
                         </div>
