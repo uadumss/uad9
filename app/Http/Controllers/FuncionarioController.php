@@ -107,6 +107,9 @@ class FuncionarioController extends Controller
             $funcionario->fun_obs_personal=$form['observacion'];
             $funcionario->fun_facultad=$form['facultad'];
             $funcionario->fun_carrera=$form['carrera1'];
+            if($form->has('estado')){
+                $funcionario->fun_habilitado=(int)$form['estado']===1;
+            }
             if(isset($form['folder']) && $form['folder']=='on'){
                 $funcionario->fun_folder='t';
                 $funcionario->fun_fecha_folder=date('d/m/Y');
@@ -142,7 +145,7 @@ class FuncionarioController extends Controller
                 'fun_ddu'=>$ddu,
                 'fun_facultad'=>$form['facultad'],
                 'fun_carrera'=>$form['carrera1'],
-                'fun_habilitado'=>true,
+                'fun_habilitado'=>$form->has('estado') ? ((int)$form['estado']===1) : true,
             ]);
             if($form['folder']=='on'){
                 $funcionario->fun_folder='t';
