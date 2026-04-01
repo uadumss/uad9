@@ -212,7 +212,8 @@
                                 <span class="font-weight-bold">{!! session('error') !!}</span>
                             </div>
                         @endif
-                        <table class="col-md-12 table table-sm table-hover table-dark">
+                        <table class="col-md-12 table table-sm table-dark ui-docleg-tramite">
+                            <thead>
                             <tr class="bg-gradient-secondary text-white p-2">
                                 <th>Nº</th>
                                 @if(!in_array($tramite->tra_tipo_tramite,['E','F']))
@@ -232,6 +233,8 @@
                                     <th colspan="4">Opciones</th>
                                 @endif
                             </tr>
+                            </thead>
+                            <tbody>
                             <?php $i=1;?>
                             @foreach($documentos as $d)
                                 @if($d->dtra_falso=='t')
@@ -364,6 +367,7 @@
                                 </tr>
                                 <?php $i++;?>
                             @endforeach
+                            </tbody>
                         </table>
                     </div>
                     @can('crear docleg - srv')

@@ -711,8 +711,22 @@
     padding-bottom: 0.38rem;
 }
 
-.servicios-ui .table tbody tr:hover {
-    background: #f7fbff;
+/* Sin resaltado al pasar el mouse en tablas (Bootstrap table-hover + reglas propias) */
+.servicios-ui .table-hover tbody tr:hover > td,
+.servicios-ui .table-hover tbody tr:hover > th {
+    background-color: inherit !important;
+    color: inherit !important;
+}
+
+.servicios-ui .table-dark.table-hover tbody tr:hover > td,
+.servicios-ui .table-dark.table-hover tbody tr:hover > th {
+    background-color: inherit !important;
+    color: inherit !important;
+}
+
+.servicios-ui .table thead th:hover,
+.servicios-ui .table thead tr:hover {
+    background-color: inherit !important;
 }
 
 .servicios-ui .btn.btn-sm {

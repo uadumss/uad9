@@ -860,19 +860,18 @@ class TramiteLegalizacionController extends Controller
             if(trim($msg)===''){
                 $msg=(string)($json['message'] ?? '');
             }
-            $errMap=$this->mapearMensajeErrorRecaudacionLegalizacion($msg);
+            $errMap=$this->mapearMensajeErrorRecaudacionLegalizacion($msg,$tipoTramite);
             return $this->respuestaErrorValidacionLegalizacion($errMap['code'],$errMap['message']);
         }
 
         $json=$response->json();
-        $lista=$json['data']['result'] ?? [];
-        if(sizeof($lista)===0){
-            $lista=$json['result'] ?? [];
-        }
+        $lista=$this->extraerListaResultadoRecaudacion(is_array($json) ? $json : []);
         if(!is_array($lista) || sizeof($lista)==0){
+            $tipoTxt=$this->etiquetaTipoTramiteLegalizacion($tipoTramite);
             return $this->respuestaErrorValidacionLegalizacion(
                 'BOLETA_NO_EXISTE',
-                'Ingrese un numero de control valido.'
+                'No se encontró información del recibo en recaudaciones para el CI y número de control indicados. '.
+                'Para trámites de '.$tipoTxt.', confirme que el valorado exista y que el documento (CI) sea el mismo registrado en caja.'
             );
         }
 
@@ -885,9 +884,10 @@ class TramiteLegalizacionController extends Controller
 
         $candidatos=$this->filtrarFilasRecaudacionPorPreimpreso($lista,$preimpreso);
         if(sizeof($candidatos)===0){
+            $tipoTxt=$this->etiquetaTipoTramiteLegalizacion($tipoTramite);
             return $this->respuestaErrorValidacionLegalizacion(
                 'BOLETA_NO_VALIDA',
-                'Boleta no valida para este tramite.'
+                'El recibo existe en recaudaciones pero no coincide con el preimpreso indicado o no aplica a este trámite ('.$tipoTxt.'). Verifique el número de preimpreso o use el valorado correcto.'
             );
         }
 
@@ -1009,10 +1009,47 @@ class TramiteLegalizacionController extends Controller
             );
         }
 
+        $tipoTxt=$this->etiquetaTipoTramiteLegalizacion($tipoTramite);
         return $this->respuestaErrorValidacionLegalizacion(
             'BOLETA_NO_VALIDA',
-            'Boleta no valida para este tramite.'
+            'No se pudo validar el pago para '.$tipoTxt.'. Verifique que el valorado corresponda a ese tipo de trámite, que el CI y el nombre coincidan con recaudaciones, y que el número de control sea el correcto.'
         );
+    }
+
+    /**
+     * Acepta distintas formas de respuesta de la API de recaudaciones.
+     */
+    private function extraerListaResultadoRecaudacion(array $json): array
+    {
+        $candidatos=[
+            $json['data']['result'] ?? null,
+            $json['result'] ?? null,
+            $json['data']['data']['result'] ?? null,
+        ];
+        foreach($candidatos as $lista){
+            if(is_array($lista) && sizeof($lista)>0){
+                return $lista;
+            }
+        }
+        $data=$json['data'] ?? null;
+        if(is_array($data) && $data!==[] && array_key_exists(0, $data)){
+            return $data;
+        }
+
+        return [];
+    }
+
+    private function etiquetaTipoTramiteLegalizacion(string $tipo): string
+    {
+        return match ($tipo) {
+            'L'=>'legalización',
+            'C'=>'certificación',
+            'B'=>'búsqueda',
+            'F'=>'confrontación',
+            'E'=>'consejo universitario',
+            'A'=>'no atentado',
+            default=>'este módulo',
+        };
     }
 
     private function respuestaErrorValidacionLegalizacion(string $code, string $message, array $extra=[]): array
@@ -1024,10 +1061,11 @@ class TramiteLegalizacionController extends Controller
         ],$extra);
     }
 
-    private function mapearMensajeErrorRecaudacionLegalizacion(string $mensajeApi): array
+    private function mapearMensajeErrorRecaudacionLegalizacion(string $mensajeApi, string $tipoTramite=''): array
     {
         $mensajeApi=trim($mensajeApi);
         $msgNorm=mb_strtolower($mensajeApi);
+        $ctx=$tipoTramite!=='' ? ' (trámite: '.$this->etiquetaTipoTramiteLegalizacion($tipoTramite).')' : '';
 
         if(
             strpos($msgNorm,'configuracion')!==false ||
@@ -1067,27 +1105,27 @@ class TramiteLegalizacionController extends Controller
         ){
             return [
                 'code'=>'BOLETA_NO_EXISTE',
-                'message'=>'Ingrese un numero de control valido.',
+                'message'=>'Recaudaciones no devolvió datos para este número de control y CI, o el comprobante no es válido.'.$ctx.' Verifique el número de control, que el CI sea el del pago y que el valorado corresponda al tipo de trámite.',
             ];
         }
 
         if(strpos($msgNorm,'documento')!==false || strpos($msgNorm,'ci')!==false || strpos($msgNorm,'identidad')!==false){
             return [
                 'code'=>'BOLETA_NO_PERTENECE_PERSONA',
-                'message'=>'La boleta no pertenece a la persona del trámite.',
+                'message'=>'La boleta no pertenece a la persona del trámite (documento/CI distinto al registrado en el pago).'.$ctx,
             ];
         }
 
         if(strpos($msgNorm,'cuenta')!==false || strpos($msgNorm,'tramite')!==false || strpos($msgNorm,'trámite')!==false){
             return [
                 'code'=>'BOLETA_NO_CORRESPONDE_TRAMITE',
-                'message'=>'La boleta no corresponde al trámite seleccionado.',
+                'message'=>'La boleta no corresponde al tipo de trámite actual.'.$ctx.' Revise que el pago sea del concepto correcto (p. ej. certificación vs legalización).',
             ];
         }
 
         return [
             'code'=>'BOLETA_NO_VALIDA',
-            'message'=>'Boleta no valida. Verifique los datos e intente nuevamente.',
+            'message'=>'No se pudo validar el pago en recaudaciones: '.($mensajeApi!=='' ? $mensajeApi : 'respuesta no reconocida.').$ctx,
         ];
     }
 
@@ -1345,18 +1383,36 @@ class TramiteLegalizacionController extends Controller
         $nombreCuenta=trim((string)($fila['cuenta'] ?? ''));
 
         if($codigoCuenta!==''){
-            $tramitesPorCuenta=Tramite::where('tre_hab','=','t')
+            $porCuenta=Tramite::where('tre_hab','=','t')
                 ->where('tre_numero_cuenta','=',$codigoCuenta)
                 ->get();
 
-            if($tramitesPorCuenta->count()===1){
-                return $tramitesPorCuenta->first();
+            $porTipo=$porCuenta->where('tre_tipo','=',$tipoTramite)->values();
+            if($porTipo->count()===1){
+                return $porTipo->first();
             }
-
-            if($tramitesPorCuenta->count()>1){
+            if($porTipo->count()>1){
                 $mejor=null;
                 $mejorScore=-1;
-                foreach($tramitesPorCuenta as $tramiteCand){
+                foreach($porTipo as $tramiteCand){
+                    $score=$this->puntajeSimilitudCuentaTramite($nombreCuenta,(string)$tramiteCand->tre_nombre);
+                    if($score>$mejorScore){
+                        $mejorScore=$score;
+                        $mejor=$tramiteCand;
+                    }
+                }
+                if($mejor){
+                    return $mejor;
+                }
+            }
+
+            if($porCuenta->count()===1){
+                return $porCuenta->first();
+            }
+            if($porCuenta->count()>1){
+                $mejor=null;
+                $mejorScore=-1;
+                foreach($porCuenta as $tramiteCand){
                     $score=$this->puntajeSimilitudCuentaTramite($nombreCuenta,(string)$tramiteCand->tre_nombre);
                     if($score>$mejorScore){
                         $mejorScore=$score;
@@ -1373,8 +1429,6 @@ class TramiteLegalizacionController extends Controller
             return null;
         }
 
-        // Fallback para cuentas no registradas en BD (p.ej. VERIF. Y AUTENT. ...)
-        // que semánticamente corresponden a legalizaciones/PTAG.
         $candidatos=Tramite::where('tre_hab','=','t')
             ->where('tre_tipo','=',$tipoTramite)
             ->get();
@@ -1389,7 +1443,8 @@ class TramiteLegalizacionController extends Controller
             }
         }
 
-        if($mejor && $mejorScore>=92){
+        $umbralSimilitud=86;
+        if($mejor && $mejorScore>=$umbralSimilitud){
             return $mejor;
         }
 
@@ -1425,6 +1480,9 @@ class TramiteLegalizacionController extends Controller
             '/\bAUTENT\b/' => ' ',
             '/\bLEGALIZACION\b/' => ' ',
             '/\bLEG\b/' => ' ',
+            '/\bCERTIFICACION\b/' => ' ',
+            '/\bCERTIFICACIÓN\b/u' => ' ',
+            '/\bCERT\b/' => ' ',
             '/\bDE\b/' => ' ',
             '/\bDEL\b/' => ' ',
             '/\bLA\b/' => ' ',
