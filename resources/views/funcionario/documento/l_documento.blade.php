@@ -44,7 +44,6 @@
             </ul>
         </div>
     @endif
-
     <div class="card">
         <div class="card shadow mb-4">
             <div class="card-header py-3 alert-primary col-md-12">
@@ -57,9 +56,6 @@
                            onclick="cargarDatos('{{url('fe_documento/0/'.$cod_fun)}}','panel_documento')">+ Documento</a>
                         <a href="" class="btn btn-sm btn-primary float-right mr-1" data-toggle="modal" data-target="#documento"
                            onclick="cargarDatos('{{url('fe_documento titularidad/0/'.$cod_fun)}}','panel_documento')">+ Titularidad</a>
-                        <a href="" class="btn btn-sm btn-primary float-right mr-1" data-toggle="modal" data-target="#documento" onclick="cargarDatos('{{url('fe_conformidad/'.$cod_fun)}}','panel_documento')">
-                            <i class="fas fa-file-alt"></i> + Formulario de conformidad
-                        </a>
                     </div>
                 </div>
             </div>
@@ -98,7 +94,6 @@
                             </div>
                         @endif
 
-                        <!-- TABLA TITULARIDADES -->
                         <table class="table table-sm table-hover" width="100%" cellspacing="0" style="font-size: 0.8em">
                             <thead>
                             <tr class="bg-gray-600 text-white">
@@ -114,8 +109,8 @@
                             </tr>
                             </thead>
                             <?php $j=1;?>
-                            <tbody>
-                                @foreach($titularidades as $d)
+
+                            <tbody> @foreach($titularidades as $d)
                                     <tr>
                                         <td>{{$j}}</td>
                                         <td>{{$d->dt_categoria}}</td>
@@ -130,15 +125,16 @@
                                         </td>
                                         <td>{{$d->dt_numero_resolucion}}</td>
                                         <td>
-                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_documento titularidad/'.$d->cod_dt.'/'.$d->cod_fun)}}','panel_documento')" 
-                                            title="Editar titularidad"><i class="fas fa-edit"></i></a>
-                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_eliminar titularidad/'.$d->cod_dt.'/'.$d->cod_fun)}}','panel_documento')" 
-                                            title="Eliminar titularidad"><i class="text-danger fas fa-trash-alt"></i>
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_documento titularidad/'.$d->cod_dt.'/'.$d->cod_fun)}}','panel_documento')"
+                                               title="Editar titularidad"><i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_eliminar titularidad/'.$d->cod_dt.'/'.$d->cod_fun)}}','panel_documento')"
+                                               title="Eliminar titularidad"><i class="text-danger fas fa-trash-alt"></i>
                                             </a>
                                         </td>
                                     </tr>
                                     <?php $j++;?>
-                                @endforeach
+                                    @endforeach
                             </tbody>
                         </table>
                         <!-- TABLA DOCUMENTOS -->
@@ -321,35 +317,18 @@
                 </div>
             </div>
         </div>
-    </div>
 
     @can('acceder al sistema - dya')
-        <!-- MODAL DOCUMENTO -->
-        <div class="modal fade" id="documento" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-md" role="document" id="panel_documento" style="max-width: 700px;">
-            </div>
-        </div>
+        <!--===========================MODAL DOCENTE===================-->
+            <div class="modal fade" id="documento" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-xl" role="document" id="panel_documento">
 
+                </div>
+            </div>
+            <!--===========================END ==============================-->
     @endcan
 
 <script>
-function cargarDatos(ruta,panel){
-    $.ajax({
-        url: ruta,
-        type: 'GET',
-        data: '',
-        success: function(resp) {
-            $('#' + panel).html(resp);
-        },
-        error: function() {
-            alert('No se puede ejecutar la petición');
-        }
-    });
-}
-
-// Script para ordenar la tabla de documentos
-
-// Script para ordenar la tabla de documentos
 document.addEventListener('DOMContentLoaded', function() {
     const table = document.getElementById('tablaDocumentos');
     const headers = table.querySelectorAll('th');
@@ -388,15 +367,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        // Limpiar indicadores de todas las columnas
         table.querySelectorAll('.sort-indicator').forEach(indicator => {
             indicator.textContent = '';
         });
 
-        const indicator = ascending ? ' ↑' : ' ↓';
-        header.querySelector('.sort-indicator') ? header.querySelector('.sort-indicator').textContent = indicator : header.insertAdjacentHTML('beforeend', `<span class="sort-indicator">${indicator}</span>`);
+        // Agregar indicador a la columna actual
+        const indicator = header.querySelector('.sort-indicator');
+        indicator.textContent = ascending ? ' ↑' : ' ↓';
 
+        // Re-insertar las filas ordenadas
         rows.forEach(row => tbody.appendChild(row));
     }
 });
 </script>
+
 @endsection

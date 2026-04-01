@@ -14,7 +14,7 @@
         <span class="font-weight-bold text-dark">{!! session('erroragregar') !!}</span>
     </div>
 @endif
-<table class="col-md-12 table table-sm table-hover table-info rounded" style="font-size: 11px">
+<table class="table table-sm table-hover table-info rounded apo-table-responsive-text">
     <tr class="bg-gradient-info text-white p-2">
         <th>Nº</th>
         <th>Nombre</th>
