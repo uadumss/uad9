@@ -148,10 +148,14 @@
                                                 @endif
                                             </td>
                                             <td class="text-center">
-                                                @if($f->fun_env_dpa === true || $f->fun_env_dpa === 1 || $f->fun_env_dpa === 't')
+                                                @php
+                                                    $estadoDpa = $f->fun_env_dpa === true || $f->fun_env_dpa === 1 || $f->fun_env_dpa === 't';
+                                                    $tieneDocumentosNuevosDpa = $f->has_pending_dpa_docs === true || $f->has_pending_dpa_docs === 1 || $f->has_pending_dpa_docs === 't';
+                                                @endphp
+                                                @if($estadoDpa && !$tieneDocumentosNuevosDpa)
                                                     <i class='fas fa-check-circle text-success' title="Enviado"></i>
                                                 @else
-                                                    <i class='fas fa-minus-circle text-danger' title="No enviado"></i>
+                                                    <i class='fas fa-minus-circle text-danger' title="No enviado o pendiente de reenvío"></i>
                                                 @endif
                                             </td>
                                             <td>

@@ -30,6 +30,12 @@ class FuncionarioController extends Controller
                 WHERE d.cod_fun = doc_adm.funcionarios.cod_fun
                 AND (o.od_solucion IS NULL OR TRIM(o.od_solucion) = '')
             ) as has_pending_obs")
+            ->selectRaw("EXISTS (
+                SELECT 1
+                FROM doc_adm.documentos d2
+                WHERE d2.cod_fun = doc_adm.funcionarios.cod_fun
+                AND COALESCE(d2.doc_enviado_dpa, false) = false
+            ) as has_pending_dpa_docs")
             ->where(function($query) use ($tipoFun) {
                 $query->where('fun_doc_adm','=',$tipoFun)
                     ->orWhere('fun_doc_adm','=','E');

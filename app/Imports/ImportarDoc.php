@@ -22,6 +22,7 @@ class ImportarDoc implements ToModel,WithHeadingRow,WithValidation
         $funcionario="";
         $documento='';
         $vacio='';
+        $seCreoDocumento = false;
         if($row['ci']!=''){
             $funcionario=Funcionario::all()->where('fun_ci','=',$row['ci'])->first();
         }else{
@@ -67,6 +68,7 @@ class ImportarDoc implements ToModel,WithHeadingRow,WithValidation
                         'doc_tipo'=>'DIPLOMA DE BACHILLER',
                         'doc_grado'=>'BACHILLER',
                     ]);
+                    $seCreoDocumento = true;
                     if($row['odb']!=''){
                         $observacion=D_observacion::create([
                             'cod_doc'=>$documento->cod_doc,
@@ -96,6 +98,7 @@ class ImportarDoc implements ToModel,WithHeadingRow,WithValidation
                         'doc_tipo'=>'DIPLOMA ACADEMICO',
                         'doc_grado'=>'PROFESIONAL',
                     ]);
+                    $seCreoDocumento = true;
                     if($row['oda']!=''){
                         $observacion=D_observacion::create([
                             'cod_doc'=>$documento->cod_doc,
@@ -125,6 +128,7 @@ class ImportarDoc implements ToModel,WithHeadingRow,WithValidation
                         'doc_tipo'=>'TITULO PROFESIONAL',
                         'doc_grado'=>'PROFESIONAL',
                     ]);
+                    $seCreoDocumento = true;
                     if($row['otpn']!=''){
                         $observacion=D_observacion::create([
                             'cod_doc'=>$documento->cod_doc,
@@ -155,6 +159,7 @@ class ImportarDoc implements ToModel,WithHeadingRow,WithValidation
                         'doc_tipo'=>mb_strtoupper($row['tiddu']),
                         'doc_grado'=>mb_strtoupper($row['grddu'])
                     ]);
+                    $seCreoDocumento = true;
                     if($row['oddu']!=''){
                         $observacion=D_observacion::create([
                             'cod_doc'=>$documento->cod_doc,
@@ -184,6 +189,7 @@ class ImportarDoc implements ToModel,WithHeadingRow,WithValidation
                         'doc_tipo'=>mb_strtoupper($row['tipos']),
                         'doc_grado'=>mb_strtoupper($row['grpos'])
                     ]);
+                    $seCreoDocumento = true;
                     if($row['opos']!=''){
                         $observacion=D_observacion::create([
                             'cod_doc'=>$documento->cod_doc,
@@ -193,6 +199,11 @@ class ImportarDoc implements ToModel,WithHeadingRow,WithValidation
                         $documento->doc_obs='t'; $documento->save();
                         $funcionario->fun_obs='t';$funcionario->save();
                     }
+                }
+
+                if($seCreoDocumento){
+                    $funcionario->fun_env_dpa = false;
+                    $funcionario->save();
                 }
 
             }
