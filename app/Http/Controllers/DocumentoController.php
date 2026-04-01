@@ -145,6 +145,7 @@ class DocumentoController extends Controller
                 $documento->doc_edu_superior=$superior;
                 $documento->doc_numero_revalida=$form['revalida'];
                 $documento->doc_grado=$form['grado'];
+                $documento->doc_numero_registro=$form['numero_registro'] ?? '';
                 
                 // Procesar el PDF si se adjuntó uno
                 if($form->hasFile('pdf')){
@@ -210,6 +211,7 @@ class DocumentoController extends Controller
                 'doc_grado'=>$form['grado'],
                 'doc_numero_revalida'=>$form['revalida'],
                 'doc_pdf'=>$nombreArchivoPdf,
+                'doc_numero_registro'=>$form['numero_registro'] ?? '',
             ]);
             
             // Si hay PDF, actualizar el nombre del archivo con el ID real del documento

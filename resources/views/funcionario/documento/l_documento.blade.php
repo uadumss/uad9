@@ -183,6 +183,9 @@
                                                             echo date('d/m/Y',strtotime($d->doc_fecha_emision));
                                                         }
                                                     ?>
+                                                    </span> |
+                                                    <span class="text-primary font-italic">Número de Registro : </span><span class="text-dark">
+                                                    {{$d->doc_numero_registro ?? 'N/A'}}
                                                     </span>
                                                 </span>
 

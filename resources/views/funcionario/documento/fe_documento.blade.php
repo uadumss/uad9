@@ -94,6 +94,12 @@
                                         <input type="text" class="form-control form-control-sm border-0" name="revalida" id="revalida" />
                                     </td>
                                 </tr>
+                                <tr>
+                                    <th class="text-right font-italic text-dark">Número de Registro:</th>
+                                    <td class="border-bottom border-dark">
+                                        <input type="text" class="form-control form-control-sm border-0" name="numero_registro" id="numero_registro" />
+                                    </td>
+                                </tr>
                             </table>
                         </div>
                         <div class="col-md-7">
@@ -236,6 +242,12 @@
                                     <th class="text-right font-italic text-dark">Nro Reválida:</th>
                                     <td class="border-bottom border-dark">
                                         <input type="text" class="form-control form-control-sm border-0" value="{{$documento->doc_numero_revalida}}" name="revalida" id="revalida" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="text-right font-italic text-dark">Número de Registro:</th>
+                                    <td class="border-bottom border-dark">
+                                        <input type="text" class="form-control form-control-sm border-0" value="{{$documento->doc_numero_registro ?? ''}}" name="numero_registro" id="numero_registro" />
                                     </td>
                                 </tr>
                             </table>
