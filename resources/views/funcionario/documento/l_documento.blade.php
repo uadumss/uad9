@@ -80,7 +80,10 @@
                             </span> |
                             <span class="text-primary font-italic">Enviado a la DPA : </span>
                             <span class="text-dark font-weight-bold">
-                                @if($funcionario->fun_env_dpa === true || $funcionario->fun_env_dpa === 1 || $funcionario->fun_env_dpa === 't')
+                                @php
+                                    $estadoDpaFuncionario = $funcionario->fun_env_dpa === true || $funcionario->fun_env_dpa === 1 || $funcionario->fun_env_dpa === 't';
+                                @endphp
+                                @if($estadoDpaFuncionario && !$hasDpaCandidates)
                                     <i class='fas fa-check-circle text-success'></i>
                                 @else
                                     <i class='fas fa-minus-circle text-danger'></i>
