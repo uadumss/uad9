@@ -227,6 +227,7 @@ class FuncionarioController extends Controller
     }
     public function procesar_reporte(Request $form){
         $parametros=array();
+        $estadoCarpetaFiltro = $form->input('estado_carpeta', '');
 
         $consulta="";
         $tipo_funcionario=$form['funcionario'];
@@ -326,7 +327,7 @@ class FuncionarioController extends Controller
         }else{
             $parametros[10]='-';
         }
-        $parametros[11]=($form['nodiplomado']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos wheredoc_tipo='DIPLOMADO')":'-';
+        $parametros[11]=($form['nodiplomado']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='DIPLOMADO')":'-';
 
         if($form['especialidad']=='on'){
             $parametros[12]="cod_fun in (select cod_fun from doc_adm.documentos where doc_tipo='ESPECIALIDAD'";
@@ -461,6 +462,18 @@ class FuncionarioController extends Controller
                 // Agregar documentos procesados y estado al objeto
                 $funcionario->documentos = $documentos_procesados;
                 $funcionario->estado_carpeta = $estado_carpeta;
+            }
+
+            if($estadoCarpetaFiltro === 'completo'){
+                $resultado = array_values(array_filter($resultado, function($funcionario){
+                    return isset($funcionario->estado_carpeta['completo']) && $funcionario->estado_carpeta['completo'] === true;
+                }));
+            }
+
+            if($estadoCarpetaFiltro === 'incompleto'){
+                $resultado = array_values(array_filter($resultado, function($funcionario){
+                    return !isset($funcionario->estado_carpeta['completo']) || $funcionario->estado_carpeta['completo'] !== true;
+                }));
             }
 
             /*Excel::create('Filename', function($excel) use($resultado) {
