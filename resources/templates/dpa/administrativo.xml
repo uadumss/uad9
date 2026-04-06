@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<documento>
+    <encabezado>
+        <lugar_fecha>Cochabamba, {{fecha}}</lugar_fecha>
+        <referencia>REF.: {{ref}}</referencia>
+        <sidoc>Sidoc.: {{sidoc}}</sidoc>
+    </encabezado>
+
+    <destinatario>
+        <trato>{{trato}}</trato>
+        <nombre>{{nombre_destinatario}}</nombre>
+        <cargo>{{cargo_destinatario}}</cargo>
+        <estado>Presente</estado>
+    </destinatario>
+
+    <asunto>REF.: ENTREGA DE DOCUMENTACION ACADEMICA DE FUNCIONARIOS ADMINISTRATIVOS VERIFICADA Y LEGALIZADA</asunto>
+
+    <cuerpo>
+        <saludo>{{saludo}}</saludo>
+        <texto_principal>En cumplimiento a la Circular N° 06/2023 de fecha 21 de agosto de 2023 referente a la actualización de documentación académica de funcionarios administrativos de la UMSS que acrediten su formación académica, adjunto a la presente, le envió un ejemplar de documentación de Diplomas-Títulos verificados y legalizados, que corresponden a Administrativo(s), según el siguiente detalle:</texto_principal>
+        <despedida>{{despedida}}</despedida>
+        <adjunto>Adj. Lo indicado</adjunto>
+    </cuerpo>
+</documento>

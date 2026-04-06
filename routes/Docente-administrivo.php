@@ -26,6 +26,8 @@ Route::group(['middleware'=>['permission:acceder al sistema - dya']],function(){
     Route::get('ver pdf documento/{cod_doc}',[DocumentoController::class,'ver_pdf_documento']);
     Route::get('fe_enviar dpa/{cod_fun}',[DocumentoController::class,'fe_enviar_dpa']);
     Route::post('enviar dpa',[DocumentoController::class,'enviar_dpa']);
+    Route::post('generar pdf dpa',[DocumentoController::class,'generar_pdf_dpa'])->name('generar.pdf.dpa');
+    Route::get('ver pdf temporal dpa',[DocumentoController::class,'ver_pdf_temporal_dpa'])->name('ver.pdf.temporal.dpa');
     Route::get('ver pdf envio dpa/{cod_env_dpa}',[DocumentoController::class,'ver_pdf_envio_dpa']);
     Route::get('descargar pdf envio dpa/{cod_env_dpa}',[DocumentoController::class,'descargar_pdf_envio_dpa']);
 
