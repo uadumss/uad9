@@ -5,32 +5,27 @@ namespace App\Services;
 use App\Models\Documento;
 use App\Models\Funcionario;
 use Exception;
-use ZipArchive;
-use DOMDocument;
-use DOMXPath;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class GenerarPDFDpaXMLService
 {
     /**
-     * Generar PDF usando edición XML del DOCX
+     * Generar PDF usando plantilla XML (docente/administrativo)
      * 
      * @param Funcionario $funcionario
      * @param array $codsDocumentos Array de códigos de documentos seleccionados
      * @param string $tipoFuncionario 'D' para docente o 'A' para administrativo
+     * @param array $datosCarta Campos editables de la carta
      * @return string Ruta del archivo PDF generado
      */
-    public function generarPDF(Funcionario $funcionario, array $codsDocumentos, string $tipoFuncionario = 'D')
+    public function generarPDF(Funcionario $funcionario, array $codsDocumentos, string $tipoFuncionario = 'D', array $datosCarta = [])
     {
         try {
-            $tipoTemplate = ($tipoFuncionario === 'D') ? 'docente' : 'administrativo';
-            $rutaTemplate = storage_path("app/templates/dpa/{$tipoTemplate}.docx");
+            $tipoNormalizado = strtoupper(trim($tipoFuncionario));
+            $tipoTemplate = ($tipoNormalizado === 'D') ? 'docente' : 'administrativo';
+            $rutaTemplateXml = resource_path("templates/dpa/{$tipoTemplate}.xml");
 
-            \Log::info("GenerarPDFDpaXMLService: Usando plantilla: {$rutaTemplate}");
-
-            if (!file_exists($rutaTemplate)) {
-                throw new Exception("Plantilla no encontrada: {$rutaTemplate}");
-            }
+            \Log::info("GenerarPDFDpaXMLService: Usando plantilla XML: {$rutaTemplateXml}");
 
             // Obtener documentos
             $documentos = Documento::whereIn('cod_doc', $codsDocumentos)
@@ -43,35 +38,27 @@ class GenerarPDFDpaXMLService
                 throw new Exception('No se encontraron documentos');
             }
 
-            // Crear directorio temporal
-            $tempDir = storage_path("app/temp/dpa-" . uniqid());
-            mkdir($tempDir, 0755, true);
+            $plantilla = $this->cargarPlantillaXml($rutaTemplateXml, $tipoTemplate);
+            $datosFinales = $this->construirDatosCarta($plantilla, $datosCarta, $funcionario);
+            $html = $this->generarHtmlCarta($datosFinales, $documentos, $funcionario);
 
-            // Descomprimir DOCX
-            $this->descomprimirDocx($rutaTemplate, $tempDir);
-
-            // Editar document.xml para agregar tabla
-            $documentXmlPath = "{$tempDir}/word/document.xml";
-            $xml = file_get_contents($documentXmlPath);
-
-            // Agregar tabla ANTES de "Sin otro particular"
-            $tablaXml = $this->generarTablaXML($documentos);
-            
-            // Buscar el párrafo que contiene "Sin otro particular" y insertar tabla antes de él
-            $xml = $this->insertarTablaEnPosicionCorrecta($xml, $tablaXml);
-
-            file_put_contents($documentXmlPath, $xml);
-
-            // Recomprimir DOCX
+            // Guardar PDF temporal
+            $tempDir = storage_path('app/temp');
+            if (!is_dir($tempDir)) {
+                mkdir($tempDir, 0755, true);
+            }
             $nombreArchivo = 'dpa-' . $funcionario->cod_fun . '-' . date('Y-m-d_H-i-s');
-            $rutaDocxFinal = storage_path("app/temp/{$nombreArchivo}.docx");
-            $this->comprimirDocx($tempDir, $rutaDocxFinal);
+            $rutaPdfFinal = storage_path("app/temp/{$nombreArchivo}.pdf");
 
-            // Limpiar temporales
-            $this->eliminarDirectorio($tempDir);
+            $pdf = Pdf::loadHTML($html)->setPaper('letter', 'portrait');
+            $pdf->save($rutaPdfFinal);
 
-            \Log::info("GenerarPDFDpaXMLService: DOCX generado en: {$rutaDocxFinal}");
-            return $rutaDocxFinal;
+            if (!file_exists($rutaPdfFinal)) {
+                throw new Exception('No se pudo crear el PDF final');
+            }
+
+            \Log::info("GenerarPDFDpaXMLService: PDF generado en: {$rutaPdfFinal}");
+            return $rutaPdfFinal;
 
         } catch (Exception $e) {
             \Log::error("GenerarPDFDpaXMLService ERROR: " . $e->getMessage());
@@ -80,236 +67,304 @@ class GenerarPDFDpaXMLService
     }
 
     /**
-     * Generar XML de la tabla con documentos
+     * Cargar campos base desde plantilla XML
      */
-    private function generarTablaXML($documentos): string
+    private function cargarPlantillaXml(string $rutaTemplateXml, string $tipoTemplate): array
     {
-        $xml = <<<'XML'
+        $defaults = [
+            'lugar_fecha' => 'Cochabamba, {{fecha}}',
+            'referencia' => 'REF.: {{ref}}',
+            'sidoc' => 'Sidoc.: {{sidoc}}',
+            'trato' => 'Señor',
+            'nombre_destinatario' => '',
+            'cargo_destinatario' => '',
+            'estado_destinatario' => 'Presente',
+            'asunto' => $tipoTemplate === 'docente'
+                ? 'REF.: ENTREGA DE DOCUMENTACIÓN ACADÉMICA DOCENTE VERIFICADA Y LEGALIZADA'
+                : 'REF.: ENTREGA DE DOCUMENTACIÓN ACADÉMICA DE FUNCIONARIOS ADMINISTRATIVOS VERIFICADA Y LEGALIZADA',
+            'saludo' => 'De mi consideración:',
+            'texto_principal' => '',
+            'despedida' => 'Sin otro particular, saludo a usted atentamente,',
+            'adjunto' => 'Adj. Lo indicado',
+        ];
 
-<w:p>
-    <w:pPr>
-        <w:spacing w:line="240" w:lineRule="auto" w:before="120" w:after="120"/>
-    </w:pPr>
-</w:p>
-
-<w:tbl>
-    <w:tblPr>
-        <w:tblW w:w="5000" w:type="dxa"/>
-        <w:tblBorders>
-            <w:top w:val="single" w:sz="12" w:space="0" w:color="000000"/>
-            <w:left w:val="single" w:sz="12" w:space="0" w:color="000000"/>
-            <w:bottom w:val="single" w:sz="12" w:space="0" w:color="000000"/>
-            <w:right w:val="single" w:sz="12" w:space="0" w:color="000000"/>
-            <w:insideH w:val="single" w:sz="12" w:space="0" w:color="000000"/>
-            <w:insideV w:val="single" w:sz="12" w:space="0" w:color="000000"/>
-        </w:tblBorders>
-    </w:tblPr>
-XML;
-
-        // Fila de encabezados
-        $encabezados = ['Nro.', 'Nombre', 'Grado académico', 'Universidad', 'Fecha de emisión', 'N° de registro'];
-        $xml .= '<w:tr>';
-        foreach ($encabezados as $encabezado) {
-            $xml .= <<<XML
-<w:tc>
-    <w:tcPr>
-        <w:shd w:fill="CCCCCC"/>
-        <w:tcBorders>
-            <w:top w:val="single" w:sz="12" w:space="0" w:color="000000"/>
-            <w:left w:val="single" w:sz="12" w:space="0" w:color="000000"/>
-            <w:bottom w:val="single" w:sz="12" w:space="0" w:color="000000"/>
-            <w:right w:val="single" w:sz="12" w:space="0" w:color="000000"/>
-        </w:tcBorders>
-    </w:tcPr>
-    <w:p>
-        <w:pPr>
-            <w:jc w:val="center"/>
-        </w:pPr>
-        <w:r>
-            <w:rPr>
-                <w:b/>
-                <w:sz w:val="20"/>
-            </w:rPr>
-            <w:t>{$encabezado}</w:t>
-        </w:r>
-    </w:p>
-</w:tc>
-XML;
+        if (!file_exists($rutaTemplateXml)) {
+            return $defaults;
         }
-        $xml .= '</w:tr>';
 
-        // Filas de datos
+        libxml_use_internal_errors(true);
+        $xml = simplexml_load_file($rutaTemplateXml, 'SimpleXMLElement', LIBXML_NOCDATA);
+        if ($xml === false) {
+            libxml_clear_errors();
+            return $defaults;
+        }
+        libxml_clear_errors();
+
+        $defaults['lugar_fecha'] = $this->limpiarTextoPlantilla((string)($xml->encabezado->lugar_fecha ?? $defaults['lugar_fecha']));
+        $defaults['referencia'] = $this->limpiarTextoPlantilla((string)($xml->encabezado->referencia ?? $defaults['referencia']));
+        $defaults['sidoc'] = $this->limpiarTextoPlantilla((string)($xml->encabezado->sidoc ?? $defaults['sidoc']));
+
+        $defaults['trato'] = $this->limpiarTextoPlantilla((string)($xml->destinatario->trato ?? $defaults['trato']));
+        $defaults['nombre_destinatario'] = $this->limpiarTextoPlantilla((string)($xml->destinatario->nombre ?? $defaults['nombre_destinatario']));
+        $defaults['cargo_destinatario'] = $this->limpiarTextoPlantilla((string)($xml->destinatario->cargo ?? $defaults['cargo_destinatario']));
+        $defaults['estado_destinatario'] = $this->limpiarTextoPlantilla((string)($xml->destinatario->estado ?? $defaults['estado_destinatario']));
+
+        $defaults['asunto'] = $this->limpiarTextoPlantilla((string)($xml->asunto ?? $defaults['asunto']));
+        $defaults['saludo'] = $this->limpiarTextoPlantilla((string)($xml->cuerpo->saludo ?? $defaults['saludo']));
+        $defaults['texto_principal'] = $this->limpiarTextoPlantilla((string)($xml->cuerpo->texto_principal ?? $defaults['texto_principal']));
+        $defaults['despedida'] = $this->limpiarTextoPlantilla((string)($xml->cuerpo->despedida ?? $defaults['despedida']));
+        $defaults['adjunto'] = $this->limpiarTextoPlantilla((string)($xml->cuerpo->adjunto ?? $defaults['adjunto']));
+
+        return $defaults;
+    }
+
+    /**
+     * Construir datos finales con overrides del formulario
+     */
+    private function construirDatosCarta(array $plantilla, array $datosCarta, Funcionario $funcionario): array
+    {
+        $fechaInput = isset($datosCarta['fecha']) ? trim((string)$datosCarta['fecha']) : '';
+        $fechaFormateada = $fechaInput !== '' ? $this->formatearFechaLargaEs($fechaInput) : $this->formatearFechaLargaEs(date('Y-m-d'));
+        $fechaDefault = 'Cochabamba, ' . $fechaFormateada;
+        $refValor = isset($datosCarta['ref']) ? trim((string)$datosCarta['ref']) : '';
+        $sidocValor = isset($datosCarta['sidoc']) ? trim((string)$datosCarta['sidoc']) : '';
+        $refDefault = $this->formatearLineaConPrefijo($refValor, 'REF.:');
+        $sidocDefault = $this->formatearLineaConPrefijo($sidocValor, 'Sidoc.:');
+
+        $vars = [
+            'fecha' => $fechaFormateada,
+            'ref' => $refValor,
+            'sidoc' => $sidocValor,
+            'trato' => $datosCarta['trato'] ?? '',
+            'nombre_destinatario' => $datosCarta['nombre_destinatario'] ?? '',
+            'cargo_destinatario' => $datosCarta['cargo_destinatario'] ?? '',
+            'saludo' => $datosCarta['saludo'] ?? '',
+            'despedida' => $datosCarta['despedida'] ?? '',
+        ];
+
+        $resultado = [];
+        foreach ($plantilla as $key => $valorPlantilla) {
+            $valorFormulario = isset($datosCarta[$key]) ? trim((string)$datosCarta[$key]) : '';
+            $base = $valorFormulario !== '' ? $valorFormulario : $valorPlantilla;
+            $resultado[$key] = $this->aplicarMarcadores($base, $vars);
+        }
+
+        // Forzar formato formal de cabecera aun cuando el usuario ingrese solo el valor.
+        $resultado['lugar_fecha'] = $fechaDefault;
+        $resultado['referencia'] = $refDefault;
+        $resultado['sidoc'] = $sidocDefault;
+
+        return $resultado;
+    }
+
+    /**
+     * Quitar marcadores no deseados de plantillas externas
+     */
+    private function limpiarTextoPlantilla(string $texto): string
+    {
+        $texto = preg_replace('/\[cite:\s*\d+\]/i', '', $texto);
+        $texto = preg_replace('/@if\s*\(.*?\)|@else|@endif|@foreach\s*\(.*?\)|@endforeach/', '', $texto);
+        return trim((string)$texto);
+    }
+
+    /**
+     * Reemplazar placeholders tipo {{campo}} o {{ $campo }}
+     */
+    private function aplicarMarcadores(string $texto, array $variables): string
+    {
+        $resultado = $texto;
+        foreach ($variables as $key => $value) {
+            $resultado = str_replace('{{' . $key . '}}', $value, $resultado);
+            $resultado = str_replace('{{ ' . $key . ' }}', $value, $resultado);
+            $resultado = str_replace('{{ $' . $key . ' }}', $value, $resultado);
+        }
+        return trim($resultado);
+    }
+
+    /**
+     * Generar HTML final del PDF
+     */
+    private function generarHtmlCarta(array $datosCarta, $documentos, Funcionario $funcionario): string
+    {
+        $filasTabla = $this->generarFilasTabla($documentos, $funcionario);
+
+        return '<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page { margin: 18mm 18mm 18mm 18mm; }
+        body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color: #111; margin: 0; }
+        .pagina { padding-top: 10mm; }
+        .cabecera { width: 100%; margin-bottom: 8px; }
+        .cabecera-top { width: 100%; text-align: right; }
+        .meta-linea { line-height: 1.25; margin-bottom: 2px; }
+        .destinatario { line-height: 1.25; margin-top: 12px; margin-bottom: 18px; }
+        .destinatario div { margin: 0; }
+        .asunto { margin: 8px 0 14px; font-weight: bold; line-height: 1.25; text-align: right; }
+        .texto { margin: 10px 0; text-align: justify; line-height: 1.5; }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0 10px; }
+        th, td { border: 1px solid #333; padding: 5px; vertical-align: top; font-size: 10.5px; }
+        th { background: #f0f0f0; text-align: center; }
+        .c { text-align: center; }
+        .firma { margin-top: 18px; }
+        .espacio-sello { height: 72px; }
+        .adjunto { font-size: 11.5px; }
+        .cargo { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="pagina">
+        <div class="cabecera">
+            <div class="cabecera-top">
+                <div class="meta-linea">' . $this->esc($datosCarta['lugar_fecha']) . '</div>
+                <div class="meta-linea">' . $this->esc($datosCarta['referencia']) . '</div>
+                <div class="meta-linea">' . $this->esc($datosCarta['sidoc']) . '</div>
+            </div>
+        </div>
+
+        <div class="destinatario">
+            <div>' . $this->esc($datosCarta['trato']) . '</div>
+            <div>' . $this->esc($datosCarta['nombre_destinatario']) . '</div>
+            <div class="cargo">' . $this->esc($datosCarta['cargo_destinatario']) . '</div>
+            <div>' . $this->esc($datosCarta['estado_destinatario']) . '</div>
+        </div>
+
+        <div class="asunto">' . $this->esc($datosCarta['asunto']) . '</div>
+        <div class="texto">' . nl2br($this->esc($datosCarta['saludo'])) . '</div>
+        <div class="texto">' . nl2br($this->esc($datosCarta['texto_principal'])) . '</div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:6%">Nro.</th>
+                    <th style="width:29%">Nombre</th>
+                    <th style="width:29%">Grado academico</th>
+                    <th style="width:16%">Universidad</th>
+                    <th style="width:12%">Fecha de emision</th>
+                    <th style="width:8%">N de registro</th>
+                </tr>
+            </thead>
+            <tbody>
+                ' . $filasTabla . '
+            </tbody>
+        </table>
+
+        <div class="firma">' . nl2br($this->esc($datosCarta['despedida'])) . '</div>
+        <div class="espacio-sello"></div>
+        <div class="adjunto">' . $this->esc($datosCarta['adjunto']) . '</div>
+    </div>
+</body>
+</html>';
+    }
+
+    /**
+     * Generar filas HTML para la tabla
+     */
+    private function generarFilasTabla($documentos, Funcionario $funcionario): string
+    {
+        $filas = '';
         $contador = 1;
+
         foreach ($documentos as $doc) {
-            $xml .= '<w:tr>';
-            
-            // Nro.
-            $xml .= $this->generarCeldaXML((string)$contador, true);
-            
-            // Nombre
-            $xml .= $this->generarCeldaXML($doc->doc_titulo ?? '');
-            
-            // Grado
-            $xml .= $this->generarCeldaXML($doc->doc_grado ?? '');
-            
-            // Universidad
-            $xml .= $this->generarCeldaXML($doc->doc_universidad ?? '');
-            
-            // Fecha
-            $fecha = $doc->doc_fecha_emision ? date('d/m/Y', strtotime($doc->doc_fecha_emision)) : '';
-            $xml .= $this->generarCeldaXML($fecha, true);
-            
-            // Registro
-            $xml .= $this->generarCeldaXML($doc->doc_numero_registro ?? '');
-            
-            $xml .= '</w:tr>';
+            $fecha = '';
+            if (!empty($doc->doc_fecha_emision)) {
+                $timestamp = strtotime($doc->doc_fecha_emision);
+                if ($timestamp !== false) {
+                    $fecha = date('d/m/Y', $timestamp);
+                }
+            }
+
+            $filas .= '<tr>'
+                . '<td class="c">' . $contador . '</td>'
+                . '<td>' . $this->esc($funcionario->fun_nombre ?? '') . '</td>'
+                . '<td>' . $this->esc($this->obtenerGradoAcademico($doc)) . '</td>'
+                . '<td>' . $this->esc($doc->doc_universidad ?? $funcionario->dt_universidad ?? '') . '</td>'
+                . '<td class="c">' . $this->esc($fecha) . '</td>'
+                . '<td class="c">' . $this->esc((string)($doc->doc_numero_registro ?? '')) . '</td>'
+                . '</tr>';
+
             $contador++;
         }
 
-        $xml .= '</w:tbl>';
-        return $xml;
+        return $filas;
     }
 
     /**
-     * Generar celda XML
+     * Escapar texto para HTML
      */
-    private function generarCeldaXML(string $texto, bool $centrado = false): string
+    private function esc(string $texto): string
     {
-        $jc = $centrado ? '<w:jc w:val="center"/>' : '';
-        $texto = htmlspecialchars($texto);
-        
-        return <<<XML
-<w:tc>
-    <w:tcPr>
-        <w:tcBorders>
-            <w:top w:val="single" w:sz="12" w:space="0" w:color="000000"/>
-            <w:left w:val="single" w:sz="12" w:space="0" w:color="000000"/>
-            <w:bottom w:val="single" w:sz="12" w:space="0" w:color="000000"/>
-            <w:right w:val="single" w:sz="12" w:space="0" w:color="000000"/>
-        </w:tcBorders>
-    </w:tcPr>
-    <w:p>
-        <w:pPr>
-            {$jc}
-        </w:pPr>
-        <w:r>
-            <w:rPr>
-                <w:sz w:val="20"/>
-            </w:rPr>
-            <w:t>{$texto}</w:t>
-        </w:r>
-    </w:p>
-</w:tc>
-XML;
+        return htmlspecialchars($texto, ENT_QUOTES, 'UTF-8');
     }
 
     /**
-     * Insertar tabla en la posición correcta (antes de "Sin otro particular")
+     * Para esta carta, "Grado académico" debe mostrar el titulo del diploma.
      */
-    private function insertarTablaEnPosicionCorrecta(string $xml, string $tablaXml): string
+    private function obtenerGradoAcademico($doc): string
     {
-        // Primero intenta con la búsqueda exacta
-        $pattern = '/<w:p>.*?<w:t[^>]*>Sin otro particular.*?<\/w:p>/s';
-        
-        if (preg_match($pattern, $xml, $matches)) {
-            \Log::info("Encontró párrafo con 'Sin otro particular'");
-            return str_replace($matches[0], $tablaXml . $matches[0], $xml);
+        if (!empty($doc->doc_titulo)) {
+            return (string)$doc->doc_titulo;
         }
-        
-        // Si no funciona, intenta con búsqueda más flexible
-        // Busca "Sin otro" en múltiples palabras
-        $pattern = '/<w:p[^>]*>.*?<w:t[^>]*>.*?Sin otro.*?<\/w:p>/s';
-        if (preg_match($pattern, $xml, $matches)) {
-            \Log::info("Encontró párrafo con 'Sin otro' (flexible)");
-            return str_replace($matches[0], $tablaXml . $matches[0], $xml);
+
+        if (!empty($doc->doc_grado)) {
+            return (string)$doc->doc_grado;
         }
-        
-        // Último intento: buscar cualquier párrafo después de la mitad del documento
-        // que probablemente contenga "Sin otro particular"
-        $parrafos = preg_split('/<w:p[^>]*>/', $xml);
-        if (count($parrafos) > 5) {
-            // Busca en los últimos párrafos
-            for ($i = count($parrafos) - 1; $i >= max(1, count($parrafos) - 5); $i--) {
-                if (strpos($parrafos[$i], 'Sin otro') !== false) {
-                    \Log::info("Encontró 'Sin otro' en párrafo {$i}");
-                    // Reconstruir el párrafo y reemplazar
-                    $parrafo = '<w:p' . explode('</w:p>', $parrafos[$i])[0] . '</w:p>';
-                    return str_replace($parrafo, $tablaXml . $parrafo, $xml);
-                }
-            }
-        }
-        
-        \Log::warning("No se encontró 'Sin otro particular', insertando al final");
-        // Si no encuentra, insertar antes del cierre de body
-        return str_replace('</w:body>', $tablaXml . '</w:body>', $xml);
+
+        return (string)($doc->doc_tipo ?? '');
     }
 
     /**
-     * Descomprimir DOCX
+     * Asegura prefijo en la linea, evitando duplicarlo.
      */
-    private function descomprimirDocx(string $docxPath, string $destDir): void
+    private function formatearLineaConPrefijo(string $valor, string $prefijo): string
     {
-        $zip = new ZipArchive();
-        if ($zip->open($docxPath) !== true) {
-            throw new Exception("No se puede abrir DOCX: {$docxPath}");
+        $valor = trim($valor);
+        if ($valor === '') {
+            return $prefijo;
         }
-        $zip->extractTo($destDir);
-        $zip->close();
+
+        if (stripos($valor, $prefijo) === 0) {
+            return $valor;
+        }
+
+        return $prefijo . ' ' . $valor;
     }
 
     /**
-     * Comprimir DOCX
+     * Convertir fecha a formato largo en espanol: 6 de abril de 2026
      */
-    private function comprimirDocx(string $sourceDir, string $docxPath): void
+    private function formatearFechaLargaEs(string $fecha): string
     {
-        $zip = new ZipArchive();
-        if ($zip->open($docxPath, ZipArchive::CREATE) !== true) {
-            throw new Exception("No se puede crear ZIP");
+        $fecha = trim($fecha);
+        if ($fecha === '') {
+            return '';
         }
 
-        $this->agregarArchivosAZip($zip, $sourceDir, '');
-        $zip->close();
-    }
-
-    /**
-     * Agregar archivos a ZIP recursivamente
-     */
-    private function agregarArchivosAZip(ZipArchive $zip, string $dir, string $baseDir): void
-    {
-        $items = scandir($dir);
-        foreach ($items as $item) {
-            if ($item === '.' || $item === '..') continue;
-            
-            $path = "{$dir}/{$item}";
-            $zipPath = $baseDir ? "{$baseDir}/{$item}" : $item;
-            
-            if (is_dir($path)) {
-                $zip->addEmptyDir($zipPath);
-                $this->agregarArchivosAZip($zip, $path, $zipPath);
-            } else {
-                $zip->addFile($path, $zipPath);
-            }
+        $timestamp = strtotime($fecha);
+        if ($timestamp === false) {
+            return $fecha;
         }
-    }
 
-    /**
-     * Eliminar directorio recursivamente
-     */
-    private function eliminarDirectorio(string $dir): void
-    {
-        if (!is_dir($dir)) return;
-        
-        $items = scandir($dir);
-        foreach ($items as $item) {
-            if ($item === '.' || $item === '..') continue;
-            
-            $path = "{$dir}/{$item}";
-            if (is_dir($path)) {
-                $this->eliminarDirectorio($path);
-            } else {
-                unlink($path);
-            }
-        }
-        rmdir($dir);
+        $meses = [
+            1 => 'enero',
+            2 => 'febrero',
+            3 => 'marzo',
+            4 => 'abril',
+            5 => 'mayo',
+            6 => 'junio',
+            7 => 'julio',
+            8 => 'agosto',
+            9 => 'septiembre',
+            10 => 'octubre',
+            11 => 'noviembre',
+            12 => 'diciembre',
+        ];
+
+        $dia = (int)date('j', $timestamp);
+        $mes = (int)date('n', $timestamp);
+        $anio = date('Y', $timestamp);
+
+        return $dia . ' de ' . ($meses[$mes] ?? date('F', $timestamp)) . ' de ' . $anio;
     }
 }

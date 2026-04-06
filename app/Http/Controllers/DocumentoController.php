@@ -488,11 +488,12 @@ class DocumentoController extends Controller
     public function enviar_dpa(Request $form){
         $form->validate([
             'cod_fun' => 'required|integer',
-            'pdf_control' => 'nullable|file|mimes:pdf|max:5120',
+            'pdf_control' => 'required|file|mimes:pdf|max:5120',
             'documentos_envio' => 'required|array|min:1',
             'documentos_envio.*' => 'integer',
             'confirmar_envio' => 'required|accepted',
         ],[
+            'pdf_control.required' => 'Debe cargar el PDF de control.',
             'pdf_control.mimes' => 'El archivo debe estar en formato PDF.',
             'pdf_control.max' => 'El PDF no debe superar los 5MB.',
             'documentos_envio.required' => 'Debe seleccionar al menos un diploma o titulo para el envio.',
@@ -566,6 +567,13 @@ class DocumentoController extends Controller
         }
         $funcionario->save();
 
+        // Limpiar temporal luego de registrar envio
+        $pdfTemporal = session('pdf_dpa_temp');
+        if($pdfTemporal && !empty($pdfTemporal['ruta']) && file_exists($pdfTemporal['ruta'])){
+            @unlink($pdfTemporal['ruta']);
+        }
+        session()->forget('pdf_dpa_temp');
+
         \Session::flash('exito','Se registró el envio a la DPA correctamente.');
         return redirect('listar documentos funcionario/'.$funcionario->cod_fun);
     }
@@ -607,10 +615,32 @@ class DocumentoController extends Controller
                 'cod_fun' => 'required|integer',
                 'documentos_envio' => 'required|array|min:1',
                 'documentos_envio.*' => 'integer',
+                'fecha' => 'required|string|max:60',
+                'ref' => 'required|string|max:255',
+                'sidoc' => 'required|string|max:255',
+                'trato' => 'required|string|max:255',
+                'nombre_destinatario' => 'required|string|max:255',
+                'cargo_destinatario' => 'required|string|max:255',
+                'estado_destinatario' => 'required|string|max:255',
+                'asunto' => 'required|string|max:500',
+                'saludo' => 'required|string|max:500',
+                'texto_principal' => 'required|string|max:4000',
+                'despedida' => 'required|string|max:500',
             ], [
                 'cod_fun.required' => 'El funcionario es requerido',
                 'documentos_envio.required' => 'Debe seleccionar al menos un documento',
                 'documentos_envio.min' => 'Debe seleccionar al menos un documento',
+                'fecha.required' => 'La fecha es requerida',
+                'ref.required' => 'La referencia es requerida',
+                'sidoc.required' => 'El sidoc es requerido',
+                'trato.required' => 'El trato es requerido',
+                'nombre_destinatario.required' => 'El nombre del destinatario es requerido',
+                'cargo_destinatario.required' => 'El cargo del destinatario es requerido',
+                'estado_destinatario.required' => 'El estado del destinatario es requerido',
+                'asunto.required' => 'El asunto es requerido',
+                'saludo.required' => 'El saludo es requerido',
+                'texto_principal.required' => 'El texto principal es requerido',
+                'despedida.required' => 'La despedida es requerida',
             ]);
 
             $funcionario = Funcionario::find($request->cod_fun);
@@ -621,7 +651,21 @@ class DocumentoController extends Controller
             \Log::info("generar_pdf_dpa: Funcionario encontrado: " . $funcionario->fun_nombre . " (tipo: " . $funcionario->fun_doc_adm . ")");
 
             $service = new GenerarPDFDpaXMLService();
-            $rutaPDF = $service->generarPDF($funcionario, $request->documentos_envio, $funcionario->fun_doc_adm);
+            $datosCarta = $request->only([
+                'fecha',
+                'ref',
+                'sidoc',
+                'trato',
+                'nombre_destinatario',
+                'cargo_destinatario',
+                'estado_destinatario',
+                'asunto',
+                'saludo',
+                'texto_principal',
+                'despedida',
+            ]);
+
+            $rutaPDF = $service->generarPDF($funcionario, $request->documentos_envio, $funcionario->fun_doc_adm, $datosCarta);
             
             \Log::info("generar_pdf_dpa: PDF generado en: {$rutaPDF}");
 
@@ -635,6 +679,8 @@ class DocumentoController extends Controller
                 'ruta' => $rutaPDF,
                 'archivo' => basename($rutaPDF),
                 'cod_fun' => $funcionario->cod_fun,
+                'documentos_envio' => $request->documentos_envio,
+                'datos_carta' => $datosCarta,
                 'timestamp' => time()
             ]]);
 
@@ -668,12 +714,9 @@ class DocumentoController extends Controller
 
         \Log::info('ver_pdf_temporal_dpa: Sirviendo documento desde: ' . $pdfInfo['ruta']);
 
-        // Limpiar sesión
-        session()->forget('pdf_dpa_temp');
-
         return response()->file($pdfInfo['ruta'], [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'Content-Disposition' => 'inline; filename="dpa-documentos.docx"'
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="dpa-documentos.pdf"'
         ]);
     }
 

@@ -72,7 +72,7 @@
                                                         <input type="hidden" name="co" value="{{$o->cod_od}}">
                                                     </form>
                                                     <div class=float-right>
-                                                        <button class="btn btn-sm btn-primary" onclick="enviar('formObs{{$i}}','{{url('g_obs_documento')}}','panel_documento', true)">Guardar</button>
+                                                        <button class="btn btn-sm btn-primary" onclick="enviar('formObs{{$i}}','{{url('g_obs_documento')}}','panel_documento', false)">Guardar</button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -121,7 +121,7 @@
                         <input type="hidden" name="cd" value="{{$documento->cod_doc}}">
                     </form>
                     <div class=float-right>
-                        <button class="btn btn-sm btn-primary" onclick="enviar('formObs','{{url('g_obs_documento')}}','panel_documento', true)">Guardar</button>
+                        <button class="btn btn-sm btn-primary" onclick="enviar('formObs','{{url('g_obs_documento')}}','panel_documento', false)">Guardar</button>
                     </div>
                 </div>
             @endcan
