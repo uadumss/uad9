@@ -54,6 +54,7 @@ Route::group(['middleware'=>['permission:acceder al sistema - dya']],function(){
     // =======================CONFORMIDAD
     Route::get('buscar-funcionarios',[FuncionarioController::class,'buscar_funcionarios']);
     Route::post('guardar-conformidad',[FuncionarioController::class,'guardar_conformidad']);
+    Route::get('l_conformidad/{cod_fun}',[FuncionarioController::class,'l_conformidad']);
     //
     
     // =======================UNIVERSIDADES

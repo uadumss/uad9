@@ -196,8 +196,24 @@ class DocumentoController extends Controller
                 $nombreArchivoPdf = 'documento-temp-' . date('Y-m-d_H-i-s') . '-' . $nombreOriginal . '.' . $extension;
             }
             
+            $codFcon = null;
+            if ($form->has('cf')) {
+                $startTime = session('conformidad_start_time_' . $form['cf']);
+                if ($startTime) {
+                    $formulario = DB::table('doc_adm.formularios_conformidad')
+                        ->where('cod_fun', $form['cf'])
+                        ->where('created_at', '>=', $startTime)
+                        ->orderByDesc('cod_fcon')
+                        ->first();
+                    if ($formulario) {
+                        $codFcon = $formulario->cod_fcon;
+                    }
+                }
+            }
+
             $documento=Documento::create([
                 'cod_fun'=>$form['cf'],
+                'cod_fcon'=>$codFcon,
                 'doc_titulo'=>$form['titulo'],
                 'doc_tipo'=>$form['tipo'],
                 'doc_gestion'=>$form['gestion'],
@@ -235,7 +251,7 @@ class DocumentoController extends Controller
             
             \Session::flash('exito','Se ha creado exitosamente el documento');
         }
-        return redirect('listar documentos funcionario/'.$form['cf']);
+        return redirect('l_conformidad/'.$form['cf']);
     }
     public function fe_eli_documento($cod_d,$cod_fun){
         $documento="";
@@ -377,7 +393,7 @@ class DocumentoController extends Controller
 
                 \Session::flash('exito','Se ha guardado exitosamente el documento de titularidad');
             }
-        return redirect('listar documentos funcionario/'.$form['cf']);
+        return redirect('l_conformidad/'.$form['cf']);
     }
     public function fe_eli_titularidad($cod_dt,$cod_fun){
         $titularidad="";

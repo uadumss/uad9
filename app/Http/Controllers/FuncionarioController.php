@@ -684,21 +684,83 @@ class FuncionarioController extends Controller
      */
     public function guardar_conformidad(Request $request)
     {
+        $request->validate([
+            'cod_fun' => 'required|integer',
+            'lugarTrabajo' => 'required|string|max:255',
+            'carrera' => 'required|string|max:255',
+            'observaciones' => 'nullable|string',
+        ]);
+
         $codFun = $request->input('cod_fun');
         $observaciones = $request->input('observaciones', '');
-
-        if (!$codFun) {
-            return redirect()->back()->with('error', 'Debe seleccionar un funcionario');
-        }
+        $lugarTrabajo = $request->input('lugarTrabajo');
+        $carrera = $request->input('carrera');
 
         $funcionario = Funcionario::find($codFun);
         if (!$funcionario) {
             return redirect()->back()->with('error', 'Funcionario no encontrado');
         }
 
- 
-        \Session::flash('exito', 'Formulario de conformidad registrado para: ' . $funcionario->fun_nombre);
-        
+        $startTime = session('conformidad_start_time_' . $codFun, now());
+
+        $contador = DB::table('doc_adm.formularios_conformidad')
+            ->where('cod_fun', $codFun)
+            ->count() + 1;
+
+        $codigo = 'FCON-' . date('Ymd') . '-' . $codFun . '-' . str_pad($contador, 3, '0', STR_PAD_LEFT);
+
+        $codFcon = DB::table('doc_adm.formularios_conformidad')->insertGetId([
+            'cod_fun' => $codFun,
+            'codigo' => $codigo,
+            'lugar_trabajo' => $lugarTrabajo,
+            'carrera' => $carrera,
+            'observaciones' => $observaciones,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('doc_adm.documentos')
+            ->where('cod_fun', $codFun)
+            ->whereNull('cod_fcon')
+            ->where('created_at', '>=', $startTime)
+            ->update(['cod_fcon' => $codFcon]);
+
+        \Session::flash('exito', 'Formulario de conformidad guardado correctamente.');
         return redirect()->back();
+    }
+
+    /**
+     * Mostrar formulario de conformidad para un funcionario
+     */
+    public function l_conformidad($cod_fun)
+    {
+        $funcionario = Funcionario::find($cod_fun);
+        if (!$funcionario) {
+            return redirect()->back()->with('error', 'Funcionario no encontrado');
+        }
+        $startTime = session('conformidad_start_time_' . $cod_fun, now());
+        session(['conformidad_start_time_' . $cod_fun => $startTime]);
+
+        $titularidades = DB::table('doc_adm.titularidads')
+            ->leftJoin('carreras','titularidads.cod_car','=','carreras.cod_car')
+            ->leftJoin('facultads','carreras.cod_fac','=','facultads.cod_fac')
+            ->select('titularidads.*','car_nombre','fac_nombre','fac_abreviacion')
+            ->where('cod_fun','=',$cod_fun)
+            ->where('titularidads.created_at', '>=', $startTime)
+            ->get();
+        $documentos = Documento::where('cod_fun','=',$cod_fun)
+            ->where('created_at', '>=', $startTime)
+            ->orderBy('doc_tipo')->get();
+        $pendingObsDocIds = DB::table('doc_adm.d_observacions as o')
+            ->join('doc_adm.documentos as d', 'o.cod_doc', '=', 'd.cod_doc')
+            ->where('d.cod_fun', '=', $cod_fun)
+            ->where(function($query){
+                $query->whereNull('o.od_solucion')
+                    ->orWhereRaw("TRIM(o.od_solucion) = ''");
+            })
+            ->pluck('o.cod_doc')
+            ->unique()
+            ->toArray();
+        return view('funcionario.documento.l_conformidad', compact('funcionario', 'titularidades', 'documentos', 'pendingObsDocIds', 'cod_fun'));
     }
 }

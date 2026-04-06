@@ -326,3 +326,24 @@
         </div>
     </div>
 </form>
+
+<script>
+$('#form_importar').on('submit', function(e) {
+    e.preventDefault();
+    var formData = new FormData(this);
+    $.ajax({
+        url: '{{url("g_documento/")}}',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            $('#documento').modal('hide');
+            location.reload();
+        },
+        error: function(xhr) {
+            alert('Error al guardar el documento');
+        }
+    });
+});
+</script>
