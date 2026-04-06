@@ -9,6 +9,7 @@ use App\Models\D_observacion;
 use App\Models\Documento;
 use App\Models\Funcionario;
 use App\Models\Titularidad;
+use App\Services\GenerarPDFDpaXMLService;
 use Illuminate\Http\Request;
 
 
@@ -487,12 +488,11 @@ class DocumentoController extends Controller
     public function enviar_dpa(Request $form){
         $form->validate([
             'cod_fun' => 'required|integer',
-            'pdf_control' => 'required|file|mimes:pdf|max:5120',
+            'pdf_control' => 'nullable|file|mimes:pdf|max:5120',
             'documentos_envio' => 'required|array|min:1',
             'documentos_envio.*' => 'integer',
             'confirmar_envio' => 'required|accepted',
         ],[
-            'pdf_control.required' => 'Debe adjuntar el PDF de control de envio.',
             'pdf_control.mimes' => 'El archivo debe estar en formato PDF.',
             'pdf_control.max' => 'El PDF no debe superar los 5MB.',
             'documentos_envio.required' => 'Debe seleccionar al menos un diploma o titulo para el envio.',
@@ -513,8 +513,6 @@ class DocumentoController extends Controller
             return redirect()->back()->with('error','No se encontraron documentos validos para el envio a la DPA.');
         }
 
-
-
         $conEnvioPrevio = $documentosSeleccionados->first(function($doc){
             return $this->isTrueFlag($doc->doc_enviado_dpa);
         });
@@ -527,10 +525,15 @@ class DocumentoController extends Controller
             Storage::disk('public')->makeDirectory($ruta);
         }
 
-        $nombreOriginal = pathinfo($form->file('pdf_control')->getClientOriginalName(), PATHINFO_FILENAME);
-        $extension = $form->file('pdf_control')->getClientOriginalExtension();
-        $nombreArchivo = 'envio-dpa-' . $funcionario->cod_fun . '-' . date('Y-m-d_H-i-s') . '-' . $nombreOriginal . '.' . $extension;
-        Storage::disk('public')->putFileAs($ruta, $form->file('pdf_control'), $nombreArchivo);
+        // Manejar PDF: puede ser cargado o generado
+        $nombreArchivo = '';
+        if($form->hasFile('pdf_control')){
+            // PDF cargado manualmente
+            $nombreOriginal = pathinfo($form->file('pdf_control')->getClientOriginalName(), PATHINFO_FILENAME);
+            $extension = $form->file('pdf_control')->getClientOriginalExtension();
+            $nombreArchivo = 'envio-dpa-' . $funcionario->cod_fun . '-' . date('Y-m-d_H-i-s') . '-' . $nombreOriginal . '.' . $extension;
+            Storage::disk('public')->putFileAs($ruta, $form->file('pdf_control'), $nombreArchivo);
+        }
 
         $documentosSeleccionados = $documentosSeleccionados->pluck('cod_doc')->toArray();
 
@@ -557,7 +560,9 @@ class DocumentoController extends Controller
 
         if(!$funcionario->fun_env_dpa){
             $funcionario->fun_env_dpa = true;
-            $funcionario->fun_pdf_env_dpa = $nombreArchivo;
+            if($nombreArchivo){
+                $funcionario->fun_pdf_env_dpa = $nombreArchivo;
+            }
         }
         $funcionario->save();
 
@@ -591,6 +596,85 @@ class DocumentoController extends Controller
         }
 
         return response()->download($rutaArchivo, $envio->env_pdf_control);
+    }
+
+    /**
+     * Generar PDF dinámicamente para envío a DPA
+     */
+    public function generar_pdf_dpa(Request $request){
+        try {
+            $request->validate([
+                'cod_fun' => 'required|integer',
+                'documentos_envio' => 'required|array|min:1',
+                'documentos_envio.*' => 'integer',
+            ], [
+                'cod_fun.required' => 'El funcionario es requerido',
+                'documentos_envio.required' => 'Debe seleccionar al menos un documento',
+                'documentos_envio.min' => 'Debe seleccionar al menos un documento',
+            ]);
+
+            $funcionario = Funcionario::find($request->cod_fun);
+            if(!$funcionario){
+                return response()->json(['error' => 'No se encontró el funcionario'], 404);
+            }
+
+            \Log::info("generar_pdf_dpa: Funcionario encontrado: " . $funcionario->fun_nombre . " (tipo: " . $funcionario->fun_doc_adm . ")");
+
+            $service = new GenerarPDFDpaXMLService();
+            $rutaPDF = $service->generarPDF($funcionario, $request->documentos_envio, $funcionario->fun_doc_adm);
+            
+            \Log::info("generar_pdf_dpa: PDF generado en: {$rutaPDF}");
+
+            // Verificar que el archivo fue creado
+            if (!file_exists($rutaPDF)) {
+                throw new \Exception('El archivo PDF no se creó correctamente');
+            }
+
+            // Guardar información temporal en sesión para acceso posterior
+            session(['pdf_dpa_temp' => [
+                'ruta' => $rutaPDF,
+                'archivo' => basename($rutaPDF),
+                'cod_fun' => $funcionario->cod_fun,
+                'timestamp' => time()
+            ]]);
+
+            return response()->json([
+                'success' => true,
+                'url' => route('ver.pdf.temporal.dpa')
+            ]);
+        } catch (\Exception $e) {
+            \Log::error("generar_pdf_dpa ERROR: " . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Mostrar documento temporal generado (DOCX)
+     */
+    public function ver_pdf_temporal_dpa(){
+        $pdfInfo = session('pdf_dpa_temp');
+        
+        \Log::info('ver_pdf_temporal_dpa: Intentando acceder a documento', ['pdfInfo' => $pdfInfo]);
+        
+        if(!$pdfInfo){
+            \Log::warning('ver_pdf_temporal_dpa: No hay documento en sesión');
+            return redirect()->back()->with('error','El documento no se encontró o ha expirado.');
+        }
+
+        if(!file_exists($pdfInfo['ruta'])){
+            \Log::warning('ver_pdf_temporal_dpa: Archivo no existe en: ' . $pdfInfo['ruta']);
+            return redirect()->back()->with('error','El archivo no se encuentra.');
+        }
+
+        \Log::info('ver_pdf_temporal_dpa: Sirviendo documento desde: ' . $pdfInfo['ruta']);
+
+        // Limpiar sesión
+        session()->forget('pdf_dpa_temp');
+
+        return response()->file($pdfInfo['ruta'], [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition' => 'inline; filename="dpa-documentos.docx"'
+        ]);
     }
 
     public function importar_docente(Request $form){
