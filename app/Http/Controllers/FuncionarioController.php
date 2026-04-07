@@ -6,6 +6,7 @@ use App\Exports\ExportFuncionarioConsulta;
 use App\Helpers\UniversidadHelper;
 use App\Models\Carrera;
 use App\Models\Documento;
+use App\Models\FormularioConformidad;
 use App\Models\Funcionario;
 use App\Models\Nacionalidad;
 use App\Models\Titularidad;
@@ -717,7 +718,7 @@ class FuncionarioController extends Controller
             'observaciones' => $observaciones,
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ], 'cod_fcon');
 
         DB::table('doc_adm.documentos')
             ->where('cod_fun', $codFun)
@@ -725,8 +726,13 @@ class FuncionarioController extends Controller
             ->where('created_at', '>=', $startTime)
             ->update(['cod_fcon' => $codFcon]);
 
+        $backUrl = $request->input('back_url');
+        if (!$backUrl || $backUrl === url('guardar-conformidad') || str_contains($backUrl, 'guardar-conformidad')) {
+            $backUrl = url('listar funcionario/' . ($funcionario->fun_doc_adm === 'D' ? 'docente' : 'administrativo'));
+        }
+
         \Session::flash('exito', 'Formulario de conformidad guardado correctamente.');
-        return redirect()->back();
+        return redirect($backUrl);
     }
 
     /**
@@ -761,6 +767,17 @@ class FuncionarioController extends Controller
             ->pluck('o.cod_doc')
             ->unique()
             ->toArray();
-        return view('funcionario.documento.l_conformidad', compact('funcionario', 'titularidades', 'documentos', 'pendingObsDocIds', 'cod_fun'));
+
+        $formularios = FormularioConformidad::with(['documentos'])
+            ->where('cod_fun', $cod_fun)
+            ->orderByDesc('created_at')
+            ->get();
+
+        $backUrl = url()->previous();
+        if ($backUrl === url('l_conformidad/'.$cod_fun) || str_contains($backUrl, 'guardar-conformidad')) {
+            $backUrl = url('listar funcionario/' . ($funcionario->fun_doc_adm === 'D' ? 'docente' : 'administrativo'));
+        }
+
+        return view('funcionario.documento.l_conformidad', compact('funcionario', 'titularidades', 'documentos', 'pendingObsDocIds', 'cod_fun', 'backUrl', 'formularios'));
     }
 }

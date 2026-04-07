@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Documento;
 
 class FormularioConformidad extends Model
 {
@@ -21,4 +22,9 @@ class FormularioConformidad extends Model
         'carrera',
         'observaciones',
     ];
+
+    public function documentos()
+    {
+        return $this->hasMany(Documento::class, 'cod_fcon', 'cod_fcon');
+    }
 }

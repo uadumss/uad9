@@ -71,6 +71,7 @@
                                 <form id="formConformidad" method="POST" action="{{ url('guardar-conformidad') }}">
                                     @csrf
                                     <input type="hidden" name="cod_fun" value="{{ $funcionario->cod_fun }}">
+                                    <input type="hidden" name="back_url" value="{{ $backUrl ?? url()->previous() }}">
                                     <div class="form-row">
                                         <div class="form-group col-md-4">
                                             <label>Nombre</label>
@@ -100,13 +101,13 @@
                                         </div>
                                         <div class="form-group col-md-6">
                                             <label>Carrera</label>
-                                            <input type="text" class="form-control" name="carrera" value="{{ old('carrera') }}" placeholder="Ingrese la carrera" required>
+                                            <input type="text" class="form-control" id="carrera" name="carrera" value="{{ old('carrera') }}" placeholder="Ingrese la carrera" required>
                                         </div>
                                     </div>
                                     <div class="form-row">
                                         <div class="form-group col-md-12">
                                             <label>Observaciones</label>
-                                            <textarea class="form-control" name="observaciones" rows="2">{{ old('observaciones', '') }}</textarea>
+                                            <textarea class="form-control" id="observaciones" name="observaciones" rows="2">{{ old('observaciones', '') }}</textarea>
                                         </div>
                                     </div>
                                     <div class="form-row mt-3">
@@ -213,7 +214,53 @@
                                         <?php $j++;?>
                                     @endforeach
                                     </tbody>
-                                </table>    
+                                </table>
+                                
+                                <div class="bg-primary centrar_bloque p-1 col-md-3 rounded shadow mt-4">
+                                    <h5 class="text-white text-center">Formularios de Conformidad</h5>
+                                </div>
+                                <div class="card mt-3">
+                                    <div class="card-body">
+                                        @if(isset($documentos) && count($documentos) > 0)
+                                            <table class="table table-sm table-hover" width="100%" cellspacing="0" style="font-size: 0.85em" id="tablaFormularios">
+                                                <thead>
+                                                    <tr class="bg-gray-600 text-white">
+                                                        <th>Código</th>
+                                                        <th>Fecha</th>
+                                                        <th>Lugar Trabajo</th>
+                                                        <th>Carrera</th>
+                                                        <th>Observaciones</th>
+                                                        <th>Documentos asociados</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($formularios as $formulario)
+                                                        <tr>
+                                                            <td>{{ $formulario->codigo }}</td>
+                                                            <td>{{ $formulario->created_at ? date('d/m/Y H:i', strtotime($formulario->created_at)) : '' }}</td>
+                                                            <td>{{ $formulario->lugar_trabajo }}</td>
+                                                            <td>{{ $formulario->carrera }}</td>
+                                                            <td>{{ $formulario->observaciones }}</td>
+                                                            <td>
+                                                                @if($formulario->documentos->count() > 0)
+                                                                    <ul class="pl-3 mb-0">
+                                                                        @foreach($formulario->documentos as $doc)
+                                                                            <li>{{ $doc->doc_tipo }} - {{ $doc->doc_titulo }}</li>
+                                                                        @endforeach
+                                                                    </ul>
+                                                                @else
+                                                                    <span class="text-muted">Sin documentos</span>
+                                                                @endif
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        @else
+                                            <div class="alert alert-info mb-0">No hay formularios de conformidad registrados para este funcionario.</div>
+                                        @endif
+                                    </div>
+                                </div>
                     </div>
                 </div>
             </div>
@@ -295,6 +342,74 @@ function cargarDatos(ruta,panel){
         }
     });
 }
+
+// Función para guardar el estado del formulario en localStorage
+function saveFormState() {
+    const lugarTrabajo = document.getElementById('lugarTrabajo').value;
+    const carrera = document.getElementById('carrera').value;
+    const observaciones = document.getElementById('observaciones').value;
+    
+    localStorage.setItem('conformidad_lugarTrabajo', lugarTrabajo);
+    localStorage.setItem('conformidad_carrera', carrera);
+    localStorage.setItem('conformidad_observaciones', observaciones);
+}
+
+// Función para restaurar el estado del formulario desde localStorage
+function restoreFormState() {
+    // Restaurar solo si los campos están vacíos
+    const lugarTrabajoEl = document.getElementById('lugarTrabajo');
+    if (!lugarTrabajoEl.value) {
+        const lugarTrabajo = localStorage.getItem('conformidad_lugarTrabajo');
+        if (lugarTrabajo) {
+            lugarTrabajoEl.value = lugarTrabajo;
+        }
+    }
+    const carreraEl = document.getElementById('carrera');
+    if (!carreraEl.value) {
+        const carrera = localStorage.getItem('conformidad_carrera');
+        if (carrera) {
+            carreraEl.value = carrera;
+        }
+    }
+    const observacionesEl = document.getElementById('observaciones');
+    if (!observacionesEl.value) {
+        const observaciones = localStorage.getItem('conformidad_observaciones');
+        if (observaciones) {
+            observacionesEl.value = observaciones;
+        }
+    }
+}
+
+// Función para limpiar localStorage al enviar el formulario
+function clearFormState() {
+    localStorage.removeItem('conformidad_lugarTrabajo');
+    localStorage.removeItem('conformidad_carrera');
+    localStorage.removeItem('conformidad_observaciones');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Restaurar estado al cargar la página
+    restoreFormState();
+    
+    // Limpiar estado si el formulario se guardó exitosamente
+    if ({{ Session::has('exito') ? 'true' : 'false' }}) {
+        clearFormState();
+    }
+    
+    // Guardar estado al cambiar los campos
+    document.getElementById('lugarTrabajo').addEventListener('change', saveFormState);
+    document.getElementById('carrera').addEventListener('input', saveFormState);
+    document.getElementById('observaciones').addEventListener('input', saveFormState);
+    
+    // Limpiar estado al enviar el formulario (solo si se envía, pero no si hay errores)
+    // Nota: La limpieza se hace solo si hay éxito, arriba
+    
+    // También guardar antes de abrir el modal
+    const buttons = document.querySelectorAll('[data-target="#documento"]');
+    buttons.forEach(button => {
+        button.addEventListener('click', saveFormState);
+    });
+});
 </script>
 
 @can('acceder al sistema - dya')

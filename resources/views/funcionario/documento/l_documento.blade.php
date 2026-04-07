@@ -314,6 +314,51 @@
                                 @else
                                     <div class="alert alert-info mt-3 mb-0">No hay envios registrados a la DPA para este funcionario.</div>
                                 @endif
+                                <div class="bg-primary centrar_bloque p-1 col-md-3 rounded shadow mt-4">
+                                    <h5 class="text-white text-center">Formularios de Conformidad</h5>
+                                </div>
+                                <div class="card mt-3">
+                                    <div class="card-body">
+                                        @if(isset($formularios) && $formularios->count() > 0)
+                                            <table class="table table-sm table-hover" width="100%" cellspacing="0" style="font-size: 0.85em" id="tablaFormularios">
+                                                <thead>
+                                                    <tr class="bg-gray-600 text-white">
+                                                        <th>Código</th>
+                                                        <th>Fecha</th>
+                                                        <th>Lugar Trabajo</th>
+                                                        <th>Carrera</th>
+                                                        <th>Observaciones</th>
+                                                        <th>Documentos asociados</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($formularios as $formulario)
+                                                        <tr>
+                                                            <td>{{ $formulario->codigo }}</td>
+                                                            <td>{{ $formulario->created_at ? date('d/m/Y H:i', strtotime($formulario->created_at)) : '' }}</td>
+                                                            <td>{{ $formulario->lugar_trabajo }}</td>
+                                                            <td>{{ $formulario->carrera }}</td>
+                                                            <td>{{ $formulario->observaciones }}</td>
+                                                            <td>
+                                                                @if($formulario->documentos->count() > 0)
+                                                                    <ul class="pl-3 mb-0">
+                                                                        @foreach($formulario->documentos as $doc)
+                                                                            <li>{{ $doc->doc_tipo }} - {{ $doc->doc_titulo }}</li>
+                                                                        @endforeach
+                                                                    </ul>
+                                                                @else
+                                                                    <span class="text-muted">Sin documentos</span>
+                                                                @endif
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        @else
+                                            <div class="alert alert-info mb-0">No hay formularios de conformidad registrados para este funcionario.</div>
+                                        @endif
+                                    </div>
+                                </div>
                     </div>
                 </div>
             </div>

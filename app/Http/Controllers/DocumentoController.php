@@ -462,7 +462,7 @@ class DocumentoController extends Controller
     private function verifyRequiredDocuments($cod_fun, $funcionario){
         $required = $this->getRequiredDocuments($funcionario);
         $documentos = Documento::where('cod_fun', '=', $cod_fun)->get();
-
+        
         foreach($required as $req){
             if(isset($req['type'])){
                 $found = $documentos->filter(function($doc) use ($req){
