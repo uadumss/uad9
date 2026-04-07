@@ -9,7 +9,7 @@ class Documento extends Model
 {
     use HasFactory;
     protected $fillable=['cod_fun','doc_titulo','doc_tipo','doc_gestion','doc_fecha_emision','doc_universidad','doc_verificado','doc_legalizado',
-                        'doc_edu_superior','doc_numero_revalida','doc_umss','doc_extranjero','doc_obs','doc_grado','doc_pdf','doc_enviado_dpa','doc_numero_registro'];
+                        'doc_edu_superior','doc_numero_revalida','doc_umss','doc_extranjero','doc_obs','doc_grado','doc_pdf','doc_enviado_dpa','doc_numero_registro','doc_tesis_titulo','doc_tesis'];
     protected $primaryKey='cod_doc';
     protected $table='doc_adm.documentos';
 }
