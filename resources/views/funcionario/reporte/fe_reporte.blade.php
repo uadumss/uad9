@@ -246,12 +246,10 @@
                                     <button class="btn btn-outline-secondary btn-sm" type="button" id="btn_reset_todos_documentos">
                                         <i class="fas fa-times"></i> Limpiar Todo
                                     </button>
+                                    <button class="btn btn-outline-info btn-sm" type="button" data-toggle="modal" data-target="#instruccionesModal">
+                                        <i class="fas fa-question-circle"></i> Instrucciones
+                                    </button>
                                 </div>
-                                <div class="alert alert-info mb-0" role="alert">
-                                    <small><strong>Cómo usar:</strong> Elige un filtro del dropdown y haz clic en "Añadir Filtro". La tarjeta aparecerá abajo. Puedes añadir múltiples filtros, pero solo funcionarán los que estén visibles. Cierra un filtro haciendo clic en la X de su tarjeta.</small>
-                                </div>
-                            </div>
-                        </div>
 
                         <div class="card border-0 shadow-sm mb-3">
                             <div class="card-body">
@@ -515,5 +513,75 @@
 
         // Inicializar display
         updateFiltrosDisplay();
+
+        // Manejo del modal de instrucciones
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mover el modal al body para evitar problemas de overflow
+            const modal = document.getElementById('instruccionesModal');
+            if (modal) {
+                document.body.appendChild(modal);
+            }
+        });
     </script>
+
+    <!-- Modal de Instrucciones -->
+    <div class="modal fade" id="instruccionesModal" tabindex="-1" role="dialog" aria-labelledby="instruccionesModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title" id="instruccionesModalLabel">
+                        <i class="fas fa-lightbulb"></i> Instrucciones de Uso
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    <h6><strong>Cómo usar correctamente:</strong></h6>
+                    
+                    <div style="margin-top: 15px; margin-bottom: 15px;">
+                        <strong style="color: #0c5460;">✓ DEBES HACER:</strong>
+                        <ul class="mb-2 pl-3">
+                            <li>Selecciona <strong>UN SOLO</strong> filtro de documento a la vez</li>
+                            <li>Si necesitas cambiar de filtro, cierra el actual con la X antes de abrir otro</li>
+                            <li>Los filtros de tipo de funcionario, folder y estado de carpeta siempre se pueden usar juntos</li>
+                            <li>Configura las opciones (Legalizado, Verificado, UMSS, etc.) antes de generar el reporte</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-top: 15px; margin-bottom: 15px;">
+                        <strong style="color: #721c24;">✗ NO HAGAS:</strong>
+                        <ul class="mb-2 pl-3">
+                            <li>NO abras múltiples filtros de documento simultáneamente</li>
+                            <li>NO combines "Bachiller" con "Maestría" en filtros abiertos a la vez</li>
+                            <li>NO uses dos filtros de documento aunque sean del mismo tipo</li>
+                        </ul>
+                    </div>
+
+                    <div style="background-color: #fff3cd; padding: 12px; border-radius: 4px; border-left: 4px solid #ffc107; margin-bottom: 15px;">
+                        <strong style="color: #856404;"><i class="fas fa-exclamation-triangle"></i> ¿Qué pasa si usas múltiples filtros?</strong>
+                        <ul class="mb-0 pl-3 mt-2" style="color: #856404;">
+                            <li>Los criterios entran en <strong>contradicción</strong> lógica</li>
+                            <li>El sistema busca funcionarios que cumplan TODOS los criterios simultáneamente</li>
+                            <li>Si pones "Bachiller CON" y "Maestría CON" no hay funcionarios con AMBOS a la vez</li>
+                            <li><strong>Resultado: No aparece ningún reporte o solo aparecen datos vacíos</strong></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <strong style="color: #155724;"><i class="fas fa-thumbs-up"></i> Consejo final:</strong>
+                        <ul class="mb-0 pl-3 mt-2" style="color: #155724;">
+                            <li>Usa un filtro de documento a la vez para obtener resultados precisos</li>
+                            <li>Combina ese filtro con tipo de funcionario y estado de carpeta para refinar tu búsqueda</li>
+                            <li>Si quieres comparar entre tipos de documento, haz varias consultas separadas</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 @endsection
