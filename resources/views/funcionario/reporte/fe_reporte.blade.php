@@ -141,7 +141,13 @@
                     </div>
 
                     <div class="help-strip mb-3">
-                        <strong>Como usar:</strong> selecciona primero el tipo de funcionario y folder. Luego, en cada documento, elige si debe existir o no y opcionalmente su estado legalizado/verificado/UMSS.
+                        <strong>Como usar:</strong> 
+                        <ul class="mb-0 pl-3 mt-2">
+                            <li>Primero: selecciona tipo de funcionario, folder y estado de carpeta (estos siempre están disponibles)</li>
+                            <li>Luego: escoge <strong>solo uno</strong> de los filtros de documento o usa "Solo Tesis" para búsquedas rápidas</li>
+                            <li>En el filtro elegido, define si debe existir y sus estados (legalizado, verificado, UMSS, tesis)</li>
+                            <li>Alternativamente, usa los presets para búsquedas predefinidas (sin activar filtros de documento)</li>
+                        </ul>
                     </div>
 
                     <div class="card border-0 shadow-sm mb-3">
@@ -208,69 +214,54 @@
 
                         @php
                             $filtros = [
-                                ['titulo' => 'Bachiller', 'con' => 'bachiller', 'sin' => 'nobachiller', 'l_si' => 'lbachiller', 'l_no' => 'nlbachiller', 'v_si' => 'vbachiller', 'v_no' => 'nvbachiller', 'u_si' => 'ubachiller', 'u_no' => 'nubachiller'],
-                                ['titulo' => 'Tecnico medio', 'con' => 'tmedio', 'sin' => 'notmedio', 'l_si' => 'ltmedio', 'l_no' => 'nltmedio', 'v_si' => 'vtmedio', 'v_no' => 'nvtmedio', 'u_si' => 'utmedio', 'u_no' => 'nutmedio'],
-                                ['titulo' => 'Tecnico superior', 'con' => 'tsuperior', 'sin' => 'notsuperior', 'l_si' => 'ltsuperior', 'l_no' => 'nltsuperior', 'v_si' => 'vtsuperior', 'v_no' => 'nvtsuperior', 'u_si' => 'utsuperior', 'u_no' => 'nutsuperior'],
-                                ['titulo' => 'Diploma academico', 'con' => 'academico', 'sin' => 'noacademico', 'l_si' => 'lacademico', 'l_no' => 'nlacademico', 'v_si' => 'vacademico', 'v_no' => 'nvacademico', 'u_si' => 'uacademico', 'u_no' => 'nuacademico'],
-                                ['titulo' => 'Titulo profesional', 'con' => 'profesional', 'sin' => 'noprofesional', 'l_si' => 'lprofesional', 'l_no' => 'nlprofesional', 'v_si' => 'vprofesional', 'v_no' => 'nvprofesional', 'u_si' => 'uprofesional', 'u_no' => 'nuprofesional'],
-                                ['titulo' => 'Educacion superior', 'con' => 'ddu', 'sin' => 'noddu', 'l_si' => 'lddu', 'l_no' => 'nlddu', 'v_si' => 'vddu', 'v_no' => 'nvddu', 'u_si' => 'uddu', 'u_no' => 'nuddu'],
-                                ['titulo' => 'Diplomado', 'con' => 'diplomado', 'sin' => 'nodiplomado', 'l_si' => 'ldiplomado', 'l_no' => 'nldiplomado', 'v_si' => 'vdiplomado', 'v_no' => 'nvdiplomado', 'u_si' => 'udiplomado', 'u_no' => 'nudiplomado'],
-                                ['titulo' => 'Especialidad', 'con' => 'especialidad', 'sin' => 'noespecialidad', 'l_si' => 'lespecialidad', 'l_no' => 'nlespecialidad', 'v_si' => 'vespecialidad', 'v_no' => 'nvespecialidad', 'u_si' => 'uespecialidad', 'u_no' => 'nuespecialidad'],
-                                ['titulo' => 'Maestria', 'con' => 'maestria', 'sin' => 'nomaestria', 'l_si' => 'lmaestria', 'l_no' => 'nlmaestria', 'v_si' => 'vmaestria', 'v_no' => 'nvmaestria', 'u_si' => 'umaestria', 'u_no' => 'numaestria'],
-                                ['titulo' => 'Doctorado', 'con' => 'doctorado', 'sin' => 'nodoctorado', 'l_si' => 'ldoctorado', 'l_no' => 'nldoctorado', 'v_si' => 'vdoctorado', 'v_no' => 'nvdoctorado', 'u_si' => 'udoctorado', 'u_no' => 'nudoctorado'],
+                                ['titulo' => 'Bachiller', 'con' => 'bachiller', 'sin' => 'nobachiller', 'l_si' => 'lbachiller', 'l_no' => 'nlbachiller', 'v_si' => 'vbachiller', 'v_no' => 'nvbachiller', 'u_si' => 'ubachiller', 'u_no' => 'nubachiller', 'con_umss' => false],
+                                ['titulo' => 'Tecnico medio', 'con' => 'tmedio', 'sin' => 'notmedio', 'l_si' => 'ltmedio', 'l_no' => 'nltmedio', 'v_si' => 'vtmedio', 'v_no' => 'nvtmedio', 'u_si' => 'utmedio', 'u_no' => 'nutmedio', 'con_umss' => false],
+                                ['titulo' => 'Tecnico superior', 'con' => 'tsuperior', 'sin' => 'notsuperior', 'l_si' => 'ltsuperior', 'l_no' => 'nltsuperior', 'v_si' => 'vtsuperior', 'v_no' => 'nvtsuperior', 'u_si' => 'utsuperior', 'u_no' => 'nutsuperior', 'con_umss' => false],
+                                ['titulo' => 'Diploma academico', 'con' => 'academico', 'sin' => 'noacademico', 'l_si' => 'lacademico', 'l_no' => 'nlacademico', 'v_si' => 'vacademico', 'v_no' => 'nvacademico', 'u_si' => 'uacademico', 'u_no' => 'nuacademico', 'con_umss' => false],
+                                ['titulo' => 'Titulo profesional', 'con' => 'profesional', 'sin' => 'noprofesional', 'l_si' => 'lprofesional', 'l_no' => 'nlprofesional', 'v_si' => 'vprofesional', 'v_no' => 'nvprofesional', 'u_si' => 'uprofesional', 'u_no' => 'nuprofesional', 'con_umss' => false],
+                                ['titulo' => 'Educacion superior', 'con' => 'ddu', 'sin' => 'noddu', 'l_si' => 'lddu', 'l_no' => 'nlddu', 'v_si' => 'vddu', 'v_no' => 'nvddu', 'u_si' => 'uddu', 'u_no' => 'nuddu', 't_si' => 'tddu', 't_no' => 'ntddu', 'con_umss' => true],
+                                ['titulo' => 'Diplomado', 'con' => 'diplomado', 'sin' => 'nodiplomado', 'l_si' => 'ldiplomado', 'l_no' => 'nldiplomado', 'v_si' => 'vdiplomado', 'v_no' => 'nvdiplomado', 'u_si' => 'udiplomado', 'u_no' => 'nudiplomado', 't_si' => 'tdiplomado', 't_no' => 'ntdiplomado', 'con_umss' => true],
+                                ['titulo' => 'Especialidad', 'con' => 'especialidad', 'sin' => 'noespecialidad', 'l_si' => 'lespecialidad', 'l_no' => 'nlespecialidad', 'v_si' => 'vespecialidad', 'v_no' => 'nvespecialidad', 'u_si' => 'uespecialidad', 'u_no' => 'nuespecialidad', 't_si' => 'tespecialidad', 't_no' => 'ntespecialidad', 'con_umss' => true],
+                                ['titulo' => 'Maestria', 'con' => 'maestria', 'sin' => 'nomaestria', 'l_si' => 'lmaestria', 'l_no' => 'nlmaestria', 'v_si' => 'vmaestria', 'v_no' => 'nvmaestria', 'u_si' => 'umaestria', 'u_no' => 'numaestria', 't_si' => 'tmaestria', 't_no' => 'ntmaestria', 'con_umss' => true],
+                                ['titulo' => 'Doctorado', 'con' => 'doctorado', 'sin' => 'nodoctorado', 'l_si' => 'ldoctorado', 'l_no' => 'nldoctorado', 'v_si' => 'vdoctorado', 'v_no' => 'nvdoctorado', 'u_si' => 'udoctorado', 'u_no' => 'nudoctorado', 't_si' => 'tdoctorado', 't_no' => 'ntdoctorado', 'con_umss' => true],
+                                ['titulo' => 'Solo Tesis', 'con' => 'solotesis', 'sin' => 'nosolotesis', 'l_si' => 'lsolotesis', 'l_no' => 'nlsolotesis', 'v_si' => 'vsolotesis', 'v_no' => 'nvsolotesis', 'u_si' => 'usolotesis', 'u_no' => 'nusolotesis', 'con_umss' => false, 'is_tesis_only' => true],
                             ];
                         @endphp
 
                         <div class="card border-0 shadow-sm mb-3">
                             <div class="card-body">
-                                <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
-                                    <h6 class="mb-2 mb-md-0 text-dark font-weight-bold">Filtros por tipo de documento</h6>
-                                    <div class="quick-actions">
-                                        <button class="btn btn-outline-success btn-sm" type="button" id="btn_con_todos">Con documento en todos</button>
-                                        <button class="btn btn-outline-danger btn-sm" type="button" id="btn_sin_todos">Sin documento en todos</button>
-                                        <button class="btn btn-outline-secondary btn-sm" type="button" id="btn_reset_documentos">Quitar filtro de documentos</button>
+                                <div class="d-flex flex-wrap align-items-end justify-content-between mb-3 gap-2">
+                                    <div style="flex: 1; min-width: 260px;">
+                                        <label class="font-weight-bold text-dark mb-2 d-block">Seleccionar filtro de documento</label>
+                                        <select id="select_documento_filtro" class="custom-select custom-select-sm">
+                                            <option value="">-- Elegir filtro --</option>
+                                            @foreach($filtros as $index => $filtro)
+                                                <option value="{{ $index }}">{{ $filtro['titulo'] }}</option>
+                                            @endforeach
+                                        </select>
                                     </div>
+                                    <button class="btn btn-outline-primary btn-sm" type="button" id="btn_agregar_filtro">
+                                        <i class="fas fa-plus"></i> Añadir Filtro
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" id="btn_reset_todos_documentos">
+                                        <i class="fas fa-times"></i> Limpiar Todo
+                                    </button>
                                 </div>
+                                <div class="alert alert-info mb-0" role="alert">
+                                    <small><strong>Cómo usar:</strong> Elige un filtro del dropdown y haz clic en "Añadir Filtro". La tarjeta aparecerá abajo. Puedes añadir múltiples filtros, pero solo funcionarán los que estén visibles. Cierra un filtro haciendo clic en la X de su tarjeta.</small>
+                                </div>
+                            </div>
+                        </div>
 
-                                <div class="filter-grid">
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-body">
+                                <div id="filtros_activos_container" class="filter-grid"></div>
+                                <div id="sin_filtros_mensaje" class="alert alert-secondary text-center mb-0">
+                                    <small><i class="fas fa-info-circle"></i> No hay filtros de documento activos. Selecciona uno arriba para comenzar.</small>
+                                </div>
+                            </div>
+                        </div>
                                     @foreach($filtros as $filtro)
-                                        <div class="filter-card">
-                                            <div class="filter-label">{{ $filtro['titulo'] }}</div>
-                                            <div class="form-group mb-2">
-                                                <label class="mb-1 text-muted small">Presencia del documento</label>
-                                                <select class="custom-select custom-select-sm presence-select" data-on="{{ $filtro['con'] }}" data-off="{{ $filtro['sin'] }}">
-                                                    <option value="indiferente" selected>Indiferente</option>
-                                                    <option value="con">Con documento</option>
-                                                    <option value="sin">Sin documento</option>
-                                                </select>
-                                            </div>
-                                            <div class="state-grid">
-                                                <div class="state-item">
-                                                    <label>Legalizado</label>
-                                                    <select class="custom-select custom-select-sm state-select" data-yes="{{ $filtro['l_si'] }}" data-no="{{ $filtro['l_no'] }}">
-                                                        <option value="indiferente" selected>Indiferente</option>
-                                                        <option value="si">Si</option>
-                                                        <option value="no">No</option>
-                                                    </select>
-                                                </div>
-                                                <div class="state-item">
-                                                    <label>Verificado</label>
-                                                    <select class="custom-select custom-select-sm state-select" data-yes="{{ $filtro['v_si'] }}" data-no="{{ $filtro['v_no'] }}">
-                                                        <option value="indiferente" selected>Indiferente</option>
-                                                        <option value="si">Si</option>
-                                                        <option value="no">No</option>
-                                                    </select>
-                                                </div>
-                                                <div class="state-item">
-                                                    <label>Documento UMSS</label>
-                                                    <select class="custom-select custom-select-sm state-select" data-yes="{{ $filtro['u_si'] }}" data-no="{{ $filtro['u_no'] }}">
-                                                        <option value="indiferente" selected>Indiferente</option>
-                                                        <option value="si">Si</option>
-                                                        <option value="no">No</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
 
                                         <input type="checkbox" class="hidden-check" name="{{ $filtro['con'] }}">
                                         <input type="checkbox" class="hidden-check" name="{{ $filtro['sin'] }}">
@@ -280,10 +271,13 @@
                                         <input type="checkbox" class="hidden-check" name="{{ $filtro['v_no'] }}">
                                         <input type="checkbox" class="hidden-check" name="{{ $filtro['u_si'] }}">
                                         <input type="checkbox" class="hidden-check" name="{{ $filtro['u_no'] }}">
+                                        @if(!isset($filtro['is_tesis_only']))
+                                            @if(isset($filtro['con_umss']) && $filtro['con_umss'])
+                                                <input type="checkbox" class="hidden-check" name="{{ $filtro['t_si'] }}">
+                                                <input type="checkbox" class="hidden-check" name="{{ $filtro['t_no'] }}">
+                                            @endif
+                                        @endif
                                     @endforeach
-                                </div>
-                            </div>
-                        </div>
 
                         <div class="card border-0 shadow-sm mb-2">
                             <div class="card-body d-flex flex-wrap align-items-center justify-content-between">
@@ -291,7 +285,7 @@
                                     <input type="checkbox" class="custom-control-input" name="excel" id="excel">
                                     <label class="custom-control-label text-success font-weight-bold" for="excel">Exportar resultado a Excel</label>
                                 </div>
-                                <button class="btn btn-primary btn-sm" type="button" onclick="enviar('form_reporte','{{url('procesar reporte dya')}}','panel_reporte')">
+                                <button class="btn btn-primary btn-sm" type="button" onclick="prepararFormularioParaEnvio('form_reporte','{{url('procesar reporte dya')}}','panel_reporte')">
                                     <i class="fas fa-search"></i> Generar reporte
                                 </button>
                             </div>
@@ -310,191 +304,216 @@
     </div>
 
     <script>
-        (function() {
-            function setCheckboxValue(name, enabled) {
-                var element = document.querySelector('input[type="checkbox"][name="' + name + '"]');
-                if (element) {
-                    element.checked = !!enabled;
-                }
+        // Datos de filtros disponibles
+        const filtrosData = @json($filtros);
+        const filtrosActivos = new Set(); // Rastrear qué filtros están abiertos
+
+        function renderizarFiltroCard(filtroIndex) {
+            const filtro = filtrosData[filtroIndex];
+            const uniqueId = 'filtro_' + filtro.con;
+            
+            let html = `
+                <div class="filter-card" id="${uniqueId}_container" ${filtro.is_tesis_only ? 'style="border-left: 4px solid #fd7e14; background: #fff8f5;"' : ''}>
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="filter-label">
+                            ${filtro.titulo}
+                            ${filtro.is_tesis_only ? '<span class="badge badge-warning ml-2" style="font-size: 0.65rem;">ESPECIAL</span>' : ''}
+                        </div>
+                        <button type="button" class="btn-close-filtro btn btn-sm btn-link text-danger p-0" data-filtro="${filtro.con}" title="Cerrar filtro">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    ${filtro.is_tesis_only ? '<small class="text-muted d-block mb-2">Busca documentos que sean tesis, independientemente del tipo.</small>' : ''}
+                    <div class="form-group mb-2">
+                        <label class="mb-1 text-muted small">Presencia del documento</label>
+                        <select class="custom-select custom-select-sm presence-select" data-on="${filtro.con}" data-off="${filtro.sin}" data-filtro-id="${filtroIndex}">
+                            <option value="indiferente" selected>Indiferente</option>
+                            <option value="con">Con documento</option>
+                            <option value="sin">Sin documento</option>
+                        </select>
+                    </div>
+                    <div class="state-grid">
+                        <div class="state-item">
+                            <label>Legalizado</label>
+                            <select class="custom-select custom-select-sm state-select" data-yes="${filtro.l_si}" data-no="${filtro.l_no}" data-filtro-id="${filtroIndex}">
+                                <option value="indiferente" selected>Indiferente</option>
+                                <option value="si">Si</option>
+                                <option value="no">No</option>
+                            </select>
+                        </div>
+                        <div class="state-item">
+                            <label>Verificado</label>
+                            <select class="custom-select custom-select-sm state-select" data-yes="${filtro.v_si}" data-no="${filtro.v_no}" data-filtro-id="${filtroIndex}">
+                                <option value="indiferente" selected>Indiferente</option>
+                                <option value="si">Si</option>
+                                <option value="no">No</option>
+                            </select>
+                        </div>
+                        <div class="state-item">
+                            <label>Documento UMSS</label>
+                            <select class="custom-select custom-select-sm state-select" data-yes="${filtro.u_si}" data-no="${filtro.u_no}" data-filtro-id="${filtroIndex}">
+                                <option value="indiferente" selected>Indiferente</option>
+                                <option value="si">Si</option>
+                                <option value="no">No</option>
+                            </select>
+                        </div>
+                        ${filtro.con_umss && !filtro.is_tesis_only ? `
+                        <div class="state-item">
+                            <label>Es Tesis</label>
+                            <select class="custom-select custom-select-sm state-select" data-yes="${filtro.t_si}" data-no="${filtro.t_no}" data-filtro-id="${filtroIndex}">
+                                <option value="indiferente" selected>Indiferente</option>
+                                <option value="si">Si</option>
+                                <option value="no">No</option>
+                            </select>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            return html;
+        }
+
+        function agregarFiltro() {
+            const select = document.getElementById('select_documento_filtro');
+            const filtroIndex = parseInt(select.value);
+            
+            if (isNaN(filtroIndex)) {
+                alert('Por favor selecciona un filtro');
+                return;
             }
 
-            function syncPresenceSelect(selectElement) {
-                var withName = selectElement.dataset.on;
-                var withoutName = selectElement.dataset.off;
-                var value = selectElement.value;
-
-                setCheckboxValue(withName, value === 'con');
-                setCheckboxValue(withoutName, value === 'sin');
+            if (filtrosActivos.has(filtroIndex)) {
+                alert('Este filtro ya está activo');
+                return;
             }
 
-            function syncStateSelect(selectElement) {
-                var yesName = selectElement.dataset.yes;
-                var noName = selectElement.dataset.no;
-                var value = selectElement.value;
+            filtrosActivos.add(filtroIndex);
+            const filtro = filtrosData[filtroIndex];
+            
+            // Mostrar mensaje o esconder según sea necesario
+            updateFiltrosDisplay();
+            
+            // Añadir la tarjeta
+            const container = document.getElementById('filtros_activos_container');
+            const html = renderizarFiltroCard(filtroIndex);
+            container.innerHTML += html;
+            
+            // Attachar event listeners
+            attachFilterListeners();
+            
+            // Limpiar select
+            select.value = '';
+        }
 
-                setCheckboxValue(yesName, value === 'si');
-                setCheckboxValue(noName, value === 'no');
-            }
-
-            function syncAllSelects() {
-                document.querySelectorAll('.presence-select').forEach(syncPresenceSelect);
-                document.querySelectorAll('.state-select').forEach(syncStateSelect);
-            }
-
-            function getPresenceSelectByCheckboxName(name) {
-                return document.querySelector('.presence-select[data-on="' + name + '"]');
-            }
-
-            function setPresenceByName(name, value) {
-                var selectElement = getPresenceSelectByCheckboxName(name);
-                if (selectElement) {
-                    selectElement.value = value;
-                    syncPresenceSelect(selectElement);
+        function cerrarFiltro(filtroKey) {
+            // Encontrar el índice del filtro por su key
+            for (let i = 0; i < filtrosData.length; i++) {
+                if (filtrosData[i].con === filtroKey) {
+                    filtrosActivos.delete(i);
+                    document.getElementById('filtro_' + filtroKey + '_container').remove();
+                    updateFiltrosDisplay();
+                    // Resetear valores de este filtro
+                    const inputs = document.querySelectorAll(`input[name="${filtrosData[i].con}"], input[name="${filtrosData[i].sin}"], input[name="${filtrosData[i].l_si}"], input[name="${filtrosData[i].l_no}"], input[name="${filtrosData[i].v_si}"], input[name="${filtrosData[i].v_no}"], input[name="${filtrosData[i].u_si}"], input[name="${filtrosData[i].u_no}"]`);
+                    inputs.forEach(inp => inp.checked = false);
+                    break;
                 }
             }
+        }
 
-            function setStateByName(name, value) {
-                var selectElement = document.querySelector('.state-select[data-yes="' + name + '"]');
-                if (selectElement) {
-                    selectElement.value = value;
-                    syncStateSelect(selectElement);
-                }
+        function updateFiltrosDisplay() {
+            const container = document.getElementById('filtros_activos_container');
+            const mensaje = document.getElementById('sin_filtros_mensaje');
+            
+            if (filtrosActivos.size === 0) {
+                mensaje.style.display = 'block';
+            } else {
+                mensaje.style.display = 'none';
             }
+        }
 
-            function setFolderPresence(value) {
-                var folderSelect = document.querySelector('.presence-select[data-on="folder"]');
-                if (folderSelect) {
-                    folderSelect.value = value;
-                    syncPresenceSelect(folderSelect);
-                }
-            }
-
-            function setTipoFuncionario(value) {
-                var tipoSelect = document.querySelector('select[name="funcionario"]');
-                if (tipoSelect) {
-                    tipoSelect.value = value;
-                }
-            }
-
-            function setEstadoCarpeta(value) {
-                var estadoSelect = document.getElementById('estado_carpeta');
-                if (estadoSelect) {
-                    estadoSelect.value = value;
-                }
-            }
-
-            function applyPreset() {
-                var presetSelect = document.getElementById('preset_busqueda');
-                if (!presetSelect || !presetSelect.value) {
-                    return;
-                }
-
-                // Base neutral antes de aplicar preset
-                setTipoFuncionario('');
-                setFolderPresence('con');
-                setEstadoCarpeta('');
-                resetDocumentFilters();
-
-                var preset = presetSelect.value;
-
-                if (preset === 'carpeta_completa') {
-                    setEstadoCarpeta('completo');
-                    setPresenceByName('bachiller', 'con');
-                    setPresenceByName('academico', 'con');
-                    setPresenceByName('profesional', 'con');
-                }
-
-                if (preset === 'carpeta_incompleta') {
-                    setFolderPresence('con');
-                    setEstadoCarpeta('incompleto');
-                }
-
-                if (preset === 'solo_docentes_con_folder') {
-                    setTipoFuncionario('D');
-                    setFolderPresence('con');
-                }
-
-                if (preset === 'solo_administrativos_con_folder') {
-                    setTipoFuncionario('A');
-                    setFolderPresence('con');
-                }
-
-                if (preset === 'documentos_no_verificados') {
-                    setFolderPresence('indiferente');
-                    setPresenceByName('bachiller', 'con');
-                    setStateByName('vbachiller', 'no');
-                    setPresenceByName('academico', 'con');
-                    setStateByName('vacademico', 'no');
-                    setPresenceByName('profesional', 'con');
-                    setStateByName('vprofesional', 'no');
-                }
-
-                if (preset === 'sin_folder') {
-                    setFolderPresence('sin');
-                }
-            }
-
-            function setAllPresence(value) {
-                document.querySelectorAll('.filter-card .presence-select').forEach(function(selectElement) {
-                    selectElement.value = value;
-                    syncPresenceSelect(selectElement);
-                });
-            }
-
-            function resetDocumentFilters() {
-                document.querySelectorAll('.filter-card .presence-select').forEach(function(selectElement) {
-                    selectElement.value = 'indiferente';
-                    syncPresenceSelect(selectElement);
-                });
-
-                document.querySelectorAll('.filter-card .state-select').forEach(function(selectElement) {
-                    selectElement.value = 'indiferente';
-                    syncStateSelect(selectElement);
-                });
-            }
-
-            document.querySelectorAll('.presence-select').forEach(function(selectElement) {
-                selectElement.addEventListener('change', function() {
-                    syncPresenceSelect(selectElement);
+        function attachFilterListeners() {
+            // Listeners para cerrar filtros
+            document.querySelectorAll('.btn-close-filtro').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    cerrarFiltro(this.getAttribute('data-filtro'));
                 });
             });
 
-            document.querySelectorAll('.state-select').forEach(function(selectElement) {
-                selectElement.addEventListener('change', function() {
-                    syncStateSelect(selectElement);
+            // Listeners para presence-select
+            document.querySelectorAll('.presence-select').forEach(select => {
+                select.addEventListener('change', function() {
+                    const withName = this.getAttribute('data-on');
+                    const withoutName = this.getAttribute('data-off');
+                    const value = this.value;
+
+                    document.querySelectorAll(`input[name="${withName}"]`).forEach(el => el.checked = (value === 'con'));
+                    document.querySelectorAll(`input[name="${withoutName}"]`).forEach(el => el.checked = (value === 'sin'));
                 });
             });
 
-            var buttonWithAll = document.getElementById('btn_con_todos');
-            var buttonWithoutAll = document.getElementById('btn_sin_todos');
-            var buttonReset = document.getElementById('btn_reset_documentos');
-            var buttonApplyPreset = document.getElementById('btn_aplicar_preset');
+            // Listeners para state-select
+            document.querySelectorAll('.state-select').forEach(select => {
+                select.addEventListener('change', function() {
+                    const yesName = this.getAttribute('data-yes');
+                    const noName = this.getAttribute('data-no');
+                    const value = this.value;
 
-            if (buttonWithAll) {
-                buttonWithAll.addEventListener('click', function() {
-                    setAllPresence('con');
+                    document.querySelectorAll(`input[name="${yesName}"]`).forEach(el => el.checked = (value === 'si'));
+                    document.querySelectorAll(`input[name="${noName}"]`).forEach(el => el.checked = (value === 'no'));
                 });
-            }
+            });
+        }
 
-            if (buttonWithoutAll) {
-                buttonWithoutAll.addEventListener('click', function() {
-                    setAllPresence('sin');
-                });
+        // Event listeners para botones
+        document.getElementById('btn_agregar_filtro').addEventListener('click', agregarFiltro);
+        
+        document.getElementById('btn_reset_todos_documentos').addEventListener('click', function() {
+            if (confirm('¿Cerrar todos los filtros de documento?')) {
+                document.getElementById('select_documento_filtro').value = '';
+                document.getElementById('filtros_activos_container').innerHTML = '';
+                filtrosActivos.clear();
+                updateFiltrosDisplay();
+                
+                // Limpiar todos los checkboxes
+                document.querySelectorAll('.hidden-check').forEach(inp => inp.checked = false);
             }
+        });
 
-            if (buttonReset) {
-                buttonReset.addEventListener('click', function() {
-                    resetDocumentFilters();
-                });
+        // Permitir Enter en el select para agregar
+        document.getElementById('select_documento_filtro').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                agregarFiltro();
             }
+        });
 
-            if (buttonApplyPreset) {
-                buttonApplyPreset.addEventListener('click', function() {
-                    applyPreset();
-                });
+        // Función para limpiar checkboxes no visibles antes de enviar
+        window.prepararFormularioParaEnvio = function(formId, url, panelId) {
+            // Desmarca todos los checkboxes de filtros no activos
+            for (let i = 0; i < filtrosData.length; i++) {
+                if (!filtrosActivos.has(i)) {
+                    const filtro = filtrosData[i];
+                    const checkboxes = [
+                        filtro.con, filtro.sin, 
+                        filtro.l_si, filtro.l_no, 
+                        filtro.v_si, filtro.v_no, 
+                        filtro.u_si, filtro.u_no
+                    ];
+                    
+                    if (filtro.con_umss && !filtro.is_tesis_only) {
+                        checkboxes.push(filtro.t_si, filtro.t_no);
+                    }
+                    
+                    checkboxes.forEach(name => {
+                        document.querySelectorAll(`input[name="${name}"]`).forEach(el => el.checked = false);
+                    });
+                }
             }
+            
+            // Llamar la función enviar original
+            enviar(formId, url, panelId);
+        };
 
-            syncAllSelects();
-        })();
+        // Inicializar display
+        updateFiltrosDisplay();
     </script>
 @endsection

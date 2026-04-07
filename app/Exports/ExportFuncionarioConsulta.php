@@ -3,21 +3,21 @@
 namespace App\Exports;
 
 use Illuminate\Support\Facades\DB;
-//use Maatwebsite\Excel\Concerns\FromQuery;
-use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\FromIterator;
 use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Iterator;
 
-
-class ExportFuncionarioConsulta implements FromArray,WithHeadings
+class ExportFuncionarioConsulta implements FromIterator, WithHeadings
 {
     use Exportable;
     protected $resultado;
 
     public function __construct($resultado)
     {
-        $this->resultado= $resultado;
+        $this->resultado = $resultado;
     }
+
     public function headings(): array
     {
         return [
@@ -28,17 +28,22 @@ class ExportFuncionarioConsulta implements FromArray,WithHeadings
             'Tipo de Funcionario',
             'Título/Diploma',
             'Tipo de Documento',
+            'Es Tesis',
+            'Título de Tesis',
             'Universidad',
             'Tipo de Universidad',
             'Educación Superior',
             'Revalidación',
             'Documento Verificado',
+            'Legalizado',
+            'UMSS',
             'Documentos Faltantes'
         ];
     }
-    public function array(): array
+
+    public function iterator(): Iterator
     {
-        $resultado = [];
+        // Usar generador para procesar de uno en uno sin cargar todo en memoria
         foreach($this->resultado as $item) {
             $tipo_funcionario = $this->getNombreTipo($item->fun_doc_adm);
             
@@ -46,7 +51,6 @@ class ExportFuncionarioConsulta implements FromArray,WithHeadings
             if(isset($item->documentos) && count($item->documentos) > 0) {
                 $es_primera_fila = true;
                 foreach($item->documentos as $doc) {
-                    $estado = '';
                     $faltantes = '';
                     
                     if($es_primera_fila && isset($item->estado_carpeta)) {
@@ -54,7 +58,7 @@ class ExportFuncionarioConsulta implements FromArray,WithHeadings
                         $es_primera_fila = false;
                     }
                     
-                    $resultado[] = [
+                    yield [
                         'nombre' => $item->fun_nombre,
                         'ci' => $item->fun_ci,
                         'facultad' => $item->fun_facultad,
@@ -62,17 +66,21 @@ class ExportFuncionarioConsulta implements FromArray,WithHeadings
                         'tipo_funcionario' => $tipo_funcionario,
                         'titulo' => $doc['titulo'],
                         'tipo_documento' => $doc['tipo'],
+                        'es_tesis' => $doc['es_tesis'],
+                        'titulo_tesis' => $doc['titulo_tesis'],
                         'universidad' => $doc['universidad'],
                         'tipo_universidad' => $doc['tipo_universidad'],
                         'edu_superior' => $doc['edu_superior'],
                         'revalida' => $doc['revalida'],
                         'verificado' => $doc['verificado'],
+                        'legalizado' => $doc['legalizado'],
+                        'umss' => $doc['umss'],
                         'faltantes' => $faltantes
                     ];
                 }
             } else {
                 // Si no tiene documentos, crear una fila con datos vacíos
-                $resultado[] = [
+                yield [
                     'nombre' => $item->fun_nombre,
                     'ci' => $item->fun_ci,
                     'facultad' => $item->fun_facultad,
@@ -80,16 +88,19 @@ class ExportFuncionarioConsulta implements FromArray,WithHeadings
                     'tipo_funcionario' => $tipo_funcionario,
                     'titulo' => '',
                     'tipo_documento' => '',
+                    'es_tesis' => '',
+                    'titulo_tesis' => '',
                     'universidad' => '',
                     'tipo_universidad' => '',
                     'edu_superior' => '',
                     'revalida' => '',
                     'verificado' => '',
+                    'legalizado' => '',
+                    'umss' => '',
                     'faltantes' => isset($item->estado_carpeta) ? implode(', ', $item->estado_carpeta['faltantes']) : 'Sin documentos'
                 ];
             }
         }
-        return $resultado;
     }
 
     private function getNombreTipo($tipo)
@@ -105,22 +116,4 @@ class ExportFuncionarioConsulta implements FromArray,WithHeadings
                 return $tipo;
         }
     }
-    /*public function prepareRows($rows)
-    {
-        return $rows->transform(function ($titulo) {
-            if($titulo->tit_fecha_emision!=''){
-                $titulo->tit_fecha_emision = date('d/m/Y',strtotime($titulo->tit_fecha_emision));
-            }
-            $titulo->cod_tit=$this->numero;
-            $this->numero++;
-            return $titulo;
-        });
-    }
-    public function map($resultado): array
-    {
-        return [
-            $resultado->fun_nombre,
-        ];
-    }
-*/
 }
