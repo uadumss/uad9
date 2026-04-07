@@ -131,6 +131,14 @@ class DocumentoController extends Controller
         $umss=$form['umss']=='on'?'t':'f';
         //$form['universidad']=$form['umss']=='on'? 'Universidad Mayor de San Simon':$form['universidad'];
         $superior=$form['superior']=='on'?'t':'f';
+        $tesis=$form['tesis']=='on'?'t':'f';
+        $tesisTitulo=$form['tesis_titulo'] ?? '';
+
+        // Validar que si está marcado como tesis, debe tener un título
+        if($tesis === 't' && trim($tesisTitulo) === '') {
+            \Session::flash('error','Si marca como tesis, debe ingresar el título de la tesis.');
+            return back();
+        }
 
         if(isset($form['cd'])){
             $documento=Documento::find($form['cd']);
@@ -147,6 +155,8 @@ class DocumentoController extends Controller
                 $documento->doc_numero_revalida=$form['revalida'];
                 $documento->doc_grado=$form['grado'];
                 $documento->doc_numero_registro=$form['numero_registro'] ?? '';
+                $documento->doc_tesis_titulo=$tesisTitulo;
+                $documento->doc_tesis=$tesis;
                 
                 // Procesar el PDF si se adjuntó uno
                 if($form->hasFile('pdf')){
@@ -213,6 +223,8 @@ class DocumentoController extends Controller
                 'doc_numero_revalida'=>$form['revalida'],
                 'doc_pdf'=>$nombreArchivoPdf,
                 'doc_numero_registro'=>$form['numero_registro'] ?? '',
+                'doc_tesis_titulo'=>$tesisTitulo,
+                'doc_tesis'=>$tesis,
             ]);
             
             // Si hay PDF, actualizar el nombre del archivo con el ID real del documento

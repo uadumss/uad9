@@ -73,7 +73,7 @@
                         </div>
 
                         <form id="formBuscador" action="{{ url('listar funcionario/'.$funcionario) }}" method="GET" class="form-inline mt-3 mb-3">
-                            <input type="text" id="buscadorFuncionarios" name="q" value="{{ old('q', $search ?? '') }}" class="form-control mr-2" placeholder="🔍 Buscar funcionario..." autocomplete="off" autofocus>
+                            <input type="text" id="buscadorFuncionarios" name="q" value="{{ old('q', $search ?? '') }}" class="form-control mr-2" placeholder="🔍 Buscar funcionario..." autocomplete="off">
                             <button type="submit" class="btn btn-sm btn-primary">Buscar</button>
                         </form>
 
@@ -326,15 +326,9 @@
             // Buscador de funcionarios
             const buscadorInput = document.getElementById('buscadorFuncionarios');
             const formBuscador = document.getElementById('formBuscador');
-            
-            // Colocar el cursor al final al cargar la página
-            if (buscadorInput.value) {
-                buscadorInput.focus();
-                buscadorInput.setSelectionRange(buscadorInput.value.length, buscadorInput.value.length);
-            }
-            
+
             // Si el campo se vacía, recargar automáticamente
-            buscadorInput.addEventListener('keyup', function() {
+            buscadorInput.addEventListener('input', function() {
                 if (this.value.length === 0) {
                     formBuscador.submit();
                 }

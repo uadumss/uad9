@@ -24,22 +24,26 @@
 
 <hr class="sidebar-divider">
 <div style="overflow-x: auto; border-top: 3px solid #ddd; border-bottom: 3px solid #ddd;">
-    <table class="table table-sm table-hover" cellspacing="0" style="font-size: 0.85em; min-width: 1400px;">
+    <table class="table table-sm table-hover" cellspacing="0" style="font-size: 0.85em; min-width: 1600px;">
             <thead>
             <tr class="bg-gray-600 text-white">
-                <th style="width: 5%;">Nº</th>
-                <th style="width: 12%;">Nombre</th>
-                <th style="width: 8%;">CI</th>
-                <th style="width: 10%;">Facultad</th>
-                <th style="width: 10%;">Carrera</th>
-                <th style="width: 12%;">Tipo de Funcionario</th>
-                <th style="width: 15%;">Título/Diploma</th>
-                <th style="width: 12%;">Tipo de Documento</th>
-                <th style="width: 15%;">Universidad</th>
-                <th style="width: 12%;">Tipo de Universidad</th>
-                <th style="width: 12%;">Educación Superior</th>
-                <th style="width: 12%;">Revalidación</th>
-                <th style="width: 12%;">Documento Verificado</th>
+                <th style="width: 3%;">Nº</th>
+                <th style="width: 10%;">Nombre</th>
+                <th style="width: 7%;">CI</th>
+                <th style="width: 8%;">Facultad</th>
+                <th style="width: 8%;">Carrera</th>
+                <th style="width: 9%;">Tipo de Funcionario</th>
+                <th style="width: 12%;">Título/Diploma</th>
+                <th style="width: 10%;">Tipo de Documento</th>
+                <th style="width: 6%;">Es Tesis</th>
+                <th style="width: 12%;">Título de Tesis</th>
+                <th style="width: 12%;">Universidad</th>
+                <th style="width: 9%;">Tipo de Universidad</th>
+                <th style="width: 6%;">Edu Superior</th>
+                <th style="width: 6%;">Revalidación</th>
+                <th style="width: 8%;">Verificado</th>
+                <th style="width: 6%;">Legalizado</th>
+                <th style="width: 6%;">UMSS</th>
             </tr>
             </thead>
             <tbody>
@@ -50,18 +54,24 @@
                     {{-- Mostrar estado del folder como fila separada de resumen al inicio --}}
                     @if(isset($f->estado_carpeta))
                         <tr style="background-color: #e8f4f8; border-top: 3px solid #0c5460; border-bottom: 3px solid #0c5460;">
-                            <td style="font-weight: bold; color: #0c5460; padding: 10px;">{{ $funcionario_num }}</td>
-                            <td colspan="6" style="font-weight: bold; color: #0c5460; padding: 10px;">{{ $f->fun_nombre }} ({{ $f->fun_ci }})</td>
-                            <td colspan="3" style="text-align: right; font-weight: bold; color: #0c5460; padding: 10px;">Estado del Folder:</td>
-                            <td colspan="4" style="padding: 10px;">
-                                @if($f->estado_carpeta['completo'])
-                                    <span style="background-color: #d4edda; color: #155724; padding: 5px 10px; border-radius: 4px; font-weight: bold;">COMPLETO</span>
-                                @else
-                                    <span style="background-color: #f8d7da; color: #721c24; padding: 5px 10px; border-radius: 4px; font-weight: bold; display: block;">INCOMPLETO</span>
-                                    <span style="color: #721c24; font-size: 0.9em; margin-top: 5px; display: block;">
-                                        Faltan: {{ implode(', ', $f->estado_carpeta['faltantes']) }}
-                                    </span>
-                                @endif
+                            <td style="font-weight: bold; color: #0c5460; padding: 10px; vertical-align: middle;">{{ $funcionario_num }}</td>
+                            <td colspan="5" style="font-weight: bold; color: #0c5460; padding: 10px; vertical-align: middle;">{{ $f->fun_nombre }} ({{ $f->fun_ci }})</td>
+                            <td colspan="11" style="padding: 10px; vertical-align: top; text-align: right;">
+                                <div style="text-align: right;">
+                                    <div style="margin-bottom: 5px;">
+                                        <strong style="color: #0c5460; margin-right: 10px;">Estado del Folder:</strong>
+                                        @if($f->estado_carpeta['completo'])
+                                            <span style="background-color: #d4edda; color: #155724; padding: 5px 10px; border-radius: 4px; font-weight: bold;">COMPLETO</span>
+                                        @else
+                                            <span style="background-color: #f8d7da; color: #721c24; padding: 5px 10px; border-radius: 4px; font-weight: bold;">INCOMPLETO</span>
+                                        @endif
+                                    </div>
+                                    @if(!$f->estado_carpeta['completo'])
+                                        <div style="color: #721c24; font-size: 0.85em; margin-top: 3px;">
+                                            Faltan: {{ implode(', ', $f->estado_carpeta['faltantes']) }}
+                                        </div>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @endif
@@ -92,6 +102,8 @@
                             @endif
                             <td>{{ $doc['titulo'] }}</td>
                             <td>{{ $doc['tipo'] }}</td>
+                            <td>{{ $doc['es_tesis'] }}</td>
+                            <td>{{ $doc['titulo_tesis'] }}</td>
                             <td>{{ $doc['universidad'] }}</td>
                             <td>{{ $doc['tipo_universidad'] }}</td>
                             <td>{{ $doc['edu_superior'] }}</td>
@@ -100,6 +112,12 @@
                             </td>
                             <td @if($doc['verificado'] === 'Pendiente') style="background-color: #fff3cd; color: #856404; font-weight: bold;" @else style="background-color: #d4edda; color: #155724; font-weight: bold;" @endif>
                                 {{ $doc['verificado'] }}
+                            </td>
+                            <td @if($doc['legalizado'] === 'Si') style="background-color: #d4edda; color: #155724; font-weight: bold;" @else style="background-color: #fff3cd; color: #856404;" @endif>
+                                {{ $doc['legalizado'] }}
+                            </td>
+                            <td @if($doc['umss'] === 'Si') style="background-color: #d4edda; color: #155724; font-weight: bold;" @else style="background-color: #f8d7da; color: #721c24;" @endif>
+                                {{ $doc['umss'] }}
                             </td>
                         </tr>
                     @endforeach
@@ -126,7 +144,7 @@
                                     {{ $f->fun_doc_adm }}
                             @endswitch
                         </td>
-                        <td colspan="5" class="text-muted">Sin documentos registrados</td>
+                        <td colspan="10" class="text-muted">Sin documentos registrados</td>
                         <td style="background-color: #f8d7da; color: #721c24; font-weight: bold;">
                             <span style="background-color: #f8d7da; color: #721c24; padding: 5px 10px; border-radius: 4px; font-weight: bold; display: block;">INCOMPLETO</span>
                             <span style="color: #721c24; font-size: 0.9em; margin-top: 5px; display: block;">Sin documentos</span>

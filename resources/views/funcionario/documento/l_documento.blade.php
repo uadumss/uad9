@@ -191,7 +191,11 @@
                                                     {{$d->doc_numero_registro ?? 'N/A'}}
                                                     </span>
                                                 </span>
-
+                                                @if($d->doc_tesis_titulo)
+                                                    <br/><div style="font-size: 0.85em; margin-top: 5px; padding-top: 5px; border-top: 1px solid #e3e6f0;">
+                                                        <span class="text-primary font-italic">Tesis : </span><span class="text-dark font-weight-bold">{{$d->doc_tesis_titulo}}</span>
+                                                    </div>
+                                                @endif
                                             </td>
                                             <td>{{$d->doc_grado}}</td>
                                             <td>{{$d->doc_universidad}}</td>

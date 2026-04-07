@@ -225,8 +225,10 @@ class FuncionarioController extends Controller
     public function fe_reporte(){
         return view('funcionario.reporte.fe_reporte');
     }
+
     public function procesar_reporte(Request $form){
         $parametros=array();
+        $estadoCarpetaFiltro = $form->input('estado_carpeta', '');
 
         $consulta="";
         $tipo_funcionario=$form['funcionario'];
@@ -242,8 +244,9 @@ class FuncionarioController extends Controller
 
         $parametros=array();
 
+        // Bachiller
         if($form['bachiller']=='on'){
-            $parametros[0]="cod_fun in (select cod_fun from doc_adm.documentos where doc_tipo='DIPLOMA DE BACHILLER'";
+            $parametros[0]="cod_fun in (select cod_fun from doc_adm.documentos where (doc_tipo='DIPLOMA DE BACHILLER' OR doc_grado='Bachiller')";
             $parametros[0].=$form['lbachiller']=='on'?" and doc_legalizado='t'":"";
             $parametros[0].=$form['nlbachiller']=='on'?" and doc_legalizado<>'t'":"";
             $parametros[0].=$form['vbachiller']=='on'?" and doc_verificado='t'":"";
@@ -254,10 +257,11 @@ class FuncionarioController extends Controller
         }else{
             $parametros[0]='-';
         }
-        $parametros[1]=($form['nobachiller']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='DIPLOMA DE BACHILLER')":'-';
+        $parametros[1]=($form['nobachiller']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='DIPLOMA DE BACHILLER' OR doc_grado='Bachiller')":'-';
 
+        // Tecnico Medio
         if($form['tmedio']=='on'){
-            $parametros[2]="cod_fun in (select cod_fun from doc_adm.documentos where doc_tipo='TECNICO MEDIO'";
+            $parametros[2]="cod_fun in (select cod_fun from doc_adm.documentos where (doc_tipo='TECNICO MEDIO' OR doc_grado='Tecnico medio')";
             $parametros[2].=$form['ltmedio']=='on'?" and doc_legalizado='t'":"";
             $parametros[2].=$form['nltmedio']=='on'?" and doc_legalizado<>'t'":"";
             $parametros[2].=$form['vtmedio']=='on'?" and doc_verificado='t'":"";
@@ -265,14 +269,14 @@ class FuncionarioController extends Controller
             $parametros[2].=$form['utmedio']=='on'?" and doc_umss='t'":"";
             $parametros[2].=$form['nutmedio']=='on'?" and doc_umss<>'t'":"";
             $parametros[2].=')';
-
         }else{
             $parametros[2]='-';
         }
-        $parametros[3]=($form['notmedio']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='TECNICO MEDIO')":'-';
+        $parametros[3]=($form['notmedio']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='TECNICO MEDIO' OR doc_grado='Tecnico medio')":'-';
 
+        // Tecnico Superior
         if($form['tsuperior']=='on'){
-            $parametros[4]="cod_fun in (select cod_fun from doc_adm.documentos where doc_tipo='TECNICO SUPERIOR'";
+            $parametros[4]="cod_fun in (select cod_fun from doc_adm.documentos where (doc_tipo='TECNICO SUPERIOR' OR doc_grado='Tecnico superior')";
             $parametros[4].=$form['ltsuperior']=='on'?" and doc_legalizado='t'":"";
             $parametros[4].=$form['nltsuperior']=='on'?" and doc_legalizado<>'t'":"";
             $parametros[4].=$form['vtsuperior']=='on'?" and doc_verificado='t'":"";
@@ -283,11 +287,11 @@ class FuncionarioController extends Controller
         }else{
             $parametros[4]='-';
         }
-        $parametros[5]=($form['notsuperior']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='TECNICO SUPERIOR')":'-';
+        $parametros[5]=($form['notsuperior']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='TECNICO SUPERIOR' OR doc_grado='Tecnico superior')":'-';
 
-
+        // Diploma Academico
         if($form['academico']=='on'){
-            $parametros[6]="cod_fun in (select cod_fun from doc_adm.documentos where doc_tipo='DIPLOMA ACADEMICO'";
+            $parametros[6]="cod_fun in (select cod_fun from doc_adm.documentos where (doc_tipo='DIPLOMA ACADEMICO' OR doc_grado='Diploma academico')";
             $parametros[6].=$form['lacademico']=='on'?" and doc_legalizado='t'":"";
             $parametros[6].=$form['nlacademico']=='on'?" and doc_legalizado<>'t'":"";
             $parametros[6].=$form['vacademico']=='on'?" and doc_verificado='t'":"";
@@ -298,10 +302,11 @@ class FuncionarioController extends Controller
         }else{
             $parametros[6]='-';
         }
-        $parametros[7]=($form['noacademico']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='DIPLOMA ACADEMICO')":'-';
+        $parametros[7]=($form['noacademico']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='DIPLOMA ACADEMICO' OR doc_grado='Diploma academico')":'-';
 
+        // Titulo Profesional
         if($form['profesional']=='on'){
-            $parametros[8]="cod_fun in (select cod_fun from doc_adm.documentos where doc_tipo='TITULO PROFESIONAL'";
+            $parametros[8]="cod_fun in (select cod_fun from doc_adm.documentos where (doc_tipo='TITULO PROFESIONAL' OR doc_grado='Titulo profesional')";
             $parametros[8].=$form['lprofesional']=='on'?" and doc_legalizado='t'":"";
             $parametros[8].=$form['nlprofesional']=='on'?" and doc_legalizado<>'t'":"";
             $parametros[8].=$form['vprofesional']=='on'?" and doc_verificado='t'":"";
@@ -312,66 +317,83 @@ class FuncionarioController extends Controller
         }else{
             $parametros[8]='-';
         }
-        $parametros[9]=($form['noprofesional']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='TITULO PROFESIONAL')":'-';
+        $parametros[9]=($form['noprofesional']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='TITULO PROFESIONAL' OR doc_grado='Titulo profesional')":'-';
 
-        if($form['diplomado']=='on'){
-            $parametros[10]="cod_fun in (select cod_fun from doc_adm.documentos where doc_tipo='DIPLOMADO'";
+        // Diplomado
+        $tiene_filtro_diplomado = $form['diplomado']=='on' || $form['tdiplomado']=='on' || $form['ntdiplomado']=='on';
+        if($tiene_filtro_diplomado){
+            $parametros[10]="cod_fun in (select cod_fun from doc_adm.documentos where (doc_tipo='DIPLOMADO' OR doc_grado='Diplomado')";
             $parametros[10].=$form['ldiplomado']=='on'?" and doc_legalizado='t'":"";
             $parametros[10].=$form['nldiplomado']=='on'?" and doc_legalizado<>'t'":"";
             $parametros[10].=$form['vdiplomado']=='on'?" and doc_verificado='t'":"";
             $parametros[10].=$form['nvdiplomado']=='on'?" and doc_verificado<>'t'":"";
             $parametros[10].=$form['udiplomado']=='on'?" and doc_umss='t'":"";
             $parametros[10].=$form['nudiplomado']=='on'?" and doc_umss<>'t'":"";
+            $parametros[10].=$form['tdiplomado']=='on'?" and doc_tesis='t'":"";
+            $parametros[10].=$form['ntdiplomado']=='on'?" and doc_tesis<>'t'":"";
             $parametros[10].=')';
         }else{
             $parametros[10]='-';
         }
-        $parametros[11]=($form['nodiplomado']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos wheredoc_tipo='DIPLOMADO')":'-';
+        $parametros[11]=($form['nodiplomado']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='DIPLOMADO' OR doc_grado='Diplomado')":'-';
 
-        if($form['especialidad']=='on'){
-            $parametros[12]="cod_fun in (select cod_fun from doc_adm.documentos where doc_tipo='ESPECIALIDAD'";
+        // Especialidad
+        $tiene_filtro_especialidad = $form['especialidad']=='on' || $form['tespecialidad']=='on' || $form['ntespecialidad']=='on';
+        if($tiene_filtro_especialidad){
+            $parametros[12]="cod_fun in (select cod_fun from doc_adm.documentos where (doc_tipo='ESPECIALIDAD' OR doc_grado='Especialidad')";
             $parametros[12].=$form['lespecialidad']=='on'?" and doc_legalizado='t'":"";
             $parametros[12].=$form['nlespecialidad']=='on'?" and doc_legalizado<>'t'":"";
             $parametros[12].=$form['vespecialidad']=='on'?" and doc_verificado='t'":"";
             $parametros[12].=$form['nvespecialidad']=='on'?" and doc_verificado<>'t'":"";
             $parametros[12].=$form['uespecialidad']=='on'?" and doc_umss='t'":"";
             $parametros[12].=$form['nuespecialidad']=='on'?" and doc_umss<>'t'":"";
+            $parametros[12].=$form['tespecialidad']=='on'?" and doc_tesis='t'":"";
+            $parametros[12].=$form['ntespecialidad']=='on'?" and doc_tesis<>'t'":"";
             $parametros[12].=')';
         }else{
             $parametros[12]='-';
         }
-        $parametros[13]=($form['noespecialidad']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='ESPECIALIDAD')":'-';
-        if($form['maestria']=='on'){
-            $parametros[14]="cod_fun in (select cod_fun from doc_adm.documentos where doc_tipo='MAESTRIA'";
+        $parametros[13]=($form['noespecialidad']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='ESPECIALIDAD' OR doc_grado='Especialidad')":'-';
+
+        // Maestria
+        $tiene_filtro_maestria = $form['maestria']=='on' || $form['tmaestria']=='on' || $form['ntmaestria']=='on';
+        if($tiene_filtro_maestria){
+            $parametros[14]="cod_fun in (select cod_fun from doc_adm.documentos where (doc_tipo='MAESTRIA' OR doc_grado='Maestria')";
             $parametros[14].=$form['lmaestria']=='on'?" and doc_legalizado='t'":"";
             $parametros[14].=$form['nlmaestria']=='on'?" and doc_legalizado<>'t'":"";
             $parametros[14].=$form['vmaestria']=='on'?" and doc_verificado='t'":"";
             $parametros[14].=$form['nvmaestria']=='on'?" and doc_verificado<>'t'":"";
             $parametros[14].=$form['umaestria']=='on'?" and doc_umss='t'":"";
             $parametros[14].=$form['numaestria']=='on'?" and doc_umss<>'t'":"";
+            $parametros[14].=$form['tmaestria']=='on'?" and doc_tesis='t'":"";
+            $parametros[14].=$form['ntmaestria']=='on'?" and doc_tesis<>'t'":"";
             $parametros[14].=')';
         }else{
             $parametros[14]='-';
         }
+        $parametros[15]=($form['nomaestria']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='MAESTRIA' OR doc_grado='Maestria')":'-';
 
-        $parametros[15]=($form['nomaestria']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='MAESTRIA')":'-';
-
-        if($form['doctorado']=='on'){
-            $parametros[16]="cod_fun in (select cod_fun from doc_adm.documentos where doc_tipo='DOCTORADO'";
+        // Doctorado
+        $tiene_filtro_doctorado = $form['doctorado']=='on' || $form['tdoctorado']=='on' || $form['ntdoctorado']=='on';
+        if($tiene_filtro_doctorado){
+            $parametros[16]="cod_fun in (select cod_fun from doc_adm.documentos where (doc_tipo='DOCTORADO' OR doc_grado='Doctorado')";
             $parametros[16].=$form['ldoctorado']=='on'?" and doc_legalizado='t'":"";
             $parametros[16].=$form['nldoctorado']=='on'?" and doc_legalizado<>'t'":"";
             $parametros[16].=$form['vdoctorado']=='on'?" and doc_verificado='t'":"";
             $parametros[16].=$form['nvdoctorado']=='on'?" and doc_verificado<>'t'":"";
             $parametros[16].=$form['udoctorado']=='on'?" and doc_umss='t'":"";
             $parametros[16].=$form['nudoctorado']=='on'?" and doc_umss<>'t'":"";
+            $parametros[16].=$form['tdoctorado']=='on'?" and doc_tesis='t'":"";
+            $parametros[16].=$form['ntdoctorado']=='on'?" and doc_tesis<>'t'":"";
             $parametros[16].=')';
         }else{
             $parametros[16]='-';
         }
-        $parametros[17]=($form['nodoctorado']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='DOCTORADO')":'-';
+        $parametros[17]=($form['nodoctorado']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='DOCTORADO' OR doc_grado='Doctorado')":'-';
 
-        $parametros[18]=($form['ddu']=='on')? "cod_fun in (select cod_fun from doc_adm.documentos where doc_edu_superior='t')":'-';
-        if($form['ddu']=='on'){
+        // Educacion Superior
+        $tiene_filtro_ddu = $form['ddu']=='on' || $form['tddu']=='on' || $form['ntddu']=='on';
+        if($tiene_filtro_ddu){
             $parametros[18]="cod_fun in (select cod_fun from doc_adm.documentos where doc_edu_superior='t'";
             $parametros[18].=$form['lddu']=='on'?" and doc_legalizado='t'":"";
             $parametros[18].=$form['nlddu']=='on'?" and doc_legalizado<>'t'":"";
@@ -379,13 +401,37 @@ class FuncionarioController extends Controller
             $parametros[18].=$form['nvddu']=='on'?" and doc_verificado<>'t'":"";
             $parametros[18].=$form['uddu']=='on'?" and doc_umss='t'":"";
             $parametros[18].=$form['nuddu']=='on'?" and doc_umss<>'t'":"";
+            $parametros[18].=$form['tddu']=='on'?" and doc_tesis='t'":"";
+            $parametros[18].=$form['ntddu']=='on'?" and doc_tesis<>'t'":"";
             $parametros[18].=')';
         }else{
             $parametros[18]='-';
         }
         $parametros[19]=($form['noddu']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_edu_superior='t')":'-';
-        $parametros[20]=($form['folder']=='on')? "fun_folder='t'":'-';
-        $parametros[21]=($form['nofolder']=='on')? "fun_folder is null":'-';
+
+        // Solo Tesis - busca documentos donde doc_tesis='t' independientemente del tipo
+        $tiene_filtro_solotesis = $form['solotesis']=='on' || $form['nosolotesis']=='on';
+        if($tiene_filtro_solotesis){
+            if($form['solotesis']=='on'){
+                $parametros[20]="cod_fun in (select cod_fun from doc_adm.documentos where doc_tesis='t'";
+                $parametros[20].=$form['lsolotesis']=='on'?" and doc_legalizado='t'":"";
+                $parametros[20].=$form['nlsolotesis']=='on'?" and doc_legalizado<>'t'":"";
+                $parametros[20].=$form['vsolotesis']=='on'?" and doc_verificado='t'":"";
+                $parametros[20].=$form['nvsolotesis']=='on'?" and doc_verificado<>'t'":"";
+                $parametros[20].=$form['usolotesis']=='on'?" and doc_umss='t'":"";
+                $parametros[20].=$form['nusolotesis']=='on'?" and doc_umss<>'t'":"";
+                $parametros[20].=')';
+            }else{
+                $parametros[20]='-';
+            }
+            $parametros[21]=($form['nosolotesis']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tesis='t')":'-';
+        }else{
+            $parametros[20]='-';
+            $parametros[21]='-';
+        }
+        
+        $parametros[22]=($form['folder']=='on')? "fun_folder='t'":'-';
+        $parametros[23]=($form['nofolder']=='on')? "fun_folder is null":'-';
 
         foreach ($parametros as $p):
             if($p!='-'){
@@ -425,6 +471,10 @@ class FuncionarioController extends Controller
                         }
                     }
                     
+                    // Determinar si es tesis
+                    $es_tesis = $doc->doc_tesis === 't' ? 'Sí' : '';
+                    $titulo_tesis = ($doc->doc_tesis === 't' && !empty($doc->doc_tesis_titulo)) ? $doc->doc_tesis_titulo : '';
+                    
                     // Clasificación para validación de completud
                     $clasificacion_tipo = $this->clasificarTipoDocumento($doc->doc_tipo);
                     $tipos_encontrados[$clasificacion_tipo] = true;
@@ -437,6 +487,10 @@ class FuncionarioController extends Controller
                         'edu_superior' => $doc->doc_edu_superior === 't' ? 'Sí' : '',
                         'revalida' => $revalida,
                         'verificado' => $doc->doc_verificado === 't' ? 'Verificado' : 'Pendiente',
+                        'legalizado' => $doc->doc_legalizado === 't' ? 'Si' : 'No',
+                        'umss' => $doc->doc_umss === 't' ? 'Si' : 'No',
+                        'es_tesis' => $es_tesis,
+                        'titulo_tesis' => $titulo_tesis,
                         'fecha_emision' => $doc->doc_fecha_emision ?? ''
                     ];
                 }
@@ -463,21 +517,23 @@ class FuncionarioController extends Controller
                 $funcionario->estado_carpeta = $estado_carpeta;
             }
 
-            /*Excel::create('Filename', function($excel) use($resultado) {
-                $excel->sheet('Sheetname', function($sheet) use($resultado) {
-                $sheet->fromArray($resultado);
-            });})->export('xls');
-            */
+            if($estadoCarpetaFiltro === 'completo'){
+                $resultado = array_values(array_filter($resultado, function($funcionario){
+                    return isset($funcionario->estado_carpeta['completo']) && $funcionario->estado_carpeta['completo'] === true;
+                }));
+            }
+
+            if($estadoCarpetaFiltro === 'incompleto'){
+                $resultado = array_values(array_filter($resultado, function($funcionario){
+                    return !isset($funcionario->estado_carpeta['completo']) || $funcionario->estado_carpeta['completo'] !== true;
+                }));
+            }
+
             if($form['excel']=='on'){
                 return (new ExportFuncionarioConsulta($resultado))->download('Resultado.xlsx');
             }else{
                 return view('funcionario.reporte.resultado_titulos',compact('resultado','tipo_funcionario'));
             }
-
-            /*
-            //dd($resultado);
-
-            */
     }
 
     /**
