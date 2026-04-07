@@ -509,7 +509,11 @@
                                         <tr>
                                             <th class="text-right font-italic">Nro. Control :</th>
                                             <td class="border-bottom border-dark">
-                                                <input class="form-control form-control-sm border-0" name="control" required oninput="programarValidacionControl(this)">
+                                                <div class="input-group">
+                                                    <input class="form-control form-control-sm border-0" name="control" required oninput="programarValidacionControl(this)">
+                                                    <span class="text-primary font-weight-bold font-italic ml-2 mr-1">Reintegro :</span>
+                                                    <input class="form-control form-control-sm border" name="reintegro" oninput="programarValidacionControl(this)">
+                                                </div>
                                             </td>
                                         </tr>
                                         <tr>
@@ -608,7 +612,7 @@
                                                 <div class="input-group">
                                                     <input class="form-control form-control-sm border-0" required name="control" oninput="programarValidacionControl(this)" />
                                                     <span class="text-primary font-weight-bold font-italic ml-2 mr-1">Reintegro :</span>
-                                                    <input class="form-control form-control-sm border" required name="reintegro" />
+                                                    <input class="form-control form-control-sm border" name="reintegro" oninput="programarValidacionControl(this)" />
                                                 </div>
                                             </td>
                                         </tr>
@@ -835,6 +839,7 @@
             var formulario=$(inputControl).closest('form');
             sincronizarCamposObligatorios(formulario);
             var control=($.trim(formulario.find('input[name="control"]').val()) || '');
+            var reintegro=($.trim(formulario.find('input[name="reintegro"]').val()) || '');
             var okInput=formulario.find('[data-campo="validacion-recaudacion-ok"]');
             okInput.val('0');
             
@@ -848,6 +853,21 @@
                 limpiarEstadoValidacion(formulario);
                 formulario.removeData('control-validado-ok');
                 formulario.removeData('control-validado-valor');
+                formulario.removeData('reintegro-validado-valor');
+                return;
+            }
+
+            if(reintegro!=='' && control===reintegro){
+                limpiarTipoLegalizacion(formulario);
+                limpiarPtagSugerido(formulario);
+                formulario.find('input[data-campo="preimpreso-api"]').val('');
+                formulario.find('input[data-campo="gestion-api"]').val('');
+                limpiarSitraFormulario(formulario);
+                actualizarEstadoSitra(formulario,'text-muted','SITRA: pendiente');
+                actualizarEstadoValidacion(formulario,'error','El Nro. de control principal y el de reintegro deben ser diferentes.');
+                formulario.removeData('control-validado-ok');
+                formulario.removeData('control-validado-valor');
+                formulario.removeData('reintegro-validado-valor');
                 return;
             }
 
@@ -859,6 +879,7 @@
                 data: {
                     _token: formulario.find('input[name="_token"]').val(),
                     control: control,
+                    reintegro: reintegro,
                     reimpresion: formulario.find('input[name="reimpresion"]').val() || ''
                 },
                 success: function(resp){
@@ -874,9 +895,11 @@
                         actualizarEstadoValidacion(formulario,'error',msg);
                         formulario.removeData('control-validado-ok');
                         formulario.removeData('control-validado-valor');
+                        formulario.removeData('reintegro-validado-valor');
                         return;
                     }
 
+                    aplicarTiposPermitidosPorMonto(formulario,resp);
                     autoseleccionarTipoLegalizacion(formulario,resp);
                     sincronizarTipoLegalizacion(formulario);
                     aplicarPtagSugerido(formulario,resp);
@@ -884,15 +907,31 @@
                     okInput.val('1');
 
                     var msg='Validado. Monto Bs. '+(resp.monto || '0');
+                    if(resp.monto_total){
+                        msg+=' | Total Bs. '+resp.monto_total;
+                    }
                     if(resp.fecha_pago){
                         msg+=' - Fecha '+resp.fecha_pago;
                     }
                     if(resp.cajero){
                         msg+=' - Caja '+resp.cajero;
                     }
+                    if(resp.reintegro_monto){
+                        msg+=' | Reintegro Bs. '+resp.reintegro_monto;
+                    }
+                    if(resp.reintegro_cuenta){
+                        msg+=' - '+resp.reintegro_cuenta;
+                    }
+                    if(resp.permitido_por_reintegro){
+                        msg+=' | Excepcional: el valorado principal se aceptó con reintegro';
+                    }
+                    if(resp.aplicar_filtro_por_monto && resp.requiere_seleccion_manual){
+                        msg+=' | Seleccione manualmente el tipo de legalización';
+                    }
                     actualizarEstadoValidacion(formulario,'ok',msg);
                     formulario.data('control-validado-ok',1);
                     formulario.data('control-validado-valor',control);
+                    formulario.data('reintegro-validado-valor',reintegro);
 
                     programarValidacionSitra(formulario);
                 },
@@ -911,6 +950,7 @@
                     actualizarEstadoValidacion(formulario,'error',msg);
                     formulario.removeData('control-validado-ok');
                     formulario.removeData('control-validado-valor');
+                    formulario.removeData('reintegro-validado-valor');
 
                     programarValidacionSitra(formulario);
                 }
@@ -944,6 +984,16 @@
                 return;
             }
 
+            var tipoSeleccionado=(form.find('input[data-campo="tipo-legalizacion-hidden"]').val() || '').toString().trim();
+            if(tipoSeleccionado===''){
+                $('#error_datos_span').html('Seleccione el tipo de legalización para continuar.');
+                $('#error_datos').show();
+                setTimeout(function () {
+                    $('#error_datos').hide(500);
+                }, 4000);
+                return;
+            }
+
             enviar1(formulario,ruta,panel);
         }
 
@@ -954,6 +1004,16 @@
 
             if(!validado){
                 $('#error_datos_span').html('Valide el número de control primero.');
+                $('#error_datos').show();
+                setTimeout(function () {
+                    $('#error_datos').hide(500);
+                }, 4000);
+                return;
+            }
+
+            var tipoSeleccionado=(form.find('input[data-campo="tipo-legalizacion-hidden"]').val() || '').toString().trim();
+            if(tipoSeleccionado===''){
+                $('#error_datos_span').html('Seleccione el tipo de legalización para continuar.');
                 $('#error_datos').show();
                 setTimeout(function () {
                     $('#error_datos').hide(500);
@@ -1252,9 +1312,118 @@
                 .trim();
         }
 
+        function obtenerTiposPermitidosDesdeRespuesta(resp){
+            if(!resp || !Array.isArray(resp.tipos_permitidos)){
+                return [];
+            }
+            return resp.tipos_permitidos.filter(function(item){
+                return item && item.cod_tre!==undefined && item.cod_tre!==null && String(item.cod_tre)!=='';
+            });
+        }
+
+        function prepararOpcionesTipoLegalizacion(formulario){
+            var select=formulario.find('select[data-campo="tipo-legalizacion"]');
+            if(!select.length){
+                return;
+            }
+            if(select.data('tipos-preparados')===1){
+                return;
+            }
+
+            select.find('option').each(function(){
+                var opcion=$(this);
+                opcion.attr('data-visible-original','1');
+            });
+            select.data('tipos-preparados',1);
+        }
+
+        function restaurarOpcionesTipoLegalizacion(formulario){
+            var select=formulario.find('select[data-campo="tipo-legalizacion"]');
+            if(!select.length){
+                return;
+            }
+
+            prepararOpcionesTipoLegalizacion(formulario);
+            select.find('option').each(function(){
+                $(this).prop('disabled',false).show();
+            });
+        }
+
+        function aplicarTiposPermitidosPorMonto(formulario,resp){
+            var select=formulario.find('select[data-campo="tipo-legalizacion"]');
+            if(!select.length){
+                return;
+            }
+
+            if(!(resp && resp.aplicar_filtro_por_monto)){
+                restaurarOpcionesTipoLegalizacion(formulario);
+                var codigoAutomatico=(resp && resp.tipo_legalizacion_sugerido) ? String(resp.tipo_legalizacion_sugerido) : '';
+                if(codigoAutomatico!=='' && select.find('option[value="'+codigoAutomatico+'"]').length){
+                    select.val(codigoAutomatico);
+                    select.prop('disabled',true);
+                }else{
+                    select.prop('disabled',false);
+                }
+                sincronizarTipoLegalizacion(formulario);
+                return;
+            }
+
+            prepararOpcionesTipoLegalizacion(formulario);
+
+            var permitidos=obtenerTiposPermitidosDesdeRespuesta(resp);
+            if(permitidos.length===0){
+                restaurarOpcionesTipoLegalizacion(formulario);
+                select.val('');
+                select.prop('disabled',true);
+                sincronizarTipoLegalizacion(formulario);
+                return;
+            }
+
+            var mapaPermitidos={};
+            permitidos.forEach(function(item){
+                mapaPermitidos[String(item.cod_tre)]=item;
+            });
+
+            select.find('option').each(function(){
+                var opcion=$(this);
+                var valor=(opcion.val() || '').toString();
+
+                if(valor===''){
+                    opcion.prop('disabled',false).show();
+                    return;
+                }
+
+                if(mapaPermitidos[valor]){
+                    opcion.prop('disabled',false).show();
+                }else{
+                    opcion.prop('disabled',true).hide();
+                }
+            });
+
+            var seleccionActual=(select.val() || '').toString();
+            if(permitidos.length===1){
+                select.val(String(permitidos[0].cod_tre));
+            }else if(seleccionActual==='' || !mapaPermitidos[seleccionActual]){
+                select.val('');
+            }
+
+            select.prop('disabled',false);
+            sincronizarTipoLegalizacion(formulario);
+        }
+
         function autoseleccionarTipoLegalizacion(formulario,resp){
             var select=formulario.find('select[data-campo="tipo-legalizacion"]');
             if(!select.length){
+                return;
+            }
+
+            var permitidos=obtenerTiposPermitidosDesdeRespuesta(resp);
+            if(permitidos.length>1 || (resp && resp.requiere_seleccion_manual)){
+                return;
+            }
+
+            if(permitidos.length===1){
+                select.val(String(permitidos[0].cod_tre));
                 return;
             }
 
@@ -1297,21 +1466,53 @@
 
             // Reglas del formulario original:
             // Búsqueda (tipo B): numero, gestion, buscar_en, documentos y control obligatorios.
-            // Legalización (L/C/E): gestion, control y reintegro obligatorios.
+            // Legalización (L/C/E): gestion y control obligatorios; reintegro opcional.
             var esBusqueda=form.find('select[name="buscar_en"]').length>0 || form.find('textarea[name="documentos"]').length>0;
 
             form.find('input[name="control"]').prop('required',true);
             form.find('input[name="gestion"]').prop('required',true);
             form.find('input[name="numero"]').prop('required',esBusqueda);
-            form.find('input[name="reintegro"]').prop('required',!esBusqueda);
+            form.find('input[name="reintegro"]').prop('required',false);
             form.find('select[name="buscar_en"]').prop('required',esBusqueda);
             form.find('textarea[name="documentos"]').prop('required',esBusqueda);
+
+            actualizarSelectorTipoSegunCuadis(form);
+        }
+
+        function actualizarSelectorTipoSegunCuadis(formulario){
+            var form=$(formulario);
+            if(!form.length){
+                return;
+            }
+
+            var select=form.find('select[data-campo="tipo-legalizacion"]');
+            if(!select.length){
+                return;
+            }
+
+            var cuadis=form.find('input[name="cuadis"]').is(':checked');
+            var validado=form.find('[data-campo="validacion-recaudacion-ok"]').val()==='1';
+
+            if(cuadis){
+                restaurarOpcionesTipoLegalizacion(form);
+                select.prop('disabled',false);
+                sincronizarTipoLegalizacion(form);
+                return;
+            }
+
+            if(!validado){
+                limpiarTipoLegalizacion(form);
+            }
         }
 
         function sincronizarTipoLegalizacion(formulario){
             var select=formulario.find('select[data-campo="tipo-legalizacion"]');
             if(select.length){
-                var valorSeleccionado=select.find('option:selected').val() || '';
+                var opcionSeleccionada=select.find('option:selected');
+                var valorSeleccionado='';
+                if(opcionSeleccionada.length && !opcionSeleccionada.prop('disabled')){
+                    valorSeleccionado=opcionSeleccionada.val() || '';
+                }
                 select.val(valorSeleccionado);
                 formulario.find('input[data-campo="tipo-legalizacion-hidden"]').val(valorSeleccionado);
             }
@@ -1320,7 +1521,9 @@
         function limpiarTipoLegalizacion(formulario){
             var select=formulario.find('select[data-campo="tipo-legalizacion"]');
             if(select.length){
+                restaurarOpcionesTipoLegalizacion(formulario);
                 select.val('');
+                select.prop('disabled',true);
             }
             formulario.find('input[data-campo="tipo-legalizacion-hidden"]').val('');
         }
@@ -1358,10 +1561,12 @@
                 return;
             }
             var control=($.trim(form.find('input[name="control"]').val()) || '');
+            var reintegro=($.trim(form.find('input[name="reintegro"]').val()) || '');
             var controlOk=form.data('control-validado-ok')===1;
             var controlPrevio=(form.data('control-validado-valor') || '').toString();
+            var reintegroPrevio=(form.data('reintegro-validado-valor') || '').toString();
 
-            if(control!=='' && controlOk && controlPrevio===control){
+            if(control!=='' && controlOk && controlPrevio===control && reintegroPrevio===reintegro){
                 return;
             }
 
@@ -1383,6 +1588,7 @@
         $(function(){
             $('form').each(function(){
                 if($(this).find('select[data-campo="tipo-legalizacion"]').length){
+                    prepararOpcionesTipoLegalizacion($(this));
                     sincronizarTipoLegalizacion($(this));
                 }
                 if($(this).find('input[name="control"]').length){
@@ -1395,6 +1601,14 @@
 
             $(document).on('change','form input[name="cuadis"]',function(){
                 sincronizarCamposObligatorios($(this).closest('form'));
+            });
+
+            $(document).on('change','form select[data-campo="tipo-legalizacion"]',function(){
+                var form=$(this).closest('form');
+                sincronizarTipoLegalizacion(form);
+                if(form.find('[data-campo="estado-sitra"]').length){
+                    programarValidacionSitra(form);
+                }
             });
 
             $(document).on('input change','form input[name="numero"], form input[name="gestion"], form select[name="buscar_en"], form input[data-campo="tipo-legalizacion-hidden"]',function(){

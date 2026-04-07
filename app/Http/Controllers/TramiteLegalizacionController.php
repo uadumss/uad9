@@ -191,7 +191,7 @@ class TramiteLegalizacionController extends Controller
                 \Session::flash('exito','Se guardaron los datos correctamente');
                 SessionController::write('C','','persona creada','personas','3',$persona->id_per);
             }
-            $tramite->save();
+        $tramite->save();
         return redirect('datos tramite legalizacion/'.$form['ctra']);
     }
     public function eli_traleg(Request $form){
@@ -301,25 +301,63 @@ class TramiteLegalizacionController extends Controller
 
             $persona=Persona::find($datosTramita->id_per);
             $preimpreso=trim((string)($form['reimpresion'] ?? ''));
+            $reintegroControl=trim((string)($form['reintegro'] ?? ''));
+            $tieneReintegro=$reintegroControl!=='';
             $verificacionRecaudacion=['ok'=>true];
+            $verificacionReintegro=['ok'=>true];
 
             // Validación obligatoria contra recaudaciones para valorados pagados
             if($cuadis!='c'){
+                if($tieneReintegro && (string)$form['control']===$reintegroControl){
+                    \Session::flash('error','El número de control principal y el de reintegro deben ser diferentes.');
+                    return redirect('datos tramite legalizacion/'.$form['ctra']);
+                }
+
                 $verificacionRecaudacion=$this->validarRecaudacionLegalizacion(
                     (string)$form['control'],
                     (string)$persona->per_ci,
                     $datosTramita->tra_tipo_tramite,
                     (int)$persona->id_per,
                     $preimpreso,
-                    (int)$form['ctra']
+                    (int)$form['ctra'],
+                    $tieneReintegro
                 );
                 if(!$verificacionRecaudacion['ok']){
                     \Session::flash('error',$verificacionRecaudacion['message']);
                     return redirect('datos tramite legalizacion/'.$form['ctra']);
                 }
+
+                if($tieneReintegro){
+                    $verificacionReintegro=$this->validarRecaudacionReintegroLegalizacion(
+                        $reintegroControl,
+                        (string)$persona->per_ci,
+                        $datosTramita->tra_tipo_tramite,
+                        (int)$persona->id_per,
+                        (int)$form['ctra']
+                    );
+                    if(!$verificacionReintegro['ok']){
+                        \Session::flash('error',$verificacionReintegro['message']);
+                        return redirect('datos tramite legalizacion/'.$form['ctra']);
+                    }
+                }
             }
 
-            $tramita=Tramite::find($form['tipo']);
+            $seleccionTipo=$this->resolverSeleccionTipoLegalizacionSegura(
+                $form,
+                $datosTramita->tra_tipo_tramite,
+                $cuadis,
+                $verificacionRecaudacion,
+                $tieneReintegro ? $verificacionReintegro : null
+            );
+            if(!$seleccionTipo['ok']){
+                \Session::flash('error',$seleccionTipo['message']);
+                return redirect('datos tramite legalizacion/'.$form['ctra']);
+            }
+
+            $tramita=$seleccionTipo['tramite'];
+            $form->merge([
+                'tipo'=>(int)$tramita->cod_tre,
+            ]);
             $buscarEnSitra=(string)($tramita->tre_buscar_en ?? '');
             if($datosTramita->tra_tipo_tramite=='B' && !empty($form['buscar_en'])){
                 $buscarEnSitra=explode('-', (string)$form['buscar_en'])[0] ?? '';
@@ -379,11 +417,18 @@ class TramiteLegalizacionController extends Controller
             //return $respuesta;
             if($tramita->tre_buscar_en=='' || $tramita->tre_buscar_en=='res'){
                 $form->validate([
-                    'tipo'=>'required','ctra'=>'required',
+                    'tipo'=>'required',
+                    'ctra'=>'required',
+                    'control'=>'nullable|integer',
+                    'reintegro'=>'nullable|integer|min:1',
                 ]);
             }else{
                 $form->validate([
-                    'tipo'=>'required','ctra'=>'required','gestion'=>'required|numeric'
+                    'tipo'=>'required',
+                    'ctra'=>'required',
+                    'gestion'=>'required|numeric',
+                    'control'=>'nullable|integer',
+                    'reintegro'=>'nullable|integer|min:1',
                 ]);
             }
             $buscar_en=array();
@@ -432,123 +477,134 @@ class TramiteLegalizacionController extends Controller
 
             $aux=explode('-',$tramita->tre_buscar_en);
             $estado=1;
-            if(true){
-            /*if($titulo){  IMPORTANTE============Cuando este restringido por titulo
+            try {
+                DB::beginTransaction();
 
-                if(sizeof($aux)==1){
-                    if($titulo->tit_pdf==''){    $estado=2;  }
-                }else{
-                    if($titulo->tit_pdf==''){    $estado=3;  }
-                }*/
-                $codtit=0;
-                if($titulo){
-                    $codtit=$titulo->cod_tit;
-                }
-                $ptaang='';
-                //return $form['ptaang'];
-                if($form['ptaang']=='on'){
-                    if($tramita->tre_buscar_en=='da'){
-                        $ptaang='A';
+                if(true){
+                /*if($titulo){  IMPORTANTE============Cuando este restringido por titulo
+
+                    if(sizeof($aux)==1){
+                        if($titulo->tit_pdf==''){    $estado=2;  }
                     }else{
-                        if($tramita->tre_buscar_en=='db'){
-                            $ptaang='B';
+                        if($titulo->tit_pdf==''){    $estado=3;  }
+                    }*/
+                    $codtit=0;
+                    if($titulo){
+                        $codtit=$titulo->cod_tit;
+                    }
+                    $ptaang='';
+                    //return $form['ptaang'];
+                    if($form['ptaang']=='on'){
+                        if($tramita->tre_buscar_en=='da'){
+                            $ptaang='A';
+                        }else{
+                            if($tramita->tre_buscar_en=='db'){
+                                $ptaang='B';
+                            }
                         }
                     }
-                }
-                $supletorio="";
-                if($form['supletorio']=='on'){
-                    $supletorio="t";
-                }
-                $busqueda_en='';
-                if($form['buscar_en']!=''){
-                    $busqueda_en=$form['buscar_en'];
-                }else{
-                    $busqueda_en=$tramita->tre_buscar_en;
-                }
-                $tramite=D_tramita::create([
-                    'cod_tre'=>$form['tipo'],
-                    'cod_tra'=>$form['ctra'],
-                    'dtra_numero'=>$numeroDoc,
-                    'dtra_gestion'=>$form['gestion'],
-                    // Hasta el 08-05-2023 se guardaba el preimpreso, ahora se guarda el nro. de control del valorado desde el 9 de mayo
-                    //'dtra_control'=>$form['valorado'],
-                    'dtra_control'=>$form['control'],
-                    'dtra_valorado_reintegro'=>$form['reintegro'],
-                    'dtra_valorado_busqueda'=>$form['valorado_bus'],
-                    'dtra_control_reimpresion'=>$form['reimpresion'],
-                    'dtra_numero_tramite'=>$numero_tramite,
-                    'dtra_gestion_tramite'=>$año_tramita,
-                    'dtra_costo'=>$tramita->tre_costo,
-                    'dtra_tipo'=>$tramita->tre_tipo,
-                    'dtra_solo_sello'=>$tramita->tre_solo_sello,
-                    //'dtra_cod_tit'=>$titulo->cod_tit,
-                    'dtra_cod_tit'=>$codtit,
-                    'dtra_estado_doc'=>$estado,
-                    'dtra_fecha_registro'=>date('d/m/Y'),
-                    'dtra_interno'=>$form['tipo_tramite'],
-                    'dtra_buscar_en'=>$busqueda_en,
-                    'dtra_ptaang'=>$ptaang,
-                    'dtra_verificacion_sitra'=>$verificar_sitra,
-                    'dtra_supletorio'=>$supletorio,
-                    'dtra_sin_valorado'=>$cuadis,
-                ]);
-                if($cuadis!='c'){
-                    $errorUso='';
-                    if(!$this->registrarUsoRecaudacion($verificacionRecaudacion,(int)$form['ctra'],(int)$tramite->cod_dtra,$errorUso)){
-                        $tramite->delete();
-                        \Session::flash('error',$errorUso);
-                        return redirect('datos tramite legalizacion/'.$form['ctra']);
+                    $supletorio="";
+                    if($form['supletorio']=='on'){
+                        $supletorio="t";
                     }
-                }
-                $nuevo=json_encode($tramite);
-                SessionController::write('C','',$nuevo,'d_tramitas','3',$tramite->cod_dtra);
-
-                \Session::flash('exito','Se ha creado exitosamente el trámite');
-            }else{ // EN CASO DE QUE EL TITULO NO SE HAYA ENCONTRADO
-                //return $tramita->tre_buscar_en." --";
-                if($tramita->tre_buscar_en=='res'){
-                    $estado=7;
-                }else{
-                    $estado=6;
-                }
-                if($tramita->tre_buscar_en=='' || $tramita->tre_buscar_en=='res'){
+                    $busqueda_en='';
+                    if($form['buscar_en']!=''){
+                        $busqueda_en=$form['buscar_en'];
+                    }else{
+                        $busqueda_en=$tramita->tre_buscar_en;
+                    }
                     $tramite=D_tramita::create([
                         'cod_tre'=>$form['tipo'],
                         'cod_tra'=>$form['ctra'],
+                        'dtra_numero'=>$numeroDoc,
+                        'dtra_gestion'=>$form['gestion'],
+                        // Hasta el 08-05-2023 se guardaba el preimpreso, ahora se guarda el nro. de control del valorado desde el 9 de mayo
+                        //'dtra_control'=>$form['valorado'],
                         'dtra_control'=>$form['control'],
-                        'dtra_control_reimpresion'=>$form['reimpresion'],
+                        'dtra_valorado_reintegro'=>$reintegroControl!=='' ? (int)$reintegroControl : null,
                         'dtra_valorado_busqueda'=>$form['valorado_bus'],
+                        'dtra_control_reimpresion'=>$form['reimpresion'],
                         'dtra_numero_tramite'=>$numero_tramite,
                         'dtra_gestion_tramite'=>$año_tramita,
                         'dtra_costo'=>$tramita->tre_costo,
                         'dtra_tipo'=>$tramita->tre_tipo,
                         'dtra_solo_sello'=>$tramita->tre_solo_sello,
-                        'dtra_fecha_registro'=>date('d/m/Y'),
+                        //'dtra_cod_tit'=>$titulo->cod_tit,
+                        'dtra_cod_tit'=>$codtit,
                         'dtra_estado_doc'=>$estado,
+                        'dtra_fecha_registro'=>date('d/m/Y'),
                         'dtra_interno'=>$form['tipo_tramite'],
-                        'dtra_buscar_en'=>$form['buscar_en'],
+                        'dtra_buscar_en'=>$busqueda_en,
+                        'dtra_ptaang'=>$ptaang,
+                        'dtra_verificacion_sitra'=>$verificar_sitra,
+                        'dtra_supletorio'=>$supletorio,
                         'dtra_sin_valorado'=>$cuadis,
                     ]);
                     if($cuadis!='c'){
                         $errorUso='';
                         if(!$this->registrarUsoRecaudacion($verificacionRecaudacion,(int)$form['ctra'],(int)$tramite->cod_dtra,$errorUso)){
-                            $tramite->delete();
-                            \Session::flash('error',$errorUso);
-                            return redirect('datos tramite legalizacion/'.$form['ctra']);
+                            throw new \RuntimeException($errorUso!=='' ? $errorUso : 'No se pudo registrar el pago principal.');
+                        }
+
+                        if($tieneReintegro){
+                            $errorUsoReintegro='';
+                            if(!$this->registrarUsoRecaudacion($verificacionReintegro,(int)$form['ctra'],(int)$tramite->cod_dtra,$errorUsoReintegro)){
+                                throw new \RuntimeException($errorUsoReintegro!=='' ? $errorUsoReintegro : 'No se pudo registrar el pago de reintegro.');
+                            }
                         }
                     }
                     $nuevo=json_encode($tramite);
                     SessionController::write('C','',$nuevo,'d_tramitas','3',$tramite->cod_dtra);
-                    \Session::flash('exito','Se ha creado exitosamente el trámite ');
-                }else{
-                    \Session::flash('error','El título '.$form['numero'].'/'.$form['gestion'].' No corresponde a la persona');
+                }else{ // EN CASO DE QUE EL TITULO NO SE HAYA ENCONTRADO
+                    //return $tramita->tre_buscar_en." --";
+                    if($tramita->tre_buscar_en=='res'){
+                        $estado=7;
+                    }else{
+                        $estado=6;
+                    }
+                    if($tramita->tre_buscar_en=='' || $tramita->tre_buscar_en=='res'){
+                        $tramite=D_tramita::create([
+                            'cod_tre'=>$form['tipo'],
+                            'cod_tra'=>$form['ctra'],
+                            'dtra_control'=>$form['control'],
+                            'dtra_control_reimpresion'=>$form['reimpresion'],
+                            'dtra_valorado_busqueda'=>$form['valorado_bus'],
+                            'dtra_numero_tramite'=>$numero_tramite,
+                            'dtra_gestion_tramite'=>$año_tramita,
+                            'dtra_costo'=>$tramita->tre_costo,
+                            'dtra_tipo'=>$tramita->tre_tipo,
+                            'dtra_solo_sello'=>$tramita->tre_solo_sello,
+                            'dtra_fecha_registro'=>date('d/m/Y'),
+                            'dtra_estado_doc'=>$estado,
+                            'dtra_interno'=>$form['tipo_tramite'],
+                            'dtra_buscar_en'=>$form['buscar_en'],
+                            'dtra_sin_valorado'=>$cuadis,
+                        ]);
+                        if($cuadis!='c'){
+                            $errorUso='';
+                            if(!$this->registrarUsoRecaudacion($verificacionRecaudacion,(int)$form['ctra'],(int)$tramite->cod_dtra,$errorUso)){
+                                throw new \RuntimeException($errorUso!=='' ? $errorUso : 'No se pudo registrar el pago principal.');
+                            }
+                        }
+                        $nuevo=json_encode($tramite);
+                        SessionController::write('C','',$nuevo,'d_tramitas','3',$tramite->cod_dtra);
+                    }else{
+                        throw new \RuntimeException('El título '.$form['numero'].'/'.$form['gestion'].' No corresponde a la persona');
+                    }
                 }
-            }
-            if($datosTramita->tra_tipo_tramite=='B' || $datosTramita->tra_tipo_tramite=='F'){
-                D_confrontacion::create([
-                    'dcon_doc'=>$form['documentos'],
-                    'cod_dtra'=>$tramite->cod_dtra,
-                ]);
+                if($datosTramita->tra_tipo_tramite=='B' || $datosTramita->tra_tipo_tramite=='F'){
+                    D_confrontacion::create([
+                        'dcon_doc'=>$form['documentos'],
+                        'cod_dtra'=>$tramite->cod_dtra,
+                    ]);
+                }
+
+                DB::commit();
+                \Session::flash('exito','Se ha creado exitosamente el trámite');
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                $mensaje=trim((string)$e->getMessage());
+                \Session::flash('error',$mensaje!=='' ? $mensaje : 'No se pudo registrar el trámite.');
             }
         }else{
 
@@ -575,13 +631,23 @@ class TramiteLegalizacionController extends Controller
         ]);
 
         $form->validate([
-            'tipo'=>'required|integer',
+            'tipo'=>'nullable|integer',
             'control'=>'required|integer',
+            'reintegro'=>'nullable|integer|min:1',
         ]);
 
         $persona=Persona::find($datosTramita->id_per);
         if(!$persona || !$persona->per_ci){
             \Session::flash('error','El CI no es válido para consultar.');
+            return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
+        }
+
+        $reintegroControl=trim((string)($form['reintegro'] ?? ''));
+        $tieneReintegro=$reintegroControl!=='';
+        $verificacionReintegro=['ok'=>true];
+
+        if($tieneReintegro && (string)$form['control']===$reintegroControl){
+            \Session::flash('error','El número de control principal y el de reintegro deben ser diferentes.');
             return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
         }
 
@@ -591,13 +657,44 @@ class TramiteLegalizacionController extends Controller
             $datosTramita->tra_tipo_tramite,
             (int)$persona->id_per,
             '',
-            (int)$datosTramita->cod_tra
+            (int)$datosTramita->cod_tra,
+            $tieneReintegro
         );
 
         if(!$verificacionRecaudacion['ok']){
             \Session::flash('error',$verificacionRecaudacion['message']);
             return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
         }
+
+        if($tieneReintegro){
+            $verificacionReintegro=$this->validarRecaudacionReintegroLegalizacion(
+                $reintegroControl,
+                (string)$persona->per_ci,
+                $datosTramita->tra_tipo_tramite,
+                (int)$persona->id_per,
+                (int)$datosTramita->cod_tra
+            );
+            if(!$verificacionReintegro['ok']){
+                \Session::flash('error',$verificacionReintegro['message']);
+                return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
+            }
+        }
+
+        $seleccionTipo=$this->resolverSeleccionTipoLegalizacionSegura(
+            $form,
+            $datosTramita->tra_tipo_tramite,
+            '',
+            $verificacionRecaudacion,
+            $tieneReintegro ? $verificacionReintegro : null
+        );
+        if(!$seleccionTipo['ok']){
+            \Session::flash('error',$seleccionTipo['message']);
+            return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
+        }
+
+        $form->merge([
+            'tipo'=>(int)$seleccionTipo['tramite']->cod_tre,
+        ]);
 
         $documentosSeleccionados=[];
         foreach(['ci','cn','lm','ce','pa','lc'] as $doc){
@@ -615,36 +712,53 @@ class TramiteLegalizacionController extends Controller
         $numero_tramite=DB::table('d_tramitas')->where('dtra_gestion_tramite','=',$año_tramita)->max('dtra_numero_tramite');
         $numero_tramite=((int)$numero_tramite)+1;
 
-        $dTramite=D_tramita::create([
-            'cod_tre'=>$form['tipo'],
-            'cod_tra'=>$datosTramita->cod_tra,
-            'dtra_tipo'=>'F',
-            'dtra_control'=>$form['control'],
-            'dtra_valorado'=>$form['control'],
-            'dtra_numero_tramite'=>$numero_tramite,
-            'dtra_gestion_tramite'=>$año_tramita,
-            'dtra_fecha_recojo'=>date('d/m/Y H:i:s'),
-            'dtra_fecha_firma'=>date('d/m/Y H:i:s'),
-            'dtra_estado_doc'=>'4',
-            'dtra_entregado'=>'t',
-        ]);
+        try {
+            DB::beginTransaction();
 
-        $errorUso='';
-        if(!$this->registrarUsoRecaudacion($verificacionRecaudacion,(int)$datosTramita->cod_tra,(int)$dTramite->cod_dtra,$errorUso)){
-            $dTramite->delete();
-            \Session::flash('error',$errorUso);
-            return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
-        }
-
-        foreach($documentosSeleccionados as $doc){
-            D_confrontacion::create([
-                'dcon_doc'=>$doc,
-                'cod_dtra'=>$dTramite->cod_dtra,
+            $dTramite=D_tramita::create([
+                'cod_tre'=>$form['tipo'],
+                'cod_tra'=>$datosTramita->cod_tra,
+                'dtra_tipo'=>'F',
+                'dtra_control'=>$form['control'],
+                'dtra_valorado'=>$form['control'],
+                'dtra_valorado_reintegro'=>$tieneReintegro ? (int)$reintegroControl : null,
+                'dtra_numero_tramite'=>$numero_tramite,
+                'dtra_gestion_tramite'=>$año_tramita,
+                'dtra_fecha_recojo'=>date('d/m/Y H:i:s'),
+                'dtra_fecha_firma'=>date('d/m/Y H:i:s'),
+                'dtra_estado_doc'=>'4',
+                'dtra_entregado'=>'t',
             ]);
+
+            $errorUso='';
+            if(!$this->registrarUsoRecaudacion($verificacionRecaudacion,(int)$datosTramita->cod_tra,(int)$dTramite->cod_dtra,$errorUso)){
+                throw new \RuntimeException($errorUso!=='' ? $errorUso : 'No se pudo registrar el pago principal.');
+            }
+
+            if($tieneReintegro){
+                $errorUsoReintegro='';
+                if(!$this->registrarUsoRecaudacion($verificacionReintegro,(int)$datosTramita->cod_tra,(int)$dTramite->cod_dtra,$errorUsoReintegro)){
+                    throw new \RuntimeException($errorUsoReintegro!=='' ? $errorUsoReintegro : 'No se pudo registrar el pago de reintegro.');
+                }
+            }
+
+            foreach($documentosSeleccionados as $doc){
+                D_confrontacion::create([
+                    'dcon_doc'=>$doc,
+                    'cod_dtra'=>$dTramite->cod_dtra,
+                ]);
+            }
+
+            SessionController::write('C','',json_encode($dTramite),'d_tramitas','3',$dTramite->cod_dtra);
+
+            DB::commit();
+            \Session::flash('exito','Se ha creado exitosamente el trámite');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            $mensaje=trim((string)$e->getMessage());
+            \Session::flash('error',$mensaje!=='' ? $mensaje : 'No se pudo registrar el trámite de confrontación.');
         }
 
-        SessionController::write('C','',json_encode($dTramite),'d_tramitas','3',$dTramite->cod_dtra);
-        \Session::flash('exito','Se ha creado exitosamente el trámite');
         return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
     }
 
@@ -652,6 +766,7 @@ class TramiteLegalizacionController extends Controller
     {
         $data=$request->validate([
             'control'=>['required','integer'],
+            'reintegro'=>['nullable','integer','min:1'],
             'reimpresion'=>['nullable','string','max:30'],
         ]);
 
@@ -671,19 +786,366 @@ class TramiteLegalizacionController extends Controller
             ],422);
         }
 
+        $reintegroControl=trim((string)($data['reintegro'] ?? ''));
+        $tieneReintegro=$reintegroControl!=='';
+
+        if($tieneReintegro && (string)$data['control']===$reintegroControl){
+            return response()->json([
+                'ok'=>false,
+                'code'=>'REINTEGRO_CONTROL_IGUAL',
+                'message'=>'El Nro. de control principal y el de reintegro deben ser diferentes.',
+            ],422);
+        }
+
         $validacion=$this->validarRecaudacionLegalizacion(
             (string)$data['control'],
             (string)$persona->per_ci,
             $tramita->tra_tipo_tramite,
             (int)$persona->id_per,
             trim((string)($data['reimpresion'] ?? '')),
-            (int)$cod_tra
+            (int)$cod_tra,
+            $tieneReintegro
         );
         if(!$validacion['ok']){
             return response()->json($validacion,422);
         }
 
+        $validacionReintegro=['ok'=>true];
+
+        if($tieneReintegro){
+            $validacionReintegro=$this->validarRecaudacionReintegroLegalizacion(
+                $reintegroControl,
+                (string)$persona->per_ci,
+                $tramita->tra_tipo_tramite,
+                (int)$persona->id_per,
+                (int)$cod_tra
+            );
+
+            if(!$validacionReintegro['ok']){
+                return response()->json($validacionReintegro,422);
+            }
+
+            $validacion['reintegro_control']=$validacionReintegro['control'] ?? $reintegroControl;
+            $validacion['reintegro_monto']=$validacionReintegro['monto'] ?? '';
+            $validacion['reintegro_codigo_cuenta']=$validacionReintegro['codigo_cuenta'] ?? '';
+            $validacion['reintegro_cuenta']=$validacionReintegro['cuenta'] ?? '';
+        }
+
+        $validacion['aplicar_filtro_por_monto']=false;
+        $validacion['requiere_seleccion_manual']=false;
+
+        if($tieneReintegro){
+            $tiposPermitidos=$this->resolverTiposPermitidosPorMontoLegalizacion(
+                (string)$tramita->tra_tipo_tramite,
+                $validacion['monto'] ?? null,
+                $validacionReintegro['monto'] ?? null
+            );
+            if(!$tiposPermitidos['ok']){
+                return response()->json([
+                    'ok'=>false,
+                    'code'=>$tiposPermitidos['code'] ?? 'MONTO_NO_CORRESPONDE_TRAMITE',
+                    'message'=>$tiposPermitidos['message'] ?? 'No se encontró un trámite válido para el monto del valorado.',
+                ],422);
+            }
+
+            $validacion['aplicar_filtro_por_monto']=true;
+            $validacion['monto_total']=$tiposPermitidos['monto_total'];
+            $validacion['tipos_permitidos']=$tiposPermitidos['tipos_permitidos'];
+            $validacion['requiere_seleccion_manual']=count($tiposPermitidos['tipos_permitidos'])>1;
+
+            $codigosPermitidos=array_map(static function(array $item): int {
+                return (int)($item['cod_tre'] ?? 0);
+            },$tiposPermitidos['tipos_permitidos']);
+
+            if(count($tiposPermitidos['tipos_permitidos'])===1){
+                $validacion['tipo_legalizacion_sugerido']=$tiposPermitidos['tipos_permitidos'][0]['cod_tre'];
+                $validacion['nombre_tipo_legalizacion_sugerido']=$tiposPermitidos['tipos_permitidos'][0]['tre_nombre'];
+            }elseif(isset($validacion['tipo_legalizacion_sugerido']) && !in_array((int)$validacion['tipo_legalizacion_sugerido'],$codigosPermitidos,true)){
+                unset($validacion['tipo_legalizacion_sugerido'],$validacion['nombre_tipo_legalizacion_sugerido']);
+            }
+        }
+
         return response()->json($validacion);
+    }
+
+    private function resolverSeleccionTipoLegalizacionSegura(
+        Request $form,
+        string $tipoTramite,
+        string $cuadis,
+        array $validacionRecaudacion = [],
+        ?array $validacionReintegro = null
+    ): array
+    {
+        $tipoSeleccionado=trim((string)$form->input('tipo',''));
+
+        if($cuadis==='c'){
+            if($tipoSeleccionado===''){
+                return [
+                    'ok'=>false,
+                    'message'=>'Seleccione el tipo de legalización para continuar.',
+                ];
+            }
+
+            $tramite=Tramite::where('cod_tre','=',(int)$tipoSeleccionado)
+                ->where('tre_tipo','=',$tipoTramite)
+                ->where('tre_hab','<>','f')
+                ->first();
+
+            if(!$tramite){
+                return [
+                    'ok'=>false,
+                    'message'=>'El tipo de legalización seleccionado no es válido para este trámite.',
+                ];
+            }
+
+            return [
+                'ok'=>true,
+                'tramite'=>$tramite,
+            ];
+        }
+
+        $aplicarFiltroPorMonto=$validacionReintegro!==null;
+        if(!$aplicarFiltroPorMonto){
+            $tipoSugerido=(int)($validacionRecaudacion['tipo_legalizacion_sugerido'] ?? 0);
+
+            if($tipoSugerido<=0){
+                return [
+                    'ok'=>false,
+                    'message'=>'No se pudo determinar automáticamente el tipo de legalización desde la cuenta validada del valorado principal.',
+                ];
+            }
+
+            // Sin reintegro, el tipo es automático y no debe depender de entrada del cliente.
+            $form->merge(['tipo'=>(string)$tipoSugerido]);
+
+            $tramite=Tramite::where('cod_tre','=',$tipoSugerido)
+                ->where('tre_tipo','=',$tipoTramite)
+                ->where('tre_hab','<>','f')
+                ->first();
+
+            if(!$tramite){
+                return [
+                    'ok'=>false,
+                    'message'=>'El tipo de legalización seleccionado no es válido para este trámite.',
+                ];
+            }
+
+            return [
+                'ok'=>true,
+                'tramite'=>$tramite,
+            ];
+        }
+
+        $resultadoMonto=$this->resolverTiposPermitidosPorMontoLegalizacion(
+            $tipoTramite,
+            $validacionRecaudacion['monto'] ?? null,
+            $validacionReintegro['monto'] ?? null
+        );
+
+        if(!$resultadoMonto['ok']){
+            return [
+                'ok'=>false,
+                'message'=>$resultadoMonto['message'] ?? 'No se encontró un trámite válido para el monto del valorado.',
+            ];
+        }
+
+        $tiposPermitidos=$resultadoMonto['tipos_permitidos'];
+        $codigosPermitidos=array_map(static function(array $item): int {
+            return (int)($item['cod_tre'] ?? 0);
+        },$tiposPermitidos);
+
+        if($tipoSeleccionado==='' && count($tiposPermitidos)===1){
+            $tipoSeleccionado=(string)$tiposPermitidos[0]['cod_tre'];
+            $form->merge(['tipo'=>$tipoSeleccionado]);
+        }
+
+        if($tipoSeleccionado===''){
+            return [
+                'ok'=>false,
+                'message'=>'Seleccione el tipo de legalización. El monto total validado es Bs. '.$resultadoMonto['monto_total'].'.',
+            ];
+        }
+
+        $tipoSeleccionadoInt=(int)$tipoSeleccionado;
+        if(!in_array($tipoSeleccionadoInt,$codigosPermitidos,true)){
+            return [
+                'ok'=>false,
+                'message'=>'El tipo de legalización seleccionado no coincide con el monto validado (Bs. '.$resultadoMonto['monto_total'].'). Opciones válidas: '.$this->construirMensajeOpcionesMonto($tiposPermitidos).'.',
+            ];
+        }
+
+        $tramite=Tramite::where('cod_tre','=',$tipoSeleccionadoInt)
+            ->where('tre_tipo','=',$tipoTramite)
+            ->where('tre_hab','<>','f')
+            ->first();
+
+        if(!$tramite){
+            return [
+                'ok'=>false,
+                'message'=>'El tipo de legalización seleccionado no es válido para este trámite.',
+            ];
+        }
+
+        return [
+            'ok'=>true,
+            'tramite'=>$tramite,
+            'tipos_permitidos'=>$tiposPermitidos,
+            'monto_total'=>$resultadoMonto['monto_total'],
+        ];
+    }
+
+    private function resolverTiposPermitidosPorMontoLegalizacion(string $tipoTramite, $montoPrincipal, $montoReintegro = null): array
+    {
+        $montoPrincipalCentavos=$this->normalizarMontoCentavos($montoPrincipal);
+        if($montoPrincipalCentavos===null || $montoPrincipalCentavos<=0){
+            return [
+                'ok'=>false,
+                'code'=>'MONTO_PRINCIPAL_INVALIDO',
+                'message'=>'No se pudo interpretar el monto del valorado principal.',
+            ];
+        }
+
+        $montoReintegroCentavos=0;
+        if($montoReintegro!==null && trim((string)$montoReintegro)!==''){
+            $montoReintegroCentavos=$this->normalizarMontoCentavos($montoReintegro);
+            if($montoReintegroCentavos===null || $montoReintegroCentavos<=0){
+                return [
+                    'ok'=>false,
+                    'code'=>'MONTO_REINTEGRO_INVALIDO',
+                    'message'=>'No se pudo interpretar el monto del reintegro.',
+                ];
+            }
+        }
+
+        $totalCentavos=$montoPrincipalCentavos+$montoReintegroCentavos;
+        $montoTotal=$this->formatearMontoDesdeCentavos($totalCentavos);
+
+        $tramites=Tramite::where('tre_tipo','=',$tipoTramite)
+            ->where('tre_hab','<>','f')
+            ->orderBy('tre_nombre')
+            ->get(['cod_tre','tre_nombre','tre_costo']);
+
+        $tiposPermitidos=[];
+        foreach($tramites as $tramite){
+            $costoCentavos=$this->normalizarMontoCentavos($tramite->tre_costo);
+            if($costoCentavos===null){
+                continue;
+            }
+
+            if($costoCentavos===$totalCentavos){
+                $tiposPermitidos[]=[
+                    'cod_tre'=>(int)$tramite->cod_tre,
+                    'tre_nombre'=>(string)$tramite->tre_nombre,
+                    'tre_costo'=>$this->formatearMontoDesdeCentavos($costoCentavos),
+                ];
+            }
+        }
+
+        if(count($tiposPermitidos)===0){
+            $tipoTxt=$this->etiquetaTipoTramiteLegalizacion($tipoTramite);
+            return [
+                'ok'=>false,
+                'code'=>'MONTO_NO_CORRESPONDE_TRAMITE',
+                'message'=>'La suma de valorados (Bs. '.$montoTotal.') no corresponde a ningún trámite habilitado de '.$tipoTxt.'.',
+            ];
+        }
+
+        return [
+            'ok'=>true,
+            'monto_total'=>$montoTotal,
+            'tipos_permitidos'=>$tiposPermitidos,
+        ];
+    }
+
+    private function normalizarMontoCentavos($valor): ?int
+    {
+        if($valor===null){
+            return null;
+        }
+
+        if(is_int($valor)){
+            return $valor*100;
+        }
+
+        if(is_float($valor)){
+            return (int)round($valor*100);
+        }
+
+        $texto=trim((string)$valor);
+        if($texto===''){
+            return null;
+        }
+
+        $texto=preg_replace('/[^0-9,\.\-]/', '', $texto) ?? '';
+        if($texto==='' || $texto==='-'){
+            return null;
+        }
+
+        $tieneComa=strpos($texto,',')!==false;
+        $tienePunto=strpos($texto,'.')!==false;
+
+        if($tieneComa && $tienePunto){
+            $ultimaComa=(int)strrpos($texto,',');
+            $ultimoPunto=(int)strrpos($texto,'.');
+            if($ultimaComa>$ultimoPunto){
+                $texto=str_replace('.', '', $texto);
+                $texto=str_replace(',', '.', $texto);
+            }else{
+                $texto=str_replace(',', '', $texto);
+            }
+        }elseif($tieneComa){
+            if(substr_count($texto,',')===1){
+                $partes=explode(',', $texto);
+                $decimal=end($partes);
+                if(strlen((string)$decimal)<=2){
+                    $texto=str_replace(',', '.', $texto);
+                }else{
+                    $texto=str_replace(',', '', $texto);
+                }
+            }else{
+                $texto=str_replace(',', '', $texto);
+            }
+        }elseif(substr_count($texto,'.')>1){
+            $partes=explode('.', $texto);
+            $decimal=(string)array_pop($partes);
+            if(strlen($decimal)<=2){
+                $texto=implode('', $partes).'.'.$decimal;
+            }else{
+                $texto=implode('', $partes).$decimal;
+            }
+        }
+
+        if(!is_numeric($texto)){
+            return null;
+        }
+
+        return (int)round(((float)$texto)*100);
+    }
+
+    private function formatearMontoDesdeCentavos(int $centavos): string
+    {
+        return number_format($centavos/100,2,'.','');
+    }
+
+    private function construirMensajeOpcionesMonto(array $tiposPermitidos): string
+    {
+        if(count($tiposPermitidos)===0){
+            return 'sin opciones';
+        }
+
+        $nombres=[];
+        foreach($tiposPermitidos as $item){
+            $nombres[]=trim((string)($item['tre_nombre'] ?? ''));
+        }
+        $nombres=array_values(array_filter($nombres, static function(string $nombre): bool {
+            return $nombre!=='';
+        }));
+
+        if(count($nombres)===0){
+            return 'sin opciones';
+        }
+
+        return implode(', ',$nombres);
     }
 
     public function validar_sitra_previa(Request $request, $cod_tra)
@@ -820,7 +1282,8 @@ class TramiteLegalizacionController extends Controller
         string $tipoTramite,
         int $idPer,
         string $preimpreso = '',
-        int $codTraActual = 0
+        int $codTraActual = 0,
+        bool $permitirTipoDistintoConReintegro = false
     ): array
     {
         $baseUrl = rtrim((string) config('services.recaudaciones.url'), '/');
@@ -945,21 +1408,25 @@ class TramiteLegalizacionController extends Controller
             }
 
             if($tramiteSugerido->tre_tipo !== $tipoTramite){
-                $nombreCuenta=trim((string)$nombreCuentaRecaudaciones);
-                $nombreTramiteSugerido=trim((string)$tramiteSugerido->tre_nombre);
-                $sonSimilares=$this->textosCuentaMuySimilares($nombreCuenta,$nombreTramiteSugerido);
+                if(!$permitirTipoDistintoConReintegro){
+                    $nombreCuenta=trim((string)$nombreCuentaRecaudaciones);
+                    $nombreTramiteSugerido=trim((string)$tramiteSugerido->tre_nombre);
+                    $sonSimilares=$this->textosCuentaMuySimilares($nombreCuenta,$nombreTramiteSugerido);
 
-                if($nombreCuenta!=='' && !$sonSimilares){
-                    $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite. Cuenta: "'.$nombreCuenta.'". Corresponde a: "'.$nombreTramiteSugerido.'".';
-                } elseif($nombreTramiteSugerido!==''){
-                    $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite. Corresponde a: "'.$nombreTramiteSugerido.'".';
-                } elseif($nombreCuenta!==''){
-                    $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite. Cuenta: "'.$nombreCuenta.'".';
-                } else {
-                    $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite.';
+                    if($nombreCuenta!=='' && !$sonSimilares){
+                        $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite. Cuenta: "'.$nombreCuenta.'". Corresponde a: "'.$nombreTramiteSugerido.'".';
+                    } elseif($nombreTramiteSugerido!==''){
+                        $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite. Corresponde a: "'.$nombreTramiteSugerido.'".';
+                    } elseif($nombreCuenta!==''){
+                        $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite. Cuenta: "'.$nombreCuenta.'".';
+                    } else {
+                        $mensajeCuentaInvalida='La boleta no corresponde a este tipo de trámite.';
+                    }
+                    continue;
                 }
-                continue;
             }
+
+            $tipoPagoDistinto=$tramiteSugerido->tre_tipo !== $tipoTramite;
 
             return [
                 'ok'=>true,
@@ -973,9 +1440,12 @@ class TramiteLegalizacionController extends Controller
                 'cuenta'=>$fila['cuenta'] ?? '',
                 'monto'=>$fila['total'] ?? '',
                 'preimpreso'=>$preimpresoApi,
-                'tipo_legalizacion_sugerido'=>$tramiteSugerido->cod_tre,
-                'nombre_tipo_legalizacion_sugerido'=>$tramiteSugerido->tre_nombre,
-                'ptag_auto'=>$ptagAuto,
+                'tipo_legalizacion_sugerido'=>$tipoPagoDistinto ? null : $tramiteSugerido->cod_tre,
+                'nombre_tipo_legalizacion_sugerido'=>$tipoPagoDistinto ? '' : $tramiteSugerido->tre_nombre,
+                'ptag_auto'=>$tipoPagoDistinto ? false : $ptagAuto,
+                'tipo_pago_origen'=>$tipoPagoDistinto ? (string)$tramiteSugerido->tre_tipo : '',
+                'nombre_tipo_pago_origen'=>$tipoPagoDistinto ? (string)$tramiteSugerido->tre_nombre : '',
+                'permitido_por_reintegro'=>$tipoPagoDistinto,
             ];
         }
 
@@ -1014,6 +1484,227 @@ class TramiteLegalizacionController extends Controller
             'BOLETA_NO_VALIDA',
             'No se pudo validar el pago para '.$tipoTxt.'. Verifique que el valorado corresponda a ese tipo de trámite, que el CI y el nombre coincidan con recaudaciones, y que el número de control sea el correcto.'
         );
+    }
+
+    private function validarRecaudacionReintegroLegalizacion(
+        string $controlReintegro,
+        string $ci,
+        string $tipoTramite,
+        int $idPer,
+        int $codTraActual = 0
+    ): array
+    {
+        $controlReintegro=trim($controlReintegro);
+        if($controlReintegro===''){
+            return $this->respuestaErrorValidacionLegalizacion(
+                'REINTEGRO_REQUERIDO',
+                'Ingrese el Nro. de control de reintegro para continuar.'
+            );
+        }
+
+        $baseUrl = rtrim((string) config('services.recaudaciones.url'), '/');
+        $token = (string) config('services.recaudaciones.token');
+        $verifySsl = filter_var(config('services.recaudaciones.verify_ssl', true), FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
+        if ($verifySsl === null) {
+            $verifySsl = true;
+        }
+
+        if($baseUrl==='' || $token===''){
+            return $this->respuestaErrorValidacionLegalizacion(
+                'SISTEMA_NO_CONFIGURADO',
+                'El sistema de recaudaciones no esta configurado. Contacte al area de sistemas.'
+            );
+        }
+
+        try {
+            $response=Http::withToken($token)
+                ->acceptJson()
+                ->timeout(20)
+                ->withOptions(['verify'=>$verifySsl])
+                ->post($baseUrl,[
+                    'unidad'=>122,
+                    'recibo'=>(int)$controlReintegro,
+                    'documento'=>$ci,
+                ]);
+        } catch (\Throwable $e) {
+            return $this->respuestaErrorValidacionLegalizacion(
+                'API_NO_DISPONIBLE',
+                'No se pudo conectar con recaudaciones para validar el reintegro. Intente nuevamente en unos minutos.'
+            );
+        }
+
+        if(!$response->successful()){
+            $json=$response->json();
+            $msg=(string)($json['error']['message'] ?? '');
+            if(trim($msg)===''){
+                $msg=(string)($json['message'] ?? '');
+            }
+
+            $errMap=$this->mapearMensajeErrorRecaudacionLegalizacion($msg,$tipoTramite);
+            if($errMap['code']==='BOLETA_NO_EXISTE'){
+                return $this->respuestaErrorValidacionLegalizacion(
+                    'BOLETA_REINTEGRO_NO_EXISTE',
+                    'No se encontró información de la boleta de reintegro para ese CI y número de control.'
+                );
+            }
+
+            return $this->respuestaErrorValidacionLegalizacion($errMap['code'],$errMap['message']);
+        }
+
+        $json=$response->json();
+        $lista=$this->extraerListaResultadoRecaudacion(is_array($json) ? $json : []);
+        if(!is_array($lista) || sizeof($lista)==0){
+            return $this->respuestaErrorValidacionLegalizacion(
+                'BOLETA_REINTEGRO_NO_EXISTE',
+                'No se encontró información de la boleta de reintegro para ese CI y número de control.'
+            );
+        }
+
+        $persona=Persona::where('per_ci','=',$ci)->first();
+        $nombreSistemaNormalizado='';
+        if($persona){
+            $nombreSistemaNormalizado=$this->normalizarTexto(($persona->per_apellido ?? '').' '.($persona->per_nombre ?? ''));
+        }
+
+        $cuentasPermitidas=$this->cuentasReintegroPermitidasLegalizacion();
+        if(count($cuentasPermitidas)===0){
+            return $this->respuestaErrorValidacionLegalizacion(
+                'REINTEGRO_SIN_CUENTAS_CONFIGURADAS',
+                'No hay cuentas de reintegro habilitadas en base de datos. Contacte a sistemas.'
+            );
+        }
+        $formatearCuenta=function(string $codigoNorm): string {
+            if(strlen($codigoNorm)===9){
+                return substr($codigoNorm,0,6).'.'.substr($codigoNorm,6,3);
+            }
+            return $codigoNorm;
+        };
+        $cuentasPermitidasTxt=implode(', ',array_map($formatearCuenta,array_keys($cuentasPermitidas)));
+
+        $usoEncontrado=null;
+        $mensajeCuentaInvalida='';
+        $detalleCi='';
+        $detalleNombre='';
+
+        foreach($lista as $fila){
+            $ciFila=trim((string)($fila['documento'] ?? ''));
+            if($ciFila!==$ci){
+                if($detalleCi===''){
+                    $detalleCi='(Recaudación: '.$ciFila.' | Trámite: '.$ci.')';
+                }
+                continue;
+            }
+
+            $nombreR=trim(($fila['apellido_1'] ?? '').' '.($fila['apellido_2'] ?? '').' '.($fila['nombre_1'] ?? '').' '.($fila['nombre_2'] ?? ''));
+            $nombreRecaudacionNormalizado=$this->normalizarTexto($nombreR);
+            if($nombreSistemaNormalizado!=='' && $nombreRecaudacionNormalizado!=='' && $nombreSistemaNormalizado!==$nombreRecaudacionNormalizado){
+                if($detalleNombre===''){
+                    $detalleNombre='(Recaudación: '.$nombreR.' | Datos: '.$nombreSistemaNormalizado.')';
+                }
+                continue;
+            }
+
+            $codigoCuenta=(string)($fila['codigo_cuenta'] ?? '');
+            $codigoCuentaNormalizado=$this->normalizarNumero($codigoCuenta);
+            if($codigoCuentaNormalizado==='' || !array_key_exists($codigoCuentaNormalizado,$cuentasPermitidas)){
+                if($mensajeCuentaInvalida===''){
+                    $mensajeCuentaInvalida='La boleta de reintegro no corresponde a una cuenta de reintegro autorizada. Cuentas válidas: '.$cuentasPermitidasTxt.'.';
+                }
+                continue;
+            }
+
+            $preimpresoApi=$this->valorPreimpresoFila((array)$fila);
+            $fechaPago=(string)($fila['fecha'] ?? '');
+
+            $usoCombinacion=$this->buscarUsoPagoPorCombinacion(
+                $nombreR,
+                $ci,
+                $controlReintegro,
+                $preimpresoApi,
+                $fechaPago
+            );
+            if($usoCombinacion){
+                $usoEncontrado=$usoCombinacion;
+                continue;
+            }
+
+            return [
+                'ok'=>true,
+                'control'=>$controlReintegro,
+                'ci'=>$ci,
+                'nombre_recaudaciones'=>$nombreR,
+                'identificador'=>$fila['identificador'] ?? '',
+                'fecha_pago'=>$fila['fecha'] ?? '',
+                'cajero'=>$fila['cajero'] ?? '',
+                'codigo_cuenta'=>$codigoCuenta,
+                'cuenta'=>$fila['cuenta'] ?? '',
+                'monto'=>$fila['total'] ?? '',
+                'preimpreso'=>$preimpresoApi,
+                'tipo_reintegro'=>$cuentasPermitidas[$codigoCuentaNormalizado] ?? '',
+            ];
+        }
+
+        if($usoEncontrado){
+            return $this->respuestaErrorValidacionLegalizacion(
+                'BOLETA_YA_USADA',
+                $this->mensajePagoYaUsado($usoEncontrado)
+            );
+        }
+
+        if($mensajeCuentaInvalida!==''){
+            return $this->respuestaErrorValidacionLegalizacion(
+                'BOLETA_REINTEGRO_NO_CORRESPONDE_CUENTA',
+                $mensajeCuentaInvalida
+            );
+        }
+
+        if($detalleCi!==''){
+            return $this->respuestaErrorValidacionLegalizacion(
+                'BOLETA_NO_PERTENECE_PERSONA',
+                'La boleta de reintegro no pertenece a la persona del trámite.',
+                ['detalle'=>$detalleCi]
+            );
+        }
+
+        if($detalleNombre!==''){
+            return $this->respuestaErrorValidacionLegalizacion(
+                'BOLETA_NO_PERTENECE_PERSONA',
+                'La boleta de reintegro no corresponde a los datos de la persona del trámite.',
+                ['detalle'=>$detalleNombre]
+            );
+        }
+
+        return $this->respuestaErrorValidacionLegalizacion(
+            'BOLETA_REINTEGRO_NO_VALIDA',
+            'No se pudo validar la boleta de reintegro. Verifique el número de control, el CI y la cuenta de reintegro.'
+        );
+    }
+
+    private function cuentasReintegroPermitidasLegalizacion(): array
+    {
+        if(!Schema::hasTable('tramites')){
+            return [];
+        }
+
+        $rows=DB::table('tramites')
+            ->where('tre_tipo','=','R')
+            ->where('tre_hab','=','t')
+            ->whereNotNull('tre_numero_cuenta')
+            ->orderBy('cod_tre')
+            ->get(['tre_numero_cuenta','tre_nombre']);
+
+        $cuentas=[];
+        foreach($rows as $row){
+            $codigoNormalizado=$this->normalizarNumero((string)($row->tre_numero_cuenta ?? ''));
+            if($codigoNormalizado===''){
+                continue;
+            }
+
+            $descripcion=trim((string)($row->tre_nombre ?? ''));
+            $cuentas[$codigoNormalizado]=$descripcion!=='' ? $descripcion : 'CUENTA REINTEGRO';
+        }
+
+        return $cuentas;
     }
 
     /**
@@ -1228,6 +1919,32 @@ class TramiteLegalizacionController extends Controller
         }
 
         return null;
+    }
+
+    private function eliminarUsoRecaudacionPorIdentificador(string $identificador, int $codDtra): void
+    {
+        if(!Schema::hasTable('recaudacion_usos')){
+            return;
+        }
+
+        $identificador=trim($identificador);
+        if($identificador===''){
+            return;
+        }
+
+        try{
+            $query=DB::table('recaudacion_usos')->where('identificador','=',$identificador);
+            if($codDtra>0){
+                $query->where('cod_dtra','=',$codDtra);
+            }
+            $query->delete();
+        }catch(\Throwable $e){
+            Log::warning('No se pudo revertir uso de recaudación.',[
+                'identificador'=>$identificador,
+                'cod_dtra'=>$codDtra,
+                'error'=>$e->getMessage(),
+            ]);
+        }
     }
 
     private function filtrarFilasRecaudacionPorPreimpreso(array $lista, string $preimpreso): array
