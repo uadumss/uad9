@@ -397,6 +397,9 @@
                                                 <select class="custom-select custom-select-sm border-0" data-campo="tipo-legalizacion" disabled>
                                                     <option value="" selected></option>
                                                     @foreach($lista_tramites as $l)
+                                                        @if(strtoupper((string)($l->tre_tipo ?? ''))==='R')
+                                                            @continue
+                                                        @endif
                                                         <option value="{{$l->cod_tre}}">{{$l->tre_nombre}}</option>
                                                     @endforeach
                                                 </select>
@@ -407,6 +410,7 @@
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group">
                                                     <input type="text" class=" form-control form-control-sm" name="control" required oninput="programarValidacionControl(this)">
+                                                    <a href="#" class="btn btn-light btn-circle btn-sm text-secondary ml-2" data-campo="estado-pago-control-icon" data-pago-campo="control" title="Control principal: pendiente" onclick="abrirDetallePagoFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
                                                     <span class="font-italic text-dark font-weight-bold ml-3">CUADIS :
                                                             <input type="checkbox" name="cuadis" />
                                                         </span>
@@ -500,6 +504,9 @@
                                                 <select class="custom-select custom-select-sm border-0" data-campo="tipo-legalizacion" disabled>
                                                     <option value="" selected></option>
                                                     @foreach($lista_tramites as $l)
+                                                        @if(strtoupper((string)($l->tre_tipo ?? ''))==='R')
+                                                            @continue
+                                                        @endif
                                                         <option value="{{$l->cod_tre}}">{{$l->tre_nombre}}</option>
                                                     @endforeach
                                                 </select>
@@ -511,8 +518,10 @@
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group">
                                                     <input class="form-control form-control-sm border-0" name="control" required oninput="programarValidacionControl(this)">
+                                                    <a href="#" class="btn btn-light btn-circle btn-sm text-secondary ml-1" data-campo="estado-pago-control-icon" data-pago-campo="control" title="Control principal: pendiente" onclick="abrirDetallePagoFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
                                                     <span class="text-primary font-weight-bold font-italic ml-2 mr-1">Reintegro :</span>
                                                     <input class="form-control form-control-sm border" name="reintegro" oninput="programarValidacionControl(this)">
+                                                    <a href="#" class="btn btn-light btn-circle btn-sm text-muted ml-1" data-campo="estado-pago-reintegro-icon" data-pago-campo="reintegro" title="Reintegro: no informado" onclick="abrirDetallePagoFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
                                                 </div>
                                             </td>
                                         </tr>
@@ -551,6 +560,9 @@
                                                         <option value="" selected></option>
                                                     @endif
                                                     @foreach($lista_tramites as $l)
+                                                        @if(strtoupper((string)($l->tre_tipo ?? ''))==='R')
+                                                            @continue
+                                                        @endif
                                                         <option value="{{$l->cod_tre}}" @if($tramite->tra_tipo_tramite=='F' && $loop->first) selected @endif>{{$l->tre_nombre}}</option>
                                                     @endforeach
                                                 </select>
@@ -611,8 +623,10 @@
                                             <td class="border-bottom border-dark input-group">
                                                 <div class="input-group">
                                                     <input class="form-control form-control-sm border-0" required name="control" oninput="programarValidacionControl(this)" />
+                                                    <a href="#" class="btn btn-light btn-circle btn-sm text-secondary ml-1" data-campo="estado-pago-control-icon" data-pago-campo="control" title="Control principal: pendiente" onclick="abrirDetallePagoFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
                                                     <span class="text-primary font-weight-bold font-italic ml-2 mr-1">Reintegro :</span>
                                                     <input class="form-control form-control-sm border" name="reintegro" oninput="programarValidacionControl(this)" />
+                                                    <a href="#" class="btn btn-light btn-circle btn-sm text-muted ml-1" data-campo="estado-pago-reintegro-icon" data-pago-campo="reintegro" title="Reintegro: no informado" onclick="abrirDetallePagoFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
                                                 </div>
                                             </td>
                                         </tr>
@@ -620,7 +634,8 @@
                                             <th class="text-right font-italic ">N° control Búsqueda:</th>
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group">
-                                                    <input class="form-control form-control-sm" name="valorado_bus" />
+                                                    <input class="form-control form-control-sm" name="valorado_bus" oninput="programarValidacionControl(this)" />
+                                                    <a href="#" class="btn btn-light btn-circle btn-sm text-muted ml-1" data-campo="estado-pago-busqueda-icon" data-pago-campo="busqueda" title="N° control Búsqueda: no informado" onclick="abrirDetallePagoFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
                                                     <span class="font-italic font-weight-bold ml-2 mr-2">Nro. control Reimpresión :</span>
                                                     <input class="form-control form-control-sm" name="reimpresion" data-campo="preimpreso-api" readonly />
                                                 </div>
@@ -835,12 +850,140 @@
             });
         }
 
+        function escaparTextoHtml(texto){
+            return String(texto || '')
+                .replace(/&/g,'&amp;')
+                .replace(/</g,'&lt;')
+                .replace(/>/g,'&gt;')
+                .replace(/"/g,'&quot;')
+                .replace(/'/g,'&#39;');
+        }
+
+        function construirEstadoPago(campo,etiqueta,estado,ok,resumen,detalle){
+            return {
+                campo: campo,
+                etiqueta: etiqueta,
+                estado: estado,
+                ok: ok,
+                resumen: resumen,
+                detalle: (detalle || resumen || '').toString()
+            };
+        }
+
+        function construirEstadoPagosBase(formulario){
+            var tieneReintegroInput=formulario.find('input[name="reintegro"]').length>0;
+            var tieneBusquedaInput=formulario.find('input[name="valorado_bus"]').length>0;
+            var reintegroValor=($.trim(formulario.find('input[name="reintegro"]').val()) || '');
+            var busquedaValor=($.trim(formulario.find('input[name="valorado_bus"]').val()) || '');
+
+            var reintegroEstado=tieneReintegroInput
+                ? (reintegroValor!==''
+                    ? construirEstadoPago('reintegro','Reintegro','pendiente',null,'Pendiente de validación','Ingrese el Nro. de control de reintegro y valide.')
+                    : construirEstadoPago('reintegro','Reintegro','no_aplica',true,'No informado (opcional)','No se registró reintegro para este trámite.'))
+                : construirEstadoPago('reintegro','Reintegro','oculto',true,'No aplica','Este formulario no maneja reintegro.');
+
+            var busquedaEstado=tieneBusquedaInput
+                ? (busquedaValor!==''
+                    ? construirEstadoPago('busqueda','N° control Búsqueda','pendiente',null,'Pendiente de validación','Ingrese el N° control Búsqueda y valide.')
+                    : construirEstadoPago('busqueda','N° control Búsqueda','no_aplica',true,'No informado (opcional)','No se registró N° control Búsqueda para este trámite.'))
+                : construirEstadoPago('busqueda','N° control Búsqueda','oculto',true,'No aplica','Este formulario no maneja N° control Búsqueda.');
+
+            return {
+                control: construirEstadoPago('control','Control principal','pendiente',null,'Pendiente de validación','Ingrese el Nro. de control principal y valide.'),
+                reintegro: reintegroEstado,
+                busqueda: busquedaEstado
+            };
+        }
+
+        function aplicarEstadoPagoIcono(formulario,campo,estado){
+            var icono=formulario.find('[data-campo="estado-pago-'+campo+'-icon"]');
+            if(!icono.length){
+                return;
+            }
+
+            var estadoCampo=estado || {};
+            var tipo=(estadoCampo.estado || 'pendiente').toString();
+            var resumen=(estadoCampo.resumen || 'Pendiente').toString();
+            var etiqueta=(estadoCampo.etiqueta || campo || 'Pago').toString();
+
+            icono.removeClass('text-success text-danger text-secondary text-muted');
+
+            if(tipo==='ok'){
+                icono.addClass('text-success').html('<i class="fas fa-check-circle"></i>');
+            }else if(tipo==='error'){
+                icono.addClass('text-danger').html('<i class="fas fa-times-circle"></i>');
+            }else if(tipo==='no_aplica'){
+                icono.addClass('text-muted').html('<i class="fas fa-minus-circle"></i>');
+            }else{
+                icono.addClass('text-secondary').html('<i class="fas fa-minus-circle"></i>');
+            }
+
+            icono.attr('title',etiqueta+': '+resumen);
+        }
+
+        function aplicarEstadoPagosFormulario(formulario,estadoPagos){
+            var base=construirEstadoPagosBase(formulario);
+            var combinado={
+                control: $.extend({},base.control,(estadoPagos && estadoPagos.control) ? estadoPagos.control : {}),
+                reintegro: $.extend({},base.reintegro,(estadoPagos && estadoPagos.reintegro) ? estadoPagos.reintegro : {}),
+                busqueda: $.extend({},base.busqueda,(estadoPagos && estadoPagos.busqueda) ? estadoPagos.busqueda : {})
+            };
+
+            formulario.data('estado-pagos',combinado);
+            aplicarEstadoPagoIcono(formulario,'control',combinado.control);
+            aplicarEstadoPagoIcono(formulario,'reintegro',combinado.reintegro);
+            aplicarEstadoPagoIcono(formulario,'busqueda',combinado.busqueda);
+        }
+
+        function abrirDetallePagoFormulario(trigger){
+            var form=$(trigger).closest('form');
+            var campo=(($(trigger).attr('data-pago-campo') || '').toString() || 'control');
+            var estadoPagos=form.data('estado-pagos') || construirEstadoPagosBase(form);
+            var info=estadoPagos[campo] || construirEstadoPago(campo,'Pago','pendiente',null,'Pendiente','Sin detalle disponible.');
+
+            var estado=(info.estado || 'pendiente').toString();
+            var etiqueta=(info.etiqueta || 'Pago').toString();
+            var resumen=(info.resumen || 'Pendiente').toString();
+            var detalle=(info.detalle || resumen || 'Sin detalle').toString();
+
+            var esOk=estado==='ok';
+            var esError=estado==='error';
+            var headerClass=esOk ? 'bg-verde-oscuro' : (esError ? 'bg-danger' : 'bg-secondary');
+            var borderClass=esOk ? 'border-bottom-primary' : (esError ? 'border-bottom-danger' : 'border-bottom-secondary');
+            var icono=esOk ? '<i class="fas fa-check-circle"></i>' : (esError ? '<i class="fas fa-times-circle"></i>' : '<i class="fas fa-minus-circle"></i>');
+            var iconoColor=esOk ? 'text-success' : (esError ? 'text-danger' : 'text-secondary');
+
+            var html=''
+                +'<div class="modal-dialog modal-lg" role="document" id="panel_docleg">'
+                +'  <div class="modal-content '+borderClass+' shadow-lg">'
+                +'    <div class="modal-header '+headerClass+'">'
+                +'      <h5 class="modal-title text-white"><img src="{{url('img/icon/eliminar.png')}}">&nbsp;&nbsp;Estado de pago</h5>'
+                +'      <button class="close" type="button" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>'
+                +'    </div>'
+                +'    <div class="modal-body">'
+                +'      <div class="d-flex align-items-center mb-3">'
+                +'          <span class="font-weight-bold mr-2">Campo:</span>'
+                +'          <span>'+escaparTextoHtml(etiqueta)+'</span>'
+                +'      </div>'
+                +'      <div class="d-flex align-items-center mb-3 '+iconoColor+'" style="font-size:1.2rem">'+icono+'<span class="ml-2 font-weight-bold">'+escaparTextoHtml(resumen)+'</span></div>'
+                +'      <div class="alert '+(esError ? 'alert-danger' : (esOk ? 'alert-success' : 'alert-secondary'))+' mb-0">'+escaparTextoHtml(detalle)+'</div>'
+                +'    </div>'
+                +'    <div class="modal-footer"><button class="btn btn-secondary" type="button" data-dismiss="modal">Cerrar</button></div>'
+                +'  </div>'
+                +'</div>';
+
+            $('#panel_docleg').html(html);
+            $('#docleg').modal('show');
+        }
+
         function validarControlRecaudaciones(inputControl){
             var formulario=$(inputControl).closest('form');
             sincronizarCamposObligatorios(formulario);
             var control=($.trim(formulario.find('input[name="control"]').val()) || '');
             var reintegro=($.trim(formulario.find('input[name="reintegro"]').val()) || '');
+            var valoradoBusqueda=($.trim(formulario.find('input[name="valorado_bus"]').val()) || '');
             var okInput=formulario.find('[data-campo="validacion-recaudacion-ok"]');
+            var estadoBase=construirEstadoPagosBase(formulario);
             okInput.val('0');
             
             if(!control){
@@ -854,6 +997,8 @@
                 formulario.removeData('control-validado-ok');
                 formulario.removeData('control-validado-valor');
                 formulario.removeData('reintegro-validado-valor');
+                formulario.removeData('busqueda-validado-valor');
+                aplicarEstadoPagosFormulario(formulario,estadoBase);
                 return;
             }
 
@@ -868,10 +1013,48 @@
                 formulario.removeData('control-validado-ok');
                 formulario.removeData('control-validado-valor');
                 formulario.removeData('reintegro-validado-valor');
+                formulario.removeData('busqueda-validado-valor');
+                estadoBase.reintegro=construirEstadoPago('reintegro','Reintegro','error',false,'Número repetido','El Nro. de control de reintegro no puede ser igual al control principal.');
+                aplicarEstadoPagosFormulario(formulario,estadoBase);
+                return;
+            }
+
+            if(valoradoBusqueda!=='' && control===valoradoBusqueda){
+                limpiarTipoLegalizacion(formulario);
+                limpiarPtagSugerido(formulario);
+                formulario.find('input[data-campo="preimpreso-api"]').val('');
+                formulario.find('input[data-campo="gestion-api"]').val('');
+                limpiarSitraFormulario(formulario);
+                actualizarEstadoSitra(formulario,'text-muted','SITRA: pendiente');
+                actualizarEstadoValidacion(formulario,'error','El Nro. de control principal y el de búsqueda deben ser diferentes.');
+                formulario.removeData('control-validado-ok');
+                formulario.removeData('control-validado-valor');
+                formulario.removeData('reintegro-validado-valor');
+                formulario.removeData('busqueda-validado-valor');
+                estadoBase.busqueda=construirEstadoPago('busqueda','N° control Búsqueda','error',false,'Número repetido','El N° control Búsqueda no puede ser igual al control principal.');
+                aplicarEstadoPagosFormulario(formulario,estadoBase);
+                return;
+            }
+
+            if(reintegro!=='' && valoradoBusqueda!=='' && reintegro===valoradoBusqueda){
+                limpiarTipoLegalizacion(formulario);
+                limpiarPtagSugerido(formulario);
+                formulario.find('input[data-campo="preimpreso-api"]').val('');
+                formulario.find('input[data-campo="gestion-api"]').val('');
+                limpiarSitraFormulario(formulario);
+                actualizarEstadoSitra(formulario,'text-muted','SITRA: pendiente');
+                actualizarEstadoValidacion(formulario,'error','El Nro. de control de reintegro y el de búsqueda deben ser diferentes.');
+                formulario.removeData('control-validado-ok');
+                formulario.removeData('control-validado-valor');
+                formulario.removeData('reintegro-validado-valor');
+                formulario.removeData('busqueda-validado-valor');
+                estadoBase.busqueda=construirEstadoPago('busqueda','N° control Búsqueda','error',false,'Número repetido','El N° control Búsqueda no puede ser igual al control de reintegro.');
+                aplicarEstadoPagosFormulario(formulario,estadoBase);
                 return;
             }
 
             actualizarEstadoValidacion(formulario,'loading','Verificando...');
+            aplicarEstadoPagosFormulario(formulario,estadoBase);
             
             $.ajax({
                 url: "{{url('validar valorado recaudaciones/'.$tramite->cod_tra)}}",
@@ -880,6 +1063,7 @@
                     _token: formulario.find('input[name="_token"]').val(),
                     control: control,
                     reintegro: reintegro,
+                    valorado_bus: valoradoBusqueda,
                     reimpresion: formulario.find('input[name="reimpresion"]').val() || ''
                 },
                 success: function(resp){
@@ -891,11 +1075,13 @@
                         formulario.find('input[data-campo="gestion-api"]').val('');
                         limpiarSitraFormulario(formulario);
                         actualizarEstadoSitra(formulario,'text-muted','SITRA: pendiente');
-                        var msg=armarMensajeValidacionRecaudacion(resp,'No se pudo validar el comprobante');
+                        var msg='Existe un problema en los pagos. Revise el ícono rojo del campo correspondiente.';
                         actualizarEstadoValidacion(formulario,'error',msg);
                         formulario.removeData('control-validado-ok');
                         formulario.removeData('control-validado-valor');
                         formulario.removeData('reintegro-validado-valor');
+                        formulario.removeData('busqueda-validado-valor');
+                        aplicarEstadoPagosFormulario(formulario,resp.estado_pagos || estadoBase);
                         return;
                     }
 
@@ -905,40 +1091,28 @@
                     aplicarPtagSugerido(formulario,resp);
                     formulario.find('input[data-campo="preimpreso-api"]').val(resp.preimpreso || '');
                     okInput.val('1');
+                    aplicarEstadoPagosFormulario(formulario,resp.estado_pagos || estadoBase);
 
-                    var msg='Validado. Monto Bs. '+(resp.monto || '0');
-                    if(resp.monto_total){
-                        msg+=' | Total Bs. '+resp.monto_total;
-                    }
-                    if(resp.fecha_pago){
-                        msg+=' - Fecha '+resp.fecha_pago;
-                    }
-                    if(resp.cajero){
-                        msg+=' - Caja '+resp.cajero;
-                    }
-                    if(resp.reintegro_monto){
-                        msg+=' | Reintegro Bs. '+resp.reintegro_monto;
-                    }
-                    if(resp.reintegro_cuenta){
-                        msg+=' - '+resp.reintegro_cuenta;
-                    }
+                    var msg='Pagos validados. Revise los íconos junto a cada campo para ver detalle.';
                     if(resp.permitido_por_reintegro){
-                        msg+=' | Excepcional: el valorado principal se aceptó con reintegro';
+                        msg+=' El control principal se aceptó por regla excepcional con reintegro.';
                     }
                     if(resp.aplicar_filtro_por_monto && resp.requiere_seleccion_manual){
-                        msg+=' | Seleccione manualmente el tipo de legalización';
+                        msg+=' Seleccione manualmente el tipo de legalización.';
                     }
                     actualizarEstadoValidacion(formulario,'ok',msg);
                     formulario.data('control-validado-ok',1);
                     formulario.data('control-validado-valor',control);
                     formulario.data('reintegro-validado-valor',reintegro);
+                    formulario.data('busqueda-validado-valor',valoradoBusqueda);
 
                     programarValidacionSitra(formulario);
                 },
                 error: function(xhr){
+                    var respError=xhr.responseJSON || null;
                     var msg='No hay conexión. Intente en unos momentos.';
-                    if(xhr.responseJSON && xhr.responseJSON.message){
-                        msg=xhr.responseJSON.message;
+                    if(respError && respError.message){
+                        msg='Existe un problema en los pagos. Revise el ícono rojo del campo correspondiente.';
                     }
                     okInput.val('0');
                     limpiarTipoLegalizacion(formulario);
@@ -951,6 +1125,8 @@
                     formulario.removeData('control-validado-ok');
                     formulario.removeData('control-validado-valor');
                     formulario.removeData('reintegro-validado-valor');
+                    formulario.removeData('busqueda-validado-valor');
+                    aplicarEstadoPagosFormulario(formulario,(respError && respError.estado_pagos) ? respError.estado_pagos : estadoBase);
 
                     programarValidacionSitra(formulario);
                 }
@@ -1562,11 +1738,13 @@
             }
             var control=($.trim(form.find('input[name="control"]').val()) || '');
             var reintegro=($.trim(form.find('input[name="reintegro"]').val()) || '');
+            var valoradoBusqueda=($.trim(form.find('input[name="valorado_bus"]').val()) || '');
             var controlOk=form.data('control-validado-ok')===1;
             var controlPrevio=(form.data('control-validado-valor') || '').toString();
             var reintegroPrevio=(form.data('reintegro-validado-valor') || '').toString();
+            var busquedaPrevia=(form.data('busqueda-validado-valor') || '').toString();
 
-            if(control!=='' && controlOk && controlPrevio===control && reintegroPrevio===reintegro){
+            if(control!=='' && controlOk && controlPrevio===control && reintegroPrevio===reintegro && busquedaPrevia===valoradoBusqueda){
                 return;
             }
 
@@ -1593,6 +1771,7 @@
                 }
                 if($(this).find('input[name="control"]').length){
                     sincronizarCamposObligatorios($(this));
+                    aplicarEstadoPagosFormulario($(this),construirEstadoPagosBase($(this)));
                 }
                 if($(this).find('[data-campo="estado-sitra"]').length){
                     programarValidacionSitra($(this));

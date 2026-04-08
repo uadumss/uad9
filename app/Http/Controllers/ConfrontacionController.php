@@ -28,8 +28,11 @@ class ConfrontacionController extends Controller
             'tra_fecha_solicitud'=>$form['fecha'],
             'tra_tipo_tramite'=>'F',
         ]);
-        $lista_tramites=Tramite::all()->where('tre_hab','=','t')->sortBy('tre_nombre')
-            ->where('tre_tipo','=','F');
+        $lista_tramites=Tramite::where('tre_hab','=','t')
+            ->where('tre_tipo','=','F')
+            ->where('tre_tipo','<>','R')
+            ->orderBy('tre_nombre')
+            ->get();
         SessionController::write('C','',json_encode($tramite),'tramitas','3',$tramite->cod_tra);
         return view('servicios.tra_legalizacion.numero_confrontacion',compact('tramite','lista_tramites'));
     }
@@ -123,8 +126,11 @@ class ConfrontacionController extends Controller
             'tra_fecha_solicitud'=>$form['fecha'],
             'tra_tipo_tramite'=>'B',
         ]);
-        $lista_tramites=Tramite::all()->where('tre_hab','=','t')->sortBy('tre_nombre')
-            ->where('tre_tipo','=','B');
+        $lista_tramites=Tramite::where('tre_hab','=','t')
+            ->where('tre_tipo','=','B')
+            ->where('tre_tipo','<>','R')
+            ->orderBy('tre_nombre')
+            ->get();
         SessionController::write('C','',json_encode($tramite),'tramitas','3',$tramite->cod_tra);
         return view('servicios.tra_legalizacion.numero_busqueda',compact('tramite','lista_tramites'));
     }

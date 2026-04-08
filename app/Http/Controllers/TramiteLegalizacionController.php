@@ -133,10 +133,18 @@ class TramiteLegalizacionController extends Controller
             $lista_tramites='';
             if($tramite->tra_tipo_tramite=='B')
             {
-                    $lista_tramites=Tramite::all()->where('tre_tipo','=','B')->where('tre_hab','<>','f');
+                    $lista_tramites=Tramite::where('tre_tipo','=','B')
+                    ->where('tre_hab','<>','f')
+                    ->where('tre_tipo','<>','R')
+                    ->orderBy('tre_nombre')
+                    ->get();
             }else{
                 //esto mientras no se llene los datos de los titulos por lo menos hasta la gstion 2000
-                $lista_tramites=Tramite::all()->where('tre_tipo','=',$tramite->tra_tipo_tramite)->where('tre_hab','<>','f');
+                $lista_tramites=Tramite::where('tre_tipo','=',$tramite->tra_tipo_tramite)
+                    ->where('tre_hab','<>','f')
+                    ->where('tre_tipo','<>','R')
+                    ->orderBy('tre_nombre')
+                    ->get();
 
                 //==========IMPORTANTE======
                 //Restringe la lista de tramites a los documentos que tiene el interesado
@@ -300,21 +308,25 @@ class TramiteLegalizacionController extends Controller
             }
 
             $persona=Persona::find($datosTramita->id_per);
+            $controlPrincipal=trim((string)($form['control'] ?? ''));
             $preimpreso=trim((string)($form['reimpresion'] ?? ''));
             $reintegroControl=trim((string)($form['reintegro'] ?? ''));
             $tieneReintegro=$reintegroControl!=='';
+            $busquedaControl=trim((string)($form['valorado_bus'] ?? ''));
+            $tieneBusqueda=$busquedaControl!=='';
             $verificacionRecaudacion=['ok'=>true];
             $verificacionReintegro=['ok'=>true];
+            $verificacionBusqueda=['ok'=>true];
 
             // Validación obligatoria contra recaudaciones para valorados pagados
             if($cuadis!='c'){
-                if($tieneReintegro && (string)$form['control']===$reintegroControl){
+                if($tieneReintegro && $controlPrincipal===$reintegroControl){
                     \Session::flash('error','El número de control principal y el de reintegro deben ser diferentes.');
                     return redirect('datos tramite legalizacion/'.$form['ctra']);
                 }
 
                 $verificacionRecaudacion=$this->validarRecaudacionLegalizacion(
-                    (string)$form['control'],
+                    $controlPrincipal,
                     (string)$persona->per_ci,
                     $datosTramita->tra_tipo_tramite,
                     (int)$persona->id_per,
@@ -339,6 +351,29 @@ class TramiteLegalizacionController extends Controller
                         \Session::flash('error',$verificacionReintegro['message']);
                         return redirect('datos tramite legalizacion/'.$form['ctra']);
                     }
+                }
+            }
+
+            if($tieneBusqueda){
+                if($controlPrincipal!=='' && $controlPrincipal===$busquedaControl){
+                    \Session::flash('error','El número de control principal y el de búsqueda deben ser diferentes.');
+                    return redirect('datos tramite legalizacion/'.$form['ctra']);
+                }
+
+                if($tieneReintegro && $reintegroControl===$busquedaControl){
+                    \Session::flash('error','El número de control de reintegro y el de búsqueda deben ser diferentes.');
+                    return redirect('datos tramite legalizacion/'.$form['ctra']);
+                }
+
+                $verificacionBusqueda=$this->validarRecaudacionBusquedaLegalizacion(
+                    $busquedaControl,
+                    (string)$persona->per_ci,
+                    (int)$persona->id_per,
+                    (int)$form['ctra']
+                );
+                if(!$verificacionBusqueda['ok']){
+                    \Session::flash('error',$verificacionBusqueda['message']);
+                    return redirect('datos tramite legalizacion/'.$form['ctra']);
                 }
             }
 
@@ -421,6 +456,7 @@ class TramiteLegalizacionController extends Controller
                     'ctra'=>'required',
                     'control'=>'nullable|integer',
                     'reintegro'=>'nullable|integer|min:1',
+                    'valorado_bus'=>'nullable|integer|min:1',
                 ]);
             }else{
                 $form->validate([
@@ -429,6 +465,7 @@ class TramiteLegalizacionController extends Controller
                     'gestion'=>'required|numeric',
                     'control'=>'nullable|integer',
                     'reintegro'=>'nullable|integer|min:1',
+                    'valorado_bus'=>'nullable|integer|min:1',
                 ]);
             }
             $buscar_en=array();
@@ -520,9 +557,9 @@ class TramiteLegalizacionController extends Controller
                         'dtra_gestion'=>$form['gestion'],
                         // Hasta el 08-05-2023 se guardaba el preimpreso, ahora se guarda el nro. de control del valorado desde el 9 de mayo
                         //'dtra_control'=>$form['valorado'],
-                        'dtra_control'=>$form['control'],
+                        'dtra_control'=>$controlPrincipal,
                         'dtra_valorado_reintegro'=>$reintegroControl!=='' ? (int)$reintegroControl : null,
-                        'dtra_valorado_busqueda'=>$form['valorado_bus'],
+                        'dtra_valorado_busqueda'=>$tieneBusqueda ? (int)$busquedaControl : null,
                         'dtra_control_reimpresion'=>$form['reimpresion'],
                         'dtra_numero_tramite'=>$numero_tramite,
                         'dtra_gestion_tramite'=>$año_tramita,
@@ -553,6 +590,13 @@ class TramiteLegalizacionController extends Controller
                             }
                         }
                     }
+
+                    if($tieneBusqueda){
+                        $errorUsoBusqueda='';
+                        if(!$this->registrarUsoRecaudacion($verificacionBusqueda,(int)$form['ctra'],(int)$tramite->cod_dtra,$errorUsoBusqueda)){
+                            throw new \RuntimeException($errorUsoBusqueda!=='' ? $errorUsoBusqueda : 'No se pudo registrar el pago de búsqueda.');
+                        }
+                    }
                     $nuevo=json_encode($tramite);
                     SessionController::write('C','',$nuevo,'d_tramitas','3',$tramite->cod_dtra);
                 }else{ // EN CASO DE QUE EL TITULO NO SE HAYA ENCONTRADO
@@ -566,9 +610,9 @@ class TramiteLegalizacionController extends Controller
                         $tramite=D_tramita::create([
                             'cod_tre'=>$form['tipo'],
                             'cod_tra'=>$form['ctra'],
-                            'dtra_control'=>$form['control'],
+                            'dtra_control'=>$controlPrincipal,
                             'dtra_control_reimpresion'=>$form['reimpresion'],
-                            'dtra_valorado_busqueda'=>$form['valorado_bus'],
+                            'dtra_valorado_busqueda'=>$tieneBusqueda ? (int)$busquedaControl : null,
                             'dtra_numero_tramite'=>$numero_tramite,
                             'dtra_gestion_tramite'=>$año_tramita,
                             'dtra_costo'=>$tramita->tre_costo,
@@ -584,6 +628,20 @@ class TramiteLegalizacionController extends Controller
                             $errorUso='';
                             if(!$this->registrarUsoRecaudacion($verificacionRecaudacion,(int)$form['ctra'],(int)$tramite->cod_dtra,$errorUso)){
                                 throw new \RuntimeException($errorUso!=='' ? $errorUso : 'No se pudo registrar el pago principal.');
+                            }
+
+                            if($tieneReintegro){
+                                $errorUsoReintegro='';
+                                if(!$this->registrarUsoRecaudacion($verificacionReintegro,(int)$form['ctra'],(int)$tramite->cod_dtra,$errorUsoReintegro)){
+                                    throw new \RuntimeException($errorUsoReintegro!=='' ? $errorUsoReintegro : 'No se pudo registrar el pago de reintegro.');
+                                }
+                            }
+                        }
+
+                        if($tieneBusqueda){
+                            $errorUsoBusqueda='';
+                            if(!$this->registrarUsoRecaudacion($verificacionBusqueda,(int)$form['ctra'],(int)$tramite->cod_dtra,$errorUsoBusqueda)){
+                                throw new \RuntimeException($errorUsoBusqueda!=='' ? $errorUsoBusqueda : 'No se pudo registrar el pago de búsqueda.');
                             }
                         }
                         $nuevo=json_encode($tramite);
@@ -767,6 +825,7 @@ class TramiteLegalizacionController extends Controller
         $data=$request->validate([
             'control'=>['required','integer'],
             'reintegro'=>['nullable','integer','min:1'],
+            'valorado_bus'=>['nullable','integer','min:1'],
             'reimpresion'=>['nullable','string','max:30'],
         ]);
 
@@ -788,12 +847,87 @@ class TramiteLegalizacionController extends Controller
 
         $reintegroControl=trim((string)($data['reintegro'] ?? ''));
         $tieneReintegro=$reintegroControl!=='';
+        $busquedaControl=trim((string)($data['valorado_bus'] ?? ''));
+        $tieneBusqueda=$busquedaControl!=='';
+
+        $estadoPagos=[
+            'control'=>$this->estadoPagoCampo(
+                'control',
+                'Control principal',
+                'pendiente',
+                null,
+                'Pendiente de validación',
+                'Ingrese el Nro. de control principal y valide.'
+            ),
+            'reintegro'=>$this->estadoPagoCampo(
+                'reintegro',
+                'Reintegro',
+                $tieneReintegro ? 'pendiente' : 'no_aplica',
+                $tieneReintegro ? null : true,
+                $tieneReintegro ? 'Pendiente de validación' : 'No informado (opcional)',
+                $tieneReintegro ? 'Ingrese el Nro. de control de reintegro y valide.' : 'No se registró reintegro para este trámite.'
+            ),
+            'busqueda'=>$this->estadoPagoCampo(
+                'busqueda',
+                'N° control Búsqueda',
+                $tieneBusqueda ? 'pendiente' : 'no_aplica',
+                $tieneBusqueda ? null : true,
+                $tieneBusqueda ? 'Pendiente de validación' : 'No informado (opcional)',
+                $tieneBusqueda ? 'Ingrese el N° control Búsqueda y valide.' : 'No se registró N° control Búsqueda para este trámite.'
+            ),
+        ];
 
         if($tieneReintegro && (string)$data['control']===$reintegroControl){
+            $estadoPagos['reintegro']=$this->estadoPagoCampo(
+                'reintegro',
+                'Reintegro',
+                'error',
+                false,
+                'Número repetido',
+                'El Nro. de control de reintegro no puede ser igual al control principal.'
+            );
             return response()->json([
                 'ok'=>false,
                 'code'=>'REINTEGRO_CONTROL_IGUAL',
                 'message'=>'El Nro. de control principal y el de reintegro deben ser diferentes.',
+                'campo_error'=>'reintegro',
+                'estado_pagos'=>$estadoPagos,
+            ],422);
+        }
+
+        if($tieneBusqueda && (string)$data['control']===$busquedaControl){
+            $estadoPagos['busqueda']=$this->estadoPagoCampo(
+                'busqueda',
+                'N° control Búsqueda',
+                'error',
+                false,
+                'Número repetido',
+                'El N° control Búsqueda no puede ser igual al control principal.'
+            );
+            return response()->json([
+                'ok'=>false,
+                'code'=>'BUSQUEDA_CONTROL_IGUAL',
+                'message'=>'El Nro. de control principal y el de búsqueda deben ser diferentes.',
+                'campo_error'=>'busqueda',
+                'estado_pagos'=>$estadoPagos,
+            ],422);
+        }
+
+        if($tieneReintegro && $tieneBusqueda && $reintegroControl===$busquedaControl){
+            $estadoPagos['busqueda']=$this->estadoPagoCampo(
+                'busqueda',
+                'N° control Búsqueda',
+                'error',
+                false,
+                'Número repetido',
+                'El N° control Búsqueda no puede ser igual al control de reintegro.'
+            );
+            return response()->json([
+                'ok'=>false,
+                'code'=>'BUSQUEDA_REINTEGRO_IGUAL',
+                'message'=>'El Nro. de control de reintegro y el de búsqueda deben ser diferentes.',
+                'campo_error'=>'busqueda',
+                'estado_pagos'=>$estadoPagos,
             ],422);
         }
 
@@ -807,10 +941,30 @@ class TramiteLegalizacionController extends Controller
             $tieneReintegro
         );
         if(!$validacion['ok']){
+            $estadoPagos['control']=$this->estadoPagoCampo(
+                'control',
+                'Control principal',
+                'error',
+                false,
+                'No válido',
+                (string)($validacion['message'] ?? 'No se pudo validar el control principal.')
+            );
+            $validacion['campo_error']='control';
+            $validacion['estado_pagos']=$estadoPagos;
             return response()->json($validacion,422);
         }
 
+        $estadoPagos['control']=$this->estadoPagoCampo(
+            'control',
+            'Control principal',
+            'ok',
+            true,
+            'Control válido',
+            $this->detalleValidacionPago($validacion,'Control principal validado correctamente.')
+        );
+
         $validacionReintegro=['ok'=>true];
+        $validacionBusqueda=['ok'=>true];
 
         if($tieneReintegro){
             $validacionReintegro=$this->validarRecaudacionReintegroLegalizacion(
@@ -822,6 +976,16 @@ class TramiteLegalizacionController extends Controller
             );
 
             if(!$validacionReintegro['ok']){
+                $estadoPagos['reintegro']=$this->estadoPagoCampo(
+                    'reintegro',
+                    'Reintegro',
+                    'error',
+                    false,
+                    'No válido',
+                    (string)($validacionReintegro['message'] ?? 'No se pudo validar el reintegro.')
+                );
+                $validacionReintegro['campo_error']='reintegro';
+                $validacionReintegro['estado_pagos']=$estadoPagos;
                 return response()->json($validacionReintegro,422);
             }
 
@@ -829,6 +993,52 @@ class TramiteLegalizacionController extends Controller
             $validacion['reintegro_monto']=$validacionReintegro['monto'] ?? '';
             $validacion['reintegro_codigo_cuenta']=$validacionReintegro['codigo_cuenta'] ?? '';
             $validacion['reintegro_cuenta']=$validacionReintegro['cuenta'] ?? '';
+
+            $estadoPagos['reintegro']=$this->estadoPagoCampo(
+                'reintegro',
+                'Reintegro',
+                'ok',
+                true,
+                'Reintegro válido',
+                $this->detalleValidacionPago($validacionReintegro,'Reintegro validado correctamente.')
+            );
+        }
+
+        if($tieneBusqueda){
+            $validacionBusqueda=$this->validarRecaudacionBusquedaLegalizacion(
+                $busquedaControl,
+                (string)$persona->per_ci,
+                (int)$persona->id_per,
+                (int)$cod_tra
+            );
+
+            if(!$validacionBusqueda['ok']){
+                $estadoPagos['busqueda']=$this->estadoPagoCampo(
+                    'busqueda',
+                    'N° control Búsqueda',
+                    'error',
+                    false,
+                    'No válido',
+                    (string)($validacionBusqueda['message'] ?? 'No se pudo validar el N° control Búsqueda.')
+                );
+                $validacionBusqueda['campo_error']='busqueda';
+                $validacionBusqueda['estado_pagos']=$estadoPagos;
+                return response()->json($validacionBusqueda,422);
+            }
+
+            $validacion['busqueda_control']=$validacionBusqueda['control'] ?? $busquedaControl;
+            $validacion['busqueda_monto']=$validacionBusqueda['monto'] ?? '';
+            $validacion['busqueda_codigo_cuenta']=$validacionBusqueda['codigo_cuenta'] ?? '';
+            $validacion['busqueda_cuenta']=$validacionBusqueda['cuenta'] ?? '';
+
+            $estadoPagos['busqueda']=$this->estadoPagoCampo(
+                'busqueda',
+                'N° control Búsqueda',
+                'ok',
+                true,
+                'Búsqueda válida',
+                $this->detalleValidacionPago($validacionBusqueda,'N° control Búsqueda validado correctamente.')
+            );
         }
 
         $validacion['aplicar_filtro_por_monto']=false;
@@ -865,7 +1075,63 @@ class TramiteLegalizacionController extends Controller
             }
         }
 
+        $validacion['estado_pagos']=$estadoPagos;
+
         return response()->json($validacion);
+    }
+
+    private function estadoPagoCampo(
+        string $campo,
+        string $etiqueta,
+        string $estado,
+        ?bool $ok,
+        string $resumen,
+        string $detalle=''
+    ): array
+    {
+        return [
+            'campo'=>$campo,
+            'etiqueta'=>$etiqueta,
+            'estado'=>$estado,
+            'ok'=>$ok,
+            'resumen'=>$resumen,
+            'detalle'=>trim($detalle)!=='' ? $detalle : $resumen,
+        ];
+    }
+
+    private function detalleValidacionPago(array $validacion, string $inicio=''): string
+    {
+        $partes=[];
+        if(trim($inicio)!==''){
+            $partes[]=$inicio;
+        }
+
+        $monto=trim((string)($validacion['monto'] ?? ''));
+        if($monto!==''){
+            $partes[]='Monto: Bs. '.$monto.'.';
+        }
+
+        $cuenta=trim((string)($validacion['cuenta'] ?? ''));
+        if($cuenta!==''){
+            $partes[]='Cuenta: '.$cuenta.'.';
+        }
+
+        $fechaPago=trim((string)($validacion['fecha_pago'] ?? ''));
+        if($fechaPago!==''){
+            $partes[]='Fecha: '.$fechaPago.'.';
+        }
+
+        $cajero=trim((string)($validacion['cajero'] ?? ''));
+        if($cajero!==''){
+            $partes[]='Caja: '.$cajero.'.';
+        }
+
+        $detalle=trim((string)($validacion['detalle'] ?? ''));
+        if($detalle!==''){
+            $partes[]=$detalle;
+        }
+
+        return trim(implode(' ',$partes));
     }
 
     private function resolverSeleccionTipoLegalizacionSegura(
@@ -1677,6 +1943,74 @@ class TramiteLegalizacionController extends Controller
         return $this->respuestaErrorValidacionLegalizacion(
             'BOLETA_REINTEGRO_NO_VALIDA',
             'No se pudo validar la boleta de reintegro. Verifique el número de control, el CI y la cuenta de reintegro.'
+        );
+    }
+
+    private function validarRecaudacionBusquedaLegalizacion(
+        string $controlBusqueda,
+        string $ci,
+        int $idPer,
+        int $codTraActual = 0
+    ): array
+    {
+        $controlBusqueda=trim($controlBusqueda);
+        if($controlBusqueda===''){
+            return ['ok'=>true];
+        }
+
+        $validacion=$this->validarRecaudacionLegalizacion(
+            $controlBusqueda,
+            $ci,
+            'B',
+            $idPer,
+            '',
+            $codTraActual,
+            false
+        );
+
+        if(($validacion['ok'] ?? false)===true){
+            return $validacion;
+        }
+
+        $code=(string)($validacion['code'] ?? '');
+        $detalle=trim((string)($validacion['detalle'] ?? ''));
+
+        if($code==='BOLETA_YA_USADA'){
+            return $validacion;
+        }
+
+        if($code==='BOLETA_NO_EXISTE'){
+            return $this->respuestaErrorValidacionLegalizacion(
+                'BOLETA_BUSQUEDA_NO_EXISTE',
+                'No se encontró información de la boleta de búsqueda para ese CI y número de control.'
+            );
+        }
+
+        if($code==='BOLETA_NO_PERTENECE_PERSONA'){
+            if($detalle!==''){
+                return $this->respuestaErrorValidacionLegalizacion(
+                    'BOLETA_BUSQUEDA_NO_PERTENECE_PERSONA',
+                    'La boleta de búsqueda no pertenece a la persona del trámite.',
+                    ['detalle'=>$detalle]
+                );
+            }
+
+            return $this->respuestaErrorValidacionLegalizacion(
+                'BOLETA_BUSQUEDA_NO_PERTENECE_PERSONA',
+                'La boleta de búsqueda no pertenece a la persona del trámite.'
+            );
+        }
+
+        if($code==='BOLETA_NO_CORRESPONDE_TRAMITE'){
+            return $this->respuestaErrorValidacionLegalizacion(
+                'BOLETA_BUSQUEDA_NO_CORRESPONDE',
+                'La boleta registrada en N° control Búsqueda no corresponde a una cuenta de búsqueda habilitada.'
+            );
+        }
+
+        return $this->respuestaErrorValidacionLegalizacion(
+            'BOLETA_BUSQUEDA_NO_VALIDA',
+            'No se pudo validar la boleta de búsqueda. Verifique el número de control y el CI.'
         );
     }
 
