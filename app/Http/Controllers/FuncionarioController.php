@@ -704,11 +704,9 @@ class FuncionarioController extends Controller
 
         $startTime = session('conformidad_start_time_' . $codFun, now());
 
-        $contador = DB::table('doc_adm.formularios_conformidad')
-            ->where('cod_fun', $codFun)
-            ->count() + 1;
+        $contador = DB::table('doc_adm.formularios_conformidad')->count() + 1;
 
-        $codigo = 'FCON-' . date('Ymd') . '-' . $codFun . '-' . str_pad($contador, 3, '0', STR_PAD_LEFT);
+        $codigo = 'DOC-' . str_pad($contador, 5, '0', STR_PAD_LEFT);
 
         $codFcon = DB::table('doc_adm.formularios_conformidad')->insertGetId([
             'cod_fun' => $codFun,
@@ -726,13 +724,10 @@ class FuncionarioController extends Controller
             ->where('created_at', '>=', $startTime)
             ->update(['cod_fcon' => $codFcon]);
 
-        $backUrl = $request->input('back_url');
-        if (!$backUrl || $backUrl === url('guardar-conformidad') || str_contains($backUrl, 'guardar-conformidad')) {
-            $backUrl = url('listar funcionario/' . ($funcionario->fun_doc_adm === 'D' ? 'docente' : 'administrativo'));
-        }
+        session()->forget('conformidad_start_time_' . $codFun);
 
         \Session::flash('exito', 'Formulario de conformidad guardado correctamente.');
-        return redirect($backUrl);
+        return redirect(url('listar documentos funcionario/' . $codFun));
     }
 
     /**
@@ -756,6 +751,7 @@ class FuncionarioController extends Controller
             ->get();
         $documentos = Documento::where('cod_fun','=',$cod_fun)
             ->where('created_at', '>=', $startTime)
+            ->whereNull('cod_fcon')
             ->orderBy('doc_tipo')->get();
         $pendingObsDocIds = DB::table('doc_adm.d_observacions as o')
             ->join('doc_adm.documentos as d', 'o.cod_doc', '=', 'd.cod_doc')

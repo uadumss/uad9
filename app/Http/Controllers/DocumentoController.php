@@ -7,6 +7,7 @@ use App\Imports\ImportarTitularidad;
 use App\Models\Carrera;
 use App\Models\D_observacion;
 use App\Models\Documento;
+use App\Models\FormularioConformidad;
 use App\Models\Funcionario;
 use App\Models\Titularidad;
 use Illuminate\Http\Request;
@@ -114,7 +115,12 @@ class DocumentoController extends Controller
         $pendingObsDocIds = $this->getPendingObservationDocIdsByFuncionario($cod_fun);
         $hasDpaCandidates = $hasDocumentosHabilitados;
 
-        return view('funcionario.documento.l_documento',compact('funcionario','documentos','cod_fun','titularidades','enviosDpa','enviosDpaDocumentos','hasDpaCandidates','hasPreviousDpaEnvio','requiresEduSuperior','pendingObsDocIds'));
+        $formularios = FormularioConformidad::with(['documentos'])
+            ->where('cod_fun', $cod_fun)
+            ->orderByDesc('created_at')
+            ->get();
+
+        return view('funcionario.documento.l_documento',compact('funcionario','documentos','cod_fun','titularidades','enviosDpa','enviosDpaDocumentos','hasDpaCandidates','hasPreviousDpaEnvio','requiresEduSuperior','pendingObsDocIds','formularios'));
     }
     public function fe_documento($cod_doc,$cod_fun){
         $documento='';

@@ -124,7 +124,7 @@
                         </div>
                         <!-- TABLA DOCUMENTOS -->
                         <div class="bg-primary centrar_bloque p-1 col-md-3 rounded shadow">
-                            <h5 class="text-white text-center">Lista de Documentos</h5>
+                            <h5 class="text-white text-center">Documentos añadidos al formulario</h5>
                         </div>
                         <hr class="sidebar-divider">
                                 <table class="table table-sm table-hover sortable-table" width="100%" cellspacing="0" style="font-size: 0.8em" id="tablaDocumentos">
@@ -221,7 +221,7 @@
                                 </div>
                                 <div class="card mt-3">
                                     <div class="card-body">
-                                        @if(isset($documentos) && count($documentos) > 0)
+                                        @if(isset($formularios) && count($formularios) > 0)
                                             <table class="table table-sm table-hover" width="100%" cellspacing="0" style="font-size: 0.85em" id="tablaFormularios">
                                                 <thead>
                                                     <tr class="bg-gray-600 text-white">

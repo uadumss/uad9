@@ -314,6 +314,8 @@
                                 @else
                                     <div class="alert alert-info mt-3 mb-0">No hay envios registrados a la DPA para este funcionario.</div>
                                 @endif
+
+                                <hr class="sidebar-divider">
                                 <div class="bg-primary centrar_bloque p-1 col-md-3 rounded shadow mt-4">
                                     <h5 class="text-white text-center">Formularios de Conformidad</h5>
                                 </div>
@@ -359,6 +361,7 @@
                                         @endif
                                     </div>
                                 </div>
+
                     </div>
                 </div>
             </div>
