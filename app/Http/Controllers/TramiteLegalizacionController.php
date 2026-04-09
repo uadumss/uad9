@@ -1704,7 +1704,7 @@ class TramiteLegalizacionController extends Controller
                 }*/
             }
             $qr=$this->valorQR(date('d'),date('m'),date('Y'));
-            $qr_generado='http://http://www.archivos.umss.edu.bo/verificar_tramite/index.php?q='.$qr;
+            $qr_generado='http://www.archivos.umss.edu.bo/verificar_tramite/index.php?q='.$qr;
 
             if($docleg->dtra_interno=='t'){$docleg->dtra_titulo=$tramite->tre_titulo_interno;}
             else{$docleg->dtra_titulo=$tramite->tre_titulo;}
