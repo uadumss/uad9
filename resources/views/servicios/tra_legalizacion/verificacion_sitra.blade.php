@@ -50,7 +50,7 @@
                                     </tr>
                                     <tr>
                                         <th class="text-right ">Título:</th>
-                                        <th class="text-dark text-left border-bottom border-danger pl-3">{{$respuesta->titulo ?? '-'}}</th>
+                                        <th class="text-dark text-left border-bottom border-danger pl-3">{{$titulo->tit_titulo ?? $respuesta->titulo ?? '-'}}</th>
                                     </tr>
                                     <tr>
                                         <th class="text-right ">Número:</th>
@@ -59,12 +59,16 @@
 
                                     <tr>
                                         <th class="text-right ">Gestión:</th>
-                                        <th class="text-dark text-left border-bottom border-danger pl-3">{{$respuesta->gestion ?? '-'}}</th>
+                                        <th class="text-dark text-left border-bottom border-danger pl-3">{{$titulo->tit_gestion ?? $respuesta->gestion ?? '-'}}</th>
                                     </tr>
 
                                     <tr>
                                         <th class="text-right ">Tipo documento:</th>
                                         <th class="text-dark text-left border-bottom border-danger pl-3">{{$respuesta->tipo ?? '-'}}</th>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-right ">Nota marginal:</th>
+                                        <th class="text-dark text-left border-bottom border-danger pl-3">{{$titulo->nota_marginal ?? '-'}}</th>
                                     </tr>
                                 </table>
                         </div>

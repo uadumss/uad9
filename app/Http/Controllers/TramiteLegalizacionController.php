@@ -118,6 +118,8 @@ class TramiteLegalizacionController extends Controller
         $tipos_array = "";
         $ptaang=array();
         $supletorios = [];
+        $titulos = [];
+
         if($tramite->id_per!='') {
             $ptaang=DB::select("select dt.dtra_ptaang,dt.dtra_numero,dt.dtra_gestion from d_tramitas dt, tramitas t where t.id_per=".$tramite->id_per." and t.cod_tra=dt.cod_tra and (dt.dtra_ptaang='B' or dt.dtra_ptaang='A')");
             $tipos_titulos = DB::select('select distinct(tit_tipo) from titulos where id_per=' . $tramite->id_per);
@@ -149,6 +151,12 @@ class TramiteLegalizacionController extends Controller
             ->where('id_per', $tramite->id_per)
             ->where('tit_tipo', 'su')
             ->select('tit_ref')
+            ->get();
+            $titulos = DB::table('titulos')
+            ->where('id_per', $tramite->id_per)
+            ->whereNotNull('tit_titulo')      // evita NULL
+            ->where('tit_titulo', '<>', '')   // evita vacío ""
+            ->select('tit_titulo','tit_tipo')
             ->get();
             foreach ($supletorios as $s) {
                 if (str_contains($s->tit_ref, 'D.A')) {
@@ -183,7 +191,7 @@ class TramiteLegalizacionController extends Controller
         if($tramite->cod_apo!=''){
             $apoderado=Apoderado::find($tramite->cod_apo);
         }
-        return view('servicios.tra_legalizacion.fe_traleg',compact('tramite','documentos','lista_tramites','confrontacion','apoderado','tipos_array','ptaang','supletorios'));
+        return view('servicios.tra_legalizacion.fe_traleg',compact('tramite','documentos','lista_tramites','confrontacion','apoderado','tipos_array','ptaang','supletorios','titulos'));
     }
     public function g_traleg(Request $form){
         //return $form['ci'];
@@ -244,6 +252,14 @@ class TramiteLegalizacionController extends Controller
         $documento=Funciones::DocumentoSitra($docleg->dtra_buscar_en);
         $numero=$docleg->dtra_numero;
         $fuente='sitra';
+        $titulo = null;
+        \Log::info('DEBUG BUSQUEDA TITULO INPUT', [
+            'id_per' => $tramita->id_per,
+            'numero' => $docleg->dtra_numero,
+            'numero_int' => (int)$docleg->dtra_numero,
+            'gestion' => $docleg->dtra_gestion,
+            'buscar_en' => $docleg->dtra_buscar_en,
+        ]);
         try {
             $respuesta=$this->verificarSitra($persona->per_ci,$docleg->dtra_numero,$docleg->dtra_buscar_en);
         } catch (\Throwable $e) {
@@ -268,6 +284,7 @@ class TramiteLegalizacionController extends Controller
 
             if($respaldoUad9){
                 $fuente='sid';
+                $titulo=$respaldoUad9;
                 $respuesta=(object)[
                     'nombre'=>trim((string)($persona->per_apellido.' '.$persona->per_nombre)),
                     'titulo'=>trim((string)($respaldoUad9->tit_titulo ?? '')),
@@ -279,8 +296,17 @@ class TramiteLegalizacionController extends Controller
                 $fuente='sitra_sid';
             }
         }
-
-        return view('servicios.tra_legalizacion.verificacion_sitra', compact('respuesta','persona','docleg','documento','fuente'));
+        $titulo = $this->buscarRespaldoInternoSitra(
+            (int)$tramita->id_per,
+            (string)$docleg->dtra_numero,
+            (string)$docleg->dtra_buscar_en,
+            trim((string)($docleg->dtra_gestion ?? ''))
+        );
+        \Log::info('DEBUG TITULO FINAL', [
+                'fuente' => $fuente,
+                'titulo' => $titulo
+            ]);
+        return view('servicios.tra_legalizacion.verificacion_sitra', compact('respuesta','persona','docleg','documento','fuente','titulo'));
     }
     public function g_docleg(Request $form){
         $datosTramita=Tramita::find($form['ctra']);
@@ -1579,7 +1605,7 @@ class TramiteLegalizacionController extends Controller
         }
 
         $query=Titulo::where('id_per','=',$idPer)
-            ->where('tit_nro_titulo','=',trim($numero));
+            ->whereRaw('CAST(tit_nro_titulo AS INTEGER) = ?', [(int)$numero]);
 
         if(trim($gestion)!==''){
             $query->where('tit_gestion','=',trim($gestion));
@@ -1592,7 +1618,12 @@ class TramiteLegalizacionController extends Controller
         }else{
             $query->where('tit_tipo','=',$buscarEn);
         }
-
+        \Log::info('DEBUG QUERY TITULO', [
+            'id_per' => $idPer,
+            'numero' => $numero,
+            'gestion' => $gestion,
+            'buscar_en' => $buscarEn
+        ]);
         return $query->first();
     }
     public function obs_docleg($cod_dtra){
