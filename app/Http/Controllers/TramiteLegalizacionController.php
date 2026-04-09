@@ -136,6 +136,7 @@ class TramiteLegalizacionController extends Controller
                     $lista_tramites=Tramite::where('tre_tipo','=','B')
                     ->where('tre_hab','<>','f')
                     ->where('tre_tipo','<>','R')
+                    ->whereRaw("UPPER(tre_nombre) NOT LIKE ?",['%REINTEGRO%'])
                     ->orderBy('tre_nombre')
                     ->get();
             }else{
@@ -143,6 +144,7 @@ class TramiteLegalizacionController extends Controller
                 $lista_tramites=Tramite::where('tre_tipo','=',$tramite->tra_tipo_tramite)
                     ->where('tre_hab','<>','f')
                     ->where('tre_tipo','<>','R')
+                    ->whereRaw("UPPER(tre_nombre) NOT LIKE ?",['%REINTEGRO%'])
                     ->orderBy('tre_nombre')
                     ->get();
 

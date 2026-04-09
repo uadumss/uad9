@@ -439,7 +439,6 @@
                                                     <option value="tp">TP</option>
                                                     <option value="di">DI</option>
                                                     <option value="tpos">TPOS</option>
-                                                    <option value="re">RE</option>
                                                     <option value="su">SU</option>
                                                 </select>
                                             </td>
