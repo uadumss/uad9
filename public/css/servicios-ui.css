@@ -672,6 +672,15 @@
     margin-right: auto;
 }
 
+.apostilla-ui .apo-observacion-content,
+.apostilla-ui .apo-confirm-content,
+.apostilla-ui .apo-entrega-content {
+    width: 100%;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 @media (min-width: 992px) {
     .apostilla-ui .apo-edit-layout.apo-edit-layout--two-col {
         grid-template-columns: minmax(280px, 34%) minmax(520px, 66%) !important;
@@ -793,4 +802,108 @@
 .servicios-ui select.form-control-sm {
     min-height: 1.95rem;
     font-size: clamp(0.78rem, 0.1vw + 0.75rem, 0.88rem);
+}
+
+/* Apostilla: pulido final de UX para edición rápida (desktop-first) */
+@media (min-width: 992px) {
+    .apostilla-ui .apo-edit-layout.apo-edit-layout--quick-two {
+        display: grid !important;
+        grid-template-columns: minmax(300px, 32%) minmax(620px, 68%) !important;
+        gap: 0.9rem;
+        align-items: start;
+    }
+
+    .apostilla-ui .apo-edit-layout.apo-edit-layout--quick-two > .apo-col-left,
+    .apostilla-ui .apo-edit-layout.apo-edit-layout--quick-two > .apo-col-main {
+        grid-column: auto !important;
+        max-width: none !important;
+        width: 100% !important;
+        flex: initial !important;
+        margin-top: 0;
+        padding-left: 0.35rem !important;
+        padding-right: 0.35rem !important;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .apostilla-ui .apo-edit-layout.apo-edit-layout--quick-two {
+        display: grid;
+        grid-template-columns: minmax(260px, 1fr);
+        gap: 0.7rem;
+    }
+
+    .apostilla-ui .apo-edit-layout.apo-edit-layout--quick-two > .apo-col-left,
+    .apostilla-ui .apo-edit-layout.apo-edit-layout--quick-two > .apo-col-main {
+        grid-column: 1 / -1;
+        max-width: none;
+        width: 100%;
+        flex: initial;
+        margin-top: 0;
+        padding-left: 0.2rem !important;
+        padding-right: 0.2rem !important;
+    }
+}
+
+.apostilla-ui .apo-col-main .apo-quick-card,
+.apostilla-ui .apo-col-main .apo-selected-card {
+    border-color: #dfe8f5 !important;
+}
+
+.apostilla-ui .apo-col-main .apo-quick-card .form-control,
+.apostilla-ui .apo-col-main .apo-quick-card .custom-select {
+    min-height: 2.08rem;
+}
+
+.apostilla-ui .apo-col-main .apo-estado-pago-icon {
+    cursor: pointer;
+}
+
+.apostilla-ui .apo-col-main .apo-quick-card label {
+    line-height: 1.2;
+}
+
+.apostilla-ui .apo-col-main #panel_lista_tramites_apostilla table {
+    table-layout: fixed;
+}
+
+.apostilla-ui .apo-col-main #panel_lista_tramites_apostilla th {
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: normal;
+    font-size: 0.82rem;
+}
+
+.apostilla-ui .apo-col-main #panel_lista_tramites_apostilla td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.apostilla-ui .apo-col-main #panel_lista_tramites_apostilla th:nth-child(1),
+.apostilla-ui .apo-col-main #panel_lista_tramites_apostilla td:nth-child(1) {
+    width: 6%;
+}
+
+.apostilla-ui .apo-col-main #panel_lista_tramites_apostilla th:nth-child(2),
+.apostilla-ui .apo-col-main #panel_lista_tramites_apostilla td:nth-child(2) {
+    width: 31%;
+}
+
+.apostilla-ui .apo-col-main #panel_lista_tramites_apostilla th:nth-child(3),
+.apostilla-ui .apo-col-main #panel_lista_tramites_apostilla td:nth-child(3) {
+    width: 13%;
+}
+
+.apostilla-ui .apo-col-main #panel_lista_tramites_apostilla th:nth-child(4),
+.apostilla-ui .apo-col-main #panel_lista_tramites_apostilla td:nth-child(4) {
+    width: 19%;
+}
+
+.apostilla-ui .apo-col-main #panel_lista_tramites_apostilla th:nth-child(5),
+.apostilla-ui .apo-col-main #panel_lista_tramites_apostilla td:nth-child(5) {
+    width: 18%;
+}
+
+.apostilla-ui .apo-col-main #panel_lista_tramites_apostilla th:nth-child(6),
+.apostilla-ui .apo-col-main #panel_lista_tramites_apostilla td:nth-child(6) {
+    width: 13%;
 }

@@ -320,12 +320,16 @@ class ApostillaController extends Controller
          * 3 -> Entregado
          */
         $form->validate([
-            'cl'=>'required',
+            'cl'=>'nullable|integer',
             'ca'=>'required',
             'nro_control'=>'required',
             'gestion_valorado'=>'nullable|digits:4',
         ]);
-        $codApos=(int)$form['ca'];
+        $codApos=(string)$form['ca'];
+        if(!Str::isUuid($codApos)){
+            return $this->responderAgregarTramiteApostilla($form,false,'Debe guardar primero el trámite de apostilla antes de agregar documentos.',$codApos);
+        }
+        $codLisIngresado=(int)($form['cl'] ?? 0);
         $tramite_apostilla=Apostilla::find($form['ca']);
         if(!$tramite_apostilla){
             return $this->responderAgregarTramiteApostilla($form,false,'No se encontró el trámite de apostilla.',$codApos);
@@ -339,13 +343,22 @@ class ApostillaController extends Controller
             (string)$form['nro_control'],
             (string)$persona->per_ci,
             (int)$tramite_apostilla->id_per,
-            (int)$form['cl']
+            0
         );
         if(!$verificacionRecaudacion['ok']){
             return $this->responderAgregarTramiteApostilla($form,false,(string)$verificacionRecaudacion['message'],$codApos);
         }
 
-        $codLisFinal=(int)$form['cl'];
+        $codLisFinal=(int)($verificacionRecaudacion['cod_lis_sugerido'] ?? 0);
+
+        if($codLisFinal<=0){
+            return $this->responderAgregarTramiteApostilla($form,false,'Boleta inválida para apostilla: no se pudo detectar automáticamente un trámite habilitado.',$codApos);
+        }
+
+        if($codLisIngresado>0 && $codLisIngresado!==$codLisFinal){
+            return $this->responderAgregarTramiteApostilla($form,false,'Se detectó una inconsistencia en el trámite enviado. Vuelva a validar el N° de control.',$codApos);
+        }
+
         $apostilla=Lista_doc_apostilla::find($codLisFinal);
         if(!$apostilla){
             return $this->responderAgregarTramiteApostilla($form,false,'No se encontró el tipo de trámite seleccionado.',$codApos);
@@ -418,7 +431,7 @@ class ApostillaController extends Controller
         }
     }
 
-    private function responderAgregarTramiteApostilla(Request $request, bool $ok, string $message, int $codApos)
+    private function responderAgregarTramiteApostilla(Request $request, bool $ok, string $message, string $codApos)
     {
         if($request->ajax() || $request->expectsJson()){
             return response()->json([
@@ -441,10 +454,17 @@ class ApostillaController extends Controller
     {
         $data=$request->validate([
             'nro_control'=>['required','integer'],
-            'cod_lis'=>['required','integer'],
         ]);
 
-        $tramiteApostilla=Apostilla::find($cod_apos);
+        $codApos=(string)$cod_apos;
+        if(!Str::isUuid($codApos)){
+            return response()->json([
+                'ok'=>false,
+                'message'=>'Debe guardar primero el trámite de apostilla antes de validar el pago.',
+            ],422);
+        }
+
+        $tramiteApostilla=Apostilla::find($codApos);
         if(!$tramiteApostilla || !$tramiteApostilla->id_per){
             return response()->json([
                 'ok'=>false,
@@ -464,7 +484,7 @@ class ApostillaController extends Controller
             (string)$data['nro_control'],
             (string)$persona->per_ci,
             (int)$tramiteApostilla->id_per,
-            (int)$data['cod_lis']
+            0
         );
 
         if(!$validacion['ok']){
@@ -990,7 +1010,7 @@ class ApostillaController extends Controller
             }
 
             if($tramiteSeleccionado && (int)$tramiteSeleccionado->cod_lis!==(int)$tramiteSugerido->cod_lis){
-                $mensajeCuentaInvalida='El pago no corresponde al trámite seleccionado.';
+                $mensajeCuentaInvalida='El pago corresponde al trámite "'.trim((string)$tramiteSugerido->lis_alias).'" y no al trámite seleccionado.';
                 continue;
             }
 
@@ -1022,6 +1042,11 @@ class ApostillaController extends Controller
                 'monto' => $fila['total'] ?? '',
                 'control' => (string)$nroControl,
                 'preimpreso' => (string)$preimpresoApi,
+                'cod_lis_sugerido'=>(int)$tramiteSugerido->cod_lis,
+                'lis_nombre_sugerido'=>(string)($tramiteSugerido->lis_nombre ?? ''),
+                'lis_alias_sugerido'=>(string)($tramiteSugerido->lis_alias ?? ''),
+                'lis_tipo_sugerido'=>(string)($tramiteSugerido->lis_tipo ?? ''),
+                'documento_label_sugerido'=>$this->etiquetaDocumentoApostilla($tramiteSugerido),
             ];
         }
 
@@ -1227,6 +1252,20 @@ class ApostillaController extends Controller
         }
 
         return null;
+    }
+
+    private function etiquetaDocumentoApostilla(Lista_doc_apostilla $tramite): string
+    {
+        $tipo=strtolower(trim((string)($tramite->lis_tipo ?? '')));
+        if($tipo==='sid'){
+            return 'N° trámite';
+        }
+
+        if(trim((string)($tramite->lis_resolucion ?? ''))!==''){
+            return 'N° resolución';
+        }
+
+        return 'N° título';
     }
 
     private function registrarUsoRecaudacionApostilla(array $validacion, int $codTra, int $codDtra, string &$error): bool
