@@ -231,6 +231,7 @@
                                                         <th>Carrera</th>
                                                         <th>Observaciones</th>
                                                         <th>Documentos asociados</th>
+                                                        <th>Acciones</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -251,6 +252,13 @@
                                                                 @else
                                                                     <span class="text-muted">Sin documentos</span>
                                                                 @endif
+                                                            </td>
+                                                            <td>
+                                                                <a href="{{ url('descargar conformidad/' . $formulario->cod_fcon) }}"
+                                                                   class="btn btn-success btn-sm"
+                                                                   title="Descargar formulario .docx">
+                                                                    <i class="fas fa-file-word"></i> Descargar
+                                                                </a>
                                                             </td>
                                                         </tr>
                                                     @endforeach

@@ -15,6 +15,7 @@ use App\Models\Universidad;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Excel;
+use PhpOffice\PhpWord\TemplateProcessor;
 
 class FuncionarioController extends Controller
 {
@@ -775,5 +776,49 @@ class FuncionarioController extends Controller
         }
 
         return view('funcionario.documento.l_conformidad', compact('funcionario', 'titularidades', 'documentos', 'pendingObsDocIds', 'cod_fun', 'backUrl', 'formularios'));
+    }
+
+    /**
+     * Descargar el formulario de conformidad como .docx con los datos llenos
+     */
+    public function descargar_conformidad($cod_fcon)
+    {
+        $formulario = FormularioConformidad::find($cod_fcon);
+        if (!$formulario) {
+            return redirect()->back()->with('error', 'Formulario no encontrado.');
+        }
+
+        $funcionario = Funcionario::find($formulario->cod_fun);
+        if (!$funcionario) {
+            return redirect()->back()->with('error', 'Funcionario no encontrado.');
+        }
+
+        $plantilla = storage_path('app/plantillas/formulario_conformidad.docx');
+        if (!file_exists($plantilla)) {
+            return redirect()->back()->with('error', 'La plantilla del formulario no se encontró.');
+        }
+
+        $templateProcessor = new TemplateProcessor($plantilla);
+
+        $fecha = $formulario->created_at
+            ? \Carbon\Carbon::parse($formulario->created_at)->format('d/m/Y')
+            : date('d/m/Y');
+
+        $templateProcessor->setValue('nombre',      $funcionario->fun_nombre ?? '');
+        $templateProcessor->setValue('lugar:trabajo', $formulario->lugar_trabajo ?? '');
+        $templateProcessor->setValue('telefono',    $funcionario->fun_telefonos ?? '');
+        $templateProcessor->setValue('email',       $funcionario->fun_email ?? '');
+        $templateProcessor->setValue('fecha',       $fecha);
+
+        $nombreArchivo = 'conformidad-' . ($formulario->codigo ?? $cod_fcon) . '.docx';
+        $rutaTemporal  = storage_path('app/temp/' . $nombreArchivo);
+
+        if (!file_exists(storage_path('app/temp'))) {
+            mkdir(storage_path('app/temp'), 0755, true);
+        }
+
+        $templateProcessor->saveAs($rutaTemporal);
+
+        return response()->download($rutaTemporal, $nombreArchivo)->deleteFileAfterSend(true);
     }
 }
