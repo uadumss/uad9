@@ -92,6 +92,13 @@
                                         <span class="font-weight-bold">{{$p->dtra_numero."/".$p->dtra_gestion}} </span> por PTAANG</li>
                                 @endforeach
                             @endif
+                            @if(sizeof($supletorios)>0)
+                                @foreach($supletorios as $s)
+                                    <li class="text-darkr">
+                                        Ya tiene <span class="font-weight-bold">{{ $s->tipo }}</span>
+                                    </li>
+                                @endforeach
+                            @endif
                         </ul>
                     </div>
                     <br/>

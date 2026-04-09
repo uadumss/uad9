@@ -117,6 +117,7 @@ class TramiteLegalizacionController extends Controller
         $lista_tramites=array();
         $tipos_array = "";
         $ptaang=array();
+        $supletorios = [];
         if($tramite->id_per!='') {
             $ptaang=DB::select("select dt.dtra_ptaang,dt.dtra_numero,dt.dtra_gestion from d_tramitas dt, tramitas t where t.id_per=".$tramite->id_per." and t.cod_tra=dt.cod_tra and (dt.dtra_ptaang='B' or dt.dtra_ptaang='A')");
             $tipos_titulos = DB::select('select distinct(tit_tipo) from titulos where id_per=' . $tramite->id_per);
@@ -152,7 +153,24 @@ class TramiteLegalizacionController extends Controller
                 /*$lista_tramites = DB::select("select * from tramites where tre_hab='t' and tre_tipo='"
                     . $tramite->tra_tipo_tramite . "' and tre_buscar_en in " . $tipos_array . " or tre_buscar_en='' or tre_buscar_en='res'");*/
             }
-
+            $supletorios = DB::table('titulos')
+            ->where('id_per', $tramite->id_per)
+            ->where('tit_tipo', 'su')
+            ->select('tit_ref')
+            ->get();
+            foreach ($supletorios as $s) {
+                if (str_contains($s->tit_ref, 'D.A')) {
+                    $s->tipo = 'SU(ACADEMICO)';
+                } elseif (str_contains($s->tit_ref, 'T.P.N')) {
+                    $s->tipo = 'SU(PROVISION)';
+                } elseif (str_contains($s->tit_ref, 'D.B')) {
+                    $s->tipo = 'SU(BACHILLER)';
+                } elseif (str_contains($s->tit_ref, 'D.I.P')) {
+                    $s->tipo = 'SU(DIPLOMADO)';
+                } else {
+                    $s->tipo = 'SU';
+                }
+            }
         }
         /*$lista_tramites=Tramite::all()->where('tre_hab','=','t')->sortBy('tre_nombre')
             ->where('tre_tipo','=',$tramite->tra_tipo_tramite);*/
@@ -173,7 +191,7 @@ class TramiteLegalizacionController extends Controller
         if($tramite->cod_apo!=''){
             $apoderado=Apoderado::find($tramite->cod_apo);
         }
-        return view('servicios.tra_legalizacion.fe_traleg',compact('tramite','documentos','lista_tramites','confrontacion','apoderado','tipos_array','ptaang'));
+        return view('servicios.tra_legalizacion.fe_traleg',compact('tramite','documentos','lista_tramites','confrontacion','apoderado','tipos_array','ptaang','supletorios'));
     }
     public function g_traleg(Request $form){
         //return $form['ci'];
@@ -2737,7 +2755,7 @@ class TramiteLegalizacionController extends Controller
                 }*/
             }
             $qr=$this->valorQR(date('d'),date('m'),date('Y'));
-            $qr_generado='http://http://www.archivos.umss.edu.bo/verificar_tramite/index.php?q='.$qr;
+            $qr_generado='http://www.archivos.umss.edu.bo/verificar_tramite/index.php?q='.$qr;
 
             if($docleg->dtra_interno=='t'){$docleg->dtra_titulo=$tramite->tre_titulo_interno;}
             else{$docleg->dtra_titulo=$tramite->tre_titulo;}
