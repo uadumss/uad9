@@ -32,6 +32,11 @@ class FuncionarioController extends Controller
             ) as has_pending_obs")
             ->selectRaw("EXISTS (
                 SELECT 1
+                FROM doc_adm.documentos d3
+                WHERE d3.cod_fun = doc_adm.funcionarios.cod_fun
+            ) as has_documents")
+            ->selectRaw("EXISTS (
+                SELECT 1
                 FROM doc_adm.documentos d2
                 WHERE d2.cod_fun = doc_adm.funcionarios.cod_fun
                 AND COALESCE(d2.doc_enviado_dpa, false) = false
