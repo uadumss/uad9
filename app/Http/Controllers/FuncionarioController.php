@@ -426,6 +426,7 @@ class FuncionarioController extends Controller
         
         $parametros[22]=($form['folder']=='on')? "fun_folder='t'":'-';
         $parametros[23]=($form['nofolder']=='on')? "fun_folder is null":'-';
+        $parametros[24]=($form['global_no_verificado']=='on')? "cod_fun in (select distinct cod_fun from doc_adm.documentos where doc_verificado<>'t')":'-';
 
         foreach ($parametros as $p):
             if($p!='-'){

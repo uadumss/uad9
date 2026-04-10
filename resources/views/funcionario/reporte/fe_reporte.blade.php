@@ -145,7 +145,7 @@
                         <ul class="mb-0 pl-3 mt-2">
                             <li>Primero: selecciona tipo de funcionario, folder y estado de carpeta (estos siempre están disponibles)</li>
                             <li>Luego: escoge <strong>solo uno</strong> de los filtros de documento o usa "Solo Tesis" para búsquedas rápidas</li>
-                            <li>En el filtro elegido, define si debe existir y sus estados (legalizado, verificado, UMSS, tesis)</li>
+                            <li>En el filtro elegido, define si debe existir y sus estados (legalizado, verificado, tipo de universidad, tesis)</li>
                             <li>Alternativamente, usa los presets para búsquedas predefinidas (sin activar filtros de documento)</li>
                         </ul>
                     </div>
@@ -159,8 +159,6 @@
                                         <option value="">Seleccionar preset...</option>
                                         <option value="carpeta_completa">Carpeta completa minima (DB + DA + TP + Postgrado)</option>
                                         <option value="carpeta_incompleta">Carpeta incompleta (falta algun documento base)</option>
-                                        <option value="solo_docentes_con_folder">Solo docentes con folder</option>
-                                        <option value="solo_administrativos_con_folder">Solo administrativos con folder</option>
                                         <option value="documentos_no_verificados">Documentos no verificados (cualquier tipo)</option>
                                         <option value="sin_folder">Funcionarios sin folder</option>
                                     </select>
@@ -201,7 +199,7 @@
                                 </div>
                                 <div class="row mt-3">
                                     <div class="col-md-6">
-                                        <label class="font-weight-bold text-dark">Estado de carpeta (calculado)</label>
+                                        <label class="font-weight-bold text-dark">Estado de carpeta</label>
                                         <select class="custom-select custom-select-sm" name="estado_carpeta" id="estado_carpeta">
                                             <option value="">Indiferente</option>
                                             <option value="completo">Solo completos</option>
@@ -285,7 +283,7 @@
                                     <input type="checkbox" class="custom-control-input" name="excel" id="excel">
                                     <label class="custom-control-label text-success font-weight-bold" for="excel">Exportar resultado a Excel</label>
                                 </div>
-                                <button class="btn btn-primary btn-sm" type="button" onclick="prepararFormularioParaEnvio('form_reporte','{{url('procesar reporte dya')}}','panel_reporte')">
+                                <button class="btn btn-primary btn-sm" id="btn_generar_reporte" type="button" onclick="prepararFormularioParaEnvio('form_reporte','{{url('procesar reporte dya')}}','panel_reporte')">
                                     <i class="fas fa-search"></i> Generar reporte
                                 </button>
                             </div>
@@ -293,6 +291,7 @@
 
                         <input type="checkbox" class="hidden-check" name="folder" checked>
                         <input type="checkbox" class="hidden-check" name="nofolder">
+                        <input type="checkbox" class="hidden-check" name="global_no_verificado">
                     </form>
 
                     <div class="row">
@@ -505,6 +504,71 @@
                 // Limpiar todos los checkboxes
                 document.querySelectorAll('.hidden-check').forEach(inp => inp.checked = false);
             }
+        });
+
+        function limpiarFiltrosDocumentoUI() {
+            document.getElementById('select_documento_filtro').value = '';
+            document.getElementById('filtros_activos_container').innerHTML = '';
+            filtrosActivos.clear();
+            updateFiltrosDisplay();
+        }
+
+        function setValorPresenceFolder(valor) {
+            const selectFolder = document.querySelector('.presence-select[data-on="folder"][data-off="nofolder"]');
+            if (!selectFolder) return;
+            selectFolder.value = valor;
+            selectFolder.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        document.getElementById('btn_aplicar_preset').addEventListener('click', function() {
+            const preset = document.getElementById('preset_busqueda').value;
+
+            if (!preset) {
+                alert('Selecciona un preset primero');
+                return;
+            }
+
+            // Limpieza base
+            limpiarFiltrosDocumentoUI();
+            document.querySelectorAll('.hidden-check').forEach(inp => inp.checked = false);
+
+            const tipoFuncionarioSelect = document.querySelector('select[name="funcionario"]');
+            const estadoCarpetaSelect = document.getElementById('estado_carpeta');
+            const globalNoVerificado = document.querySelector('input[name="global_no_verificado"]');
+
+            if (tipoFuncionarioSelect) tipoFuncionarioSelect.value = '';
+            if (estadoCarpetaSelect) estadoCarpetaSelect.value = '';
+            if (globalNoVerificado) globalNoVerificado.checked = false;
+
+            // Preset rules
+            if (preset === 'carpeta_completa') {
+                setValorPresenceFolder('con');
+                if (estadoCarpetaSelect) estadoCarpetaSelect.value = 'completo';
+            }
+
+            if (preset === 'carpeta_incompleta') {
+                setValorPresenceFolder('con');
+                if (estadoCarpetaSelect) estadoCarpetaSelect.value = 'incompleto';
+            }
+
+            if (preset === 'sin_folder') {
+                setValorPresenceFolder('sin');
+            }
+
+            if (preset === 'documentos_no_verificados') {
+                setValorPresenceFolder('indiferente');
+                if (globalNoVerificado) globalNoVerificado.checked = true;
+            }
+
+            const botonGenerar = document.getElementById('btn_generar_reporte');
+            if (botonGenerar) {
+                botonGenerar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            // Ejecutar automáticamente después de aplicar el preset
+            setTimeout(function() {
+                prepararFormularioParaEnvio('form_reporte','{{url('procesar reporte dya')}}','panel_reporte');
+            }, 250);
         });
 
         // Permitir Enter en el select para agregar
