@@ -245,190 +245,179 @@ class FuncionarioController extends Controller
         $parametros=array();
 
         // Bachiller
-        if($form['bachiller']=='on'){
-            $parametros[0]="cod_fun in (select cod_fun from doc_adm.documentos where (doc_tipo='DIPLOMA DE BACHILLER' OR doc_grado='Bachiller')";
-            $parametros[0].=$form['lbachiller']=='on'?" and doc_legalizado='t'":"";
-            $parametros[0].=$form['nlbachiller']=='on'?" and doc_legalizado<>'t'":"";
-            $parametros[0].=$form['vbachiller']=='on'?" and doc_verificado='t'":"";
-            $parametros[0].=$form['nvbachiller']=='on'?" and doc_verificado<>'t'":"";
-            $parametros[0].=$form['ubachiller']=='on'?" and doc_umss='t'":"";
-            $parametros[0].=$form['nubachiller']=='on'?" and doc_umss<>'t'":"";
+        $tiene_filtro_bachiller = $form['nobachiller']!='on' && $this->tieneFiltroPositivo($form, 'bachiller');
+        if($tiene_filtro_bachiller){
+            $parametros[0]="cod_fun in (select distinct d.cod_fun from doc_adm.documentos d LEFT JOIN doc_adm.universidades u ON d.doc_universidad = u.sigla where (d.doc_tipo='DIPLOMA DE BACHILLER' OR d.doc_grado='Bachiller')";
+            $parametros[0].=$form['lbachiller']=='on'?" and d.doc_legalizado='t'":"";
+            $parametros[0].=$form['nlbachiller']=='on'?" and d.doc_legalizado<>'t'":"";
+            $parametros[0].=$form['vbachiller']=='on'?" and d.doc_verificado='t'":"";
+            $parametros[0].=$form['nvbachiller']=='on'?" and d.doc_verificado<>'t'":"";
+            $parametros[0].=$this->construirFiltroTipoUniversidad($form, 'ubachiller');
             $parametros[0].=')';
         }else{
             $parametros[0]='-';
         }
-        $parametros[1]=($form['nobachiller']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='DIPLOMA DE BACHILLER' OR doc_grado='Bachiller')":'-';
+        $parametros[1]=($form['nobachiller']=='on')? "cod_fun not in (select distinct cod_fun from doc_adm.documentos where doc_tipo='DIPLOMA DE BACHILLER' OR doc_grado='Bachiller')":"-";
 
         // Tecnico Medio
-        if($form['tmedio']=='on'){
-            $parametros[2]="cod_fun in (select cod_fun from doc_adm.documentos where (doc_tipo='TECNICO MEDIO' OR doc_grado='Tecnico medio')";
-            $parametros[2].=$form['ltmedio']=='on'?" and doc_legalizado='t'":"";
-            $parametros[2].=$form['nltmedio']=='on'?" and doc_legalizado<>'t'":"";
-            $parametros[2].=$form['vtmedio']=='on'?" and doc_verificado='t'":"";
-            $parametros[2].=$form['nvtmedio']=='on'?" and doc_verificado<>'t'":"";
-            $parametros[2].=$form['utmedio']=='on'?" and doc_umss='t'":"";
-            $parametros[2].=$form['nutmedio']=='on'?" and doc_umss<>'t'":"";
+        $tiene_filtro_tmedio = $form['notmedio']!='on' && $this->tieneFiltroPositivo($form, 'tmedio');
+        if($tiene_filtro_tmedio){
+            $parametros[2]="cod_fun in (select distinct d.cod_fun from doc_adm.documentos d LEFT JOIN doc_adm.universidades u ON d.doc_universidad = u.sigla where (d.doc_tipo='TECNICO MEDIO' OR d.doc_grado='Tecnico medio')";
+            $parametros[2].=$form['ltmedio']=='on'?" and d.doc_legalizado='t'":"";
+            $parametros[2].=$form['nltmedio']=='on'?" and d.doc_legalizado<>'t'":"";
+            $parametros[2].=$form['vtmedio']=='on'?" and d.doc_verificado='t'":"";
+            $parametros[2].=$form['nvtmedio']=='on'?" and d.doc_verificado<>'t'":"";
+            $parametros[2].=$this->construirFiltroTipoUniversidad($form, 'utmedio');
             $parametros[2].=')';
         }else{
             $parametros[2]='-';
         }
-        $parametros[3]=($form['notmedio']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='TECNICO MEDIO' OR doc_grado='Tecnico medio')":'-';
+        $parametros[3]=($form['notmedio']=='on')? "cod_fun not in (select distinct cod_fun from doc_adm.documentos where doc_tipo='TECNICO MEDIO' OR doc_grado='Tecnico medio')":"-";
 
         // Tecnico Superior
-        if($form['tsuperior']=='on'){
-            $parametros[4]="cod_fun in (select cod_fun from doc_adm.documentos where (doc_tipo='TECNICO SUPERIOR' OR doc_grado='Tecnico superior')";
-            $parametros[4].=$form['ltsuperior']=='on'?" and doc_legalizado='t'":"";
-            $parametros[4].=$form['nltsuperior']=='on'?" and doc_legalizado<>'t'":"";
-            $parametros[4].=$form['vtsuperior']=='on'?" and doc_verificado='t'":"";
-            $parametros[4].=$form['nvtsuperior']=='on'?" and doc_verificado<>'t'":"";
-            $parametros[4].=$form['utsuperior']=='on'?" and doc_umss='t'":"";
-            $parametros[4].=$form['nutsuperior']=='on'?" and doc_umss<>'t'":"";
+        $tiene_filtro_tsuperior = $form['notsuperior']!='on' && $this->tieneFiltroPositivo($form, 'tsuperior');
+        if($tiene_filtro_tsuperior){
+            $parametros[4]="cod_fun in (select distinct d.cod_fun from doc_adm.documentos d LEFT JOIN doc_adm.universidades u ON d.doc_universidad = u.sigla where (d.doc_tipo='TECNICO SUPERIOR' OR d.doc_grado='Tecnico superior')";
+            $parametros[4].=$form['ltsuperior']=='on'?" and d.doc_legalizado='t'":"";
+            $parametros[4].=$form['nltsuperior']=='on'?" and d.doc_legalizado<>'t'":"";
+            $parametros[4].=$form['vtsuperior']=='on'?" and d.doc_verificado='t'":"";
+            $parametros[4].=$form['nvtsuperior']=='on'?" and d.doc_verificado<>'t'":"";
+            $parametros[4].=$this->construirFiltroTipoUniversidad($form, 'utsuperior');
             $parametros[4].=')';
         }else{
             $parametros[4]='-';
         }
-        $parametros[5]=($form['notsuperior']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='TECNICO SUPERIOR' OR doc_grado='Tecnico superior')":'-';
+        $parametros[5]=($form['notsuperior']=='on')? "cod_fun not in (select distinct cod_fun from doc_adm.documentos where doc_tipo='TECNICO SUPERIOR' OR doc_grado='Tecnico superior')":"-";
 
         // Diploma Academico
-        if($form['academico']=='on'){
-            $parametros[6]="cod_fun in (select cod_fun from doc_adm.documentos where (doc_tipo='DIPLOMA ACADEMICO' OR doc_grado='Diploma academico')";
-            $parametros[6].=$form['lacademico']=='on'?" and doc_legalizado='t'":"";
-            $parametros[6].=$form['nlacademico']=='on'?" and doc_legalizado<>'t'":"";
-            $parametros[6].=$form['vacademico']=='on'?" and doc_verificado='t'":"";
-            $parametros[6].=$form['nvacademico']=='on'?" and doc_verificado<>'t'":"";
-            $parametros[6].=$form['uacademico']=='on'?" and doc_umss='t'":"";
-            $parametros[6].=$form['nuacademico']=='on'?" and doc_umss<>'t'":"";
+        $tiene_filtro_academico = $form['noacademico']!='on' && $this->tieneFiltroPositivo($form, 'academico');
+        if($tiene_filtro_academico){
+            $parametros[6]="cod_fun in (select distinct d.cod_fun from doc_adm.documentos d LEFT JOIN doc_adm.universidades u ON d.doc_universidad = u.sigla where (d.doc_tipo='DIPLOMA ACADEMICO' OR d.doc_grado='Diploma academico')";
+            $parametros[6].=$form['lacademico']=='on'?" and d.doc_legalizado='t'":"";
+            $parametros[6].=$form['nlacademico']=='on'?" and d.doc_legalizado<>'t'":"";
+            $parametros[6].=$form['vacademico']=='on'?" and d.doc_verificado='t'":"";
+            $parametros[6].=$form['nvacademico']=='on'?" and d.doc_verificado<>'t'":"";
+            $parametros[6].=$this->construirFiltroTipoUniversidad($form, 'uacademico');
             $parametros[6].=')';
         }else{
             $parametros[6]='-';
         }
-        $parametros[7]=($form['noacademico']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='DIPLOMA ACADEMICO' OR doc_grado='Diploma academico')":'-';
+        $parametros[7]=($form['noacademico']=='on')? "cod_fun not in (select distinct cod_fun from doc_adm.documentos where doc_tipo='DIPLOMA ACADEMICO' OR doc_grado='Diploma academico')":"-";
 
         // Titulo Profesional
-        if($form['profesional']=='on'){
-            $parametros[8]="cod_fun in (select cod_fun from doc_adm.documentos where (doc_tipo='TITULO PROFESIONAL' OR doc_grado='Titulo profesional')";
-            $parametros[8].=$form['lprofesional']=='on'?" and doc_legalizado='t'":"";
-            $parametros[8].=$form['nlprofesional']=='on'?" and doc_legalizado<>'t'":"";
-            $parametros[8].=$form['vprofesional']=='on'?" and doc_verificado='t'":"";
-            $parametros[8].=$form['nvprofesional']=='on'?" and doc_verificado<>'t'":"";
-            $parametros[8].=$form['uprofesional']=='on'?" and doc_umss='t'":"";
-            $parametros[8].=$form['nuprofesional']=='on'?" and doc_umss<>'t'":"";
+        $tiene_filtro_profesional = $form['noprofesional']!='on' && $this->tieneFiltroPositivo($form, 'profesional');
+        if($tiene_filtro_profesional){
+            $parametros[8]="cod_fun in (select distinct d.cod_fun from doc_adm.documentos d LEFT JOIN doc_adm.universidades u ON d.doc_universidad = u.sigla where (d.doc_tipo='TITULO PROFESIONAL' OR d.doc_grado='Titulo profesional')";
+            $parametros[8].=$form['lprofesional']=='on'?" and d.doc_legalizado='t'":"";
+            $parametros[8].=$form['nlprofesional']=='on'?" and d.doc_legalizado<>'t'":"";
+            $parametros[8].=$form['vprofesional']=='on'?" and d.doc_verificado='t'":"";
+            $parametros[8].=$form['nvprofesional']=='on'?" and d.doc_verificado<>'t'":"";
+            $parametros[8].=$this->construirFiltroTipoUniversidad($form, 'uprofesional');
             $parametros[8].=')';
         }else{
             $parametros[8]='-';
         }
-        $parametros[9]=($form['noprofesional']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='TITULO PROFESIONAL' OR doc_grado='Titulo profesional')":'-';
+        $parametros[9]=($form['noprofesional']=='on')? "cod_fun not in (select distinct cod_fun from doc_adm.documentos where doc_tipo='TITULO PROFESIONAL' OR doc_grado='Titulo profesional')":"-";
 
         // Diplomado
-        $tiene_filtro_diplomado = $form['diplomado']=='on' || $form['tdiplomado']=='on' || $form['ntdiplomado']=='on';
+        $tiene_filtro_diplomado = $form['nodiplomado']!='on' && $this->tieneFiltroPositivo($form, 'diplomado', true);
         if($tiene_filtro_diplomado){
-            $parametros[10]="cod_fun in (select cod_fun from doc_adm.documentos where (doc_tipo='DIPLOMADO' OR doc_grado='Diplomado')";
-            $parametros[10].=$form['ldiplomado']=='on'?" and doc_legalizado='t'":"";
-            $parametros[10].=$form['nldiplomado']=='on'?" and doc_legalizado<>'t'":"";
-            $parametros[10].=$form['vdiplomado']=='on'?" and doc_verificado='t'":"";
-            $parametros[10].=$form['nvdiplomado']=='on'?" and doc_verificado<>'t'":"";
-            $parametros[10].=$form['udiplomado']=='on'?" and doc_umss='t'":"";
-            $parametros[10].=$form['nudiplomado']=='on'?" and doc_umss<>'t'":"";
-            $parametros[10].=$form['tdiplomado']=='on'?" and doc_tesis='t'":"";
-            $parametros[10].=$form['ntdiplomado']=='on'?" and doc_tesis<>'t'":"";
+            $parametros[10]="cod_fun in (select distinct d.cod_fun from doc_adm.documentos d LEFT JOIN doc_adm.universidades u ON d.doc_universidad = u.sigla where (d.doc_tipo='DIPLOMADO' OR d.doc_grado='Diplomado')";
+            $parametros[10].=$form['ldiplomado']=='on'?" and d.doc_legalizado='t'":"";
+            $parametros[10].=$form['nldiplomado']=='on'?" and d.doc_legalizado<>'t'":"";
+            $parametros[10].=$form['vdiplomado']=='on'?" and d.doc_verificado='t'":"";
+            $parametros[10].=$form['nvdiplomado']=='on'?" and d.doc_verificado<>'t'":"";
+            $parametros[10].=$this->construirFiltroTipoUniversidad($form, 'udiplomado');
+            $parametros[10].=$form['tdiplomado']=='on'?" and d.doc_tesis='t'":"";
+            $parametros[10].=$form['ntdiplomado']=='on'?" and d.doc_tesis<>'t'":"";
             $parametros[10].=')';
         }else{
             $parametros[10]='-';
         }
-        $parametros[11]=($form['nodiplomado']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='DIPLOMADO' OR doc_grado='Diplomado')":'-';
+        $parametros[11]=($form['nodiplomado']=='on')? "cod_fun not in (select distinct cod_fun from doc_adm.documentos where doc_tipo='DIPLOMADO' OR doc_grado='Diplomado')":"-";
 
         // Especialidad
-        $tiene_filtro_especialidad = $form['especialidad']=='on' || $form['tespecialidad']=='on' || $form['ntespecialidad']=='on';
+        $tiene_filtro_especialidad = $form['noespecialidad']!='on' && $this->tieneFiltroPositivo($form, 'especialidad', true);
         if($tiene_filtro_especialidad){
-            $parametros[12]="cod_fun in (select cod_fun from doc_adm.documentos where (doc_tipo='ESPECIALIDAD' OR doc_grado='Especialidad')";
-            $parametros[12].=$form['lespecialidad']=='on'?" and doc_legalizado='t'":"";
-            $parametros[12].=$form['nlespecialidad']=='on'?" and doc_legalizado<>'t'":"";
-            $parametros[12].=$form['vespecialidad']=='on'?" and doc_verificado='t'":"";
-            $parametros[12].=$form['nvespecialidad']=='on'?" and doc_verificado<>'t'":"";
-            $parametros[12].=$form['uespecialidad']=='on'?" and doc_umss='t'":"";
-            $parametros[12].=$form['nuespecialidad']=='on'?" and doc_umss<>'t'":"";
-            $parametros[12].=$form['tespecialidad']=='on'?" and doc_tesis='t'":"";
-            $parametros[12].=$form['ntespecialidad']=='on'?" and doc_tesis<>'t'":"";
+            $parametros[12]="cod_fun in (select distinct d.cod_fun from doc_adm.documentos d LEFT JOIN doc_adm.universidades u ON d.doc_universidad = u.sigla where (d.doc_tipo='ESPECIALIDAD' OR d.doc_grado='Especialidad')";
+            $parametros[12].=$form['lespecialidad']=='on'?" and d.doc_legalizado='t'":"";
+            $parametros[12].=$form['nlespecialidad']=='on'?" and d.doc_legalizado<>'t'":"";
+            $parametros[12].=$form['vespecialidad']=='on'?" and d.doc_verificado='t'":"";
+            $parametros[12].=$form['nvespecialidad']=='on'?" and d.doc_verificado<>'t'":"";
+            $parametros[12].=$this->construirFiltroTipoUniversidad($form, 'uespecialidad');
+            $parametros[12].=$form['tespecialidad']=='on'?" and d.doc_tesis='t'":"";
+            $parametros[12].=$form['ntespecialidad']=='on'?" and d.doc_tesis<>'t'":"";
             $parametros[12].=')';
         }else{
             $parametros[12]='-';
         }
-        $parametros[13]=($form['noespecialidad']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='ESPECIALIDAD' OR doc_grado='Especialidad')":'-';
+        $parametros[13]=($form['noespecialidad']=='on')? "cod_fun not in (select distinct cod_fun from doc_adm.documentos where doc_tipo='ESPECIALIDAD' OR doc_grado='Especialidad')":"-";
 
         // Maestria
-        $tiene_filtro_maestria = $form['maestria']=='on' || $form['tmaestria']=='on' || $form['ntmaestria']=='on';
+        $tiene_filtro_maestria = $form['nomaestria']!='on' && $this->tieneFiltroPositivo($form, 'maestria', true);
         if($tiene_filtro_maestria){
-            $parametros[14]="cod_fun in (select cod_fun from doc_adm.documentos where (doc_tipo='MAESTRIA' OR doc_grado='Maestria')";
-            $parametros[14].=$form['lmaestria']=='on'?" and doc_legalizado='t'":"";
-            $parametros[14].=$form['nlmaestria']=='on'?" and doc_legalizado<>'t'":"";
-            $parametros[14].=$form['vmaestria']=='on'?" and doc_verificado='t'":"";
-            $parametros[14].=$form['nvmaestria']=='on'?" and doc_verificado<>'t'":"";
-            $parametros[14].=$form['umaestria']=='on'?" and doc_umss='t'":"";
-            $parametros[14].=$form['numaestria']=='on'?" and doc_umss<>'t'":"";
-            $parametros[14].=$form['tmaestria']=='on'?" and doc_tesis='t'":"";
-            $parametros[14].=$form['ntmaestria']=='on'?" and doc_tesis<>'t'":"";
+            $parametros[14]="cod_fun in (select distinct d.cod_fun from doc_adm.documentos d LEFT JOIN doc_adm.universidades u ON d.doc_universidad = u.sigla where (d.doc_tipo='MAESTRIA' OR d.doc_grado='Maestria')";
+            $parametros[14].=$form['lmaestria']=='on'?" and d.doc_legalizado='t'":"";
+            $parametros[14].=$form['nlmaestria']=='on'?" and d.doc_legalizado<>'t'":"";
+            $parametros[14].=$form['vmaestria']=='on'?" and d.doc_verificado='t'":"";
+            $parametros[14].=$form['nvmaestria']=='on'?" and d.doc_verificado<>'t'":"";
+            $parametros[14].=$this->construirFiltroTipoUniversidad($form, 'umaestria');
+            $parametros[14].=$form['tmaestria']=='on'?" and d.doc_tesis='t'":"";
+            $parametros[14].=$form['ntmaestria']=='on'?" and d.doc_tesis<>'t'":"";
             $parametros[14].=')';
         }else{
             $parametros[14]='-';
         }
-        $parametros[15]=($form['nomaestria']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='MAESTRIA' OR doc_grado='Maestria')":'-';
+        $parametros[15]=($form['nomaestria']=='on')? "cod_fun not in (select distinct cod_fun from doc_adm.documentos where doc_tipo='MAESTRIA' OR doc_grado='Maestria')":"-";
 
         // Doctorado
-        $tiene_filtro_doctorado = $form['doctorado']=='on' || $form['tdoctorado']=='on' || $form['ntdoctorado']=='on';
+        $tiene_filtro_doctorado = $form['nodoctorado']!='on' && $this->tieneFiltroPositivo($form, 'doctorado', true);
         if($tiene_filtro_doctorado){
-            $parametros[16]="cod_fun in (select cod_fun from doc_adm.documentos where (doc_tipo='DOCTORADO' OR doc_grado='Doctorado')";
-            $parametros[16].=$form['ldoctorado']=='on'?" and doc_legalizado='t'":"";
-            $parametros[16].=$form['nldoctorado']=='on'?" and doc_legalizado<>'t'":"";
-            $parametros[16].=$form['vdoctorado']=='on'?" and doc_verificado='t'":"";
-            $parametros[16].=$form['nvdoctorado']=='on'?" and doc_verificado<>'t'":"";
-            $parametros[16].=$form['udoctorado']=='on'?" and doc_umss='t'":"";
-            $parametros[16].=$form['nudoctorado']=='on'?" and doc_umss<>'t'":"";
-            $parametros[16].=$form['tdoctorado']=='on'?" and doc_tesis='t'":"";
-            $parametros[16].=$form['ntdoctorado']=='on'?" and doc_tesis<>'t'":"";
+            $parametros[16]="cod_fun in (select distinct d.cod_fun from doc_adm.documentos d LEFT JOIN doc_adm.universidades u ON d.doc_universidad = u.sigla where (d.doc_tipo='DOCTORADO' OR d.doc_grado='Doctorado')";
+            $parametros[16].=$form['ldoctorado']=='on'?" and d.doc_legalizado='t'":"";
+            $parametros[16].=$form['nldoctorado']=='on'?" and d.doc_legalizado<>'t'":"";
+            $parametros[16].=$form['vdoctorado']=='on'?" and d.doc_verificado='t'":"";
+            $parametros[16].=$form['nvdoctorado']=='on'?" and d.doc_verificado<>'t'":"";
+            $parametros[16].=$this->construirFiltroTipoUniversidad($form, 'udoctorado');
+            $parametros[16].=$form['tdoctorado']=='on'?" and d.doc_tesis='t'":"";
+            $parametros[16].=$form['ntdoctorado']=='on'?" and d.doc_tesis<>'t'":"";
             $parametros[16].=')';
         }else{
             $parametros[16]='-';
         }
-        $parametros[17]=($form['nodoctorado']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tipo='DOCTORADO' OR doc_grado='Doctorado')":'-';
+        $parametros[17]=($form['nodoctorado']=='on')? "cod_fun not in (select distinct cod_fun from doc_adm.documentos where doc_tipo='DOCTORADO' OR doc_grado='Doctorado')":"-";
 
         // Educacion Superior
-        $tiene_filtro_ddu = $form['ddu']=='on' || $form['tddu']=='on' || $form['ntddu']=='on';
+        $tiene_filtro_ddu = $form['noddu']!='on' && $this->tieneFiltroPositivo($form, 'ddu', true);
         if($tiene_filtro_ddu){
-            $parametros[18]="cod_fun in (select cod_fun from doc_adm.documentos where doc_edu_superior='t'";
-            $parametros[18].=$form['lddu']=='on'?" and doc_legalizado='t'":"";
-            $parametros[18].=$form['nlddu']=='on'?" and doc_legalizado<>'t'":"";
-            $parametros[18].=$form['vddu']=='on'?" and doc_verificado='t'":"";
-            $parametros[18].=$form['nvddu']=='on'?" and doc_verificado<>'t'":"";
-            $parametros[18].=$form['uddu']=='on'?" and doc_umss='t'":"";
-            $parametros[18].=$form['nuddu']=='on'?" and doc_umss<>'t'":"";
-            $parametros[18].=$form['tddu']=='on'?" and doc_tesis='t'":"";
-            $parametros[18].=$form['ntddu']=='on'?" and doc_tesis<>'t'":"";
+            $parametros[18]="cod_fun in (select distinct d.cod_fun from doc_adm.documentos d LEFT JOIN doc_adm.universidades u ON d.doc_universidad = u.sigla where d.doc_edu_superior='t'";
+            $parametros[18].=$form['lddu']=='on'?" and d.doc_legalizado='t'":"";
+            $parametros[18].=$form['nlddu']=='on'?" and d.doc_legalizado<>'t'":"";
+            $parametros[18].=$form['vddu']=='on'?" and d.doc_verificado='t'":"";
+            $parametros[18].=$form['nvddu']=='on'?" and d.doc_verificado<>'t'":"";
+            $parametros[18].=$this->construirFiltroTipoUniversidad($form, 'uddu');
+            $parametros[18].=$form['tddu']=='on'?" and d.doc_tesis='t'":"";
+            $parametros[18].=$form['ntddu']=='on'?" and d.doc_tesis<>'t'":"";
             $parametros[18].=')';
         }else{
             $parametros[18]='-';
         }
-        $parametros[19]=($form['noddu']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_edu_superior='t')":'-';
+        $parametros[19]=($form['noddu']=='on')? "cod_fun not in (select distinct cod_fun from doc_adm.documentos where doc_edu_superior='t')":'-';
 
         // Solo Tesis - busca documentos donde doc_tesis='t' independientemente del tipo
-        $tiene_filtro_solotesis = $form['solotesis']=='on' || $form['nosolotesis']=='on';
+        $tiene_filtro_solotesis = $form['nosolotesis']!='on' && $this->tieneFiltroPositivo($form, 'solotesis');
         if($tiene_filtro_solotesis){
-            if($form['solotesis']=='on'){
-                $parametros[20]="cod_fun in (select cod_fun from doc_adm.documentos where doc_tesis='t'";
-                $parametros[20].=$form['lsolotesis']=='on'?" and doc_legalizado='t'":"";
-                $parametros[20].=$form['nlsolotesis']=='on'?" and doc_legalizado<>'t'":"";
-                $parametros[20].=$form['vsolotesis']=='on'?" and doc_verificado='t'":"";
-                $parametros[20].=$form['nvsolotesis']=='on'?" and doc_verificado<>'t'":"";
-                $parametros[20].=$form['usolotesis']=='on'?" and doc_umss='t'":"";
-                $parametros[20].=$form['nusolotesis']=='on'?" and doc_umss<>'t'":"";
-                $parametros[20].=')';
-            }else{
-                $parametros[20]='-';
-            }
-            $parametros[21]=($form['nosolotesis']=='on')? "cod_fun not in (select cod_fun from doc_adm.documentos where doc_tesis='t')":'-';
+            $parametros[20]="cod_fun in (select distinct d.cod_fun from doc_adm.documentos d LEFT JOIN doc_adm.universidades u ON d.doc_universidad = u.sigla where d.doc_tesis='t'";
+            $parametros[20].=$form['lsolotesis']=='on'?" and d.doc_legalizado='t'":"";
+            $parametros[20].=$form['nlsolotesis']=='on'?" and d.doc_legalizado<>'t'":"";
+            $parametros[20].=$form['vsolotesis']=='on'?" and d.doc_verificado='t'":"";
+            $parametros[20].=$form['nvsolotesis']=='on'?" and d.doc_verificado<>'t'":"";
+            $parametros[20].=$this->construirFiltroTipoUniversidad($form, 'usolotesis');
+            $parametros[20].=')';
         }else{
             $parametros[20]='-';
-            $parametros[21]='-';
         }
+        $parametros[21]=($form['nosolotesis']=='on')? "cod_fun not in (select distinct cod_fun from doc_adm.documentos where doc_tesis='t')":'-';
         
         $parametros[22]=($form['folder']=='on')? "fun_folder='t'":'-';
         $parametros[23]=($form['nofolder']=='on')? "fun_folder is null":'-';
@@ -447,6 +436,7 @@ class FuncionarioController extends Controller
             }
         endforeach;
             $consulta.=" order by fun_nombre";
+
             $resultado=DB::select($consulta);
 
             // Procesar documentos y agregar información de validación
@@ -534,6 +524,67 @@ class FuncionarioController extends Controller
             }else{
                 return view('funcionario.reporte.resultado_titulos',compact('resultado','tipo_funcionario'));
             }
+    }
+
+    /**
+     * Determina si un filtro positivo está activo (incluye subfiltros aunque presencia esté en "indiferente")
+     */
+    private function tieneFiltroPositivo(Request $form, string $prefix, bool $incluyeTesis = false): bool
+    {
+        $campos = [
+            $prefix,
+            'l'.$prefix,
+            'nl'.$prefix,
+            'v'.$prefix,
+            'nv'.$prefix,
+            'u'.$prefix.'_publica',
+            'u'.$prefix.'_privada',
+            'u'.$prefix.'_extranjera',
+            'u'.$prefix.'_otra',
+        ];
+
+        if($incluyeTesis){
+            $campos[] = 't'.$prefix;
+            $campos[] = 'nt'.$prefix;
+        }
+
+        foreach($campos as $campo){
+            if($form->input($campo) === 'on'){
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Construir fragmento SQL para filtro de tipo de universidad
+     * @param Request $form
+     * @param string $prefix Prefijo de los campos (ej: 'ubachiller')
+     * @return string SQL WHERE condition o empty string si no hay selección
+     */
+    private function construirFiltroTipoUniversidad(Request $form, $prefix)
+    {
+        $conditions = [];
+
+        if($form[$prefix.'_publica']=='on') {
+            $conditions[] = "u.tipo='Pública'";
+        }
+        if($form[$prefix.'_privada']=='on') {
+            $conditions[] = "u.tipo='Privada'";
+        }
+        if($form[$prefix.'_extranjera']=='on') {
+            $conditions[] = "u.tipo='Extranjera'";
+        }
+        if($form[$prefix.'_otra']=='on') {
+            $conditions[] = "u.tipo IN ('Otro','Otra')";
+        }
+        
+        if(empty($conditions)) {
+            return '';
+        }
+        
+        return ' and (' . implode(' OR ', $conditions) . ')';
     }
 
     /**

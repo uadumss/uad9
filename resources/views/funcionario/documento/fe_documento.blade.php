@@ -36,8 +36,6 @@
                                     <td class="border-bottom border-dark">
                                         <select class="form-control border-0 form-control-sm" name="tipo" id="tipo">
                                             <option value="DIPLOMA DE BACHILLER">DIPLOMA DE BACHILLER</option>
-                                            <option value="TECNICO MEDIO">TECNICO MEDIO</option>
-                                            <option value="TECNICO SUPERIOR">TECNICO SUPERIOR</option>
                                             <option value="DIPLOMA ACADEMICO">DIPLOMA ACADEMICO</option>
                                             <option value="TITULO PROFESIONAL">TITULO PROFESIONAL</option>
                                             <option value="DIPLOMADO">DIPLOMADO</option>
@@ -195,8 +193,6 @@
 
                                             <option value="{{$documento->doc_tipo}}">{{$documento->doc_tipo}}</option>
                                             <option value="DIPLOMA DE BACHILLER">DIPLOMA DE BACHILLER</option>
-                                            <option value="TECNICO MEDIO">TECNICO MEDIO</option>
-                                            <option value="TECNICO SUPERIOR">TECNICO SUPERIOR</option>
                                             <option value="DIPLOMA ACADEMICO">DIPLOMA ACADEMICO</option>
                                             <option value="TITULO PROFESIONAL">TITULO PROFESIONAL</option>
                                             <option value="DIPLOMADO">DIPLOMADO</option>
