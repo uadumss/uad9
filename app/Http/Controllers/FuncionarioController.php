@@ -725,6 +725,12 @@ class FuncionarioController extends Controller
             ->where('created_at', '>=', $startTime)
             ->update(['cod_fcon' => $codFcon]);
 
+        DB::table('doc_adm.titularidads')
+            ->where('cod_fun', $codFun)
+            ->whereNull('cod_fcon')
+            ->where('created_at', '>=', $startTime)
+            ->update(['cod_fcon' => $codFcon]);
+
         session()->forget('conformidad_start_time_' . $codFun);
 
         \Session::flash('exito', 'Formulario de conformidad guardado correctamente.');
@@ -765,7 +771,7 @@ class FuncionarioController extends Controller
             ->unique()
             ->toArray();
 
-        $formularios = FormularioConformidad::with(['documentos'])
+        $formularios = FormularioConformidad::with(['documentos', 'titularidades'])
             ->where('cod_fun', $cod_fun)
             ->orderByDesc('created_at')
             ->get();
@@ -820,5 +826,52 @@ class FuncionarioController extends Controller
         $templateProcessor->saveAs($rutaTemporal);
 
         return response()->download($rutaTemporal, $nombreArchivo)->deleteFileAfterSend(true);
+    }
+
+    public function fe_formulario_conformidad($cod_fcon){
+        $formulario = FormularioConformidad::find($cod_fcon);
+        return view('funcionario.documento.fe_formulario_conformidad', compact('formulario'));
+    }
+
+    public function editar_conformidad(Request $request){
+        $request->validate([
+            'cod_fcon' => 'required|integer',
+            'lugar_trabajo' => 'required|string|max:255',
+            'carrera' => 'required|string|max:255',
+            'observaciones' => 'nullable|string',
+        ]);
+
+        $formulario = FormularioConformidad::find($request->cod_fcon);
+        if($formulario){
+            $formulario->lugar_trabajo = $request->lugar_trabajo;
+            $formulario->carrera = $request->carrera;
+            $formulario->observaciones = $request->observaciones;
+            // Eloquent automatically updates updated_at and leaves created_at alone.
+            $formulario->save();
+
+            \Session::flash('exito','El formulario se actualizó correctamente');
+        } else {
+            \Session::flash('error','Formulario no encontrado');
+        }
+        return redirect()->back();
+    }
+
+    public function fe_eli_conformidad($cod_fcon){
+        $formulario = FormularioConformidad::find($cod_fcon);
+        return view('funcionario.documento.f_eli_formulario_conformidad', compact('formulario'));
+    }
+
+    public function eliminar_conformidad(Request $request){
+        $request->validate([
+            'cod_fcon' => 'required|integer'
+        ]);
+        $formulario = FormularioConformidad::find($request->cod_fcon);
+        if($formulario){
+            $formulario->delete();
+            \Session::flash('exito','El formulario fue eliminado exitosamente');
+        } else {
+            \Session::flash('error','Formulario no encontrado');
+        }
+        return redirect()->back();
     }
 }

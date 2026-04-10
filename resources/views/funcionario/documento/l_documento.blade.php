@@ -331,6 +331,7 @@
                                                         <th>Carrera</th>
                                                         <th>Observaciones</th>
                                                         <th>Documentos asociados</th>
+                                                        <th>Acciones</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -351,6 +352,19 @@
                                                                 @else
                                                                     <span class="text-muted">Sin documentos</span>
                                                                 @endif
+                                                            </td>
+                                                            <td>
+                                                                {{--<a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_formulario_conformidad/'.$formulario->cod_fcon)}}','panel_documento')"
+                                                                   title="Editar formulario"><i class="fas fa-edit"></i>
+                                                                </a>--}}
+                                                                <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_eliminar_conformidad/'.$formulario->cod_fcon)}}','panel_documento')"
+                                                                   title="Eliminar formulario"><i class="text-danger fas fa-trash-alt"></i>
+                                                                </a>
+                                                                <a href="{{ url('descargar conformidad/' . $formulario->cod_fcon) }}"
+                                                                   class="btn btn-success btn-circle btn-sm"
+                                                                   title="Descargar formulario .docx">
+                                                                    <i class="fas fa-file-word"></i>
+                                                                </a>
                                                             </td>
                                                         </tr>
                                                     @endforeach
