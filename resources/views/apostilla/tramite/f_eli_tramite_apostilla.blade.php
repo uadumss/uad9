@@ -1,5 +1,4 @@
-<div class="modal-dialog modal-lg" role="document">
-    <div class="modal-content border-bottom-danger">
+<div class="modal-content border-bottom-danger apo-confirm-content">
         <form action="{{url('eliminar tramite apostilla')}}" method="post">
             @csrf
             <input  type="hidden" name="ct" id="ct" value=""/>
@@ -55,4 +54,3 @@
             </div>
         </form>
     </div>
-</div>

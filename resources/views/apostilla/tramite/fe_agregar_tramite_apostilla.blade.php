@@ -188,6 +188,7 @@
     }
 
     function solicitarValidacionRecaudacion(form,nroControl,codLis,onOk,onFail){
+        const codApos=(form.find('input[name="ca"]').val() || '').toString().trim();
         $.ajax({
             url:'{{ url("validar valorado apostilla/$tramite_apostilla->cod_apos") }}',
             type:'POST',
@@ -195,7 +196,8 @@
             data:{
                 _token:form.find('input[name="_token"]').val(),
                 nro_control:parseInt(nroControl,10) || 0,
-                cod_lis:parseInt(codLis,10) || 0
+                cod_lis:parseInt(codLis,10) || 0,
+                ca:codApos
             },
             success:function(resp){
                 if(resp && resp.ok){

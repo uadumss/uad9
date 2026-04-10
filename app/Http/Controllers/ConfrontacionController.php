@@ -31,6 +31,7 @@ class ConfrontacionController extends Controller
         $lista_tramites=Tramite::where('tre_hab','=','t')
             ->where('tre_tipo','=','F')
             ->where('tre_tipo','<>','R')
+            ->whereRaw("UPPER(tre_nombre) NOT LIKE ?",['%REINTEGRO%'])
             ->orderBy('tre_nombre')
             ->get();
         SessionController::write('C','',json_encode($tramite),'tramitas','3',$tramite->cod_tra);
@@ -129,6 +130,7 @@ class ConfrontacionController extends Controller
         $lista_tramites=Tramite::where('tre_hab','=','t')
             ->where('tre_tipo','=','B')
             ->where('tre_tipo','<>','R')
+            ->whereRaw("UPPER(tre_nombre) NOT LIKE ?",['%REINTEGRO%'])
             ->orderBy('tre_nombre')
             ->get();
         SessionController::write('C','',json_encode($tramite),'tramitas','3',$tramite->cod_tra);

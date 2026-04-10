@@ -8,8 +8,16 @@ function cargarDatos(ruta,panel){
         success: function (resp) {
             $('#'+panel).html(resp);
         },
-        error: function () {
-            $('#'+panel).html("<span class='text-white font-weight-bold bg-danger rounded p-1'>Ocurrio un error, probablemente no tenga permisos para esta acción</span>");
+        error: function (xhr) {
+            var mensaje='Ocurrio un error interno al cargar la ventana.';
+            if(xhr && xhr.status===403){
+                mensaje='No tiene permisos para esta acción.';
+            }else if(xhr && xhr.status===404){
+                mensaje='No se encontro la ruta solicitada.';
+            }else if(xhr && xhr.status===419){
+                mensaje='La sesion expiro. Recargue la pagina e intente nuevamente.';
+            }
+            $('#'+panel).html("<span class='text-white font-weight-bold bg-danger rounded p-1'>"+mensaje+"</span>");
         }
     });
 }

@@ -1,5 +1,4 @@
-<div class="modal-dialog modal-lg shadow" role="document">
-    <div class="modal-content border-bottom-primaryr">
+<div class="modal-content border-bottom-primaryr shadow apo-observacion-content">
             <input  type="hidden" name="ct" id="ct" value=""/>
             <div class="modal-header bg-verde-oscuro">
                 <h5 class="modal-title text-white" id="exampleModalLabel"> &nbsp;Observar trámite de apostilla</h5>
@@ -56,4 +55,3 @@
             </div>
 
     </div>
-</div>
