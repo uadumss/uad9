@@ -18,7 +18,6 @@
             <div class="bg-primary centrar_bloque p-1 col-md-7 rounded shadow">
                 <h6 class="text-white text-center mb-0">Formulario para editar legalización</h6>
             </div>
-            {{$tipos_array}}
             <hr class="sidebar-divider"/>
             <div class="row ui-form-layout">
                 <div class="col-md-4">
@@ -112,6 +111,7 @@
                                 @foreach($titulos as $t)
                                     <li class="text-darkr">
                                         Ya tiene el {{ $tipos[$t->tit_tipo] ?? strtoupper($t->tit_tipo) }} : <span class="font-weight-bold">{{ $t->tit_titulo }}</span>
+                                        emitido el {{$t->tit_fecha_emision}}
                                     </li>
                                 @endforeach
                             @endif
