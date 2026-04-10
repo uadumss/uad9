@@ -654,19 +654,36 @@ class FuncionarioController extends Controller
      */
     public function crear_universidad(Request $request)
     {
-        $request->validate([
-            'nombre' => 'required|unique:universidades',
-            'sigla' => 'required|unique:universidades',
+        // Validación inicial
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:255',
+            'sigla' => 'required|string|max:50',
             'tipo' => 'required|in:Pública,Privada,Extranjera'
         ]);
 
-        Universidad::create([
-            'nombre' => $request->nombre,
-            'sigla' => $request->sigla,
-            'tipo' => $request->tipo
-        ]);
+        // Validar que el nombre no exista (case-insensitive)
+        $nombreExistente = Universidad::whereRaw('LOWER(nombre) = ?', [strtolower($request->nombre)])->first();
+        if ($nombreExistente) {
+            return back()->withInput($request->all())->withErrors(['nombre' => 'Ya existe una universidad con este nombre.']);
+        }
 
-        return redirect('listar universidades')->with('exito', 'Universidad creada exitosamente');
+        // Validar que la sigla no exista (case-insensitive)
+        $siglaExistente = Universidad::whereRaw('LOWER(sigla) = ?', [strtolower($request->sigla)])->first();
+        if ($siglaExistente) {
+            return back()->withInput($request->all())->withErrors(['sigla' => 'Ya existe una universidad con esta sigla.']);
+        }
+
+        try {
+            Universidad::create([
+                'nombre' => $request->nombre,
+                'sigla' => $request->sigla,
+                'tipo' => $request->tipo
+            ]);
+
+            return redirect('listar universidades')->with('exito', 'Universidad creada exitosamente');
+        } catch (\Exception $e) {
+            return back()->withInput($request->all())->withErrors(['error' => 'Error al crear la universidad: ' . $e->getMessage()]);
+        }
     }
 
     /**
@@ -681,18 +698,68 @@ class FuncionarioController extends Controller
         }
 
         $request->validate([
-            'nombre' => 'required|unique:universidades,nombre,'.$id,
-            'sigla' => 'required|unique:universidades,sigla,'.$id,
+            'nombre' => 'required|string|max:255',
+            'sigla' => 'required|string|max:50',
             'tipo' => 'required|in:Pública,Privada,Extranjera'
         ]);
 
-        $universidad->update([
-            'nombre' => $request->nombre,
-            'sigla' => $request->sigla,
-            'tipo' => $request->tipo
-        ]);
+        // Validar que el nombre no exista en otras universidades (case-insensitive)
+        $nombreExistente = Universidad::whereRaw('LOWER(nombre) = ?', [strtolower($request->nombre)])
+            ->where('id', '!=', $id)
+            ->exists();
+        if ($nombreExistente) {
+            return back()->withInput()->withErrors(['nombre' => 'Ya existe otra universidad con este nombre.']);
+        }
 
-        return redirect('listar universidades')->with('exito', 'Universidad actualizada exitosamente');
+        // Validar que la sigla no exista en otras universidades (case-insensitive)
+        $siglaExistente = Universidad::whereRaw('LOWER(sigla) = ?', [strtolower($request->sigla)])
+            ->where('id', '!=', $id)
+            ->exists();
+        if ($siglaExistente) {
+            return back()->withInput()->withErrors(['sigla' => 'Ya existe otra universidad con esta sigla.']);
+        }
+
+        try {
+            $universidad->update([
+                'nombre' => $request->nombre,
+                'sigla' => $request->sigla,
+                'tipo' => $request->tipo
+            ]);
+
+            return redirect('listar universidades')->with('exito', 'Universidad actualizada exitosamente');
+        } catch (\Exception $e) {
+            return back()->withInput()->withErrors(['error' => 'Error al actualizar la universidad: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Verificar si una universidad ya existe
+     */
+    public function verificar_universidad(Request $request)
+    {
+        $nombre = $request->input('nombre', '');
+        $sigla = $request->input('sigla', '');
+        $id = $request->input('id', null);
+
+        // Validar nombre duplicado
+        $nombreExistente = Universidad::whereRaw('LOWER(nombre) = ?', [strtolower($nombre)])
+            ->when($id, function ($query) use ($id) {
+                return $query->where('id', '!=', $id);
+            })
+            ->exists();
+
+        // Validar sigla duplicada
+        $siglaExistente = Universidad::whereRaw('LOWER(sigla) = ?', [strtolower($sigla)])
+            ->when($id, function ($query) use ($id) {
+                return $query->where('id', '!=', $id);
+            })
+            ->exists();
+
+        return response()->json([
+            'valido' => !($nombreExistente || $siglaExistente),
+            'nombre_existe' => $nombreExistente,
+            'sigla_existe' => $siglaExistente
+        ]);
     }
 
     /**

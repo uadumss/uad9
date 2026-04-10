@@ -195,16 +195,18 @@
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="nombre">Nombre:</label>
-                        <input type="text" class="form-control @error('nombre') is-invalid @enderror" id="nombre" name="nombre" required>
+                        <input type="text" class="form-control @error('nombre') is-invalid @enderror" id="nombre" name="nombre" value="{{ old('nombre') }}" required>
+                        <small id="nombreError" class="text-danger d-none"></small>
                         @error('nombre')
-                            <span class="invalid-feedback">{{ $message }}</span>
+                            <span class="invalid-feedback d-block">{{ $message }}</span>
                         @enderror
                     </div>
                     <div class="form-group">
                         <label for="sigla">Sigla:</label>
-                        <input type="text" class="form-control @error('sigla') is-invalid @enderror" id="sigla" name="sigla" required>
+                        <input type="text" class="form-control @error('sigla') is-invalid @enderror" id="sigla" name="sigla" value="{{ old('sigla') }}" required>
+                        <small id="siglaError" class="text-danger d-none"></small>
                         @error('sigla')
-                            <span class="invalid-feedback">{{ $message }}</span>
+                            <span class="invalid-feedback d-block">{{ $message }}</span>
                         @enderror
                     </div>
                     <div class="form-group">
@@ -216,13 +218,13 @@
                             <option value="Extranjera">Extranjera</option>
                         </select>
                         @error('tipo')
-                            <span class="invalid-feedback">{{ $message }}</span>
+                            <span class="invalid-feedback d-block">{{ $message }}</span>
                         @enderror
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
+                    <button type="submit" class="btn btn-primary" id="btnGuardarUniversidad" disabled>Guardar</button>
                 </div>
             </form>
         </div>
@@ -245,24 +247,35 @@
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="nombreEdit">Nombre:</label>
-                        <input type="text" class="form-control" id="nombreEdit" name="nombre" required>
+                        <input type="text" class="form-control @error('nombre') is-invalid @enderror" id="nombreEdit" name="nombre" value="{{ old('nombre') }}" required>
+                        <small id="nombreEditError" class="text-danger d-none"></small>
+                        @error('nombre')
+                            <span class="invalid-feedback d-block">{{ $message }}</span>
+                        @enderror
                     </div>
                     <div class="form-group">
                         <label for="siglaEdit">Sigla:</label>
-                        <input type="text" class="form-control" id="siglaEdit" name="sigla" required>
+                        <input type="text" class="form-control @error('sigla') is-invalid @enderror" id="siglaEdit" name="sigla" value="{{ old('sigla') }}" required>
+                        <small id="siglaEditError" class="text-danger d-none"></small>
+                        @error('sigla')
+                            <span class="invalid-feedback d-block">{{ $message }}</span>
+                        @enderror
                     </div>
                     <div class="form-group">
                         <label for="tipoEdit">Tipo:</label>
-                        <select class="custom-select" id="tipoEdit" name="tipo" required>
+                        <select class="custom-select @error('tipo') is-invalid @enderror" id="tipoEdit" name="tipo" required>
                             <option value="Pública">Pública</option>
                             <option value="Privada">Privada</option>
                             <option value="Extranjera">Extranjera</option>
                         </select>
+                        @error('tipo')
+                            <span class="invalid-feedback d-block">{{ $message }}</span>
+                        @enderror
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-info">Actualizar</button>
+                    <button type="submit" class="btn btn-info" id="btnActualizarUniversidad" disabled>Actualizar</button>
                 </div>
             </form>
         </div>
@@ -291,66 +304,256 @@
 </div>
 
 <script>
-// Limpiar backdrop al cargar
-$(document).ready(function() {
-    // Resetear body completamente
-    $('body').removeClass('modal-open');
-    $('.modal-backdrop').remove();
+var tiempoValidacionCrear = null;
+var tiempoValidacionEditar = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Obtener token CSRF
+    var metaToken = document.querySelector('meta[name="csrf-token"]');
+    var inputToken = document.querySelector('input[name="_token"]');
+    window.CSRFToken = metaToken ? metaToken.getAttribute('content') : (inputToken ? inputToken.value : '{{ csrf_token() }}');
     
-    // Prevenir que data-toggle/data-target agregue backdrops
-    $('#modalNuevaUniversidad').on('show.bs.modal', function () {
-        $('.modal-backdrop').remove();
-    });
+    console.log('Token CSRF:', window.CSRFToken);
+    
+    // Eventos para modal crear
+    var nombre = document.getElementById('nombre');
+    var sigla = document.getElementById('sigla');
+    var tipo = document.getElementById('tipo');
+    
+    if (nombre) {
+        nombre.addEventListener('keyup', function() {
+            clearTimeout(tiempoValidacionCrear);
+            tiempoValidacionCrear = setTimeout(validarCrear, 300);
+        });
+        nombre.addEventListener('change', function() {
+            clearTimeout(tiempoValidacionCrear);
+            tiempoValidacionCrear = setTimeout(validarCrear, 300);
+        });
+    }
+    
+    if (sigla) {
+        sigla.addEventListener('keyup', function() {
+            clearTimeout(tiempoValidacionCrear);
+            tiempoValidacionCrear = setTimeout(validarCrear, 300);
+        });
+        sigla.addEventListener('change', function() {
+            clearTimeout(tiempoValidacionCrear);
+            tiempoValidacionCrear = setTimeout(validarCrear, 300);
+        });
+    }
+    
+    if (tipo) {
+        tipo.addEventListener('change', function() {
+            clearTimeout(tiempoValidacionCrear);
+            tiempoValidacionCrear = setTimeout(validarCrear, 300);
+        });
+    }
+    
+    // Eventos para modal editar
+    var nombreEdit = document.getElementById('nombreEdit');
+    var siglaEdit = document.getElementById('siglaEdit');
+    var tipoEdit = document.getElementById('tipoEdit');
+    
+    if (nombreEdit) {
+        nombreEdit.addEventListener('keyup', function() {
+            clearTimeout(tiempoValidacionEditar);
+            tiempoValidacionEditar = setTimeout(validarEditar, 300);
+        });
+        nombreEdit.addEventListener('change', function() {
+            clearTimeout(tiempoValidacionEditar);
+            tiempoValidacionEditar = setTimeout(validarEditar, 300);
+        });
+    }
+    
+    if (siglaEdit) {
+        siglaEdit.addEventListener('keyup', function() {
+            clearTimeout(tiempoValidacionEditar);
+            tiempoValidacionEditar = setTimeout(validarEditar, 300);
+        });
+        siglaEdit.addEventListener('change', function() {
+            clearTimeout(tiempoValidacionEditar);
+            tiempoValidacionEditar = setTimeout(validarEditar, 300);
+        });
+    }
+    
+    if (tipoEdit) {
+        tipoEdit.addEventListener('change', function() {
+            clearTimeout(tiempoValidacionEditar);
+            tiempoValidacionEditar = setTimeout(validarEditar, 300);
+        });
+    }
 });
 
-function abrirModalNueva() {
-    // Limpiar ANY Modal
-    $('body').removeClass('modal-open');
-    $('.modal').modal('hide');
-    $('.modal-backdrop').remove();
+function validarCrear() {
+    var nombre = document.getElementById('nombre').value.trim();
+    var sigla = document.getElementById('sigla').value.trim();
+    var tipo = document.getElementById('tipo').value.trim();
+    var boton = document.getElementById('btnGuardarUniversidad');
+    var nombreError = document.getElementById('nombreError');
+    var siglaError = document.getElementById('siglaError');
     
-    setTimeout(function() {
-        $('#modalNuevaUniversidad').modal('show');
-    }, 100);
+    console.log('Validando crear:', { nombre, sigla, tipo });
+    
+    // Limpiar errores
+    if (nombreError) nombreError.classList.add('d-none');
+    if (siglaError) siglaError.classList.add('d-none');
+    
+    // Si campos vacíos, deshabilitar
+    if (!nombre || !sigla || !tipo) {
+        boton.disabled = true;
+        console.log('Campos vacíos, botón deshabilitado');
+        return;
+    }
+    
+    // AJAX con fetch
+    console.log('Enviando AJAX a verificar-universidad');
+    fetch("{{ url('verificar-universidad') }}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRF-TOKEN': window.CSRFToken
+        },
+        body: new URLSearchParams({
+            nombre: nombre,
+            sigla: sigla,
+            _token: window.CSRFToken
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Respuesta AJAX:', data);
+        if (data.valido) {
+            boton.disabled = false;
+            if (nombreError) nombreError.classList.add('d-none');
+            if (siglaError) siglaError.classList.add('d-none');
+            console.log('Datos válidos, botón habilitado');
+        } else {
+            boton.disabled = true;
+            if (data.nombre_existe && nombreError) {
+                nombreError.classList.remove('d-none');
+                nombreError.textContent = 'Esta universidad ya existe';
+            }
+            if (data.sigla_existe && siglaError) {
+                siglaError.classList.remove('d-none');
+                siglaError.textContent = 'Esta sigla ya existe';
+            }
+            console.log('Datos inválidos, botón deshabilitado');
+        }
+    })
+    .catch(error => {
+        console.error('Error en AJAX:', error);
+        boton.disabled = true;
+    });
+}
+
+function validarEditar() {
+    var nombre = document.getElementById('nombreEdit').value.trim();
+    var sigla = document.getElementById('siglaEdit').value.trim();
+    var tipo = document.getElementById('tipoEdit').value.trim();
+    var boton = document.getElementById('btnActualizarUniversidad');
+    var nombreError = document.getElementById('nombreEditError');
+    var siglaError = document.getElementById('siglaEditError');
+    var formEditar = document.getElementById('formEditar');
+    var id = formEditar.action.split('/').pop();
+    
+    console.log('Validando editar:', { nombre, sigla, tipo, id });
+    
+    // Limpiar errores
+    if (nombreError) nombreError.classList.add('d-none');
+    if (siglaError) siglaError.classList.add('d-none');
+    
+    // Si campos vacíos, deshabilitar
+    if (!nombre || !sigla || !tipo) {
+        boton.disabled = true;
+        console.log('Campos vacíos, botón deshabilitado');
+        return;
+    }
+    
+    // AJAX con fetch
+    console.log('Enviando AJAX a verificar-universidad');
+    fetch("{{ url('verificar-universidad') }}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRF-TOKEN': window.CSRFToken
+        },
+        body: new URLSearchParams({
+            nombre: nombre,
+            sigla: sigla,
+            id: id,
+            _token: window.CSRFToken
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Respuesta AJAX:', data);
+        if (data.valido) {
+            boton.disabled = false;
+            if (nombreError) nombreError.classList.add('d-none');
+            if (siglaError) siglaError.classList.add('d-none');
+            console.log('Datos válidos, botón habilitado');
+        } else {
+            boton.disabled = true;
+            if (data.nombre_existe && nombreError) {
+                nombreError.classList.remove('d-none');
+                nombreError.textContent = 'Esta universidad ya existe';
+            }
+            if (data.sigla_existe && siglaError) {
+                siglaError.classList.remove('d-none');
+                siglaError.textContent = 'Esta sigla ya existe';
+            }
+            console.log('Datos inválidos, botón deshabilitado');
+        }
+    })
+    .catch(error => {
+        console.error('Error en AJAX:', error);
+        boton.disabled = true;
+    });
+}
+
+function abrirModalNueva() {
+    document.getElementById('nombre').value = '';
+    document.getElementById('sigla').value = '';
+    document.getElementById('tipo').value = '';
+    
+    var nombreError = document.getElementById('nombreError');
+    var siglaError = document.getElementById('siglaError');
+    if (nombreError) nombreError.classList.add('d-none');
+    if (siglaError) siglaError.classList.add('d-none');
+    
+    document.getElementById('btnGuardarUniversidad').disabled = true;
+    
+    // Usar Bootstrap para abrir el modal
+    var modal = new bootstrap.Modal(document.getElementById('modalNuevaUniversidad'));
+    modal.show();
 }
 
 function editarUniversidad(id, nombre, sigla, tipo) {
-    // Limpiar completamente
-    $('body').removeClass('modal-open');
-    $('.modal').modal('hide');
-    $('.modal-backdrop').remove();
-    
-    // Rellenar formulario
     document.getElementById('nombreEdit').value = nombre;
     document.getElementById('siglaEdit').value = sigla;
     document.getElementById('tipoEdit').value = tipo;
-    document.getElementById('formEditar').action = "{{url('actualizar universidad')}}/" + id;
+    document.getElementById('formEditar').action = "{{ url('actualizar universidad') }}/" + id;
     
-    // Esperar a que se oculten los modales
-    setTimeout(function() {
-        $('body').removeClass('modal-open');
-        $('.modal-backdrop').remove();
-        $('#modalEditarUniversidad').modal('show');
-    }, 100);
+    var nombreError = document.getElementById('nombreEditError');
+    var siglaError = document.getElementById('siglaEditError');
+    if (nombreError) nombreError.classList.add('d-none');
+    if (siglaError) siglaError.classList.add('d-none');
+    
+    document.getElementById('btnActualizarUniversidad').disabled = false;
+    
+    // Usar Bootstrap para abrir el modal
+    var modal = new bootstrap.Modal(document.getElementById('modalEditarUniversidad'));
+    modal.show();
     
     return false;
 }
 
 function confirmarEliminar(id) {
-    // Guardar el ID en una variable global
     window.idUniversidadAEliminar = id;
     
-    // Limpiar completamente
-    $('body').removeClass('modal-open');
-    $('.modal').modal('hide');
-    $('.modal-backdrop').remove();
-    
-    // Mostrar modal de confirmación
-    setTimeout(function() {
-        $('body').removeClass('modal-open');
-        $('.modal-backdrop').remove();
-        $('#modalConfirmarEliminar').modal('show');
-    }, 100);
+    // Usar Bootstrap para abrir el modal
+    var modal = new bootstrap.Modal(document.getElementById('modalConfirmarEliminar'));
+    modal.show();
     
     return false;
 }
@@ -360,12 +563,12 @@ function confirmarEliminacionModal() {
     
     var form = document.createElement('form');
     form.method = 'POST';
-    form.action = "{{url('eliminar universidad')}}/" + id;
+    form.action = "{{ url('eliminar universidad') }}/" + id;
     
     var csrf = document.createElement('input');
     csrf.type = 'hidden';
     csrf.name = '_token';
-    csrf.value = '{{csrf_token()}}';
+    csrf.value = '{{ csrf_token() }}';
     form.appendChild(csrf);
     
     var method = document.createElement('input');
@@ -378,15 +581,6 @@ function confirmarEliminacionModal() {
     form.submit();
 }
 
-// Limpiar cuando cierre CUALQUIER modal
-$(document).on('hidden.bs.modal', function () {
-    setTimeout(function() {
-        if ($('.modal:visible').length === 0) {
-            $('body').removeClass('modal-open').css('overflow', '');
-            $('.modal-backdrop').remove();
-        }
-    }, 50);
-});
 </script>
 @endsection
 
