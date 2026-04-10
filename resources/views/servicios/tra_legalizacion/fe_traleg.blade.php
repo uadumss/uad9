@@ -630,7 +630,7 @@
                                             <td class="border-bottom border-dark input-group">
                                                 <div class="input-group">
                                                     <input class="form-control form-control-sm border-0" required name="control" oninput="programarValidacionControl(this)" />
-                                                    <span class="text-primary font-weight-bold font-italic ml-2 mr-1">Reintegrooo :</span>
+                                                    <span class="text-primary font-weight-bold font-italic ml-2 mr-1">Reintegro :</span>
                                                     <input class="form-control form-control-sm border" required name="reintegro" />
                                                 </div>
                                             </td>
