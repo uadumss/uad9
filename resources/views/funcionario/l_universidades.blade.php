@@ -177,6 +177,50 @@
                 </div>
             </div>
         </div>
+
+        <!-- OTROS (CEUB, INSTITUTOS, MINISTERIO, ETC) -->
+        <div class="col-12 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="text-info font-weight-bold text-uppercase mb-3">
+                        <i class="fas fa-building text-info"></i> Otros (CEUB, Institutos, Ministerio de Educación, etc)
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Sigla</th>
+                                    <th style="width: 70px;">Opciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($universidadesOtros as $uni)
+                                    <tr>
+                                        <td class="text-dark">{{ $uni->nombre }}</td>
+                                        <td>
+                                            <span class="badge badge-info">{{ $uni->sigla }}</span>
+                                        </td>
+                                        <td>
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" onclick="return editarUniversidad({{ $uni->id }}, '{{ $uni->nombre }}', '{{ $uni->sigla }}', '{{ $uni->tipo }}')" title="Editar universidad">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-danger" onclick="confirmarEliminar({{ $uni->id }}); return false;" title="Eliminar universidad">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted">No hay otras instituciones</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -195,7 +239,7 @@
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="nombre">Nombre:</label>
-                        <input type="text" class="form-control @error('nombre') is-invalid @enderror" id="nombre" name="nombre" value="{{ old('nombre') }}" required>
+                        <input type="text" class="form-control @error('nombre') is-invalid @enderror" id="nombre" name="nombre" value="{{ old('nombre') }}" required style="text-transform: uppercase;">
                         <small id="nombreError" class="text-danger d-none"></small>
                         @error('nombre')
                             <span class="invalid-feedback d-block">{{ $message }}</span>
@@ -203,7 +247,7 @@
                     </div>
                     <div class="form-group">
                         <label for="sigla">Sigla:</label>
-                        <input type="text" class="form-control @error('sigla') is-invalid @enderror" id="sigla" name="sigla" value="{{ old('sigla') }}" required>
+                        <input type="text" class="form-control @error('sigla') is-invalid @enderror" id="sigla" name="sigla" value="{{ old('sigla') }}" required style="text-transform: uppercase;">
                         <small id="siglaError" class="text-danger d-none"></small>
                         @error('sigla')
                             <span class="invalid-feedback d-block">{{ $message }}</span>
@@ -216,6 +260,7 @@
                             <option value="Pública">Pública</option>
                             <option value="Privada">Privada</option>
                             <option value="Extranjera">Extranjera</option>
+                            <option value="Otro">Otro (CEUB, Institutos, Ministerio de Educación, etc)</option>
                         </select>
                         @error('tipo')
                             <span class="invalid-feedback d-block">{{ $message }}</span>
@@ -247,7 +292,7 @@
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="nombreEdit">Nombre:</label>
-                        <input type="text" class="form-control @error('nombre') is-invalid @enderror" id="nombreEdit" name="nombre" value="{{ old('nombre') }}" required>
+                        <input type="text" class="form-control @error('nombre') is-invalid @enderror" id="nombreEdit" name="nombre" value="{{ old('nombre') }}" required style="text-transform: uppercase;">
                         <small id="nombreEditError" class="text-danger d-none"></small>
                         @error('nombre')
                             <span class="invalid-feedback d-block">{{ $message }}</span>
@@ -255,7 +300,7 @@
                     </div>
                     <div class="form-group">
                         <label for="siglaEdit">Sigla:</label>
-                        <input type="text" class="form-control @error('sigla') is-invalid @enderror" id="siglaEdit" name="sigla" value="{{ old('sigla') }}" required>
+                        <input type="text" class="form-control @error('sigla') is-invalid @enderror" id="siglaEdit" name="sigla" value="{{ old('sigla') }}" required style="text-transform: uppercase;">
                         <small id="siglaEditError" class="text-danger d-none"></small>
                         @error('sigla')
                             <span class="invalid-feedback d-block">{{ $message }}</span>
@@ -267,6 +312,7 @@
                             <option value="Pública">Pública</option>
                             <option value="Privada">Privada</option>
                             <option value="Extranjera">Extranjera</option>
+                            <option value="Otro">Otro (CEUB, Institutos, Ministerio de Educación, etc)</option>
                         </select>
                         @error('tipo')
                             <span class="invalid-feedback d-block">{{ $message }}</span>
@@ -315,12 +361,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('Token CSRF:', window.CSRFToken);
     
-    // Eventos para modal crear
+    // Convertir inputs a mayúsculas automáticamente
     var nombre = document.getElementById('nombre');
     var sigla = document.getElementById('sigla');
-    var tipo = document.getElementById('tipo');
+    var nombreEdit = document.getElementById('nombreEdit');
+    var siglaEdit = document.getElementById('siglaEdit');
     
     if (nombre) {
+        nombre.addEventListener('input', function() {
+            this.value = this.value.toUpperCase();
+        });
         nombre.addEventListener('keyup', function() {
             clearTimeout(tiempoValidacionCrear);
             tiempoValidacionCrear = setTimeout(validarCrear, 300);
@@ -332,6 +382,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     if (sigla) {
+        sigla.addEventListener('input', function() {
+            this.value = this.value.toUpperCase();
+        });
         sigla.addEventListener('keyup', function() {
             clearTimeout(tiempoValidacionCrear);
             tiempoValidacionCrear = setTimeout(validarCrear, 300);
@@ -342,19 +395,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    if (tipo) {
-        tipo.addEventListener('change', function() {
-            clearTimeout(tiempoValidacionCrear);
-            tiempoValidacionCrear = setTimeout(validarCrear, 300);
-        });
-    }
-    
-    // Eventos para modal editar
-    var nombreEdit = document.getElementById('nombreEdit');
-    var siglaEdit = document.getElementById('siglaEdit');
-    var tipoEdit = document.getElementById('tipoEdit');
-    
     if (nombreEdit) {
+        nombreEdit.addEventListener('input', function() {
+            this.value = this.value.toUpperCase();
+        });
         nombreEdit.addEventListener('keyup', function() {
             clearTimeout(tiempoValidacionEditar);
             tiempoValidacionEditar = setTimeout(validarEditar, 300);
@@ -366,6 +410,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     if (siglaEdit) {
+        siglaEdit.addEventListener('input', function() {
+            this.value = this.value.toUpperCase();
+        });
         siglaEdit.addEventListener('keyup', function() {
             clearTimeout(tiempoValidacionEditar);
             tiempoValidacionEditar = setTimeout(validarEditar, 300);
@@ -373,6 +420,17 @@ document.addEventListener('DOMContentLoaded', function() {
         siglaEdit.addEventListener('change', function() {
             clearTimeout(tiempoValidacionEditar);
             tiempoValidacionEditar = setTimeout(validarEditar, 300);
+        });
+    }
+    
+    
+    var tipo = document.getElementById('tipo');
+    var tipoEdit = document.getElementById('tipoEdit');
+    
+    if (tipo) {
+        tipo.addEventListener('change', function() {
+            clearTimeout(tiempoValidacionCrear);
+            tiempoValidacionCrear = setTimeout(validarCrear, 300);
         });
     }
     

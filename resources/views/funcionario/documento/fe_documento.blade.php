@@ -75,20 +75,19 @@
                                         <select class="form-control form-control-sm border-0" name="universidad" id="universidad">
                                             <option value="">Seleccionar...</option>
                                             @php
-                                                $universidades = \App\Models\Universidad::orderByRaw("CASE WHEN tipo='Pública' THEN 1 WHEN tipo='Privada' THEN 2 WHEN tipo='Extranjera' THEN 3 ELSE 4 END")->orderBy('nombre')->get();
-                                                $tiposProcessados = [];
+                                                $universidades = \App\Models\Universidad::orderByRaw("CASE WHEN tipo='Pública' THEN 1 WHEN tipo='Privada' THEN 2 WHEN tipo='Extranjera' THEN 3 WHEN tipo='Otro' THEN 4 ELSE 5 END")->orderBy('nombre')->get();
+                                                $universidadesPorTipo = [];
+                                                foreach ($universidades as $uni) {
+                                                    $universidadesPorTipo[$uni->tipo][] = $uni;
+                                                }
                                             @endphp
-                                            @foreach($universidades as $uni)
-                                                @if(!in_array($uni->tipo, $tiposProcessados))
-                                                    @if(!empty($tiposProcessados))
-                                                        </optgroup>
-                                                    @endif
-                                                    <optgroup label="Universidad {{ $uni->tipo }}">
-                                                    @php $tiposProcessados[] = $uni->tipo; @endphp
-                                                @endif
-                                                <option value="{{ $uni->sigla }}">{{ $uni->nombre }} ({{ $uni->sigla }})</option>
-                                                @if($loop->last)
-                                                        </optgroup>
+                                            @foreach(['Pública' => 'Universidad Pública', 'Privada' => 'Universidad Privada', 'Extranjera' => 'Universidad Extranjera', 'Otro' => 'Otros (CEUB, Instituto, Ministerio de Educación, etc)'] as $tipo => $label)
+                                                @if(isset($universidadesPorTipo[$tipo]))
+                                                    <optgroup label="{{ $label }}">
+                                                        @foreach($universidadesPorTipo[$tipo] as $uni)
+                                                            <option value="{{ $uni->sigla }}">{{ $uni->nombre }} ({{ $uni->sigla }})</option>
+                                                        @endforeach
+                                                    </optgroup>
                                                 @endif
                                             @endforeach
                                         </select>
@@ -235,24 +234,43 @@
                                         <select class="form-control form-control-sm border-0" name="universidad" id="universidad">
                                             <option value="{{ $documento->doc_universidad }}">{{ $documento->doc_universidad }}</option>
                                             @php
-                                                $universidades = \App\Models\Universidad::orderByRaw("CASE WHEN tipo='Pública' THEN 1 WHEN tipo='Privada' THEN 2 WHEN tipo='Extranjera' THEN 3 ELSE 4 END")->orderBy('nombre')->get();
-                                                $tiposProcessados = [];
+                                                $universidades = \App\Models\Universidad::orderByRaw("CASE WHEN tipo='Pública' THEN 1 WHEN tipo='Privada' THEN 2 WHEN tipo='Extranjera' THEN 3 WHEN tipo='Otro' THEN 4 ELSE 5 END")->orderBy('nombre')->get();
+                                                $universidadesPorTipo = [
+                                                    'Pública' => [],
+                                                    'Privada' => [],
+                                                    'Extranjera' => [],
+                                                    'Otro' => []
+                                                ];
+                                                foreach ($universidades as $uni) {
+                                                    if ($uni->sigla !== $documento->doc_universidad && isset($universidadesPorTipo[$uni->tipo])) {
+                                                        $universidadesPorTipo[$uni->tipo][] = $uni;
+                                                    }
+                                                }
                                             @endphp
-                                            @foreach($universidades as $uni)
-                                                @if($uni->sigla !== $documento->doc_universidad)
-                                                    @if(!in_array($uni->tipo, $tiposProcessados))
-                                                        @if(!empty($tiposProcessados))
-                                                            </optgroup>
-                                                        @endif
-                                                        <optgroup label="Universidad {{ $uni->tipo }}">
-                                                        @php $tiposProcessados[] = $uni->tipo; @endphp
-                                                    @endif
+                                            <optgroup label="Universidad Pública">
+                                                @forelse($universidadesPorTipo['Pública'] as $uni)
                                                     <option value="{{ $uni->sigla }}">{{ $uni->nombre }} ({{ $uni->sigla }})</option>
-                                                    @if($loop->last)
-                                                            </optgroup>
-                                                    @endif
-                                                @endif
-                                            @endforeach
+                                                @empty
+                                                @endforelse
+                                            </optgroup>
+                                            <optgroup label="Universidad Privada">
+                                                @forelse($universidadesPorTipo['Privada'] as $uni)
+                                                    <option value="{{ $uni->sigla }}">{{ $uni->nombre }} ({{ $uni->sigla }})</option>
+                                                @empty
+                                                @endforelse
+                                            </optgroup>
+                                            <optgroup label="Universidad Extranjera">
+                                                @forelse($universidadesPorTipo['Extranjera'] as $uni)
+                                                    <option value="{{ $uni->sigla }}">{{ $uni->nombre }} ({{ $uni->sigla }})</option>
+                                                @empty
+                                                @endforelse
+                                            </optgroup>
+                                            <optgroup label="Otros (CEUB, Instituto, Ministerio de Educación, etc)">
+                                                @forelse($universidadesPorTipo['Otro'] as $uni)
+                                                    <option value="{{ $uni->sigla }}">{{ $uni->nombre }} ({{ $uni->sigla }})</option>
+                                                @empty
+                                                @endforelse
+                                            </optgroup>
                                         </select>
                                     </td>
                                 </tr>

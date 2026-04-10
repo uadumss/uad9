@@ -199,7 +199,7 @@
                                             </td>
                                             <td>{{$d->doc_grado}}</td>
                                             <td>{{$d->doc_universidad}}</td>
-                                            <td><span class="badge badge-{{ \App\Helpers\UniversidadHelper::getTipoUniversidad($d->doc_universidad) === 'Pública' ? 'success' : (\App\Helpers\UniversidadHelper::getTipoUniversidad($d->doc_universidad) === 'Privada' ? 'warning' : 'info') }}">{{ \App\Helpers\UniversidadHelper::getTipoUniversidad($d->doc_universidad) }}</span></td>
+                                            <td><span class="badge {{ \App\Helpers\UniversidadHelper::getColorBadge(\App\Helpers\UniversidadHelper::getTipoUniversidad($d->doc_universidad)) }}">{{ \App\Helpers\UniversidadHelper::getTipoUniversidad($d->doc_universidad) }}</span></td>
                                             <td>
                                                 @if($d->doc_edu_superior=='t')
                                                     <span class="bg-success text-white rounded font-italic pr-1 pl-1 font-weight-bold"> Docencia </span>

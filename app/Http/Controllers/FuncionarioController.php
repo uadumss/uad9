@@ -645,8 +645,9 @@ class FuncionarioController extends Controller
         $universidadesPublicas = Universidad::where('tipo', 'Pública')->get();
         $universidadesPrivadas = Universidad::where('tipo', 'Privada')->get();
         $universidadesExtranjeras = Universidad::where('tipo', 'Extranjera')->get();
+        $universidadesOtros = Universidad::where('tipo', 'Otro')->get();
 
-        return view('funcionario.l_universidades', compact('universidadesPublicas', 'universidadesPrivadas', 'universidadesExtranjeras'));
+        return view('funcionario.l_universidades', compact('universidadesPublicas', 'universidadesPrivadas', 'universidadesExtranjeras', 'universidadesOtros'));
     }
 
     /**
@@ -658,7 +659,7 @@ class FuncionarioController extends Controller
         $validated = $request->validate([
             'nombre' => 'required|string|max:255',
             'sigla' => 'required|string|max:50',
-            'tipo' => 'required|in:Pública,Privada,Extranjera'
+            'tipo' => 'required|in:Pública,Privada,Extranjera,Otro'
         ]);
 
         // Validar que el nombre no exista (case-insensitive)
@@ -700,7 +701,7 @@ class FuncionarioController extends Controller
         $request->validate([
             'nombre' => 'required|string|max:255',
             'sigla' => 'required|string|max:50',
-            'tipo' => 'required|in:Pública,Privada,Extranjera'
+            'tipo' => 'required|in:Pública,Privada,Extranjera,Otro'
         ]);
 
         // Validar que el nombre no exista en otras universidades (case-insensitive)
