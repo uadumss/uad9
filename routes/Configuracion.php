@@ -20,6 +20,9 @@ Route::group(['middleware'=>['permission:corregir datos personales  ci - adm']],
     Route::get('corregir por ci',[PersonaController::class,'formulario_corregir']);
     Route::post('fe_persona',[PersonaController::class,'buscar_ci']);
     Route::post('g_persona',[PersonaController::class,'g_persona']);
+
+    Route::get('formulario cuadis',[PersonaController::class,'formulario_cuadis']);
+    Route::post('g_cuadis',[PersonaController::class,'guardar_cuadis']);
 });
 
 

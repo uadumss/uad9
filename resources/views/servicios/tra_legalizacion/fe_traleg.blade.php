@@ -428,16 +428,23 @@
                                                 </select>
                                             </td>
                                         </tr>
-                                        <tr>
+                                        <tr data-campo="fila-pago-principal">
                                             <th class="text-right font-italic"> Nº control valorado: </th>
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group">
                                                     <input type="text" class=" form-control form-control-sm" name="control" required oninput="programarValidacionControl(this)">
                                                     <a href="#" class="btn btn-light btn-circle btn-sm text-secondary ml-2" data-campo="estado-pago-control-icon" data-pago-campo="control" title="Ver detalle de validación de pago" onclick="abrirDetallePagoFormulario(this); return false;"><i class="fas fa-minus-circle"></i></a>
-                                                    <span class="font-italic text-dark font-weight-bold ml-3">CUADIS :
-                                                            <input type="checkbox" name="cuadis" />
-                                                        </span>
                                                 </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th class="text-right font-italic">CUADIS :</th>
+                                            <td class="border-bottom border-dark">
+                                                <span class="font-italic text-dark font-weight-bold ml-1">
+                                                    <span class="badge badge-secondary ml-1" data-campo="cuadis-indicador">NO</span>
+                                                    <input type="checkbox" name="cuadis" class="d-none" tabindex="-1" aria-hidden="true" />
+                                                </span>
+                                                <small class="d-none" data-campo="cuadis-estado"></small>
                                             </td>
                                         </tr>
                                         <tr><th class="text-right font-italic">Nro. Título:</th>
@@ -612,12 +619,15 @@
                                                 <span class="font-weight-bold text-danger mx-2" style="font-size: 20px">|</span>
                                                 @if($tramite->tra_tipo_tramite=='L')
                                                     <span class="font-weight-bold text-dark font-italic mr-3">PTAG :
-                                                            <input type="checkbox" name="ptaang">
+                                                            <span class="badge badge-secondary ml-1" data-campo="ptag-indicador">NO</span>
+                                                            <input type="checkbox" name="ptaang" class="d-none" tabindex="-1" aria-hidden="true">
                                                         </span>
                                                 @endif
                                                 <span class="font-italic text-dark font-weight-bold">CUADIS :
-                                                            <input type="checkbox" name="cuadis" />
+                                                            <span class="badge badge-secondary ml-1" data-campo="cuadis-indicador">NO</span>
+                                                            <input type="checkbox" name="cuadis" class="d-none" tabindex="-1" aria-hidden="true" />
                                                         </span>
+                                                <small class="d-none" data-campo="cuadis-estado"></small>
                                             </td>
                                         </tr>
                                         <tr>
@@ -638,7 +648,7 @@
                                                 </div>
                                             </td>
                                         </tr>
-                                        <tr>
+                                        <tr data-campo="fila-pago-principal">
                                             <th class="text-right font-italic ">Nro. Control:</th>
                                             <td class="border-bottom border-dark input-group">
                                                 <div class="input-group">
@@ -650,7 +660,7 @@
                                                 </div>
                                             </td>
                                         </tr>
-                                        <tr>
+                                        <tr data-campo="fila-pago-complementario">
                                             <th class="text-right font-italic ">N° control Búsqueda:</th>
                                             <td class="border-bottom border-dark">
                                                 <div class="input-group">
@@ -819,7 +829,7 @@
 
     <script>
         function cargarDatosPersonales(ci){
-            var link="{{url('datos_per/')}}"+"/"+ci;
+            var link="{{url('datos_per/')}}"+"/"+encodeURIComponent((ci || '').toString().trim());
             $.ajax({
                 url: link,
                 type: 'GET',
@@ -832,14 +842,166 @@
                         $('#apellido').val(res['per_apellido']);
                         $('#nombre').val(res['per_nombre']);
                     }
+                    consultarEstadoCuadisPorCi(ci);
                 },
                 error: function () {
-                    $('#'+panel).html("<span class='text-danger'>Ocurrio un error, probablemente no tenga permisos para esta acción</span>");
+                    limpiarEstadoCuadisEnFormularios();
                 }
             });
         }
+
+        function obtenerCiPrincipalTramite(){
+            var ciServidor=($.trim({!! json_encode((string)($tramite->per_ci ?? '')) !!}) || '');
+            if(ciServidor!==''){
+                return ciServidor;
+            }
+
+            var ciFormulario=($.trim($('#form_traleg input[name="ci"]').first().val()) || '');
+            return ciFormulario;
+        }
+
+        function actualizarIndicadorCuadis(formulario,activo){
+            var indicador=$(formulario).find('[data-campo="cuadis-indicador"]');
+            if(!indicador.length){
+                return;
+            }
+            if(activo){
+                indicador.text('SI').removeClass('badge-secondary').addClass('badge-success');
+            }else{
+                indicador.text('NO').removeClass('badge-success').addClass('badge-secondary');
+            }
+        }
+
+        function actualizarIndicadorPtag(formulario,activo){
+            var indicador=$(formulario).find('[data-campo="ptag-indicador"]');
+            if(!indicador.length){
+                return;
+            }
+            if(activo){
+                indicador.text('SI').removeClass('badge-secondary').addClass('badge-success');
+            }else{
+                indicador.text('NO').removeClass('badge-success').addClass('badge-secondary');
+            }
+        }
+
+        function limpiarEstadoCuadisEnFormularios(){
+            $('form').find('input[name="cuadis"]').each(function(){
+                var check=$(this);
+                var form=check.closest('form');
+                if(check.attr('data-cuadis-auto')==='1'){
+                    check.prop('checked',false);
+                }
+                check.removeAttr('data-cuadis-auto');
+                actualizarIndicadorCuadis(form,false);
+                form.find('[data-campo="cuadis-estado"]').text('No registrado en CUADIS.').removeClass('text-success text-warning').addClass('text-muted');
+                sincronizarCamposObligatorios(form);
+            });
+        }
+
+        function aplicarEstadoCuadisEnFormularios(esCuadis,detalle){
+            $('form').find('input[name="cuadis"]').each(function(){
+                var check=$(this);
+                var form=check.closest('form');
+                var estado=form.find('[data-campo="cuadis-estado"]');
+
+                if(esCuadis){
+                    check.prop('checked',true);
+                    check.attr('data-cuadis-auto','1');
+                    actualizarIndicadorCuadis(form,true);
+                    if(estado.length){
+                        var texto='CUADIS detectado';
+                        if((detalle || '').toString().trim()!==''){
+                            texto+=': '+detalle;
+                        }
+                        estado.text(texto).removeClass('text-muted text-warning').addClass('text-success');
+                    }
+                }else{
+                    if(check.attr('data-cuadis-auto')==='1'){
+                        check.prop('checked',false);
+                    }
+                    check.removeAttr('data-cuadis-auto');
+                    actualizarIndicadorCuadis(form,false);
+                    if(estado.length){
+                        estado.text('No registrado en CUADIS.').removeClass('text-success text-warning').addClass('text-muted');
+                    }
+                }
+
+                sincronizarCamposObligatorios(form);
+            });
+        }
+
+        function consultarEstadoCuadisPorCi(ci){
+            var ciLimpio=(ci || '').toString().trim();
+            if(ciLimpio===''){
+                limpiarEstadoCuadisEnFormularios();
+                return;
+            }
+
+            $('form').find('[data-campo="cuadis-estado"]').text('Consultando CUADIS...').removeClass('text-muted text-success text-warning').addClass('text-info');
+
+            $.ajax({
+                url:"{{url('estado cuadis/')}}"+"/"+encodeURIComponent(ciLimpio),
+                type:'GET',
+                dataType:'json',
+                success:function(resp){
+                    var esCuadis=!!(resp && resp.ok && resp.cuadis===true);
+                    var detalle='';
+                    if(esCuadis){
+                        detalle=(resp.respaldo || '').toString().trim();
+                    }
+                    aplicarEstadoCuadisEnFormularios(esCuadis,detalle);
+                },
+                error:function(){
+                    $('form').find('input[name="cuadis"]').each(function(){
+                        var check=$(this);
+                        var form=check.closest('form');
+                        if(check.attr('data-cuadis-auto')==='1'){
+                            check.prop('checked',false);
+                        }
+                        check.removeAttr('data-cuadis-auto');
+                        actualizarIndicadorCuadis(form,false);
+                        form.find('[data-campo="cuadis-estado"]').text('No se pudo validar CUADIS.').removeClass('text-muted text-success text-info').addClass('text-warning');
+                        sincronizarCamposObligatorios(form);
+                    });
+                }
+            });
+        }
+
+        function consultarEstadoCuadisPorPersona(idPer){
+            var id=parseInt(idPer,10) || 0;
+            if(id<=0){
+                return false;
+            }
+
+            $('form').find('[data-campo="cuadis-estado"]').text('Consultando CUADIS...').removeClass('text-muted text-success text-warning').addClass('text-info');
+
+            $.ajax({
+                url:"{{url('estado cuadis persona/')}}"+"/"+id,
+                type:'GET',
+                dataType:'json',
+                success:function(resp){
+                    var esCuadis=!!(resp && resp.ok && resp.cuadis===true);
+                    var detalle='';
+                    if(esCuadis){
+                        detalle=(resp.respaldo || '').toString().trim();
+                    }
+                    aplicarEstadoCuadisEnFormularios(esCuadis,detalle);
+                },
+                error:function(){
+                    var ciFallback=obtenerCiPrincipalTramite();
+                    if(ciFallback!==''){
+                        consultarEstadoCuadisPorCi(ciFallback);
+                        return;
+                    }
+                    limpiarEstadoCuadisEnFormularios();
+                }
+            });
+
+            return true;
+        }
+
         function cargarDatosApoderado(ci){
-            var link="{{url('datos_apo/')}}"+"/"+ci;
+            var link="{{url('datos_apo/')}}"+"/"+encodeURIComponent((ci || '').toString().trim());
             $.ajax({
                 url: link,
                 type: 'GET',
@@ -854,7 +1016,7 @@
                     }
                 },
                 error: function () {
-                    $('#'+panel).html("<span class='text-danger'>Ocurrio un error, probablemente no tenga permisos para esta acción</span>");
+                    // No interrumpir el flujo principal de la modal por errores del apoderado.
                 }
             });
         }
@@ -1935,15 +2097,45 @@
             // Búsqueda (tipo B): numero, gestion, buscar_en, documentos y control obligatorios.
             // Legalización (L/C/E): gestion y control obligatorios; reintegro opcional.
             var esBusqueda=form.find('select[name="buscar_en"]').length>0 || form.find('textarea[name="documentos"]').length>0;
+            var esCuadis=form.find('input[name="cuadis"]').is(':checked');
 
-            form.find('input[name="control"]').prop('required',true);
+            form.find('input[name="control"]').prop('required',!esCuadis);
             form.find('input[name="gestion"]').prop('required',true);
             form.find('input[name="numero"]').prop('required',esBusqueda);
             form.find('input[name="reintegro"]').prop('required',false);
             form.find('select[name="buscar_en"]').prop('required',esBusqueda);
             form.find('textarea[name="documentos"]').prop('required',esBusqueda);
 
+            actualizarVisibilidadPagoCuadis(form,esCuadis);
+
             actualizarSelectorTipoSegunCuadis(form);
+        }
+
+        function actualizarVisibilidadPagoCuadis(formulario,esCuadis){
+            var form=$(formulario);
+            if(!form.length){
+                return;
+            }
+
+            var filasPrincipal=form.find('[data-campo="fila-pago-principal"]');
+            var filasComplementarias=form.find('[data-campo="fila-pago-complementario"]');
+
+            if(esCuadis){
+                filasPrincipal.hide();
+                filasComplementarias.hide();
+
+                form.find('input[name="control"]').val('');
+                form.find('input[name="reintegro"]').val('');
+                form.find('input[name="valorado_bus"]').val('');
+                form.find('input[name="reimpresion"]').val('');
+                form.find('input[data-campo="preimpreso-api"]').val('');
+                form.find('input[data-campo="validacion-recaudacion-ok"]').val('0');
+                limpiarPtagSugerido(form);
+                return;
+            }
+
+            filasPrincipal.show();
+            filasComplementarias.show();
         }
 
         function actualizarSelectorTipoSegunCuadis(formulario){
@@ -2005,11 +2197,14 @@
                 check.prop('checked',true);
                 check.attr('data-ptag-lock','1');
                 check.attr('title','PTAG detectado desde la cuenta de recaudación');
+                actualizarIndicadorPtag(formulario,true);
                 return;
             }
 
+            check.prop('checked',false);
             check.removeAttr('data-ptag-lock');
             check.removeAttr('title');
+            actualizarIndicadorPtag(formulario,false);
         }
 
         function limpiarPtagSugerido(formulario){
@@ -2020,6 +2215,7 @@
             check.removeAttr('data-ptag-lock');
             check.removeAttr('title');
             check.prop('checked',false);
+            actualizarIndicadorPtag(formulario,false);
         }
 
         function programarValidacionControl(inputControl){
@@ -2085,8 +2281,21 @@
 
             var ns='.tralegValidaciones';
 
-            $(document).off('change'+ns,'form input[name="cuadis"]').on('change'+ns,'form input[name="cuadis"]',function(){
-                sincronizarCamposObligatorios($(this).closest('form'));
+            $(document).off('click'+ns+' change'+ns,'form input[name="cuadis"]').on('click'+ns+' change'+ns,'form input[name="cuadis"]',function(e){
+                e.preventDefault();
+                var check=$(this);
+                check.prop('checked',check.attr('data-cuadis-auto')==='1');
+                sincronizarCamposObligatorios(check.closest('form'));
+                return false;
+            });
+
+            $(document).off('blur'+ns+' change'+ns,'#form_traleg input[name="ci"]').on('blur'+ns+' change'+ns,'#form_traleg input[name="ci"]',function(){
+                var valor=($.trim($(this).val()) || '');
+                if(valor!==''){
+                    consultarEstadoCuadisPorCi(valor);
+                }else{
+                    limpiarEstadoCuadisEnFormularios();
+                }
             });
 
             $(document).off('change'+ns,'form select[data-campo="tipo-legalizacion"]').on('change'+ns,'form select[data-campo="tipo-legalizacion"]',function(){
@@ -2104,9 +2313,11 @@
                 }
             });
 
-            $(document).off('click'+ns+' change'+ns,'form input[name="ptaang"][data-ptag-lock="1"]').on('click'+ns+' change'+ns,'form input[name="ptaang"][data-ptag-lock="1"]',function(e){
+            $(document).off('click'+ns+' change'+ns,'form input[name="ptaang"]').on('click'+ns+' change'+ns,'form input[name="ptaang"]',function(e){
                 e.preventDefault();
-                $(this).prop('checked',true);
+                var check=$(this);
+                check.prop('checked',check.attr('data-ptag-lock')==='1');
+                return false;
             });
 
             $(document).off('click'+ns,selectorIconosValidacion()).on('click'+ns,selectorIconosValidacion(),function(e){
@@ -2132,6 +2343,16 @@
             $(document).off('hidden.bs.modal'+ns,'.modal').on('hidden.bs.modal'+ns,'.modal',function(){
                 cerrarPopoversValidacion();
             });
+
+            var idPerPrincipal=parseInt({!! json_encode((int)($tramite->id_per ?? 0)) !!},10) || 0;
+            if(!consultarEstadoCuadisPorPersona(idPerPrincipal)){
+                var ciInicial=obtenerCiPrincipalTramite();
+                if(ciInicial!==''){
+                    consultarEstadoCuadisPorCi(ciInicial);
+                }else{
+                    limpiarEstadoCuadisEnFormularios();
+                }
+            }
         });
 
     </script>

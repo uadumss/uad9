@@ -7,15 +7,17 @@ use App\Models\Apoderado;
 use App\Models\D_tramita;
 use App\Models\Nacionalidad;
 use App\Models\Persona;
+use App\Models\PersonaCuadis;
 use App\Models\Persona_prueba;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class PersonaController extends Controller
 {
     public function __construct(){
-        $this->middleware(['permission:corregir datos personales  ci - adm'], ['only' => ['formulario_corregir','g_persona','buscar_ci']]);
+        $this->middleware(['permission:corregir datos personales  ci - adm'], ['only' => ['formulario_corregir','g_persona','buscar_ci','formulario_cuadis','guardar_cuadis']]);
 
         $this->middleware(['permission:corregir duplicados - adm'], ['only' => ['corregir_duplicados','corregir_persona_ci_duplicado','lista_duplicados','lista_duplicado']]);
 
@@ -174,6 +176,259 @@ class PersonaController extends Controller
         return view('session.administracion.persona.correccion.l_persona');
     }
 
+    public function formulario_cuadis(){
+        if(!$this->tablaCuadisDisponible()){
+            \Session::flash('error cuadis','No existe la tabla de registro CUADIS. Ejecute las migraciones pendientes.');
+        }
+        return view('session.administracion.persona.cuadis.l_cuadis',$this->datosVistaCuadisLista());
+    }
+
+    public function guardar_cuadis(Request $form){
+        if(!$this->tablaCuadisDisponible()){
+            \Session::flash('error cuadis','No existe la tabla de registro CUADIS. Ejecute las migraciones pendientes.');
+            return view('session.administracion.persona.cuadis.l_cuadis',$this->datosVistaCuadisLista([
+                'resolucionNumero'=>trim((string)$form->input('resolucion_numero','')),
+                'resolucionAnio'=>trim((string)$form->input('resolucion_anio','')),
+                'personasTabla'=>is_array($form->input('personas')) ? $form->input('personas') : [],
+                'habilitado'=>in_array((string)$form->input('habilitado','1'),['0','1'],true) ? (string)$form->input('habilitado','1') : '1',
+            ]));
+        }
+
+        $gestionMaxima=((int)date('Y'))+1;
+        $form->validate([
+            'resolucion_numero'=>'required|max:40',
+            'resolucion_anio'=>'required|digits:4|integer|between:1900,'.$gestionMaxima,
+            'personas'=>'required|array|min:1',
+            'habilitado'=>'nullable|in:0,1',
+        ],[
+            'resolucion_numero.required'=>'Debe ingresar el numero de resolucion CUADIS.',
+            'resolucion_numero.max'=>'El numero de resolucion no puede exceder 40 caracteres.',
+            'resolucion_anio.required'=>'Debe ingresar el año de la resolucion CUADIS.',
+            'resolucion_anio.digits'=>'El año de la resolucion debe tener 4 digitos.',
+            'resolucion_anio.integer'=>'El año de la resolucion debe ser numerico.',
+            'resolucion_anio.between'=>'El año de la resolucion no es valido.',
+            'personas.required'=>'Debe ingresar al menos una fila en la tabla de personas.',
+            'personas.array'=>'El formato de la tabla de personas no es válido.',
+            'personas.min'=>'Debe ingresar al menos una fila en la tabla de personas.',
+            'habilitado.in'=>'El estado CUADIS seleccionado no es valido.',
+        ]);
+
+        $personasTabla=$form->input('personas',[]);
+        if(!is_array($personasTabla)){
+            $personasTabla=[];
+        }
+
+        $parseoLista=$this->parsearFilasPersonasCuadis($personasTabla);
+        $registrosLista=$parseoLista['registros'];
+        $erroresFormato=$parseoLista['errores'];
+        $repetidos=$parseoLista['repetidos'];
+        $totalLineasIngresadas=(int)($parseoLista['total_filas_ingresadas'] ?? 0);
+
+        if(sizeof($registrosLista)===0){
+            \Session::flash('error cuadis','La tabla no contiene filas válidas. Complete Apellidos, Nombres y CI por fila.');
+            return view('session.administracion.persona.cuadis.l_cuadis',$this->datosVistaCuadisLista([
+                'resolucionNumero'=>trim((string)$form->input('resolucion_numero','')),
+                'resolucionAnio'=>trim((string)$form->input('resolucion_anio','')),
+                'personasTabla'=>$personasTabla,
+                'habilitado'=>in_array((string)$form->input('habilitado','1'),['0','1'],true) ? (string)$form->input('habilitado','1') : '1',
+                'resultadoLista'=>[
+                    'total_lineas'=>$totalLineasIngresadas,
+                    'total_registros_validos'=>0,
+                    'total_errores_formato'=>sizeof($erroresFormato),
+                    'errores_formato'=>$erroresFormato,
+                    'repetidos'=>$repetidos,
+                    'procesados'=>[],
+                ],
+            ]));
+        }
+
+        $resolucionNumero=mb_strtoupper(trim((string)$form->input('resolucion_numero','')));
+        $resolucionNumero=preg_replace('/\s+/',' ',$resolucionNumero);
+        $resolucionAnio=trim((string)$form->input('resolucion_anio',''));
+        $resolucion=$resolucionNumero.'/'.$resolucionAnio;
+        $habilitado=(string)$form->input('habilitado','1')==='1';
+
+        $ciLista=array_map(function(array $item){
+            return (string)$item['ci'];
+        },$registrosLista);
+
+        $personas=Persona::whereIn('per_ci',$ciLista)
+            ->select('id_per','per_ci','per_apellido','per_nombre')
+            ->get();
+
+        $personasPorCi=[];
+        foreach($personas as $persona){
+            $personasPorCi[(string)$persona->per_ci]=$persona;
+        }
+
+        $totalPersonasNuevas=0;
+        $totalPersonasExistentes=0;
+        $totalCreados=0;
+        $totalActualizados=0;
+        $procesados=[];
+
+        DB::beginTransaction();
+        try{
+            foreach($registrosLista as $registroLista){
+                $ci=(string)$registroLista['ci'];
+                if(isset($personasPorCi[$ci])){
+                    $totalPersonasExistentes++;
+                    continue;
+                }
+
+                $personaNueva=Persona::create([
+                    'per_ci'=>$ci,
+                    'per_apellido'=>$registroLista['apellido'],
+                    'per_nombre'=>$registroLista['nombre'],
+                    'per_sistema'=>3,
+                ]);
+                $personasPorCi[$ci]=$personaNueva;
+                $totalPersonasNuevas++;
+            }
+
+            foreach($registrosLista as $registroLista){
+                $ci=(string)$registroLista['ci'];
+                $persona=$personasPorCi[$ci];
+                $registro=PersonaCuadis::where('id_per','=',(int)$persona->id_per)->first();
+                $esNuevo=!$registro;
+                if($esNuevo){
+                    $registro=new PersonaCuadis();
+                    $registro->id_per=(int)$persona->id_per;
+                }
+
+                $registro->pcu_hab=$habilitado;
+                $registro->pcu_respaldo=$resolucion;
+                $registro->pcu_observacion=null;
+                $registro->save();
+
+                if($esNuevo){
+                    $totalCreados++;
+                }else{
+                    $totalActualizados++;
+                }
+
+                $procesados[]=[
+                    'ci'=>(string)$persona->per_ci,
+                    'nombre'=>trim((string)$persona->per_apellido.' '.(string)$persona->per_nombre),
+                    'accion'=>$esNuevo ? 'REGISTRADO' : 'ACTUALIZADO',
+                ];
+            }
+
+            DB::commit();
+        }catch(\Throwable $e){
+            DB::rollBack();
+            report($e);
+            \Session::flash('error cuadis','No se pudo procesar la lista CUADIS. Revise los datos e intente nuevamente.');
+            return view('session.administracion.persona.cuadis.l_cuadis',$this->datosVistaCuadisLista([
+                'resolucionNumero'=>$resolucionNumero,
+                'resolucionAnio'=>$resolucionAnio,
+                'personasTabla'=>$personasTabla,
+                'habilitado'=>$habilitado ? '1' : '0',
+            ]));
+        }
+
+        $totalEncontrados=$totalCreados+$totalActualizados;
+        $totalErroresFormato=sizeof($erroresFormato);
+
+        if($totalEncontrados>0){
+            \Session::flash('exito cuadis',
+                'Lista CUADIS procesada. Personas nuevas: '.$totalPersonasNuevas.
+                ', personas existentes: '.$totalPersonasExistentes.
+                ', CUADIS registrados: '.$totalCreados.
+                ', actualizados: '.$totalActualizados.
+                ', líneas inválidas: '.$totalErroresFormato.'.');
+        }else{
+            \Session::flash('error cuadis','No se registraron filas válidas en CUADIS. Revise el formato de la lista.');
+        }
+
+        $resultadoLista=[
+            'resolucion'=>$resolucion,
+            'habilitado'=>$habilitado,
+            'total_lineas'=>$totalLineasIngresadas,
+            'total_registros_validos'=>sizeof($registrosLista),
+            'total_personas_nuevas'=>$totalPersonasNuevas,
+            'total_personas_existentes'=>$totalPersonasExistentes,
+            'total_creados'=>$totalCreados,
+            'total_actualizados'=>$totalActualizados,
+            'total_errores_formato'=>$totalErroresFormato,
+            'errores_formato'=>$erroresFormato,
+            'repetidos'=>$repetidos,
+            'procesados'=>$procesados,
+        ];
+
+        return view('session.administracion.persona.cuadis.l_cuadis',$this->datosVistaCuadisLista([
+            'resultadoLista'=>$resultadoLista,
+            'resolucionNumero'=>$resolucionNumero,
+            'resolucionAnio'=>$resolucionAnio,
+            'personasTabla'=>[],
+            'habilitado'=>$habilitado ? '1' : '0',
+        ]));
+    }
+
+    public function estado_cuadis($ci){
+        $ci=$this->normalizarCiCuadis((string)$ci);
+        if($ci===''){
+            return response()->json([
+                'ok'=>true,
+                'cuadis'=>false,
+            ]);
+        }
+
+        if(!$this->tablaCuadisDisponible()){
+            return response()->json([
+                'ok'=>true,
+                'cuadis'=>false,
+                'message'=>'Registro CUADIS no configurado.',
+            ]);
+        }
+
+        $persona=Persona::where('per_ci','=',$ci)->first();
+        if(!$persona){
+            return response()->json([
+                'ok'=>true,
+                'cuadis'=>false,
+            ]);
+        }
+
+        $registro=$this->buscarRegistroCuadis('',(int)$persona->id_per);
+        $activo=$registro ? (bool)$registro->pcu_hab : false;
+
+        return response()->json([
+            'ok'=>true,
+            'cuadis'=>$activo,
+            'respaldo'=>$registro ? (string)($registro->pcu_respaldo ?? '') : '',
+            'observacion'=>$registro ? (string)($registro->pcu_observacion ?? '') : '',
+        ]);
+    }
+
+    public function estado_cuadis_persona($idPer){
+        $idPer=(int)$idPer;
+        if($idPer<=0){
+            return response()->json([
+                'ok'=>true,
+                'cuadis'=>false,
+            ]);
+        }
+
+        if(!$this->tablaCuadisDisponible()){
+            return response()->json([
+                'ok'=>true,
+                'cuadis'=>false,
+                'message'=>'Registro CUADIS no configurado.',
+            ]);
+        }
+
+        $registro=$this->buscarRegistroCuadis('',$idPer);
+        $activo=$registro ? (bool)$registro->pcu_hab : false;
+
+        return response()->json([
+            'ok'=>true,
+            'cuadis'=>$activo,
+            'respaldo'=>$registro ? (string)($registro->pcu_respaldo ?? '') : '',
+            'observacion'=>$registro ? (string)($registro->pcu_observacion ?? '') : '',
+        ]);
+    }
+
     public function buscar_ci(Request $form){
 	$form->validate([
             'ci'=>'required',
@@ -226,6 +481,116 @@ class PersonaController extends Controller
     }
     public function f_duplicados(){
         return view('session.administracion.persona.duplicado.f_duplicados');
+    }
+
+    private function tablaCuadisDisponible(): bool
+    {
+        return Schema::hasTable('personas_cuadis');
+    }
+
+    private function datosVistaCuadisLista(array $valores=[]): array
+    {
+        $base=[
+            'resultadoLista'=>null,
+            'resolucionNumero'=>'',
+            'resolucionAnio'=>'',
+            'personasTabla'=>[],
+            'habilitado'=>'1',
+        ];
+
+        return array_merge($base,$valores);
+    }
+
+    private function parsearFilasPersonasCuadis(array $filas): array
+    {
+        $resultado=[];
+        $errores=[];
+        $repetidos=[];
+        $visto=[];
+        $totalFilasIngresadas=0;
+
+        foreach($filas as $indice=>$fila){
+            $filaNumero=$indice+1;
+            if(!is_array($fila)){
+                continue;
+            }
+
+            $apellidoRaw=trim((string)($fila['apellido'] ?? ''));
+            $nombreRaw=trim((string)($fila['nombre'] ?? ''));
+            $ciRaw=trim((string)($fila['ci'] ?? ''));
+
+            if($apellidoRaw==='' && $nombreRaw==='' && $ciRaw===''){
+                continue;
+            }
+
+            $totalFilasIngresadas++;
+
+            $apellido=mb_strtoupper(preg_replace('/\s+/',' ',$apellidoRaw));
+            $nombre=mb_strtoupper(preg_replace('/\s+/',' ',$nombreRaw));
+            $ci=$this->normalizarCiCuadis((string)$ciRaw);
+
+            if($apellido==='' || $nombre==='' || $ciRaw===''){
+                $errores[]='Fila '.$filaNumero.': apellido, nombre y CI son obligatorios.';
+                continue;
+            }
+
+            if($ci===''){
+                $errores[]='Fila '.$filaNumero.': CI inválido.';
+                continue;
+            }
+
+            if(isset($visto[$ci])){
+                $repetidos[]=$ci;
+                continue;
+            }
+
+            $visto[$ci]=true;
+            $resultado[]=[
+                'apellido'=>preg_replace('/\s+/',' ',$apellido),
+                'nombre'=>preg_replace('/\s+/',' ',$nombre),
+                'ci'=>$ci,
+            ];
+        }
+
+        return [
+            'registros'=>$resultado,
+            'errores'=>$errores,
+            'repetidos'=>array_values(array_unique($repetidos)),
+            'total_filas_ingresadas'=>$totalFilasIngresadas,
+        ];
+    }
+
+    private function buscarRegistroCuadis(string $ci, ?int $idPer): ?PersonaCuadis
+    {
+        if($idPer){
+            return PersonaCuadis::where('id_per','=',$idPer)->first();
+        }
+
+        $ci=$this->normalizarCiCuadis($ci);
+        if($ci===''){
+            return null;
+        }
+
+        $persona=Persona::where('per_ci','=',$ci)->select('id_per')->first();
+        if(!$persona){
+            return null;
+        }
+
+        return PersonaCuadis::where('id_per','=',(int)$persona->id_per)->first();
+    }
+
+    private function normalizarCiCuadis(string $ci): string
+    {
+        $ci=mb_strtoupper(trim($ci));
+        if($ci===''){
+            return '';
+        }
+
+        $partes=preg_split('/\s+/',$ci);
+        $ci=$partes && isset($partes[0]) ? (string)$partes[0] : $ci;
+        $ci=preg_replace('/[^A-Z0-9]/','',$ci);
+
+        return substr((string)$ci,0,12);
     }
     public function lista_duplicados($tipo){
         switch ($tipo){
