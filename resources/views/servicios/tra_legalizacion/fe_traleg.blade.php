@@ -99,6 +99,22 @@
                                     </li>
                                 @endforeach
                             @endif
+                            @if(sizeof($titulos)>0)
+                                @php
+                                    $tipos = [
+                                        'da' => 'Diploma Académico',
+                                        'tp' => 'Título Provisional',
+                                        'di' => 'Diplomado',
+                                        'db' => 'Diploma de Bachiller',
+                                        'ca' => 'Certificado Académico'
+                                    ];
+                                @endphp
+                                @foreach($titulos as $t)
+                                    <li class="text-darkr">
+                                        Ya tiene el {{ $tipos[$t->tit_tipo] ?? strtoupper($t->tit_tipo) }} : <span class="font-weight-bold">{{ $t->tit_titulo }}</span>
+                                    </li>
+                                @endforeach
+                            @endif
                         </ul>
                     </div>
                     <br/>
