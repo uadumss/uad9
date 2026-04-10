@@ -33,8 +33,9 @@
                 <th style="width: 8%;">Facultad</th>
                 <th style="width: 8%;">Carrera</th>
                 <th style="width: 9%;">Tipo de Funcionario</th>
-                <th style="width: 12%;">Título/Diploma</th>
                 <th style="width: 10%;">Tipo de Documento</th>
+                <th style="width: 8%;">Fecha de Emisión</th>
+                <th style="width: 12%;">Título/Diploma</th>
                 <th style="width: 6%;">Es Tesis</th>
                 <th style="width: 12%;">Título de Tesis</th>
                 <th style="width: 12%;">Universidad</th>
@@ -56,7 +57,7 @@
                         <tr style="background-color: #e8f4f8; border-top: 3px solid #0c5460; border-bottom: 3px solid #0c5460;">
                             <td style="font-weight: bold; color: #0c5460; padding: 10px; vertical-align: middle;">{{ $funcionario_num }}</td>
                             <td colspan="5" style="font-weight: bold; color: #0c5460; padding: 10px; vertical-align: middle;">{{ $f->fun_nombre }} ({{ $f->fun_ci }})</td>
-                            <td colspan="11" style="padding: 10px; vertical-align: top; text-align: right;">
+                            <td colspan="12" style="padding: 10px; vertical-align: top; text-align: right;">
                                 <div style="text-align: right;">
                                     <div style="margin-bottom: 5px;">
                                         <strong style="color: #0c5460; margin-right: 10px;">Estado del Folder:</strong>
@@ -100,8 +101,9 @@
                                 </td>
                                 <?php $primer_doc = false; ?>
                             @endif
-                            <td>{{ $doc['titulo'] }}</td>
                             <td>{{ $doc['tipo'] }}</td>
+                            <td>{{ $doc['fecha_emision'] ? date('d/m/Y', strtotime($doc['fecha_emision'])) : '' }}</td>
+                            <td>{{ $doc['titulo'] }}</td>
                             <td>{{ $doc['es_tesis'] }}</td>
                             <td>{{ $doc['titulo_tesis'] }}</td>
                             <td>{{ $doc['universidad'] }}</td>
@@ -113,10 +115,10 @@
                             <td @if($doc['verificado'] === 'Pendiente') style="background-color: #fff3cd; color: #856404; font-weight: bold;" @else style="background-color: #d4edda; color: #155724; font-weight: bold;" @endif>
                                 {{ $doc['verificado'] }}
                             </td>
-                            <td @if($doc['legalizado'] === 'Si') style="background-color: #d4edda; color: #155724; font-weight: bold;" @else style="background-color: #fff3cd; color: #856404;" @endif>
+                            <td @if($doc['legalizado'] === 'Si') style="background-color: #d4edda; color: #155724; font-weight: bold; text-align: center;" @else style="background-color: #fff3cd; color: #856404; text-align: center;" @endif>
                                 {{ $doc['legalizado'] }}
                             </td>
-                            <td @if($doc['umss'] === 'Si') style="background-color: #d4edda; color: #155724; font-weight: bold;" @else style="background-color: #f8d7da; color: #721c24;" @endif>
+                            <td style="text-align: center;">
                                 {{ $doc['umss'] }}
                             </td>
                         </tr>

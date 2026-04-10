@@ -60,6 +60,7 @@ Route::group(['middleware'=>['permission:acceder al sistema - dya']],function(){
     
     // =======================UNIVERSIDADES
     Route::get('listar universidades',[FuncionarioController::class,'listar_universidades'])->middleware('permission:listar universidades - dya');
+    Route::post('verificar-universidad',[FuncionarioController::class,'verificar_universidad'])->middleware('permission:listar universidades - dya');
     Route::post('crear universidad',[FuncionarioController::class,'crear_universidad'])->middleware('permission:listar universidades - dya');
     Route::put('actualizar universidad/{id}',[FuncionarioController::class,'actualizar_universidad'])->middleware('permission:listar universidades - dya');
     Route::delete('eliminar universidad/{id}',[FuncionarioController::class,'eliminar_universidad'])->middleware('permission:listar universidades - dya');

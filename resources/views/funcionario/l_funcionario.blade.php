@@ -100,6 +100,8 @@
                                     @foreach($funcionarios as $f)
                                         @php
                                             $hasPendingObs = $f->has_pending_obs === true || $f->has_pending_obs === 1 || $f->has_pending_obs === 't';
+                                            $tieneDocumentosRegistrados = $f->has_documents === true || $f->has_documents === 1 || $f->has_documents === 't';
+                                            $mostrarAsteriscoSinDocumentos = $f->fun_folder!='t' && !$tieneDocumentosRegistrados;
                                         @endphp
                                         @if(!$hasPendingObs)
                                             <tr>
@@ -116,7 +118,7 @@
 
                                             </td>
                                             <td>{!! \App\Helpers\UniversidadHelper::highlightText($f->fun_nombre, $search) !!}
-                                                @if($f->fun_folder!='t')
+                                                @if($mostrarAsteriscoSinDocumentos)
                                                     <span class="bg-danger p-1 rounded text-white">*</span>
                                                 @endif
                                             </td>

@@ -17,7 +17,7 @@ return new class extends Migration
             $table->id();
             $table->string('nombre')->unique();
             $table->string('sigla')->unique();
-            $table->enum('tipo', ['Pública', 'Privada', 'Extranjera'])->default('Extranjera');
+            $table->enum('tipo', ['Pública', 'Privada', 'Extranjera', 'Otro'])->default('Extranjera');
             $table->timestamps();
         });
     }

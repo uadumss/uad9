@@ -145,7 +145,7 @@
                         <ul class="mb-0 pl-3 mt-2">
                             <li>Primero: selecciona tipo de funcionario, folder y estado de carpeta (estos siempre están disponibles)</li>
                             <li>Luego: escoge <strong>solo uno</strong> de los filtros de documento o usa "Solo Tesis" para búsquedas rápidas</li>
-                            <li>En el filtro elegido, define si debe existir y sus estados (legalizado, verificado, UMSS, tesis)</li>
+                            <li>En el filtro elegido, define si debe existir y sus estados (legalizado, verificado, tipo de universidad, tesis)</li>
                             <li>Alternativamente, usa los presets para búsquedas predefinidas (sin activar filtros de documento)</li>
                         </ul>
                     </div>
@@ -159,8 +159,6 @@
                                         <option value="">Seleccionar preset...</option>
                                         <option value="carpeta_completa">Carpeta completa minima (DB + DA + TP + Postgrado)</option>
                                         <option value="carpeta_incompleta">Carpeta incompleta (falta algun documento base)</option>
-                                        <option value="solo_docentes_con_folder">Solo docentes con folder</option>
-                                        <option value="solo_administrativos_con_folder">Solo administrativos con folder</option>
                                         <option value="documentos_no_verificados">Documentos no verificados (cualquier tipo)</option>
                                         <option value="sin_folder">Funcionarios sin folder</option>
                                     </select>
@@ -201,7 +199,7 @@
                                 </div>
                                 <div class="row mt-3">
                                     <div class="col-md-6">
-                                        <label class="font-weight-bold text-dark">Estado de carpeta (calculado)</label>
+                                        <label class="font-weight-bold text-dark">Estado de carpeta</label>
                                         <select class="custom-select custom-select-sm" name="estado_carpeta" id="estado_carpeta">
                                             <option value="">Indiferente</option>
                                             <option value="completo">Solo completos</option>
@@ -214,17 +212,17 @@
 
                         @php
                             $filtros = [
-                                ['titulo' => 'Bachiller', 'con' => 'bachiller', 'sin' => 'nobachiller', 'l_si' => 'lbachiller', 'l_no' => 'nlbachiller', 'v_si' => 'vbachiller', 'v_no' => 'nvbachiller', 'u_si' => 'ubachiller', 'u_no' => 'nubachiller', 'con_umss' => false],
-                                ['titulo' => 'Tecnico medio', 'con' => 'tmedio', 'sin' => 'notmedio', 'l_si' => 'ltmedio', 'l_no' => 'nltmedio', 'v_si' => 'vtmedio', 'v_no' => 'nvtmedio', 'u_si' => 'utmedio', 'u_no' => 'nutmedio', 'con_umss' => false],
-                                ['titulo' => 'Tecnico superior', 'con' => 'tsuperior', 'sin' => 'notsuperior', 'l_si' => 'ltsuperior', 'l_no' => 'nltsuperior', 'v_si' => 'vtsuperior', 'v_no' => 'nvtsuperior', 'u_si' => 'utsuperior', 'u_no' => 'nutsuperior', 'con_umss' => false],
-                                ['titulo' => 'Diploma academico', 'con' => 'academico', 'sin' => 'noacademico', 'l_si' => 'lacademico', 'l_no' => 'nlacademico', 'v_si' => 'vacademico', 'v_no' => 'nvacademico', 'u_si' => 'uacademico', 'u_no' => 'nuacademico', 'con_umss' => false],
-                                ['titulo' => 'Titulo profesional', 'con' => 'profesional', 'sin' => 'noprofesional', 'l_si' => 'lprofesional', 'l_no' => 'nlprofesional', 'v_si' => 'vprofesional', 'v_no' => 'nvprofesional', 'u_si' => 'uprofesional', 'u_no' => 'nuprofesional', 'con_umss' => false],
-                                ['titulo' => 'Educacion superior', 'con' => 'ddu', 'sin' => 'noddu', 'l_si' => 'lddu', 'l_no' => 'nlddu', 'v_si' => 'vddu', 'v_no' => 'nvddu', 'u_si' => 'uddu', 'u_no' => 'nuddu', 't_si' => 'tddu', 't_no' => 'ntddu', 'con_umss' => true],
-                                ['titulo' => 'Diplomado', 'con' => 'diplomado', 'sin' => 'nodiplomado', 'l_si' => 'ldiplomado', 'l_no' => 'nldiplomado', 'v_si' => 'vdiplomado', 'v_no' => 'nvdiplomado', 'u_si' => 'udiplomado', 'u_no' => 'nudiplomado', 't_si' => 'tdiplomado', 't_no' => 'ntdiplomado', 'con_umss' => true],
-                                ['titulo' => 'Especialidad', 'con' => 'especialidad', 'sin' => 'noespecialidad', 'l_si' => 'lespecialidad', 'l_no' => 'nlespecialidad', 'v_si' => 'vespecialidad', 'v_no' => 'nvespecialidad', 'u_si' => 'uespecialidad', 'u_no' => 'nuespecialidad', 't_si' => 'tespecialidad', 't_no' => 'ntespecialidad', 'con_umss' => true],
-                                ['titulo' => 'Maestria', 'con' => 'maestria', 'sin' => 'nomaestria', 'l_si' => 'lmaestria', 'l_no' => 'nlmaestria', 'v_si' => 'vmaestria', 'v_no' => 'nvmaestria', 'u_si' => 'umaestria', 'u_no' => 'numaestria', 't_si' => 'tmaestria', 't_no' => 'ntmaestria', 'con_umss' => true],
-                                ['titulo' => 'Doctorado', 'con' => 'doctorado', 'sin' => 'nodoctorado', 'l_si' => 'ldoctorado', 'l_no' => 'nldoctorado', 'v_si' => 'vdoctorado', 'v_no' => 'nvdoctorado', 'u_si' => 'udoctorado', 'u_no' => 'nudoctorado', 't_si' => 'tdoctorado', 't_no' => 'ntdoctorado', 'con_umss' => true],
-                                ['titulo' => 'Solo Tesis', 'con' => 'solotesis', 'sin' => 'nosolotesis', 'l_si' => 'lsolotesis', 'l_no' => 'nlsolotesis', 'v_si' => 'vsolotesis', 'v_no' => 'nvsolotesis', 'u_si' => 'usolotesis', 'u_no' => 'nusolotesis', 'con_umss' => false, 'is_tesis_only' => true],
+                                ['titulo' => 'Bachiller', 'con' => 'bachiller', 'sin' => 'nobachiller', 'l_si' => 'lbachiller', 'l_no' => 'nlbachiller', 'v_si' => 'vbachiller', 'v_no' => 'nvbachiller', 'uni_publica' => 'ubachiller_publica', 'uni_privada' => 'ubachiller_privada', 'uni_extranjera' => 'ubachiller_extranjera', 'uni_otra' => 'ubachiller_otra', 'con_tipo_universidad' => false],
+                                ['titulo' => 'Tecnico medio', 'con' => 'tmedio', 'sin' => 'notmedio', 'l_si' => 'ltmedio', 'l_no' => 'nltmedio', 'v_si' => 'vtmedio', 'v_no' => 'nvtmedio', 'uni_publica' => 'utmedio_publica', 'uni_privada' => 'utmedio_privada', 'uni_extranjera' => 'utmedio_extranjera', 'uni_otra' => 'utmedio_otra', 'con_tipo_universidad' => false],
+                                ['titulo' => 'Tecnico superior', 'con' => 'tsuperior', 'sin' => 'notsuperior', 'l_si' => 'ltsuperior', 'l_no' => 'nltsuperior', 'v_si' => 'vtsuperior', 'v_no' => 'nvtsuperior', 'uni_publica' => 'utsuperior_publica', 'uni_privada' => 'utsuperior_privada', 'uni_extranjera' => 'utsuperior_extranjera', 'uni_otra' => 'utsuperior_otra', 'con_tipo_universidad' => false],
+                                ['titulo' => 'Diploma academico', 'con' => 'academico', 'sin' => 'noacademico', 'l_si' => 'lacademico', 'l_no' => 'nlacademico', 'v_si' => 'vacademico', 'v_no' => 'nvacademico', 'uni_publica' => 'uacademico_publica', 'uni_privada' => 'uacademico_privada', 'uni_extranjera' => 'uacademico_extranjera', 'uni_otra' => 'uacademico_otra', 'con_tipo_universidad' => false],
+                                ['titulo' => 'Titulo profesional', 'con' => 'profesional', 'sin' => 'noprofesional', 'l_si' => 'lprofesional', 'l_no' => 'nlprofesional', 'v_si' => 'vprofesional', 'v_no' => 'nvprofesional', 'uni_publica' => 'uprofesional_publica', 'uni_privada' => 'uprofesional_privada', 'uni_extranjera' => 'uprofesional_extranjera', 'uni_otra' => 'uprofesional_otra', 'con_tipo_universidad' => false],
+                                ['titulo' => 'Educacion superior', 'con' => 'ddu', 'sin' => 'noddu', 'l_si' => 'lddu', 'l_no' => 'nlddu', 'v_si' => 'vddu', 'v_no' => 'nvddu', 'uni_publica' => 'uddu_publica', 'uni_privada' => 'uddu_privada', 'uni_extranjera' => 'uddu_extranjera', 'uni_otra' => 'uddu_otra', 't_si' => 'tddu', 't_no' => 'ntddu', 'con_tipo_universidad' => true],
+                                ['titulo' => 'Diplomado', 'con' => 'diplomado', 'sin' => 'nodiplomado', 'l_si' => 'ldiplomado', 'l_no' => 'nldiplomado', 'v_si' => 'vdiplomado', 'v_no' => 'nvdiplomado', 'uni_publica' => 'udiplomado_publica', 'uni_privada' => 'udiplomado_privada', 'uni_extranjera' => 'udiplomado_extranjera', 'uni_otra' => 'udiplomado_otra', 't_si' => 'tdiplomado', 't_no' => 'ntdiplomado', 'con_tipo_universidad' => true],
+                                ['titulo' => 'Especialidad', 'con' => 'especialidad', 'sin' => 'noespecialidad', 'l_si' => 'lespecialidad', 'l_no' => 'nlespecialidad', 'v_si' => 'vespecialidad', 'v_no' => 'nvespecialidad', 'uni_publica' => 'uespecialidad_publica', 'uni_privada' => 'uespecialidad_privada', 'uni_extranjera' => 'uespecialidad_extranjera', 'uni_otra' => 'uespecialidad_otra', 't_si' => 'tespecialidad', 't_no' => 'ntespecialidad', 'con_tipo_universidad' => true],
+                                ['titulo' => 'Maestria', 'con' => 'maestria', 'sin' => 'nomaestria', 'l_si' => 'lmaestria', 'l_no' => 'nlmaestria', 'v_si' => 'vmaestria', 'v_no' => 'nvmaestria', 'uni_publica' => 'umaestria_publica', 'uni_privada' => 'umaestria_privada', 'uni_extranjera' => 'umaestria_extranjera', 'uni_otra' => 'umaestria_otra', 't_si' => 'tmaestria', 't_no' => 'ntmaestria', 'con_tipo_universidad' => true],
+                                ['titulo' => 'Doctorado', 'con' => 'doctorado', 'sin' => 'nodoctorado', 'l_si' => 'ldoctorado', 'l_no' => 'nldoctorado', 'v_si' => 'vdoctorado', 'v_no' => 'nvdoctorado', 'uni_publica' => 'udoctorado_publica', 'uni_privada' => 'udoctorado_privada', 'uni_extranjera' => 'udoctorado_extranjera', 'uni_otra' => 'udoctorado_otra', 't_si' => 'tdoctorado', 't_no' => 'ntdoctorado', 'con_tipo_universidad' => true],
+                                ['titulo' => 'Solo Tesis', 'con' => 'solotesis', 'sin' => 'nosolotesis', 'l_si' => 'lsolotesis', 'l_no' => 'nlsolotesis', 'v_si' => 'vsolotesis', 'v_no' => 'nvsolotesis', 'uni_publica' => 'usolotesis_publica', 'uni_privada' => 'usolotesis_privada', 'uni_extranjera' => 'usolotesis_extranjera', 'uni_otra' => 'usolotesis_otra', 'con_tipo_universidad' => false, 'is_tesis_only' => true],
                             ];
                         @endphp
 
@@ -267,10 +265,12 @@
                                         <input type="checkbox" class="hidden-check" name="{{ $filtro['l_no'] }}">
                                         <input type="checkbox" class="hidden-check" name="{{ $filtro['v_si'] }}">
                                         <input type="checkbox" class="hidden-check" name="{{ $filtro['v_no'] }}">
-                                        <input type="checkbox" class="hidden-check" name="{{ $filtro['u_si'] }}">
-                                        <input type="checkbox" class="hidden-check" name="{{ $filtro['u_no'] }}">
+                                        <input type="checkbox" class="hidden-check" name="{{ $filtro['uni_publica'] }}">
+                                        <input type="checkbox" class="hidden-check" name="{{ $filtro['uni_privada'] }}">
+                                        <input type="checkbox" class="hidden-check" name="{{ $filtro['uni_extranjera'] }}">
+                                        <input type="checkbox" class="hidden-check" name="{{ $filtro['uni_otra'] }}">
                                         @if(!isset($filtro['is_tesis_only']))
-                                            @if(isset($filtro['con_umss']) && $filtro['con_umss'])
+                                            @if(isset($filtro['con_tipo_universidad']) && $filtro['con_tipo_universidad'])
                                                 <input type="checkbox" class="hidden-check" name="{{ $filtro['t_si'] }}">
                                                 <input type="checkbox" class="hidden-check" name="{{ $filtro['t_no'] }}">
                                             @endif
@@ -283,7 +283,7 @@
                                     <input type="checkbox" class="custom-control-input" name="excel" id="excel">
                                     <label class="custom-control-label text-success font-weight-bold" for="excel">Exportar resultado a Excel</label>
                                 </div>
-                                <button class="btn btn-primary btn-sm" type="button" onclick="prepararFormularioParaEnvio('form_reporte','{{url('procesar reporte dya')}}','panel_reporte')">
+                                <button class="btn btn-primary btn-sm" id="btn_generar_reporte" type="button" onclick="prepararFormularioParaEnvio('form_reporte','{{url('procesar reporte dya')}}','panel_reporte')">
                                     <i class="fas fa-search"></i> Generar reporte
                                 </button>
                             </div>
@@ -291,6 +291,7 @@
 
                         <input type="checkbox" class="hidden-check" name="folder" checked>
                         <input type="checkbox" class="hidden-check" name="nofolder">
+                        <input type="checkbox" class="hidden-check" name="global_no_verificado">
                     </form>
 
                     <div class="row">
@@ -348,14 +349,16 @@
                             </select>
                         </div>
                         <div class="state-item">
-                            <label>Documento UMSS</label>
-                            <select class="custom-select custom-select-sm state-select" data-yes="${filtro.u_si}" data-no="${filtro.u_no}" data-filtro-id="${filtroIndex}">
+                            <label>Tipo de Universidad</label>
+                            <select class="custom-select custom-select-sm university-type-select" data-publica="${filtro.uni_publica}" data-privada="${filtro.uni_privada}" data-extranjera="${filtro.uni_extranjera}" data-otra="${filtro.uni_otra}" data-filtro-id="${filtroIndex}">
                                 <option value="indiferente" selected>Indiferente</option>
-                                <option value="si">Si</option>
-                                <option value="no">No</option>
+                                <option value="publica">Pública</option>
+                                <option value="privada">Privada</option>
+                                <option value="extranjera">Extranjera</option>
+                                <option value="otra">Otra</option>
                             </select>
                         </div>
-                        ${filtro.con_umss && !filtro.is_tesis_only ? `
+                        ${filtro.con_tipo_universidad && !filtro.is_tesis_only ? `
                         <div class="state-item">
                             <label>Es Tesis</label>
                             <select class="custom-select custom-select-sm state-select" data-yes="${filtro.t_si}" data-no="${filtro.t_no}" data-filtro-id="${filtroIndex}">
@@ -411,7 +414,7 @@
                     document.getElementById('filtro_' + filtroKey + '_container').remove();
                     updateFiltrosDisplay();
                     // Resetear valores de este filtro
-                    const inputs = document.querySelectorAll(`input[name="${filtrosData[i].con}"], input[name="${filtrosData[i].sin}"], input[name="${filtrosData[i].l_si}"], input[name="${filtrosData[i].l_no}"], input[name="${filtrosData[i].v_si}"], input[name="${filtrosData[i].v_no}"], input[name="${filtrosData[i].u_si}"], input[name="${filtrosData[i].u_no}"]`);
+                    const inputs = document.querySelectorAll(`input[name="${filtrosData[i].con}"], input[name="${filtrosData[i].sin}"], input[name="${filtrosData[i].l_si}"], input[name="${filtrosData[i].l_no}"], input[name="${filtrosData[i].v_si}"], input[name="${filtrosData[i].v_no}"], input[name="${filtrosData[i].uni_publica}"], input[name="${filtrosData[i].uni_privada}"], input[name="${filtrosData[i].uni_extranjera}"], input[name="${filtrosData[i].uni_otra}"]`);
                     inputs.forEach(inp => inp.checked = false);
                     break;
                 }
@@ -436,34 +439,60 @@
                     cerrarFiltro(this.getAttribute('data-filtro'));
                 });
             });
-
-            // Listeners para presence-select
-            document.querySelectorAll('.presence-select').forEach(select => {
-                select.addEventListener('change', function() {
-                    const withName = this.getAttribute('data-on');
-                    const withoutName = this.getAttribute('data-off');
-                    const value = this.value;
-
-                    document.querySelectorAll(`input[name="${withName}"]`).forEach(el => el.checked = (value === 'con'));
-                    document.querySelectorAll(`input[name="${withoutName}"]`).forEach(el => el.checked = (value === 'sin'));
-                });
-            });
-
-            // Listeners para state-select
-            document.querySelectorAll('.state-select').forEach(select => {
-                select.addEventListener('change', function() {
-                    const yesName = this.getAttribute('data-yes');
-                    const noName = this.getAttribute('data-no');
-                    const value = this.value;
-
-                    document.querySelectorAll(`input[name="${yesName}"]`).forEach(el => el.checked = (value === 'si'));
-                    document.querySelectorAll(`input[name="${noName}"]`).forEach(el => el.checked = (value === 'no'));
-                });
-            });
+            // Los demás event listeners usan delegación de eventos en el documento
         }
 
         // Event listeners para botones
         document.getElementById('btn_agregar_filtro').addEventListener('click', agregarFiltro);
+        
+        // Usar delegación de eventos para los selects dinámicos
+        document.addEventListener('change', function(event) {
+            // Presence select
+            if (event.target.classList.contains('presence-select')) {
+                const withName = event.target.getAttribute('data-on');
+                const withoutName = event.target.getAttribute('data-off');
+                const value = event.target.value;
+
+                document.querySelectorAll(`input[name="${withName}"]`).forEach(el => el.checked = (value === 'con'));
+                document.querySelectorAll(`input[name="${withoutName}"]`).forEach(el => el.checked = (value === 'sin'));
+                return;
+            }
+            
+            // State select (Legalizado, Verificado, Tesis)
+            if (event.target.classList.contains('state-select')) {
+                const yesName = event.target.getAttribute('data-yes');
+                const noName = event.target.getAttribute('data-no');
+                const value = event.target.value;
+
+                document.querySelectorAll(`input[name="${yesName}"]`).forEach(el => el.checked = (value === 'si'));
+                document.querySelectorAll(`input[name="${noName}"]`).forEach(el => el.checked = (value === 'no'));
+                return;
+            }
+            
+            // University type select
+            if (event.target.classList.contains('university-type-select')) {
+                const publicaName = event.target.getAttribute('data-publica');
+                const privadaName = event.target.getAttribute('data-privada');
+                const extranjeraName = event.target.getAttribute('data-extranjera');
+                const otraName = event.target.getAttribute('data-otra');
+                const value = event.target.value;
+
+                // Desmarcar todos primero, luego marcar la seleccionada
+                document.querySelectorAll(`input[name="${publicaName}"]`).forEach(el => {
+                    el.checked = (value === 'publica');
+                });
+                document.querySelectorAll(`input[name="${privadaName}"]`).forEach(el => {
+                    el.checked = (value === 'privada');
+                });
+                document.querySelectorAll(`input[name="${extranjeraName}"]`).forEach(el => {
+                    el.checked = (value === 'extranjera');
+                });
+                document.querySelectorAll(`input[name="${otraName}"]`).forEach(el => {
+                    el.checked = (value === 'otra');
+                });
+                return;
+            }
+        });
         
         document.getElementById('btn_reset_todos_documentos').addEventListener('click', function() {
             if (confirm('¿Cerrar todos los filtros de documento?')) {
@@ -475,6 +504,71 @@
                 // Limpiar todos los checkboxes
                 document.querySelectorAll('.hidden-check').forEach(inp => inp.checked = false);
             }
+        });
+
+        function limpiarFiltrosDocumentoUI() {
+            document.getElementById('select_documento_filtro').value = '';
+            document.getElementById('filtros_activos_container').innerHTML = '';
+            filtrosActivos.clear();
+            updateFiltrosDisplay();
+        }
+
+        function setValorPresenceFolder(valor) {
+            const selectFolder = document.querySelector('.presence-select[data-on="folder"][data-off="nofolder"]');
+            if (!selectFolder) return;
+            selectFolder.value = valor;
+            selectFolder.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        document.getElementById('btn_aplicar_preset').addEventListener('click', function() {
+            const preset = document.getElementById('preset_busqueda').value;
+
+            if (!preset) {
+                alert('Selecciona un preset primero');
+                return;
+            }
+
+            // Limpieza base
+            limpiarFiltrosDocumentoUI();
+            document.querySelectorAll('.hidden-check').forEach(inp => inp.checked = false);
+
+            const tipoFuncionarioSelect = document.querySelector('select[name="funcionario"]');
+            const estadoCarpetaSelect = document.getElementById('estado_carpeta');
+            const globalNoVerificado = document.querySelector('input[name="global_no_verificado"]');
+
+            if (tipoFuncionarioSelect) tipoFuncionarioSelect.value = '';
+            if (estadoCarpetaSelect) estadoCarpetaSelect.value = '';
+            if (globalNoVerificado) globalNoVerificado.checked = false;
+
+            // Preset rules
+            if (preset === 'carpeta_completa') {
+                setValorPresenceFolder('con');
+                if (estadoCarpetaSelect) estadoCarpetaSelect.value = 'completo';
+            }
+
+            if (preset === 'carpeta_incompleta') {
+                setValorPresenceFolder('con');
+                if (estadoCarpetaSelect) estadoCarpetaSelect.value = 'incompleto';
+            }
+
+            if (preset === 'sin_folder') {
+                setValorPresenceFolder('sin');
+            }
+
+            if (preset === 'documentos_no_verificados') {
+                setValorPresenceFolder('indiferente');
+                if (globalNoVerificado) globalNoVerificado.checked = true;
+            }
+
+            const botonGenerar = document.getElementById('btn_generar_reporte');
+            if (botonGenerar) {
+                botonGenerar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            // Ejecutar automáticamente después de aplicar el preset
+            setTimeout(function() {
+                prepararFormularioParaEnvio('form_reporte','{{url('procesar reporte dya')}}','panel_reporte');
+            }, 250);
         });
 
         // Permitir Enter en el select para agregar
@@ -494,10 +588,10 @@
                         filtro.con, filtro.sin, 
                         filtro.l_si, filtro.l_no, 
                         filtro.v_si, filtro.v_no, 
-                        filtro.u_si, filtro.u_no
+                        filtro.uni_publica, filtro.uni_privada, filtro.uni_extranjera, filtro.uni_otra
                     ];
                     
-                    if (filtro.con_umss && !filtro.is_tesis_only) {
+                    if (filtro.con_tipo_universidad && !filtro.is_tesis_only) {
                         checkboxes.push(filtro.t_si, filtro.t_no);
                     }
                     
@@ -507,10 +601,33 @@
                 }
             }
             
+            // IMPORTANTE: Sincronizar estado de todos los selects de tipo de universidad con los checkboxes
+            document.querySelectorAll('.university-type-select').forEach(select => {
+                const publicaName = select.getAttribute('data-publica');
+                const privadaName = select.getAttribute('data-privada');
+                const extranjeraName = select.getAttribute('data-extranjera');
+                const otraName = select.getAttribute('data-otra');
+                const value = select.value;
+
+                // Marcar/desmarcar según el valor del select
+                document.querySelectorAll(`input[name="${publicaName}"]`).forEach(el => {
+                    el.checked = (value === 'publica');
+                });
+                document.querySelectorAll(`input[name="${privadaName}"]`).forEach(el => {
+                    el.checked = (value === 'privada');
+                });
+                document.querySelectorAll(`input[name="${extranjeraName}"]`).forEach(el => {
+                    el.checked = (value === 'extranjera');
+                });
+                document.querySelectorAll(`input[name="${otraName}"]`).forEach(el => {
+                    el.checked = (value === 'otra');
+                });
+            });
+
             // Llamar la función enviar original
             enviar(formId, url, panelId);
         };
-
+        
         // Inicializar display
         updateFiltrosDisplay();
 
@@ -545,7 +662,7 @@
                             <li>Selecciona <strong>UN SOLO</strong> filtro de documento a la vez</li>
                             <li>Si necesitas cambiar de filtro, cierra el actual con la X antes de abrir otro</li>
                             <li>Los filtros de tipo de funcionario, folder y estado de carpeta siempre se pueden usar juntos</li>
-                            <li>Configura las opciones (Legalizado, Verificado, UMSS, etc.) antes de generar el reporte</li>
+                            <li>Configura las opciones (Legalizado, Verificado, Tipo de Universidad, etc.) antes de generar el reporte</li>
                         </ul>
                     </div>
 
