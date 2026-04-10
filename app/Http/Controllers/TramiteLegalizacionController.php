@@ -156,7 +156,7 @@ class TramiteLegalizacionController extends Controller
             ->where('id_per', $tramite->id_per)
             ->whereNotNull('tit_titulo')      // evita NULL
             ->where('tit_titulo', '<>', '')   // evita vacío ""
-            ->select('tit_titulo','tit_tipo')
+            ->select('tit_titulo','tit_tipo','tit_fecha_emision')
             ->get();
             foreach ($supletorios as $s) {
                 if (str_contains($s->tit_ref, 'D.A')) {
