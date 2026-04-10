@@ -454,9 +454,14 @@ class ApostillaController extends Controller
     {
         $data=$request->validate([
             'nro_control'=>['required','integer'],
+            'ca'=>['nullable','string'],
         ]);
 
-        $codApos=(string)$cod_apos;
+        $codApos=trim((string)($data['ca'] ?? ''));
+        if($codApos===''){
+            $codApos=trim((string)$cod_apos);
+        }
+
         if(!Str::isUuid($codApos)){
             return response()->json([
                 'ok'=>false,

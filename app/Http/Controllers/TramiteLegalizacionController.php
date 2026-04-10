@@ -1462,14 +1462,14 @@ class TramiteLegalizacionController extends Controller
         }
 
         $buscarEn='';
-        if(!empty($data['tipo'])){
+        if(!empty($data['buscar_en'])){
+            $buscarEn=explode('-', (string)$data['buscar_en'])[0] ?? '';
+        }
+        if($buscarEn==='' && !empty($data['tipo'])){
             $tipoDoc=Tramite::find((int)$data['tipo']);
             if($tipoDoc){
                 $buscarEn=(string)($tipoDoc->tre_buscar_en ?? '');
             }
-        }
-        if($buscarEn==='' && !empty($data['buscar_en'])){
-            $buscarEn=explode('-', (string)$data['buscar_en'])[0] ?? '';
         }
 
         if(!in_array($buscarEn,['db','ca','da','tp','re','su'],true)){
@@ -1508,7 +1508,10 @@ class TramiteLegalizacionController extends Controller
         if($nombresCoinciden && $tipoLocal===$tipoSitraNormalizado && $numeroLocal===$numeroSitra){
             $estado='0';
         }elseif($nombreSitra==='' && $tipoSitraNormalizado==='' && $numeroSitra===''){
-            $respaldoUad9=$this->buscarRespaldoInternoSitra((int)$tramita->id_per,$numero,$buscarEn,$gestion);
+            $respaldoUad9=null;
+            if($gestion!==''){
+                $respaldoUad9=$this->buscarRespaldoInternoSitra((int)$tramita->id_per,$numero,$buscarEn,$gestion);
+            }
             if($respaldoUad9){
                 return response()->json([
                     'ok'=>true,

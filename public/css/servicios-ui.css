@@ -417,6 +417,30 @@
     line-height: 1.2;
 }
 
+.apostilla-ui .apo-quick-card #form_agregar_tramite_rapido {
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.apostilla-ui .apo-quick-card .apo-quick-row {
+    margin-left: -0.22rem;
+    margin-right: -0.22rem;
+}
+
+.apostilla-ui .apo-quick-card .apo-quick-row .apo-quick-col {
+    padding-left: 0.22rem;
+    padding-right: 0.22rem;
+}
+
+.apostilla-ui .apo-quick-card .apo-quick-row .apo-quick-col .form-control {
+    min-width: 0;
+}
+
+.apostilla-ui .apo-quick-card .apo-quick-col-boton .btn {
+    white-space: nowrap;
+}
+
 @media (min-width: 992px) {
     .servicios-ui .modal-dialog.modal-xl {
         max-width: min(96vw, 1320px);
@@ -440,6 +464,64 @@
     .servicios-ui .ui-modal-traleg .ui-form-layout > .col-md-8 {
         flex: 0 0 66%;
         max-width: 66%;
+    }
+
+    .apostilla-ui .apo-quick-card .apo-quick-row-top .apo-quick-col-control {
+        flex: 0 0 40%;
+        max-width: 40%;
+    }
+
+    .apostilla-ui .apo-quick-card .apo-quick-row-top .apo-quick-col-detectado {
+        flex: 0 0 60%;
+        max-width: 60%;
+    }
+
+    .apostilla-ui .apo-quick-card .apo-quick-row-bottom .apo-quick-col-numero {
+        flex: 0 0 46%;
+        max-width: 46%;
+    }
+
+    .apostilla-ui .apo-quick-card .apo-quick-row-bottom .apo-quick-col-gestion {
+        flex: 0 0 22%;
+        max-width: 22%;
+    }
+
+    .apostilla-ui .apo-quick-card .apo-quick-row-bottom .apo-quick-col-boton {
+        flex: 0 0 32%;
+        max-width: 32%;
+    }
+}
+
+@media (min-width: 1200px) {
+    .apostilla-ui .apo-quick-card #form_agregar_tramite_rapido {
+        max-width: 840px;
+    }
+
+    .apostilla-ui .apo-quick-card .apo-quick-row {
+        display: grid;
+        justify-content: center;
+        align-items: end;
+        column-gap: 0.65rem;
+        row-gap: 0.35rem;
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    .apostilla-ui .apo-quick-card .apo-quick-row .apo-quick-col {
+        max-width: none;
+        flex: initial;
+        width: auto;
+        padding-left: 0;
+        padding-right: 0;
+        margin-bottom: 0.35rem;
+    }
+
+    .apostilla-ui .apo-quick-card .apo-quick-row-top {
+        grid-template-columns: minmax(250px, 320px) minmax(330px, 470px);
+    }
+
+    .apostilla-ui .apo-quick-card .apo-quick-row-bottom {
+        grid-template-columns: minmax(290px, 420px) minmax(170px, 210px) minmax(190px, 230px);
     }
 }
 
@@ -906,4 +988,127 @@
 .apostilla-ui .apo-col-main #panel_lista_tramites_apostilla th:nth-child(6),
 .apostilla-ui .apo-col-main #panel_lista_tramites_apostilla td:nth-child(6) {
     width: 13%;
+}
+
+/* Apostilla: patron UX por pasos para registro rapido */
+.apostilla-ui .apo-quick-card .apo-quick-subtitle {
+    line-height: 1.25;
+}
+
+.apostilla-ui .apo-quick-card .apo-quick-form {
+    max-width: 1120px;
+    margin: 0 auto;
+}
+
+.apostilla-ui .apo-quick-card .apo-quick-step {
+    border: 1px solid #dbe5f2;
+    border-radius: 0.55rem;
+    background: linear-gradient(180deg, #f6f9ff 0%, #ffffff 55%);
+    padding: 0.65rem 0.72rem 0.55rem;
+    margin-bottom: 0.55rem;
+}
+
+.apostilla-ui .apo-quick-card .apo-quick-step:last-of-type {
+    margin-bottom: 0.35rem;
+}
+
+.apostilla-ui .apo-quick-card .apo-quick-step-title {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.42rem;
+    font-size: 0.74rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #2f4d7f;
+}
+
+.apostilla-ui .apo-quick-card .apo-quick-step-title .apo-step-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 50%;
+    background-color: #2f4d7f;
+    color: #ffffff;
+    font-size: 0.71rem;
+    font-weight: 700;
+    flex: 0 0 auto;
+}
+
+.apostilla-ui .apo-quick-card .apo-quick-row {
+    margin-left: -0.24rem;
+    margin-right: -0.24rem;
+}
+
+.apostilla-ui .apo-quick-card .apo-quick-row .apo-quick-col {
+    padding-left: 0.24rem;
+    padding-right: 0.24rem;
+    margin-bottom: 0.35rem;
+}
+
+.apostilla-ui .apo-quick-card .apo-quick-row .apo-quick-col .form-control {
+    min-width: 0;
+}
+
+.apostilla-ui .apo-quick-card .apo-quick-col-boton {
+    display: flex;
+    align-items: flex-end;
+}
+
+.apostilla-ui .apo-quick-card .apo-quick-col-boton .btn {
+    white-space: nowrap;
+    min-height: 2.05rem;
+}
+
+.apostilla-ui .apo-quick-card .apo-quick-help {
+    line-height: 1.2;
+}
+
+@media (min-width: 1200px) {
+    .apostilla-ui .apo-quick-card .apo-quick-form {
+        max-width: 1020px;
+    }
+
+    .apostilla-ui .apo-quick-card .apo-quick-step .apo-quick-row {
+        display: grid;
+        column-gap: 0.62rem;
+        row-gap: 0.1rem;
+        align-items: end;
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    .apostilla-ui .apo-quick-card .apo-quick-step .apo-quick-row .apo-quick-col {
+        padding-left: 0;
+        padding-right: 0;
+        margin-bottom: 0.15rem;
+        max-width: none;
+        width: auto;
+        flex: initial;
+    }
+
+    .apostilla-ui .apo-quick-card .apo-quick-step-pago .apo-quick-row-top {
+        grid-template-columns: minmax(290px, 400px) minmax(360px, 1fr);
+    }
+
+    .apostilla-ui .apo-quick-card .apo-quick-step-doc .apo-quick-row-bottom {
+        grid-template-columns: minmax(360px, 1fr) minmax(180px, 220px) minmax(220px, 260px);
+    }
+}
+
+@media (max-width: 991.98px) {
+    .apostilla-ui .apo-quick-card .apo-quick-form {
+        max-width: none;
+    }
+
+    .apostilla-ui .apo-quick-card .apo-quick-step {
+        padding: 0.62rem 0.6rem 0.5rem;
+    }
+
+    .apostilla-ui .apo-quick-card .apo-quick-step-title {
+        font-size: 0.72rem;
+    }
 }

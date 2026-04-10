@@ -204,44 +204,61 @@
                     @can('agregar documento - apo')
                         @if($tramite_apostilla->apos_estado<2)
                             <div class="border shadow rounded p-3 mb-3 bg-white apo-quick-card">
-                                <div class="d-flex justify-content-between align-items-center flex-wrap mb-2">
-                                    <span class="text-danger font-italic font-weight-bold" style="font-size: 16px">* Registro rápido de apostillas</span>
+                                <div class="d-flex justify-content-between align-items-start flex-wrap mb-2">
+                                    <div>
+                                        <span class="text-danger font-italic font-weight-bold" style="font-size: 16px">Registro de apostillas</span>
+                                    </div>
                                 </div>
                                 <hr class="my-2"/>
 
-                                <form id="form_agregar_tramite_rapido">
+                                <form id="form_agregar_tramite_rapido" class="apo-quick-form">
                                     @csrf
-                                    <div class="form-row align-items-end">
-                                        <div class="col-md-4 mb-2">
-                                            <label class="font-italic text-dark mb-1">N° control del pago</label>
-                                            <div class="d-flex align-items-center">
-                                                <input type="text" class="form-control form-control-sm" name="nro_control" id="nro_control_rapido" autocomplete="off">
-                                                <span class="btn btn-light btn-circle btn-sm text-secondary ml-2 apo-estado-pago-icon"
-                                                      data-campo="estado-pago-icon"
-                                                      title="Pago pendiente de validación"
-                                                      tabindex="0"
-                                                      onclick="mostrarDetallePagoRapido(event,this);">
-                                                    <i class="fas fa-minus-circle"></i>
-                                                </span>
-                                            </div>
+                                    <div class="apo-quick-step apo-quick-step-pago">
+                                        <div class="apo-quick-step-title">
+                                            <span class="apo-step-badge">1</span>
+                                            <span>Validación de pago</span>
                                         </div>
-                                        <div class="col-md-8 mb-2">
-                                            <label class="font-italic text-dark mb-1">Trámite detectado</label>
-                                            <input type="text" class="form-control form-control-sm" data-campo="tramite-detectado" readonly placeholder="Pendiente de validación">
+
+                                        <div class="form-row align-items-end apo-quick-row apo-quick-row-top">
+                                            <div class="col-md-4 mb-2 apo-quick-col apo-quick-col-control">
+                                                <label class="font-italic text-dark mb-1">N° control del pago</label>
+                                                <div class="d-flex align-items-center">
+                                                    <input type="text" class="form-control form-control-sm" name="nro_control" id="nro_control_rapido" autocomplete="off">
+                                                    <span class="btn btn-light btn-circle btn-sm text-secondary ml-2 apo-estado-pago-icon"
+                                                          data-campo="estado-pago-icon"
+                                                        title="Ver detalle de validacion de pago"
+                                                          tabindex="0"
+                                                          onclick="mostrarDetallePagoRapido(event,this);">
+                                                        <i class="fas fa-minus-circle"></i>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-8 mb-2 apo-quick-col apo-quick-col-detectado">
+                                                <label class="font-italic text-dark mb-1">Trámite detectado</label>
+                                                <input type="text" class="form-control form-control-sm" data-campo="tramite-detectado" readonly placeholder="Pendiente">
+                                                <small class="text-muted d-block mt-1 apo-quick-help">Se completa automáticamente cuando el pago es válido.</small>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div class="form-row align-items-end">
-                                        <div class="col-md-6 mb-2">
-                                            <label class="font-italic text-dark mb-1" data-campo="label-documento">N° título / resolución</label>
-                                            <input type="text" class="form-control form-control-sm" name="numero" autocomplete="off">
+                                    <div class="apo-quick-step apo-quick-step-doc">
+                                        <div class="apo-quick-step-title">
+                                            <span class="apo-step-badge">2</span>
+                                            <span>Datos del documento</span>
                                         </div>
-                                        <div class="col-md-3 mb-2">
-                                            <label class="font-italic text-dark mb-1">Gestión documento</label>
-                                            <input type="text" class="form-control form-control-sm" name="gestion" pattern="[0-9]{4}" autocomplete="off">
-                                        </div>
-                                        <div class="col-md-3 mb-2">
-                                            <button type="button" class="btn btn-sm btn-primary btn-block" onclick="return submitAgregarApostillaRapida();">+ Agregar trámite</button>
+
+                                        <div class="form-row align-items-end apo-quick-row apo-quick-row-bottom">
+                                            <div class="col-md-6 mb-2 apo-quick-col apo-quick-col-numero">
+                                                <label class="font-italic text-dark mb-1" data-campo="label-documento">N° título / resolución</label>
+                                                <input type="text" class="form-control form-control-sm" name="numero" autocomplete="off">
+                                            </div>
+                                            <div class="col-md-3 mb-2 apo-quick-col apo-quick-col-gestion">
+                                                <label class="font-italic text-dark mb-1">Gestión documento</label>
+                                                <input type="text" class="form-control form-control-sm" name="gestion" pattern="[0-9]{4}" autocomplete="off">
+                                            </div>
+                                            <div class="col-md-3 mb-2 apo-quick-col apo-quick-col-boton">
+                                                <button type="button" class="btn btn-sm btn-primary btn-block" onclick="return submitAgregarApostillaRapida();">+ Agregar trámite</button>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -377,7 +394,156 @@
     let apostillaRapidaControlValidado='';
     let apostillaRapidaCodLisDetectado='';
     let apostillaRapidaTimer=null;
-    let apostillaRapidaDetallePago='Pago pendiente de validación.';
+    let apostillaRapidaValidacionSeq=0;
+    let apostillaRapidaRetryTimer=null;
+    let apostillaRapidaDetallePago='Pendiente de validacion.';
+
+    function compactarMensajeUxPagoApostilla(mensaje,respaldo){
+        const texto=(mensaje || '').toString().trim();
+        const fallback=(respaldo || '').toString().trim();
+        if(texto===''){
+            return fallback;
+        }
+
+        const normal=texto.toLowerCase();
+        if(normal.indexOf('no esta configurado')!==-1 || normal.indexOf('no esta configurada')!==-1){
+            return 'Recaudaciones no configurado.';
+        }
+        if(normal.indexOf('no se pudo conectar')!==-1 || normal.indexOf('no hay conexion')!==-1 || normal.indexOf('api_no_disponible')!==-1){
+            return 'Sin conexion con recaudaciones.';
+        }
+        if(normal.indexOf('no se encontro')!==-1 || normal.indexOf('no se encontró')!==-1){
+            return 'Boleta no encontrada.';
+        }
+        if(normal.indexOf('ya fue utilizado')!==-1 || normal.indexOf('ya fue registrada')!==-1 || normal.indexOf('ya esta registrada')!==-1 || normal.indexOf('ya está registrada')!==-1){
+            return 'Boleta ya registrada.';
+        }
+        if(normal.indexOf('no corresponde')!==-1){
+            return 'Boleta no corresponde.';
+        }
+
+        if(texto.length>110){
+            return fallback!=='' ? fallback : texto.substring(0,107)+'...';
+        }
+        return texto;
+    }
+
+    function limpiarTextoUxApostilla(texto){
+        return (texto || '').toString().replace(/\s+/g,' ').trim();
+    }
+
+    function limitarTextoUxApostilla(texto,maximo){
+        const txt=limpiarTextoUxApostilla(texto);
+        const max=(typeof maximo==='number' && maximo>10) ? maximo : 240;
+        if(txt.length<=max){
+            return txt;
+        }
+        return txt.substring(0,max-3)+'...';
+    }
+
+    function normalizarClaveUxApostilla(texto){
+        return limpiarTextoUxApostilla(texto)
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g,'');
+    }
+
+    function detectarCategoriaPagoUxApostilla(tipo,mensaje){
+        if(tipo==='loading') return 'loading';
+        if(tipo==='ok') return 'ok';
+        if(tipo==='pending') return 'pending';
+
+        const normal=normalizarClaveUxApostilla(mensaje || '');
+        if(normal.indexOf('too many')!==-1 || normal.indexOf('demasiadas solicitudes')!==-1 || normal.indexOf('429')!==-1 || normal.indexOf('rate limit')!==-1){
+            return 'rate_limit';
+        }
+        if(normal.indexOf('no esta configurado')!==-1 || normal.indexOf('no esta configurada')!==-1 || normal.indexOf('sistema_no_configurado')!==-1){
+            return 'not_configured';
+        }
+        if(normal.indexOf('sin conexion')!==-1 || normal.indexOf('no hay conexion')!==-1 || normal.indexOf('no se pudo conectar')!==-1 || normal.indexOf('api_no_disponible')!==-1 || normal.indexOf('timeout')!==-1){
+            return 'connection';
+        }
+        if(normal.indexOf('ya fue utilizado')!==-1 || normal.indexOf('ya fue registrada')!==-1 || normal.indexOf('ya esta registrada')!==-1 || normal.indexOf('no se puede usar nuevamente')!==-1){
+            return 'used';
+        }
+        if(normal.indexOf('no se encontro')!==-1){
+            return 'not_found';
+        }
+        if(normal.indexOf('no corresponde')!==-1){
+            return 'not_match';
+        }
+        return 'error';
+    }
+
+    function resumenCategoriaPagoUxApostilla(categoria,resumenFallback){
+        if(categoria==='ok') return 'Pago validado.';
+        if(categoria==='loading') return 'Validando pago...';
+        if(categoria==='pending') return 'Pendiente de validacion.';
+        if(categoria==='rate_limit') return 'Demasiadas solicitudes.';
+        if(categoria==='not_configured') return 'API no configurada.';
+        if(categoria==='connection') return 'Sin conexion.';
+        if(categoria==='used') return 'Ya utilizado.';
+        if(categoria==='not_found') return 'Boleta no encontrada.';
+        if(categoria==='not_match') return 'Boleta no corresponde.';
+        return (resumenFallback || 'Pago no valido.').toString();
+    }
+
+    function deduplicarDetalleApostilla(resumen,detalle){
+        let resumenTxt=limpiarTextoUxApostilla(resumen || '');
+        let detalleTxt=limpiarTextoUxApostilla(detalle || '');
+        if(detalleTxt===''){
+            return '';
+        }
+        const resumenNorm=normalizarClaveUxApostilla(resumenTxt);
+        const detalleNorm=normalizarClaveUxApostilla(detalleTxt);
+        if(resumenNorm!=='' && (detalleNorm===resumenNorm || detalleNorm.indexOf(resumenNorm+' ')===0 || detalleNorm.indexOf(resumenNorm+':')===0 || detalleNorm.indexOf(resumenNorm+'.')===0)){
+            const re=new RegExp('^'+resumenTxt.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'[\\s:\\.-]*','i');
+            detalleTxt=detalleTxt.replace(re,'').trim();
+        }
+        return detalleTxt;
+    }
+
+    function limpiarReintentoRapidoApostilla(){
+        if(apostillaRapidaRetryTimer!==null){
+            clearTimeout(apostillaRapidaRetryTimer);
+            apostillaRapidaRetryTimer=null;
+        }
+    }
+
+    function construirDetalleUxPagoApostilla(tipo,mensajeOriginal,resumenCorto){
+        const resumen=limpiarTextoUxApostilla(resumenCorto || 'Pendiente de validacion.');
+        const original=limpiarTextoUxApostilla(mensajeOriginal || '');
+        const categoria=detectarCategoriaPagoUxApostilla(tipo,mensajeOriginal || resumenCorto);
+
+        if(original==='' || original.toLowerCase()===resumen.toLowerCase()){
+            return resumen;
+        }
+
+        if(tipo==='error'){
+            if(categoria==='rate_limit'){
+                const limpioRate=deduplicarDetalleApostilla(resumen,original);
+                if(limpioRate===''){
+                    return 'Reintentando en 15 segundos.';
+                }
+                return limitarTextoUxApostilla(limpioRate+' Reintentando en 15 segundos.',300);
+            }
+            const limpio=deduplicarDetalleApostilla(resumen,original).replace(/^detalle\s*:\s*/i,'').trim();
+            if(limpio===''){
+                return resumen;
+            }
+            return limitarTextoUxApostilla('Detalle: '+limpio,280);
+        }
+
+        if(tipo==='ok' && original.length<=140){
+            const limpioOk=deduplicarDetalleApostilla(resumen,original).replace(/^detalle\s*:\s*/i,'').trim();
+            if(limpioOk===''){
+                return resumen;
+            }
+            return limitarTextoUxApostilla(resumen+' '+limpioOk,240);
+        }
+
+        return resumen;
+    }
 
     function formApostillaRapida(){
         return $('#form_agregar_tramite_rapido');
@@ -390,26 +556,39 @@
         const icono=form.find('[data-campo="estado-pago-icon"]');
         if(!icono.length){ return; }
 
+        let title=(mensaje || 'Pendiente de validacion.').toString();
+        const categoria=detectarCategoriaPagoUxApostilla(tipo,title);
+        title=compactarMensajeUxPagoApostilla(title,resumenCategoriaPagoUxApostilla(categoria,title));
+
         let color='text-secondary';
         let iconClass='fa-minus-circle';
-        let title=(mensaje || 'Pago pendiente de validación').toString();
-
-        if(tipo==='loading'){
-            color='text-info';
-            iconClass='fa-spinner fa-spin';
-            title=title || 'Validando pago';
-        }else if(tipo==='ok'){
+        if(categoria==='ok'){
             color='text-success';
             iconClass='fa-check-circle';
-            title=title || 'Pago validado';
-        }else if(tipo==='error'){
-            color='text-danger';
-            iconClass='fa-times-circle';
-            title=title || 'Pago inválido';
+        }else if(categoria==='loading'){
+            color='text-info';
+            iconClass='fa-spinner fa-spin';
+        }else if(categoria==='rate_limit'){
+            color='text-warning';
+            iconClass='fa-clock';
+        }else if(categoria==='used'){
+            color='text-warning';
+            iconClass='fa-ban';
+        }else if(categoria==='connection'){
+            color='text-warning';
+            iconClass='fa-plug';
+        }else if(categoria==='not_configured'){
+            color='text-muted';
+            iconClass='fa-cog';
+        }else if(categoria==='pending'){
+            color='text-secondary';
+            iconClass='fa-minus-circle';
         }else if(tipo==='warn'){
             color='text-warning';
             iconClass='fa-exclamation-circle';
-            title=title || 'Atención';
+        }else{
+            color='text-danger';
+            iconClass='fa-times-circle';
         }
 
         icono
@@ -424,22 +603,32 @@
     }
 
     function estadoRegistroRapido(tipo,mensaje){
-        let texto=(mensaje || '').toString().trim();
+        const mensajeOriginal=(mensaje || '').toString().trim();
+        const categoria=detectarCategoriaPagoUxApostilla(tipo,mensajeOriginal);
+        let texto=compactarMensajeUxPagoApostilla(mensajeOriginal,resumenCategoriaPagoUxApostilla(categoria,'')).toString().trim();
         if(texto===''){
             if(tipo==='loading'){
-                texto='Validando pago y detectando trámite...';
+                texto='Validando pago...';
             }else if(tipo==='ok'){
                 texto='Pago validado.';
             }else if(tipo==='error'){
-                texto='Pago inválido.';
+                texto='Pago no valido.';
             }else if(tipo==='warn'){
-                texto='Atención en la validación del pago.';
+                texto='Revise el dato.';
             }else{
-                texto='Pago pendiente de validación.';
+                texto='Pendiente de validacion.';
             }
         }
-        apostillaRapidaDetallePago=texto;
+        apostillaRapidaDetallePago=construirDetalleUxPagoApostilla(tipo,mensajeOriginal,texto);
         setIconoPagoRapido(tipo,texto);
+
+        const form=formApostillaRapida();
+        if(form.length){
+            const icono=form.find('[data-campo="estado-pago-icon"]');
+            if(icono.length){
+                icono.attr('data-detalle-pago',apostillaRapidaDetallePago);
+            }
+        }
     }
 
     function mostrarDetallePagoRapido(evento,elemento){
@@ -451,7 +640,7 @@
         const icono=$(elemento);
         if(!icono.length){ return false; }
 
-        const detalle=(icono.attr('data-detalle-pago') || apostillaRapidaDetallePago || 'Pago pendiente de validación.').toString();
+        const detalle=(icono.attr('data-detalle-pago') || apostillaRapidaDetallePago || 'Pendiente de validacion.').toString();
         const visible=icono.attr('data-popover-visible')==='1';
 
         icono.popover('dispose');
@@ -512,7 +701,7 @@
         form.find('input[name="cl"]').val('');
         form.find('[data-campo="tramite-detectado"]').val('');
         aplicarEtiquetaDocumentoRapida('N° título / resolución');
-        setIconoPagoRapido('pending','Pago pendiente de validación');
+        setIconoPagoRapido('pending','Pendiente de validacion.');
     }
 
     function solicitarValidacionRapidaApostilla(callbackOk,callbackError){
@@ -520,11 +709,13 @@
         if(!form.length){ return; }
 
         const nroControl=obtenerControlRapidoApostilla();
+        const requestSeq=++apostillaRapidaValidacionSeq;
 
         if(nroControl===''){
+            limpiarReintentoRapidoApostilla();
             limpiarEstadoValidacionRapida();
-            estadoRegistroRapido('error','Ingrese el N° de control del pago.');
-            if(typeof callbackError==='function'){ callbackError('Ingrese el N° de control del pago.'); }
+            estadoRegistroRapido('pending','Ingrese N° de control.');
+            if(typeof callbackError==='function'){ callbackError('Ingrese N° de control.'); }
             return;
         }
 
@@ -536,16 +727,34 @@
             dataType:'json',
             data:{
                 _token:form.find('input[name="_token"]').val(),
-                nro_control:parseInt(nroControl,10) || 0
+                nro_control:parseInt(nroControl,10) || 0,
+                ca:(form.find('input[name="ca"]').val() || '').toString().trim()
             },
             success:function(resp){
+                if(requestSeq!==apostillaRapidaValidacionSeq){ return; }
+                if(obtenerControlRapidoApostilla()!==nroControl){ return; }
+
                 if(!(resp && resp.ok)){
-                    const msg=(resp && resp.message) ? resp.message : 'No se pudo validar el pago.';
+                    const msg=(resp && resp.message)
+                        ? resp.message
+                        : 'No se pudo validar el pago. Revise el N° de control e intente nuevamente.';
                     limpiarEstadoValidacionRapida();
-                    estadoRegistroRapido('error',msg);
+                    const esRate=detectarCategoriaPagoUxApostilla('error',msg)==='rate_limit';
+                    if(esRate){
+                        estadoRegistroRapido('error','Demasiadas solicitudes. Reintentando en 15 segundos.');
+                        limpiarReintentoRapidoApostilla();
+                        apostillaRapidaRetryTimer=setTimeout(function(){
+                            if(obtenerControlRapidoApostilla()!==nroControl){ return; }
+                            solicitarValidacionRapidaApostilla();
+                        },15000);
+                    }else{
+                        estadoRegistroRapido('error',msg);
+                    }
                     if(typeof callbackError==='function'){ callbackError(msg); }
                     return;
                 }
+
+                limpiarReintentoRapidoApostilla();
 
                 const codSugerido=(resp.cod_lis_sugerido || '').toString().trim();
                 if(codSugerido!==''){
@@ -554,8 +763,8 @@
                     aplicarEtiquetaDocumentoRapida((resp.documento_label_sugerido || 'N° título / resolución').toString());
                 }else{
                     limpiarEstadoValidacionRapida();
-                    estadoRegistroRapido('error','Boleta inválida: no corresponde a ningún trámite habilitado de apostilla.');
-                    if(typeof callbackError==='function'){ callbackError('Boleta inválida: no se detectó trámite.'); }
+                    estadoRegistroRapido('error','Boleta sin tramite valido.');
+                    if(typeof callbackError==='function'){ callbackError('Boleta sin tramite valido.'); }
                     return;
                 }
 
@@ -571,27 +780,41 @@
                 apostillaRapidaControlValidado=nroControl;
                 apostillaRapidaCodLisDetectado=codSugerido;
 
-                let resumen='Pago validado';
+                let resumen='Pago validado.';
                 if(resp.lis_alias_sugerido){
-                    resumen+=': '+resp.lis_alias_sugerido;
+                    resumen='Pago validado. Tramite: '+resp.lis_alias_sugerido+'.';
                 }
-                resumen+='.';
                 estadoRegistroRapido('ok',resumen);
 
                 if(typeof callbackOk==='function'){ callbackOk(resp); }
             },
             error:function(xhr){
+                if(requestSeq!==apostillaRapidaValidacionSeq){ return; }
+                if(obtenerControlRapidoApostilla()!==nroControl){ return; }
+
                 const msg=(xhr.responseJSON && xhr.responseJSON.message)
                     ? xhr.responseJSON.message
-                    : 'No hay conexión. Intente en unos momentos.';
+                    : 'Sin conexion. Intente nuevamente.';
                 limpiarEstadoValidacionRapida();
-                estadoRegistroRapido('error',msg);
+                const esRate=(xhr.status===429) || detectarCategoriaPagoUxApostilla('error',msg)==='rate_limit';
+                if(esRate){
+                    estadoRegistroRapido('error','Demasiadas solicitudes. Reintentando en 15 segundos.');
+                    limpiarReintentoRapidoApostilla();
+                    apostillaRapidaRetryTimer=setTimeout(function(){
+                        if(obtenerControlRapidoApostilla()!==nroControl){ return; }
+                        solicitarValidacionRapidaApostilla();
+                    },15000);
+                }else{
+                    limpiarReintentoRapidoApostilla();
+                    estadoRegistroRapido('error',msg);
+                }
                 if(typeof callbackError==='function'){ callbackError(msg); }
             }
         });
     }
 
     function programarValidacionRapidaApostilla(){
+        limpiarReintentoRapidoApostilla();
         if(apostillaRapidaTimer!==null){
             clearTimeout(apostillaRapidaTimer);
         }
@@ -621,20 +844,20 @@
                     form.find('input[name="gestion"]').val('');
 
                     limpiarEstadoValidacionRapida();
-                    estadoRegistroRapido('ok','Trámite agregado correctamente. Puede registrar otro valorado.');
+                    estadoRegistroRapido('ok','Tramite agregado.');
                     form.find('input[name="nro_control"]').trigger('focus');
                     return;
                 }
 
                 const msg=(resp && resp.message)
                     ? resp.message
-                    : 'No se pudo registrar el trámite.';
+                    : 'No se pudo registrar el tramite.';
                 estadoRegistroRapido('error',msg);
             },
             error:function(xhr){
                 const msg=(xhr.responseJSON && xhr.responseJSON.message)
                     ? xhr.responseJSON.message
-                    : 'No se pudo registrar el trámite. Intente nuevamente.';
+                    : 'No se pudo registrar el tramite.';
                 estadoRegistroRapido('error',msg);
             }
         });
@@ -649,7 +872,7 @@
         const nroControl=obtenerControlRapidoApostilla();
 
         if(nroControl===''){
-            estadoRegistroRapido('error','Ingrese el N° de control del pago.');
+            estadoRegistroRapido('pending','Ingrese N° de control.');
             return false;
         }
 
@@ -663,13 +886,13 @@
         const intentarGuardar=function(){
             const codLis=(form.find('input[name="cl"]').val() || '').toString().trim();
             if(codLis==='' || codLis!==apostillaRapidaCodLisDetectado){
-                estadoRegistroRapido('error','No se detectó automáticamente un trámite válido para esta boleta.');
+                estadoRegistroRapido('error','No se detecto tramite valido.');
                 return;
             }
 
             const gestionValorado=(form.find('input[data-campo="gestion-api"]').val() || '').toString().trim();
             if(gestionValorado===''){
-                estadoRegistroRapido('error','No se pudo obtener la gestión del pago desde recaudaciones.');
+                estadoRegistroRapido('error','No se obtuvo gestion del pago.');
                 return;
             }
 
@@ -691,8 +914,10 @@
         .off('input.apoControlRapido','#nro_control_rapido')
         .on('input.apoControlRapido','#nro_control_rapido',function(){
             limpiarEstadoValidacionRapida();
+            limpiarReintentoRapidoApostilla();
             if((this.value || '').toString().trim()===''){
-                estadoRegistroRapido('warn','Ingrese el N° de control para detectar el trámite automáticamente.');
+                apostillaRapidaValidacionSeq+=1;
+                estadoRegistroRapido('pending','Ingrese N° de control.');
                 return;
             }
             programarValidacionRapidaApostilla();
@@ -712,7 +937,7 @@
     $(function(){
         const form=formApostillaRapida();
         if(form.length){
-            estadoRegistroRapido('pending','Pago pendiente de validación.');
+            estadoRegistroRapido('pending','Pendiente de validacion.');
         }
     });
 </script>
