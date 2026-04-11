@@ -146,6 +146,7 @@
 
 
         <!-- Nav Item - User Information -->
+        @auth
         <li class="nav-item dropdown no-arrow">
             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                 <span class="mr-2 d-none d-lg-inline text-gray-600 small">{{Auth::user()->name}}</span>
@@ -160,13 +161,13 @@
             <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
                 @can('acceder a reportes - rep')
                 <div class="dropdown-divider"></div>
-                <a class="dropdown-item text-primary" href="{{url('rendimiento/1/'.Auth::user()->id)}}" title="Rendimiento">
+                <a class="dropdown-item text-primary" href="{{url('rendimiento/1/'.Auth::id())}}" title="Rendimiento">
                     <i class="fas fa-chart-line"></i> Rendimiento
                 </a>
                 @endcan
 
                         <div class="dropdown-divider"></div>
-                        <a class="dropdown-item text-primary" href="{{url('editar datos personles/'.Auth::user()->id)}}" title="Rendimiento">
+                        <a class="dropdown-item text-primary" href="{{url('editar datos personles/'.Auth::id())}}" title="Rendimiento">
                             <i class="fas fa-user-edit"></i> Editar Datos
                         </a>
 
@@ -178,8 +179,16 @@
             </div>
 
         </li>
+        @else
+        <li class="nav-item no-arrow">
+            <a class="nav-link text-primary" href="{{ url('login') }}">
+                <i class="fas fa-sign-in-alt"></i> Iniciar sesión
+            </a>
+        </li>
+        @endauth
     </ul>
 </nav>
+@auth
 <div class="modal fade" style="z-index:1500;" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-backdrop="static">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -206,3 +215,4 @@
 <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
     @csrf
 </form>
+@endauth

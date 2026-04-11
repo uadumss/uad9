@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Schema;
 class PersonaController extends Controller
 {
     public function __construct(){
+        $this->middleware('auth');
+
         $this->middleware(['permission:corregir datos personales  ci - adm'], ['only' => ['formulario_corregir','g_persona','buscar_ci','formulario_cuadis','guardar_cuadis']]);
 
         $this->middleware(['permission:corregir duplicados - adm'], ['only' => ['corregir_duplicados','corregir_persona_ci_duplicado','lista_duplicados','lista_duplicado']]);

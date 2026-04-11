@@ -2,9 +2,10 @@
 
 use App\Http\Controllers\PersonaController;
 
-Route::get('corregir datos persona',[PersonaController::class,'f_persona']);
+Route::get('corregir datos persona',[PersonaController::class,'f_persona'])
+    ->middleware(['auth','permission:corregir datos personales  ci - adm|corregir duplicados - adm']);
 
-Route::group(['middleware'=>['permission:corregir duplicados - adm']],function(){
+Route::group(['middleware'=>['auth','permission:corregir duplicados - adm']],function(){
     //======================== CORRECCIONES PERSONA
     Route::get('formulario duplicados',[PersonaController::class,'f_duplicados']);
     Route::get('lista duplicados/{tipo}',[PersonaController::class,'lista_duplicados']);
@@ -16,7 +17,7 @@ Route::group(['middleware'=>['permission:corregir duplicados - adm']],function()
 
 });
 
-Route::group(['middleware'=>['permission:corregir datos personales  ci - adm']],function(){
+Route::group(['middleware'=>['auth','permission:corregir datos personales  ci - adm']],function(){
     Route::get('corregir por ci',[PersonaController::class,'formulario_corregir']);
     Route::post('fe_persona',[PersonaController::class,'buscar_ci']);
     Route::post('g_persona',[PersonaController::class,'g_persona']);
