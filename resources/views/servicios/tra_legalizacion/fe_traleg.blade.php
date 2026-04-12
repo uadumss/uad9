@@ -88,7 +88,7 @@
                                 @foreach($ptaang as $p)
                                     <li class="text-darkr">Ya tiene
                                         @php echo \App\Models\Funciones::tipo_ptaang($p->dtra_ptaang)." Nº " @endphp
-                                        <span class="font-weight-bold">{{$p->dtra_numero."/".$p->dtra_gestion}} </span> por PTAANG</li>
+                                        <span class="font-weight-bold">{{$p->dtra_numero."/".$p->dtra_gestion}} </span> por PTAG</li>
                                 @endforeach
                             @endif
                             @if(sizeof($supletorios)>0)
@@ -618,7 +618,7 @@
                                                 <span class="mr-3"><input type="radio" name="tipo_tramite" value="t"> INTERNO</span>
                                                 <span class="font-weight-bold text-danger mx-2" style="font-size: 20px">|</span>
                                                 @if($tramite->tra_tipo_tramite=='L')
-                                                    <span class="font-weight-bold text-dark font-italic mr-3">PTAG :
+                                                    <span class="font-weight-bold text-dark font-italic mr-3 d-none" data-campo="ptag-wrap">PTAG :
                                                             <span class="badge badge-secondary ml-1" data-campo="ptag-indicador">NO</span>
                                                             <input type="checkbox" name="ptaang" class="d-none" tabindex="-1" aria-hidden="true">
                                                         </span>
@@ -1478,7 +1478,7 @@
             var okInput=formulario.find('[data-campo="validacion-recaudacion-ok"]');
             var estadoBase=construirEstadoPagosBase(formulario);
             okInput.val('0');
-            
+
             if(!control){
                 limpiarTipoLegalizacion(formulario);
                 limpiarPtagSugerido(formulario);
@@ -1554,7 +1554,7 @@
                 estadoLoading.busqueda=construirEstadoPago('busqueda','N° control Búsqueda','loading',null,'Validando','Validando control de busqueda...');
             }
             aplicarEstadoPagosFormulario(formulario,estadoLoading);
-            
+
             $.ajax({
                 url: "{{url('validar valorado recaudaciones/'.$tramite->cod_tra)}}",
                 type: 'POST',
@@ -1598,7 +1598,7 @@
 
                         okInput.val('0');
                         limpiarTipoLegalizacion(formulario);
-                        limpiarPtagSugerido(formulario);
+                        aplicarPtagSugerido(formulario,resp);
                         formulario.find('input[data-campo="preimpreso-api"]').val('');
                         formulario.find('input[data-campo="gestion-api"]').val('');
                         limpiarSitraFormulario(formulario);
@@ -1653,7 +1653,7 @@
                     var respError=xhr.responseJSON || null;
                     okInput.val('0');
                     limpiarTipoLegalizacion(formulario);
-                    limpiarPtagSugerido(formulario);
+                    aplicarPtagSugerido(formulario,respError);
                     formulario.find('input[data-campo="preimpreso-api"]').val('');
                     formulario.find('input[data-campo="gestion-api"]').val('');
                     limpiarSitraFormulario(formulario);
@@ -2189,11 +2189,15 @@
 
         function aplicarPtagSugerido(formulario,resp){
             var check=formulario.find('input[name="ptaang"]');
+            var wrap=formulario.find('[data-campo="ptag-wrap"]');
             if(!check.length){
                 return;
             }
+
             var sugerido=!!(resp && resp.ptag_auto);
+
             if(sugerido){
+                wrap.removeClass('d-none');
                 check.prop('checked',true);
                 check.attr('data-ptag-lock','1');
                 check.attr('title','PTAG detectado desde la cuenta de recaudación');
@@ -2205,10 +2209,12 @@
             check.removeAttr('data-ptag-lock');
             check.removeAttr('title');
             actualizarIndicadorPtag(formulario,false);
+            wrap.addClass('d-none');
         }
 
         function limpiarPtagSugerido(formulario){
             var check=formulario.find('input[name="ptaang"]');
+            var wrap=formulario.find('[data-campo="ptag-wrap"]');
             if(!check.length){
                 return;
             }
@@ -2216,6 +2222,7 @@
             check.removeAttr('title');
             check.prop('checked',false);
             actualizarIndicadorPtag(formulario,false);
+            wrap.addClass('d-none');
         }
 
         function programarValidacionControl(inputControl){

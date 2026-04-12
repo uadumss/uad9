@@ -598,15 +598,15 @@ class TramiteLegalizacionController extends Controller
                         $codtit=$titulo->cod_tit;
                     }
                     $ptaang='';
+                    $tipoPtagActual=$this->resolverTipoPtagDesdeBuscarEn((string)($tramita->tre_buscar_en ?? ''));
                     $ptagAuto=!!($verificacionRecaudacion['ptag_auto'] ?? false);
                     if($ptagAuto){
-                        if($tramita->tre_buscar_en=='da'){
-                            $ptaang='A';
-                        }else{
-                            if($tramita->tre_buscar_en=='db'){
-                                $ptaang='B';
-                            }
+                        $usoPtagPrevio=$this->obtenerUsoPreferencialPtagPorPersona((int)$persona->id_per,$tipoPtagActual);
+                        if($usoPtagPrevio){
+                            throw new \RuntimeException($this->mensajeBeneficioPtagYaUsado($usoPtagPrevio));
                         }
+
+                        $ptaang=$tipoPtagActual;
                     }
                     $supletorio="";
                     if($form['supletorio']=='on'){
@@ -1009,12 +1009,17 @@ class TramiteLegalizacionController extends Controller
             $tieneReintegro
         );
         if(!$validacion['ok']){
+            $resumenControl='No válido';
+            if((string)($validacion['code'] ?? '')==='PTAG_BENEFICIO_YA_USADO'){
+                $resumenControl='PTAG no disponible';
+            }
+
             $estadoPagos['control']=$this->estadoPagoCampo(
                 'control',
                 'Control principal',
                 'error',
                 false,
-                'No válido',
+                $resumenControl,
                 (string)($validacion['message'] ?? 'No se pudo validar el control principal.')
             );
             $validacion['campo_error']='control';
@@ -1763,6 +1768,23 @@ class TramiteLegalizacionController extends Controller
             $nombreCuentaRecaudaciones=strtoupper(trim((string)($fila['cuenta'] ?? '')));
             $tramiteSugerido=$this->buscarTramiteSugeridoDesdeFilaRecaudacion((array)$fila,$tipoTramite);
             $ptagAuto=$this->esCuentaVerifAutentPtag($nombreCuentaRecaudaciones,$tipoTramite,$tramiteSugerido);
+            $tipoPtagDetectado=$this->resolverTipoPtagDesdeBuscarEn((string)($tramiteSugerido->tre_buscar_en ?? ''));
+
+            if($ptagAuto){
+                $usoPtagPrevio=$this->obtenerUsoPreferencialPtagPorPersona($idPer,$tipoPtagDetectado);
+                if($usoPtagPrevio){
+                    $mensajePtag=$this->mensajeBeneficioPtagYaUsado($usoPtagPrevio);
+                    return $this->respuestaErrorValidacionLegalizacion(
+                        'PTAG_BENEFICIO_YA_USADO',
+                        $mensajePtag,
+                        [
+                            'ptag_auto'=>false,
+                            'ptag_beneficio_disponible'=>false,
+                            'ptag_mensaje'=>$mensajePtag,
+                        ]
+                    );
+                }
+            }
 
             if(!$tramiteSugerido){
                 $nombreCuenta=trim((string)$nombreCuentaRecaudaciones);
@@ -1810,6 +1832,10 @@ class TramiteLegalizacionController extends Controller
                 'tipo_legalizacion_sugerido'=>$tipoPagoDistinto ? null : $tramiteSugerido->cod_tre,
                 'nombre_tipo_legalizacion_sugerido'=>$tipoPagoDistinto ? '' : $tramiteSugerido->tre_nombre,
                 'ptag_auto'=>$tipoPagoDistinto ? false : $ptagAuto,
+                'ptag_beneficio_disponible'=>true,
+                'ptag_mensaje'=>$tipoPagoDistinto
+                    ? ''
+                    : ($ptagAuto ? 'Pago preferencial PTAG detectado. Beneficio disponible para este trámite.' : ''),
                 'tipo_pago_origen'=>$tipoPagoDistinto ? (string)$tramiteSugerido->tre_tipo : '',
                 'nombre_tipo_pago_origen'=>$tipoPagoDistinto ? (string)$tramiteSugerido->tre_nombre : '',
                 'permitido_por_reintegro'=>$tipoPagoDistinto,
@@ -2434,6 +2460,76 @@ class TramiteLegalizacionController extends Controller
         }
         
         $mensaje.='. No se puede usar nuevamente.';
+
+        return $mensaje;
+    }
+
+    private function obtenerUsoPreferencialPtagPorPersona(int $idPer, string $tipoPtag=''): ?object
+    {
+        if($idPer<=0){
+            return null;
+        }
+
+        $tipoPtagFiltro=strtoupper(trim($tipoPtag));
+
+        $query=DB::table('d_tramitas as dt')
+            ->join('tramitas as t','dt.cod_tra','=','t.cod_tra')
+            ->leftJoin('tramites as tr','dt.cod_tre','=','tr.cod_tre')
+            ->where('t.id_per','=',$idPer)
+            ->whereRaw("UPPER(COALESCE(dt.dtra_ptaang,'')) IN ('A','B')")
+            ->select('dt.dtra_ptaang','dt.dtra_numero','dt.dtra_gestion','dt.dtra_numero_tramite','dt.dtra_gestion_tramite','tr.tre_nombre')
+            ->orderByDesc('dt.cod_dtra');
+
+        if($tipoPtagFiltro!==''){
+            $query->whereRaw("UPPER(COALESCE(dt.dtra_ptaang,'')) = ?",[$tipoPtagFiltro]);
+        }
+
+        return $query->first();
+    }
+
+    private function resolverTipoPtagDesdeBuscarEn(string $buscarEn): string
+    {
+        $valor=strtolower(trim($buscarEn));
+        if(in_array($valor,['da','da-ant'],true)){
+            return 'A';
+        }
+        if(in_array($valor,['db','db-ant'],true)){
+            return 'B';
+        }
+
+        return '';
+    }
+
+    private function mensajeBeneficioPtagYaUsado(?object $usoPtag): string
+    {
+        if(!$usoPtag){
+            return 'El beneficio PTAG para este tipo de trámite ya fue utilizado anteriormente. Para nuevas legalizaciones de este tipo debe realizar el pago completo.';
+        }
+
+        $tipoPtag=strtoupper(trim((string)($usoPtag->dtra_ptaang ?? '')));
+        $tipoDocumento='documento';
+        if($tipoPtag==='A'){
+            $tipoDocumento='diploma académico';
+        }elseif($tipoPtag==='B'){
+            $tipoDocumento='diploma de bachiller';
+        }
+
+        $numero=trim((string)($usoPtag->dtra_numero ?? ''));
+        $gestion=trim((string)($usoPtag->dtra_gestion ?? ''));
+        $tramite=trim((string)($usoPtag->tre_nombre ?? ''));
+
+        $referencia='';
+        if($numero!=='' && $gestion!==''){
+            $referencia=' N° '.$numero.'/'.$gestion;
+        }elseif($numero!==''){
+            $referencia=' N° '.$numero;
+        }
+
+        $mensaje='El beneficio PTAG para '.$tipoDocumento.' ya fue utilizado'.$referencia.'.';
+        if($tramite!==''){
+            $mensaje.=' Trámite registrado: '.$tramite.'.';
+        }
+        $mensaje.=' Para nuevas legalizaciones de este tipo debe realizar el pago completo (sin tarifa PTAG).';
 
         return $mensaje;
     }
