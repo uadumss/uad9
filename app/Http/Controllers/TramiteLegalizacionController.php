@@ -325,15 +325,9 @@ class TramiteLegalizacionController extends Controller
         }
 
         /* cuadis = 'c' hace referencia a los del cuadis que no pagan valorados*/
+        $cuadisSolicitado=$form->input('cuadis')==='on';
         $cuadis='';
-        if($form['cuadis']!='on'){
-            if($form['control']==''){
-                \Session::flash('error','El número de control del valorado es requerido');
-                return redirect('datos tramite legalizacion/'.$form['ctra']);
-            }
-        }else{
-            $cuadis='c';
-        }
+
         if(!isset($form['cdtra'])){
             $datosTramita=Tramita::find($form['ctra']);
             if(!$datosTramita || !$datosTramita->id_per){
@@ -354,6 +348,11 @@ class TramiteLegalizacionController extends Controller
             }
 
             $persona=Persona::find($datosTramita->id_per);
+            if(!$persona){
+                \Session::flash('error','No se encontró la persona asociada al trámite.');
+                return redirect('datos tramite legalizacion/'.$form['ctra']);
+            }
+
             $controlPrincipal=trim((string)($form['control'] ?? ''));
             $preimpreso=trim((string)($form['reimpresion'] ?? ''));
             $reintegroControl=trim((string)($form['reintegro'] ?? ''));
@@ -363,6 +362,29 @@ class TramiteLegalizacionController extends Controller
             $verificacionRecaudacion=['ok'=>true];
             $verificacionReintegro=['ok'=>true];
             $verificacionBusqueda=['ok'=>true];
+
+            $esPersonaCuadis=$this->esPersonaRegistradaCuadis((string)($persona->per_ci ?? ''),(int)($persona->id_per ?? 0));
+            if($cuadisSolicitado && !$esPersonaCuadis){
+                \Session::flash('error','No se puede usar CUADIS: la persona no está registrada en el padrón CUADIS.');
+                return redirect('datos tramite legalizacion/'.$form['ctra']);
+            }
+            if($esPersonaCuadis){
+                $cuadis='c';
+            }
+
+            if($cuadis!='c' && $controlPrincipal===''){
+                \Session::flash('error','El número de control del valorado es requerido');
+                return redirect('datos tramite legalizacion/'.$form['ctra']);
+            }
+
+            if($cuadis==='c'){
+                $controlPrincipal='';
+                $preimpreso='';
+                $reintegroControl='';
+                $tieneReintegro=false;
+                $busquedaControl='';
+                $tieneBusqueda=false;
+            }
 
             // Validación obligatoria contra recaudaciones para valorados pagados
             if($cuadis!='c'){
@@ -576,8 +598,8 @@ class TramiteLegalizacionController extends Controller
                         $codtit=$titulo->cod_tit;
                     }
                     $ptaang='';
-                    //return $form['ptaang'];
-                    if($form['ptaang']=='on'){
+                    $ptagAuto=!!($verificacionRecaudacion['ptag_auto'] ?? false);
+                    if($ptagAuto){
                         if($tramita->tre_buscar_en=='da'){
                             $ptaang='A';
                         }else{
@@ -1178,6 +1200,36 @@ class TramiteLegalizacionController extends Controller
         }
 
         return trim(implode(' ',$partes));
+    }
+
+    private function esPersonaRegistradaCuadis(string $ci,int $idPer=0): bool
+    {
+        $ci=trim($ci);
+        if($ci==='' && $idPer<=0){
+            return false;
+        }
+
+        if(!Schema::hasTable('personas_cuadis')){
+            return false;
+        }
+
+        $query=DB::table('personas_cuadis')
+            ->where(function($q){
+                $q->whereNull('pcu_hab')
+                    ->orWhere('pcu_hab','=',true);
+            });
+
+        if($idPer>0){
+            $query->where('id_per','=',$idPer);
+            return $query->exists();
+        }
+
+        if($ci!==''){
+            $query->join('personas as p','p.id_per','=','personas_cuadis.id_per')
+                ->where('p.per_ci','=',$ci);
+        }
+
+        return $query->exists();
     }
 
     private function resolverSeleccionTipoLegalizacionSegura(

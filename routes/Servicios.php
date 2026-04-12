@@ -52,6 +52,8 @@ Route::group(['middleware'=>['permission:acceso al sistema - srv']],function(){
     //Route::post('generar numero certificacion',[TramiteLegalizacionController::class,'generar_numero_certificacion']);
     //==================APDOERADO=========================
     //Route::get('datos_per/{ci}',[PersonaController::class,'datos_per']);
+    Route::get('estado cuadis/{ci}',[PersonaController::class,'estado_cuadis']);
+    Route::get('estado cuadis persona/{id_per}',[PersonaController::class,'estado_cuadis_persona']);
 
     Route::get('datos apoderado/{cod_tra}',[TramiteLegalizacionController::class,'f_apoderado'])->middleware(['permission:editar apoderado traleg - srv']);
     Route::post('guardar apoderado/',[TramiteLegalizacionController::class,'g_apoderado'])->middleware(['permission:editar apoderado traleg - srv']);

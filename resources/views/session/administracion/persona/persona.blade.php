@@ -42,6 +42,10 @@
                         <button class="nav-link active" id="home-tab" data-toggle="tab" data-target="#panel_persona" type="button" role="tab"
                                 aria-controls="home" aria-selected="true" onclick="cargarDatos('{{url('corregir por ci')}}','panel_persona')">Datos personales</button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="cuadis-tab" data-toggle="tab" data-target="#panel_persona" type="button" role="tab"
+                                aria-controls="cuadis" aria-selected="false" onclick="cargarDatos('{{url('formulario cuadis')}}','panel_persona')">Registro CUADIS</button>
+                    </li>
                     @endcan
                     @can('corregir duplicados - adm')
                     <li class="nav-item" role="presentation">

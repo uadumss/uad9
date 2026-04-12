@@ -48,7 +48,7 @@
                     @can('busqueda - dyt')
                         <a class="collapse-item" href="{{url('buscar_t')}}"><i class="fas fa-search"></i> Buscar título</a>
                     @endcan
-                    <a class="collapse-item" href="{{url('lista importaciones/'.Auth::user()->id)}}"><i class="fas fa-upload"></i> Importar títulos</a>
+                    <a class="collapse-item" href="{{url('lista importaciones/'.Auth::id())}}"><i class="fas fa-upload"></i> Importar títulos</a>
                     <a class="collapse-item" href="{{url('reportes/')}}"><i class="fas fa-chart-area"></i> Reportes</a>
 
                 </div>
@@ -83,7 +83,7 @@
                         <a class="collapse-item" href="{{url('buscar resolucion')}}"><i class="fas fa-search"></i> Búsquedas</a>
                     @endcan
                     @can('importar - rr')
-                    <a class="collapse-item" href="{{url('lista importaciones resolucion/'.Auth::user()->id)}}"><i class="fas fa-upload"></i> Importar Resoluciones</a>
+                    <a class="collapse-item" href="{{url('lista importaciones resolucion/'.Auth::id())}}"><i class="fas fa-upload"></i> Importar Resoluciones</a>
                     @endcan
                     @can('acceder a temas - rr')
                     <a class="collapse-item" href="{{url('temas interes/')}}"><i class="fas fa-bookmark"></i> Temas de interés</a>
@@ -269,6 +269,7 @@
         	</a>
 	</li>
 	@endcan
+    @auth
     @if(Auth::user()->responsable=='t')
         <li class="nav-item">
             <a class="nav-link collapsed text-dark" href="#" data-toggle="collapse" data-target="#collapseProgramacion" aria-expanded="true" aria-controls="collapseUtilities">
@@ -284,6 +285,7 @@
             </div>
         </li>
     @endif
+    @endauth
     @can('acceder a reportes - rep')
     <li class="nav-item">
         <a class="nav-link collapsed text-dark" href="#" data-toggle="collapse" data-target="#collapseTareas" aria-expanded="true" aria-controls="collapseUtilities">
