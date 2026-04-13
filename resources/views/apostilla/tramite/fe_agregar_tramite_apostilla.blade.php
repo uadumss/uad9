@@ -1,4 +1,4 @@
-<div class="modal-content border-bottom-primary shadow-lg">
+<div class="modal-content border-bottom-primary shadow-lg apo-add-tramite-content">
         <div class="modal-header bg-verde-oscuro">
             <h5 class="modal-title font-weight-bolder text-white" id="exampleModalLabel"><i class="fas fa-book"></i> Apostilla </h5>
             <button class="close text-white" type="button" data-dismiss="modal" aria-label="Close">
@@ -18,8 +18,8 @@
                 <h6 class="text-white text-center">Formulario para agregar tramite de apostilla</h6>
             </div>
             <hr class="sidebar-divider"/>
-            <div class="row apo-edit-layout">
-                <div class="col-md-3 apo-col-left">
+            <div class="row apo-edit-layout apo-edit-layout--two-col">
+                <div class="col-md-4 apo-col-left">
 
                    <div class="shadow-sm p-2 col-md-7 centrar_bloque">
                         <span class="text-primary font-weight-bold"> TRÁMITE</span>
@@ -79,8 +79,8 @@
                     <br/>
                 </div>
                 <!-- ================================LISTA DE DOCUMENTOS====================================-->
-                <div class="col-md-6 pl-3 border shadow pt-2 apo-col-center">
-                    <span class="text-danger font-italic font-weight-bold" style="font-size: 16px">* Caracteristicas hhhhhdel trámite</span>
+                <div class="col-md-8 pl-3 border shadow pt-2 apo-col-center">
+                    <span class="text-danger font-italic font-weight-bold" style="font-size: 16px">* Caracteristicas del trámite</span>
                     <br/>
                     <br/>
                     <br/>
@@ -142,21 +142,6 @@
                     <br/>
 
                 </div>
-                <div class="col-md-3 pt-2 apo-col-right">
-                    <span class="text-danger font-italic font-weight-bold" style="font-size: 16px">* Resumen del trámite</span>
-                    <div class="border rounded p-2 bg-light mt-1" style="font-size: 12px;">
-                        <div><span class="font-weight-bold">Tipo:</span> {{$apostilla->lis_alias}}</div>
-                        <div><span class="font-weight-bold">Cuenta:</span> {{$apostilla->lis_cuenta}}</div>
-                        <div><span class="font-weight-bold">Monto:</span> Bs. {{$apostilla->lis_monto}}</div>
-                        <div><span class="font-weight-bold">N° UAD:</span> {{$tramite_apostilla->apos_numero}}</div>
-                    </div>
-                    <div class="mt-2 border rounded p-2">
-                        <span class="font-weight-bold text-primary">Nota</span>
-                        <div class="text-muted" style="font-size: 12px;">
-                            Verifica el número de control y la gestión antes de guardar.
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
         <div class="modal-footer">
@@ -203,6 +188,7 @@
     }
 
     function solicitarValidacionRecaudacion(form,nroControl,codLis,onOk,onFail){
+        const codApos=(form.find('input[name="ca"]').val() || '').toString().trim();
         $.ajax({
             url:'{{ url("validar valorado apostilla/$tramite_apostilla->cod_apos") }}',
             type:'POST',
@@ -210,7 +196,8 @@
             data:{
                 _token:form.find('input[name="_token"]').val(),
                 nro_control:parseInt(nroControl,10) || 0,
-                cod_lis:parseInt(codLis,10) || 0
+                cod_lis:parseInt(codLis,10) || 0,
+                ca:codApos
             },
             success:function(resp){
                 if(resp && resp.ok){

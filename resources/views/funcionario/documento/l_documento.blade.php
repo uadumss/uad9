@@ -81,7 +81,10 @@
                             </span> |
                             <span class="text-primary font-italic">Enviado a la DPA : </span>
                             <span class="text-dark font-weight-bold">
-                                @if($funcionario->fun_env_dpa === true || $funcionario->fun_env_dpa === 1 || $funcionario->fun_env_dpa === 't')
+                                @php
+                                    $estadoDpaFuncionario = $funcionario->fun_env_dpa === true || $funcionario->fun_env_dpa === 1 || $funcionario->fun_env_dpa === 't';
+                                @endphp
+                                @if($estadoDpaFuncionario && !$hasDpaCandidates)
                                     <i class='fas fa-check-circle text-success'></i>
                                 @else
                                     <i class='fas fa-minus-circle text-danger'></i>
@@ -184,13 +187,20 @@
                                                             echo date('d/m/Y',strtotime($d->doc_fecha_emision));
                                                         }
                                                     ?>
+                                                    </span> |
+                                                    <span class="text-primary font-italic">Número de Registro : </span><span class="text-dark">
+                                                    {{$d->doc_numero_registro ?? 'N/A'}}
                                                     </span>
                                                 </span>
-
+                                                @if($d->doc_tesis_titulo)
+                                                    <br/><div style="font-size: 0.85em; margin-top: 5px; padding-top: 5px; border-top: 1px solid #e3e6f0;">
+                                                        <span class="text-primary font-italic">Tesis : </span><span class="text-dark font-weight-bold">{{$d->doc_tesis_titulo}}</span>
+                                                    </div>
+                                                @endif
                                             </td>
                                             <td>{{$d->doc_grado}}</td>
                                             <td>{{$d->doc_universidad}}</td>
-                                            <td><span class="badge badge-{{ \App\Helpers\UniversidadHelper::getTipoUniversidad($d->doc_universidad) === 'Pública' ? 'success' : (\App\Helpers\UniversidadHelper::getTipoUniversidad($d->doc_universidad) === 'Privada' ? 'warning' : 'info') }}">{{ \App\Helpers\UniversidadHelper::getTipoUniversidad($d->doc_universidad) }}</span></td>
+                                            <td><span class="badge {{ \App\Helpers\UniversidadHelper::getColorBadge(\App\Helpers\UniversidadHelper::getTipoUniversidad($d->doc_universidad)) }}">{{ \App\Helpers\UniversidadHelper::getTipoUniversidad($d->doc_universidad) }}</span></td>
                                             <td>
                                                 @if($d->doc_edu_superior=='t')
                                                     <span class="bg-success text-white rounded font-italic pr-1 pl-1 font-weight-bold"> Docencia </span>

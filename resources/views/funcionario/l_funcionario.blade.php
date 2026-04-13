@@ -70,7 +70,7 @@
                         </div>
 
                         <form id="formBuscador" action="{{ url('listar funcionario/'.$funcionario) }}" method="GET" class="form-inline mt-3 mb-3">
-                            <input type="text" id="buscadorFuncionarios" name="q" value="{{ old('q', $search ?? '') }}" class="form-control mr-2" placeholder="🔍 Buscar funcionario..." autocomplete="off" autofocus>
+                            <input type="text" id="buscadorFuncionarios" name="q" value="{{ old('q', $search ?? '') }}" class="form-control mr-2" placeholder="🔍 Buscar funcionario..." autocomplete="off">
                             <button type="submit" class="btn btn-sm btn-primary">Buscar</button>
                         </form>
 
@@ -97,6 +97,8 @@
                                     @foreach($funcionarios as $f)
                                         @php
                                             $hasPendingObs = $f->has_pending_obs === true || $f->has_pending_obs === 1 || $f->has_pending_obs === 't';
+                                            $tieneDocumentosRegistrados = $f->has_documents === true || $f->has_documents === 1 || $f->has_documents === 't';
+                                            $mostrarAsteriscoSinDocumentos = $f->fun_folder!='t' && !$tieneDocumentosRegistrados;
                                         @endphp
                                         @if(!$hasPendingObs)
                                             <tr>
@@ -113,7 +115,7 @@
 
                                             </td>
                                             <td>{!! \App\Helpers\UniversidadHelper::highlightText($f->fun_nombre, $search) !!}
-                                                @if($f->fun_folder!='t')
+                                                @if($mostrarAsteriscoSinDocumentos)
                                                     <span class="bg-danger p-1 rounded text-white">*</span>
                                                 @endif
                                             </td>
@@ -323,15 +325,9 @@
             // Buscador de funcionarios
             const buscadorInput = document.getElementById('buscadorFuncionarios');
             const formBuscador = document.getElementById('formBuscador');
-            
-            // Colocar el cursor al final al cargar la página
-            if (buscadorInput.value) {
-                buscadorInput.focus();
-                buscadorInput.setSelectionRange(buscadorInput.value.length, buscadorInput.value.length);
-            }
-            
+
             // Si el campo se vacía, recargar automáticamente
-            buscadorInput.addEventListener('keyup', function() {
+            buscadorInput.addEventListener('input', function() {
                 if (this.value.length === 0) {
                     formBuscador.submit();
                 }

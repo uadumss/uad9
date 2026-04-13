@@ -8,27 +8,23 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     *
-     * @return void
      */
-    public function up()
+    public function up(): void
     {
-        Schema::create('universidades', function (Blueprint $table) {
-            $table->id();
+        Schema::connection('pgsql')->create('universidades', function (Blueprint $table) {
+            $table->bigIncrements('id');
             $table->string('nombre')->unique();
             $table->string('sigla')->unique();
-            $table->enum('tipo', ['Pública', 'Privada', 'Extranjera', 'Otro'])->default('Extranjera');
+            $table->string('tipo')->default('Extranjera');
             $table->timestamps();
         });
     }
 
     /**
      * Reverse the migrations.
-     *
-     * @return void
      */
-    public function down()
+    public function down(): void
     {
-        Schema::dropIfExists('universidades');
+        Schema::connection('pgsql')->dropIfExists('universidades');
     }
 };
