@@ -915,6 +915,7 @@ class FuncionarioController extends Controller
         session()->forget('conformidad_start_time_' . $codFun);
 
         \Session::flash('exito', 'Formulario de conformidad guardado correctamente.');
+        \Session::flash('descargar_conformidad', $codFcon);
         return redirect(url('listar documentos funcionario/' . $codFun));
     }
 
@@ -993,9 +994,28 @@ class FuncionarioController extends Controller
 
         $templateProcessor->setValue('nombre',      $funcionario->fun_nombre ?? '');
         $templateProcessor->setValue('lugar:trabajo', $formulario->lugar_trabajo ?? '');
+        $templateProcessor->setValue('carrera',     $formulario->carrera ?? '');
         $templateProcessor->setValue('telefono',    $funcionario->fun_telefonos ?? '');
         $templateProcessor->setValue('email',       $funcionario->fun_email ?? '');
         $templateProcessor->setValue('fecha',       $fecha);
+
+        $documentos = \App\Models\Documento::where('cod_fcon', $cod_fcon)->orderBy('doc_tipo')->get();
+        $templateProcessor->setValue('cantidad_documentos', count($documentos) + 1);
+        $valoresDocs = [];
+        foreach ($documentos as $doc) {
+            $valoresDocs[] = [
+                'doc_tipo' => htmlspecialchars($doc->doc_tipo ?? ''),
+                'doc_titulo' => htmlspecialchars($doc->doc_titulo ?? ''),
+            ];
+        }
+        
+        if (count($valoresDocs) > 0) {
+            $templateProcessor->cloneRowAndSetValues('doc_tipo', $valoresDocs);
+        } else {
+            $templateProcessor->cloneRowAndSetValues('doc_tipo', [
+                ['doc_tipo' => 'Sin documentos añadidos', 'doc_titulo' => '']
+            ]);
+        }
 
         $nombreArchivo = 'conformidad-' . ($formulario->codigo ?? $cod_fcon) . '.docx';
         $rutaTemporal  = storage_path('app/temp/' . $nombreArchivo);

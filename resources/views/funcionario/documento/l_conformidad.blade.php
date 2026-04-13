@@ -87,15 +87,31 @@
                                             <label>Lugar de trabajo</label>
                                             <select class="form-control" id="lugarTrabajo" name="lugarTrabajo" required>
                                                 <option value="">Seleccione lugar de trabajo</option>
-                                                <option value="Facultad de Economía" {{ old('lugarTrabajo') == 'Facultad de Economía' ? 'selected' : '' }}>Facultad de Economía</option>
-                                                <option value="Facultad de Arquitectura" {{ old('lugarTrabajo') == 'Facultad de Arquitectura' ? 'selected' : '' }}>Facultad de Arquitectura</option>
-                                                <option value="Facultad de Derecho" {{ old('lugarTrabajo') == 'Facultad de Derecho' ? 'selected' : '' }}>Facultad de Derecho</option>
-                                                <option value="Facultad de Ciencias Jurídicas" {{ old('lugarTrabajo') == 'Facultad de Ciencias Jurídicas' ? 'selected' : '' }}>Facultad de Ciencias Jurídicas</option>
-                                                <option value="Facultad de Ingeniería" {{ old('lugarTrabajo') == 'Facultad de Ingeniería' ? 'selected' : '' }}>Facultad de Ingeniería</option>
-                                                <option value="Facultad de Humanidades" {{ old('lugarTrabajo') == 'Facultad de Humanidades' ? 'selected' : '' }}>Facultad de Humanidades</option>
+                                                <option value="FACULTAD DE CIENCIAS AGRÍCOLAS Y PECUARIAS" {{ old('lugarTrabajo') == 'FACULTAD DE CIENCIAS AGRÍCOLAS Y PECUARIAS' ? 'selected' : '' }}>FACULTAD DE CIENCIAS AGRÍCOLAS Y PECUARIAS</option>
+                                                <option value="FACULTAD DE CIENCIAS VETERINARIAS" {{ old('lugarTrabajo') == 'FACULTAD DE CIENCIAS VETERINARIAS' ? 'selected' : '' }}>FACULTAD DE CIENCIAS VETERINARIAS</option>
+                                                <option value="FACULTAD DE CIENCIAS FARMACÉUTICAS Y BIOQUÍMICAS" {{ old('lugarTrabajo') == 'FACULTAD DE CIENCIAS FARMACÉUTICAS Y BIOQUÍMICAS' ? 'selected' : '' }}>FACULTAD DE CIENCIAS FARMACÉUTICAS Y BIOQUÍMICAS</option>
+                                                <option value="FACULTAD DE CIENCIAS ECONÓMICAS" {{ old('lugarTrabajo') == 'FACULTAD DE CIENCIAS ECONÓMICAS' ? 'selected' : '' }}>FACULTAD DE CIENCIAS ECONÓMICAS</option>
+                                                <option value="FACULTAD DE DESARROLLO RURAL Y TERRITORIAL &quot;DR. JORGE TRIGO ANDIA &quot;" {{ old('lugarTrabajo') == 'FACULTAD DE DESARROLLO RURAL Y TERRITORIAL "DR. JORGE TRIGO ANDIA "' ? 'selected' : '' }}>FACULTAD DE DESARROLLO RURAL Y TERRITORIAL "DR. JORGE TRIGO ANDIA "</option>
+                                                <option value="FACULTAD DE ODONTOLOGÍA" {{ old('lugarTrabajo') == 'FACULTAD DE ODONTOLOGÍA' ? 'selected' : '' }}>FACULTAD DE ODONTOLOGÍA</option>
+                                                <option value="FACULTAD DE MEDICINA" {{ old('lugarTrabajo') == 'FACULTAD DE MEDICINA' ? 'selected' : '' }}>FACULTAD DE MEDICINA</option>
+                                                <option value="FACULTAD DE ARQUITECTURA Y CIENCIAS DEL HÁBITAT" {{ old('lugarTrabajo') == 'FACULTAD DE ARQUITECTURA Y CIENCIAS DEL HÁBITAT' ? 'selected' : '' }}>FACULTAD DE ARQUITECTURA Y CIENCIAS DEL HÁBITAT</option>
+                                                <option value="FACULTAD DE HUMANIDADES Y CIENCIAS DE LA EDUCACIÓN" {{ old('lugarTrabajo') == 'FACULTAD DE HUMANIDADES Y CIENCIAS DE LA EDUCACIÓN' ? 'selected' : '' }}>FACULTAD DE HUMANIDADES Y CIENCIAS DE LA EDUCACIÓN</option>
+                                                <option value="FACULTAD DE CIENCIAS JURÍDICAS Y POLÍTICAS" {{ old('lugarTrabajo') == 'FACULTAD DE CIENCIAS JURÍDICAS Y POLÍTICAS' ? 'selected' : '' }}>FACULTAD DE CIENCIAS JURÍDICAS Y POLÍTICAS</option>
+                                                <option value="FACULTAD DE CIENCIAS Y TECNOLOGÍA" {{ old('lugarTrabajo') == 'FACULTAD DE CIENCIAS Y TECNOLOGÍA' ? 'selected' : '' }}>FACULTAD DE CIENCIAS Y TECNOLOGÍA</option>
+                                                <option value="FACULTAD POLITÉCNICA DEL VALLE ALTO" {{ old('lugarTrabajo') == 'FACULTAD POLITÉCNICA DEL VALLE ALTO' ? 'selected' : '' }}>FACULTAD POLITÉCNICA DEL VALLE ALTO</option>
+                                                <option value="FACULTAD DE CIENCIAS SOCIALES" {{ old('lugarTrabajo') == 'FACULTAD DE CIENCIAS SOCIALES' ? 'selected' : '' }}>FACULTAD DE CIENCIAS SOCIALES</option>
+                                                <option value="FACULTAD DE ENFERMERÍA" {{ old('lugarTrabajo') == 'FACULTAD DE ENFERMERÍA' ? 'selected' : '' }}>FACULTAD DE ENFERMERÍA</option>
+                                                <option value="DIRECCION ADMINISTRATIVA Y FINANCIERA" {{ old('lugarTrabajo') == 'DIRECCION ADMINISTRATIVA Y FINANCIERA' ? 'selected' : '' }}>DIRECCION ADMINISTRATIVA Y FINANCIERA</option>
+                                                <option value="DIRECCION DE INVESTIGACION" {{ old('lugarTrabajo') == 'DIRECCION DE INVESTIGACION' ? 'selected' : '' }}>DIRECCION DE INVESTIGACION</option>
+                                                <option value="DIRECCION DE BIENESTAR ESTUDIANTIL" {{ old('lugarTrabajo') == 'DIRECCION DE BIENESTAR ESTUDIANTIL' ? 'selected' : '' }}>DIRECCION DE BIENESTAR ESTUDIANTIL</option>
+                                                <option value="DIRECCION DE RR.II. Y CONVENIOS" {{ old('lugarTrabajo') == 'DIRECCION DE RR.II. Y CONVENIOS' ? 'selected' : '' }}>DIRECCION DE RR.II. Y CONVENIOS</option>
+                                                <option value="SECRETARIA GENERAL" {{ old('lugarTrabajo') == 'SECRETARIA GENERAL' ? 'selected' : '' }}>SECRETARIA GENERAL</option>
+                                                <option value="DIRECCION DE PLANIFICACION Y PROYECTOS" {{ old('lugarTrabajo') == 'DIRECCION DE PLANIFICACION Y PROYECTOS' ? 'selected' : '' }}>DIRECCION DE PLANIFICACION Y PROYECTOS</option>
+                                                <option value="ESCUELA UNIVERSITARIA DE POSTGRADO" {{ old('lugarTrabajo') == 'ESCUELA UNIVERSITARIA DE POSTGRADO' ? 'selected' : '' }}>ESCUELA UNIVERSITARIA DE POSTGRADO</option>
+                                                <option value="Otros" {{ old('lugarTrabajo') == 'Otros' ? 'selected' : '' }}>Otros</option>
                                             </select>
                                         </div>
-                                        <div class="form-group col-md-6">
+                                        <div class="form-group col-md-6" id="carreraContainer">
                                             <label>Carrera</label>
                                             <input type="text" class="form-control" id="carrera" name="carrera" value="{{ old('carrera') }}" placeholder="Ingrese la carrera" required>
                                         </div>
@@ -375,11 +391,66 @@ function cargarDatos(ruta,panel){
     });
 }
 
+const facultadesCarreras = {
+    "FACULTAD DE CIENCIAS AGRÍCOLAS Y PECUARIAS": ["Ingeniería Agronómica", "Ingeniería Agrícola"],
+    "FACULTAD DE CIENCIAS VETERINARIAS": ["Medicina Veterinaria y Zootecnia"],
+    "FACULTAD DE CIENCIAS FARMACÉUTICAS Y BIOQUÍMICAS": ["Bioquímica y Farmacia"],
+    "FACULTAD DE CIENCIAS ECONÓMICAS": ["Economía", "Administración de Empresas", "Contaduría Pública", "Ingeniería Comercial", "Ingeniería Financiera"],
+    "FACULTAD DE DESARROLLO RURAL Y TERRITORIAL \"DR. JORGE TRIGO ANDIA \"": ["Ingeniería en Desarrollo Rural", "Gestión de Cuencas", "Desarrollo Territorial"],
+    "FACULTAD DE ODONTOLOGÍA": ["Odontología"],
+    "FACULTAD DE MEDICINA": ["Medicina", "Fisioterapia y Kinesiología", "Nutrición y Dietética"],
+    "FACULTAD DE ARQUITECTURA Y CIENCIAS DEL HÁBITAT": ["Arquitectura", "Diseño Gráfico y Comunicación Visual", "Planificación del Territorio", "Turismo"],
+    "FACULTAD DE HUMANIDADES Y CIENCIAS DE LA EDUCACIÓN": ["Ciencias de la Educación", "Comunicación Social", "Psicología", "Lingüística Aplicada", "Trabajo Social", "Música"],
+    "FACULTAD DE CIENCIAS JURÍDICAS Y POLÍTICAS": ["Derecho", "Ciencias Políticas"],
+    "FACULTAD DE CIENCIAS Y TECNOLOGÍA": ["Ing. Civil", "Ing. Alimentos", "Ing. Industrial", "Ing. Mecánica", "Ing. Eléctrica", "Ing. Electrónica", "Ing. Química", "Ing. Sistemas", "Ing. Informática", "Matemáticas", "Física", "Biología"],
+    "FACULTAD POLITÉCNICA DEL VALLE ALTO": ["T.S. en Construcción Civil", "T.S. Mecánica Automotriz", "T.S. Mecánica Industrial", "T.S. Química Industrial", "T.S. Industria de Alimentos"],
+    "FACULTAD DE CIENCIAS SOCIALES": ["Sociología", "Antropología"],
+    "FACULTAD DE ENFERMERÍA": ["Lic. Enfermeria"]
+};
+
+function renderCarreraField() {
+    const lugarTrabajoEl = document.getElementById('lugarTrabajo');
+    const container = document.getElementById('carreraContainer');
+    if (!container) return;
+    
+    const carreraInput = document.getElementById('carrera');
+    let currentValue = carreraInput ? carreraInput.value : '';
+    
+    const oldCarrera = {!! json_encode(old('carrera', '')) !!};
+    const savedCarrera = localStorage.getItem('conformidad_carrera');
+    
+    if (!currentValue && oldCarrera) currentValue = oldCarrera;
+    if (!currentValue && savedCarrera) currentValue = savedCarrera;
+
+    const facultad = lugarTrabajoEl ? lugarTrabajoEl.value : '';
+    let html = '<label>Carrera</label>';
+    
+    if (facultadesCarreras[facultad]) {
+        html += '<select class="form-control" id="carrera" name="carrera" required>';
+        html += '<option value="">Seleccione una carrera</option>';
+        facultadesCarreras[facultad].forEach(function(c) {
+            let selected = (c === currentValue) ? 'selected' : '';
+            html += '<option value="' + c + '" ' + selected + '>' + c + '</option>';
+        });
+        html += '</select>';
+    } else {
+        html += '<input type="text" class="form-control" id="carrera" name="carrera" value="' + currentValue + '" placeholder="Ingrese la carrera" required>';
+    }
+    
+    container.innerHTML = html;
+    
+    const newCarreraInput = document.getElementById('carrera');
+    if (newCarreraInput) {
+        newCarreraInput.addEventListener(newCarreraInput.tagName === 'SELECT' ? 'change' : 'input', saveFormState);
+    }
+}
+
 // Función para guardar el estado del formulario en localStorage
 function saveFormState() {
     const lugarTrabajo = document.getElementById('lugarTrabajo').value;
     const carrera = document.getElementById('carrera').value;
-    const observaciones = document.getElementById('observaciones').value;
+    const observacionesEl = document.getElementById('observaciones');
+    const observaciones = observacionesEl ? observacionesEl.value : '';
     
     localStorage.setItem('conformidad_lugarTrabajo', lugarTrabajo);
     localStorage.setItem('conformidad_carrera', carrera);
@@ -396,6 +467,9 @@ function restoreFormState() {
             lugarTrabajoEl.value = lugarTrabajo;
         }
     }
+    
+    renderCarreraField();
+    
     const carreraEl = document.getElementById('carrera');
     if (!carreraEl.value) {
         const carrera = localStorage.getItem('conformidad_carrera');
@@ -404,7 +478,7 @@ function restoreFormState() {
         }
     }
     const observacionesEl = document.getElementById('observaciones');
-    if (!observacionesEl.value) {
+    if (observacionesEl && !observacionesEl.value) {
         const observaciones = localStorage.getItem('conformidad_observaciones');
         if (observaciones) {
             observacionesEl.value = observaciones;
@@ -429,9 +503,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Guardar estado al cambiar los campos
-    document.getElementById('lugarTrabajo').addEventListener('change', saveFormState);
-    document.getElementById('carrera').addEventListener('input', saveFormState);
-    document.getElementById('observaciones').addEventListener('input', saveFormState);
+    document.getElementById('lugarTrabajo').addEventListener('change', function() {
+        renderCarreraField();
+        saveFormState();
+    });
+    
+    const obsEl = document.getElementById('observaciones');
+    if (obsEl) {
+        obsEl.addEventListener('input', saveFormState);
+    }
     
     // Limpiar estado al enviar el formulario (solo si se envía, pero no si hay errores)
     // Nota: La limpieza se hace solo si hay éxito, arriba

@@ -8,6 +8,15 @@
             {!! session('exito') !!}
         </div>
     @endif
+    @if(Session::has('descargar_conformidad'))
+        <script>
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    window.location.href = "{{ url('descargar conformidad/' . session('descargar_conformidad')) }}";
+                }, 500);
+            });
+        </script>
+    @endif
     @if(Session::has('error'))
         <div class="alert alert-danger alert-dismissible">
             <button type="button" class="close" data-dismiss="alert" aria-label="close">
