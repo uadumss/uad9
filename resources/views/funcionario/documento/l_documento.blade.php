@@ -56,6 +56,7 @@
                            onclick="cargarDatos('{{url('fe_documento/0/'.$cod_fun)}}','panel_documento')">+ Documento</a>
                         <a href="" class="btn btn-sm btn-primary float-right mr-1" data-toggle="modal" data-target="#documento"
                            onclick="cargarDatos('{{url('fe_documento titularidad/0/'.$cod_fun)}}','panel_documento')">+ Titularidad</a>
+                        <a href="{{ url('l_conformidad/'.$cod_fun) }}" class="btn btn-sm btn-success float-right mr-1"><i class="fas fa-file-alt"></i> + Formulario de conformidad</a>
                     </div>
                 </div>
             </div>
@@ -323,6 +324,68 @@
                                 @else
                                     <div class="alert alert-info mt-3 mb-0">No hay envios registrados a la DPA para este funcionario.</div>
                                 @endif
+
+                                <hr class="sidebar-divider">
+                                <div class="bg-primary centrar_bloque p-1 col-md-3 rounded shadow mt-4">
+                                    <h5 class="text-white text-center">Formularios de Conformidad</h5>
+                                </div>
+                                <div class="card mt-3">
+                                    <div class="card-body">
+                                        @if(isset($formularios) && $formularios->count() > 0)
+                                            <table class="table table-sm table-hover" width="100%" cellspacing="0" style="font-size: 0.85em" id="tablaFormularios">
+                                                <thead>
+                                                    <tr class="bg-gray-600 text-white">
+                                                        <th>Código</th>
+                                                        <th>Fecha</th>
+                                                        <th>Lugar Trabajo</th>
+                                                        <th>Carrera</th>
+                                                        <th>Observaciones</th>
+                                                        <th>Documentos asociados</th>
+                                                        <th>Acciones</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($formularios as $formulario)
+                                                        <tr>
+                                                            <td>{{ $formulario->codigo }}</td>
+                                                            <td>{{ $formulario->created_at ? date('d/m/Y H:i', strtotime($formulario->created_at)) : '' }}</td>
+                                                            <td>{{ $formulario->lugar_trabajo }}</td>
+                                                            <td>{{ $formulario->carrera }}</td>
+                                                            <td>{{ $formulario->observaciones }}</td>
+                                                            <td>
+                                                                @if($formulario->documentos->count() > 0)
+                                                                    <ul class="pl-3 mb-0">
+                                                                        @foreach($formulario->documentos as $doc)
+                                                                            <li>{{ $doc->doc_tipo }} - {{ $doc->doc_titulo }}</li>
+                                                                        @endforeach
+                                                                    </ul>
+                                                                @else
+                                                                    <span class="text-muted">Sin documentos</span>
+                                                                @endif
+                                                            </td>
+                                                            <td>
+                                                                {{--<a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_formulario_conformidad/'.$formulario->cod_fcon)}}','panel_documento')"
+                                                                   title="Editar formulario"><i class="fas fa-edit"></i>
+                                                                </a>--}}
+                                                                <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_eliminar_conformidad/'.$formulario->cod_fcon)}}','panel_documento')"
+                                                                   title="Eliminar formulario"><i class="text-danger fas fa-trash-alt"></i>
+                                                                </a>
+                                                                <a href="{{ url('descargar conformidad/' . $formulario->cod_fcon) }}"
+                                                                   class="btn btn-success btn-circle btn-sm"
+                                                                   title="Descargar formulario .docx">
+                                                                    <i class="fas fa-file-word"></i>
+                                                                </a>
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        @else
+                                            <div class="alert alert-info mb-0">No hay formularios de conformidad registrados para este funcionario.</div>
+                                        @endif
+                                    </div>
+                                </div>
+
                     </div>
                 </div>
             </div>
