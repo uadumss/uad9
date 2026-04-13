@@ -97,15 +97,21 @@
                                              <span class="text-primary">{{$i}}</span>
                                         </th>
                                         <td class="text-left">
-                                                @php   $tipo_tramite['L']='LEGALIZACIÓN'; $tipo_tramite['LC']='bg-info text-white';
+                                                @php
+                                                    $tipo_tramite['L']='LEGALIZACIÓN'; $tipo_tramite['LC']='bg-info text-white';
                                                     $tipo_tramite['F']='CONFRONTACIÓN';$tipo_tramite['FC']='bg-danger text-white';
                                                     $tipo_tramite['C']='CERTIFICACIÓN';$tipo_tramite['CC']='bg-warning text-dark';
                                                     $tipo_tramite['B']='BÚSQUEDA';$tipo_tramite['BC']='bg-success text-white';
                                                     $tipo_tramite['A']='NO-ATENTADO';$tipo_tramite['AC']='bg-primary text-white';
                                                     $tipo_tramite['E']='CONSEJO';$tipo_tramite['EC']='bg-secondary text-white';
+                                                    $tipo_tramite['R']='REINTEGRO';$tipo_tramite['RC']='bg-dark text-white';
+
+                                                    $tipoActual=(string)($t['tre_tipo'] ?? '');
+                                                    $etiquetaTipo=$tipo_tramite[$tipoActual] ?? ('TIPO '.$tipoActual);
+                                                    $claseTipo=$tipo_tramite[$tipoActual.'C'] ?? 'bg-dark text-white';
                                                 @endphp
-                                                <span class="font-italic font-weight-bold rounded pl-2 pr-2 {{$tipo_tramite[$t['tre_tipo'].'C']}}">
-                                                {{$tipo_tramite[$t['tre_tipo']]}}
+                                                <span class="font-italic font-weight-bold rounded pl-2 pr-2 {{$claseTipo}}">
+                                                {{$etiquetaTipo}}
                                             </span>
                                         </td>
                                         <td class="text-left">{{$t['tre_nombre']}} </td>

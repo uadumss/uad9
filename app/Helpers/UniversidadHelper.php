@@ -11,6 +11,21 @@ class UniversidadHelper
      */
     public static function getTipoUniversidad($nombreUniversidad)
     {
+        if (empty($nombreUniversidad)) {
+            return null;
+        }
+
+        // Primero, buscar en la base de datos
+        try {
+            $universidad = \App\Models\Universidad::where('sigla', $nombreUniversidad)->first();
+            if ($universidad) {
+                return $universidad->tipo;
+            }
+        } catch (\Exception $e) {
+            // Si hay error, continuar con búsqueda en arrays
+        }
+
+        // Si no está en BD, buscar en los arrays existentes para compatibilidad
         $universidadesPublicas = [
             'Universidad Mayor de San Simón' => 'UMSS',
             'UMSS' => 'UMSS',
@@ -217,6 +232,8 @@ class UniversidadHelper
                 return 'badge-warning';
             case 'Extranjera':
                 return 'badge-info';
+            case 'Otro':
+                return 'badge-primary';
             default:
                 return 'badge-secondary';
         }

@@ -1,6 +1,12 @@
 <form action="{{url('g_documento/')}}" method="POST" id="form_importar" enctype="multipart/form-data">
     @csrf
 
+    <style>
+        input[name="tesis"] {
+            accent-color: #4e73df;
+        }
+    </style>
+
     <div class="modal-content border-bottom-primary">
         <div class="modal-header bg-primary ">
             <h5 class="modal-title font-weight-bolder text-white" id="exampleModalLabel"><i class="fas fa-university"></i> Facultad</h5>
@@ -30,8 +36,6 @@
                                     <td class="border-bottom border-dark">
                                         <select class="form-control border-0 form-control-sm" name="tipo" id="tipo">
                                             <option value="DIPLOMA DE BACHILLER">DIPLOMA DE BACHILLER</option>
-                                            <option value="TECNICO MEDIO">TECNICO MEDIO</option>
-                                            <option value="TECNICO SUPERIOR">TECNICO SUPERIOR</option>
                                             <option value="DIPLOMA ACADEMICO">DIPLOMA ACADEMICO</option>
                                             <option value="TITULO PROFESIONAL">TITULO PROFESIONAL</option>
                                             <option value="DIPLOMADO">DIPLOMADO</option>
@@ -69,20 +73,19 @@
                                         <select class="form-control form-control-sm border-0" name="universidad" id="universidad">
                                             <option value="">Seleccionar...</option>
                                             @php
-                                                $universidades = \App\Models\Universidad::orderByRaw("CASE WHEN tipo='Pública' THEN 1 WHEN tipo='Privada' THEN 2 WHEN tipo='Extranjera' THEN 3 ELSE 4 END")->orderBy('nombre')->get();
-                                                $tiposProcessados = [];
+                                                $universidades = \App\Models\Universidad::orderByRaw("CASE WHEN tipo='Pública' THEN 1 WHEN tipo='Privada' THEN 2 WHEN tipo='Extranjera' THEN 3 WHEN tipo='Otro' THEN 4 ELSE 5 END")->orderBy('nombre')->get();
+                                                $universidadesPorTipo = [];
+                                                foreach ($universidades as $uni) {
+                                                    $universidadesPorTipo[$uni->tipo][] = $uni;
+                                                }
                                             @endphp
-                                            @foreach($universidades as $uni)
-                                                @if(!in_array($uni->tipo, $tiposProcessados))
-                                                    @if(!empty($tiposProcessados))
-                                                        </optgroup>
-                                                    @endif
-                                                    <optgroup label="Universidad {{ $uni->tipo }}">
-                                                    @php $tiposProcessados[] = $uni->tipo; @endphp
-                                                @endif
-                                                <option value="{{ $uni->sigla }}">{{ $uni->nombre }} ({{ $uni->sigla }})</option>
-                                                @if($loop->last)
-                                                        </optgroup>
+                                            @foreach(['Pública' => 'Universidad Pública', 'Privada' => 'Universidad Privada', 'Extranjera' => 'Universidad Extranjera', 'Otro' => 'Otros (CEUB, Instituto, Ministerio de Educación, etc)'] as $tipo => $label)
+                                                @if(isset($universidadesPorTipo[$tipo]))
+                                                    <optgroup label="{{ $label }}">
+                                                        @foreach($universidadesPorTipo[$tipo] as $uni)
+                                                            <option value="{{ $uni->sigla }}">{{ $uni->nombre }} ({{ $uni->sigla }})</option>
+                                                        @endforeach
+                                                    </optgroup>
                                                 @endif
                                             @endforeach
                                         </select>
@@ -92,6 +95,12 @@
                                     <th class="text-right font-italic text-dark">Nro Reválida:</th>
                                     <td class="border-bottom border-dark">
                                         <input type="text" class="form-control form-control-sm border-0" name="revalida" id="revalida" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="text-right font-italic text-dark">Número de Registro:</th>
+                                    <td class="border-bottom border-dark">
+                                        <input type="text" class="form-control form-control-sm border-0" name="numero_registro" id="numero_registro" />
                                     </td>
                                 </tr>
                             </table>
@@ -120,6 +129,18 @@
                                     <th class="text-right font-italic text-dark">Documento de la UMSS:</th>
                                     <td class="border-bottom border-dark">
                                         <input type="checkbox" name="umss"/>
+                                    </td>
+                                </tr>
+                                <tr id="fila_titulo_tesis" style="display: none;">
+                                    <th class="text-right font-italic text-dark">Título de Tesis:</th>
+                                    <td class="border-bottom border-dark">
+                                        <input type="text" class="form-control form-control-sm border-0" name="tesis_titulo" id="tesis_titulo" placeholder="Ej: Análisis de sistemas de información"/>
+                                    </td>
+                                </tr>
+                                <tr id="fila_es_tesis" style="display: none;">
+                                    <th class="text-right font-italic text-dark">Es tesis:</th>
+                                    <td class="border-bottom border-dark">
+                                        <input type="checkbox" name="tesis" id="tesis"/>
                                     </td>
                                 </tr>
                                 <tr>
@@ -172,8 +193,6 @@
 
                                             <option value="{{$documento->doc_tipo}}">{{$documento->doc_tipo}}</option>
                                             <option value="DIPLOMA DE BACHILLER">DIPLOMA DE BACHILLER</option>
-                                            <option value="TECNICO MEDIO">TECNICO MEDIO</option>
-                                            <option value="TECNICO SUPERIOR">TECNICO SUPERIOR</option>
                                             <option value="DIPLOMA ACADEMICO">DIPLOMA ACADEMICO</option>
                                             <option value="TITULO PROFESIONAL">TITULO PROFESIONAL</option>
                                             <option value="DIPLOMADO">DIPLOMADO</option>
@@ -211,24 +230,43 @@
                                         <select class="form-control form-control-sm border-0" name="universidad" id="universidad">
                                             <option value="{{ $documento->doc_universidad }}">{{ $documento->doc_universidad }}</option>
                                             @php
-                                                $universidades = \App\Models\Universidad::orderByRaw("CASE WHEN tipo='Pública' THEN 1 WHEN tipo='Privada' THEN 2 WHEN tipo='Extranjera' THEN 3 ELSE 4 END")->orderBy('nombre')->get();
-                                                $tiposProcessados = [];
+                                                $universidades = \App\Models\Universidad::orderByRaw("CASE WHEN tipo='Pública' THEN 1 WHEN tipo='Privada' THEN 2 WHEN tipo='Extranjera' THEN 3 WHEN tipo='Otro' THEN 4 ELSE 5 END")->orderBy('nombre')->get();
+                                                $universidadesPorTipo = [
+                                                    'Pública' => [],
+                                                    'Privada' => [],
+                                                    'Extranjera' => [],
+                                                    'Otro' => []
+                                                ];
+                                                foreach ($universidades as $uni) {
+                                                    if ($uni->sigla !== $documento->doc_universidad && isset($universidadesPorTipo[$uni->tipo])) {
+                                                        $universidadesPorTipo[$uni->tipo][] = $uni;
+                                                    }
+                                                }
                                             @endphp
-                                            @foreach($universidades as $uni)
-                                                @if($uni->sigla !== $documento->doc_universidad)
-                                                    @if(!in_array($uni->tipo, $tiposProcessados))
-                                                        @if(!empty($tiposProcessados))
-                                                            </optgroup>
-                                                        @endif
-                                                        <optgroup label="Universidad {{ $uni->tipo }}">
-                                                        @php $tiposProcessados[] = $uni->tipo; @endphp
-                                                    @endif
+                                            <optgroup label="Universidad Pública">
+                                                @forelse($universidadesPorTipo['Pública'] as $uni)
                                                     <option value="{{ $uni->sigla }}">{{ $uni->nombre }} ({{ $uni->sigla }})</option>
-                                                    @if($loop->last)
-                                                            </optgroup>
-                                                    @endif
-                                                @endif
-                                            @endforeach
+                                                @empty
+                                                @endforelse
+                                            </optgroup>
+                                            <optgroup label="Universidad Privada">
+                                                @forelse($universidadesPorTipo['Privada'] as $uni)
+                                                    <option value="{{ $uni->sigla }}">{{ $uni->nombre }} ({{ $uni->sigla }})</option>
+                                                @empty
+                                                @endforelse
+                                            </optgroup>
+                                            <optgroup label="Universidad Extranjera">
+                                                @forelse($universidadesPorTipo['Extranjera'] as $uni)
+                                                    <option value="{{ $uni->sigla }}">{{ $uni->nombre }} ({{ $uni->sigla }})</option>
+                                                @empty
+                                                @endforelse
+                                            </optgroup>
+                                            <optgroup label="Otros (CEUB, Instituto, Ministerio de Educación, etc)">
+                                                @forelse($universidadesPorTipo['Otro'] as $uni)
+                                                    <option value="{{ $uni->sigla }}">{{ $uni->nombre }} ({{ $uni->sigla }})</option>
+                                                @empty
+                                                @endforelse
+                                            </optgroup>
                                         </select>
                                     </td>
                                 </tr>
@@ -236,6 +274,12 @@
                                     <th class="text-right font-italic text-dark">Nro Reválida:</th>
                                     <td class="border-bottom border-dark">
                                         <input type="text" class="form-control form-control-sm border-0" value="{{$documento->doc_numero_revalida}}" name="revalida" id="revalida" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="text-right font-italic text-dark">Número de Registro:</th>
+                                    <td class="border-bottom border-dark">
+                                        <input type="text" class="form-control form-control-sm border-0" value="{{$documento->doc_numero_registro ?? ''}}" name="numero_registro" id="numero_registro" />
                                     </td>
                                 </tr>
                             </table>
@@ -283,6 +327,22 @@
                                             <input type="checkbox" name="umss" checked/>
                                         @else
                                             <input type="checkbox" name="umss"/>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr id="fila_titulo_tesis_edit" style="display: none;">
+                                    <th class="text-right font-italic text-dark">Título de Tesis:</th>
+                                    <td class="border-bottom border-dark">
+                                        <input type="text" class="form-control form-control-sm border-0" name="tesis_titulo" id="tesis_titulo_edit" value="{{$documento->doc_tesis_titulo ?? ''}}"/>
+                                    </td>
+                                </tr>
+                                <tr id="fila_es_tesis_edit" style="display: none;">
+                                    <th class="text-right font-italic text-dark">Es tesis:</th>
+                                    <td class="border-bottom border-dark">
+                                        @if($documento->doc_tesis=='t')
+                                            <input type="checkbox" name="tesis" id="tesis_edit" checked/>
+                                        @else
+                                            <input type="checkbox" name="tesis" id="tesis_edit"/>
                                         @endif
                                     </td>
                                 </tr>
@@ -346,4 +406,124 @@ $('#form_importar').on('submit', function(e) {
         }
     });
 });
+    // Función para mostrar/ocultar campos de tesis según el tipo de documento
+    function toggleTesisCampos() {
+        const tiposConTesis = ['DIPLOMADO', 'MAESTRIA', 'ESPECIALIDAD', 'DOCTORADO'];
+        
+        // Obtener todos los selects de tipo en la página
+        const selects = document.querySelectorAll('select[name="tipo"]');
+        
+        selects.forEach(selectElement => {
+            const valor = selectElement.value;
+            const mostrar = tiposConTesis.includes(valor);
+            
+            // Buscar las filas en el mismo formulario/contenedor
+            const form = selectElement.closest('form');
+            
+            if (form) {
+                const filaTitleNew = form.querySelector('#fila_titulo_tesis');
+                const filaCheckNew = form.querySelector('#fila_es_tesis');
+                const filaTitleEdit = form.querySelector('#fila_titulo_tesis_edit');
+                const filaCheckEdit = form.querySelector('#fila_es_tesis_edit');
+                
+                if (filaTitleNew) filaTitleNew.style.display = mostrar ? '' : 'none';
+                if (filaCheckNew) filaCheckNew.style.display = mostrar ? '' : 'none';
+                if (filaTitleEdit) filaTitleEdit.style.display = mostrar ? '' : 'none';
+                if (filaCheckEdit) filaCheckEdit.style.display = mostrar ? '' : 'none';
+            }
+        });
+    }
+    
+    // Función para marcar automáticamente checkbox si hay título de tesis
+    function autoCheckTesis(inputElement) {
+        const form = inputElement.closest('form');
+        if (form) {
+            // Buscar checkbox en el mismo formulario
+            let checkbox = null;
+            
+            if (inputElement.id === 'tesis_titulo') {
+                checkbox = form.querySelector('input#tesis[type="checkbox"]');
+            } else if (inputElement.id === 'tesis_titulo_edit') {
+                checkbox = form.querySelector('input#tesis_edit[type="checkbox"]');
+            }
+            
+            if (checkbox) {
+                const hasTítulo = inputElement.value.trim() !== '';
+                checkbox.checked = hasTítulo;
+            }
+        }
+    }
+    
+    // Función para validar el desmarcado del checkbox
+    function validateTesisCheckbox(checkboxElement) {
+        const form = checkboxElement.closest('form');
+        if (form) {
+            // Buscar el input de título de tesis
+            let tituloInput = null;
+            
+            if (checkboxElement.id === 'tesis') {
+                tituloInput = form.querySelector('input#tesis_titulo[type="text"]');
+            } else if (checkboxElement.id === 'tesis_edit') {
+                tituloInput = form.querySelector('input#tesis_titulo_edit[type="text"]');
+            }
+            
+            if (tituloInput && tituloInput.value.trim() !== '' && !checkboxElement.checked) {
+                // El usuario intenta desmarcar pero hay un título, no lo permitimos
+                checkboxElement.checked = true;
+                alert('No puedes desmarcar "Es tesis" si hay un título de tesis ingresado. Primero borra el título de tesis.');
+            }
+        }
+    }
+    
+    // Ejecutar cuando se carga el documento
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleTesisCampos();
+        attachEventListeners();
+    });
+    
+    // Función para asignar event listeners
+    function attachEventListeners() {
+        // Event listeners para cambios en tipo
+        document.querySelectorAll('select[name="tipo"]').forEach(select => {
+            select.removeEventListener('change', toggleTesisCampos);
+            select.addEventListener('change', toggleTesisCampos);
+        });
+        
+        // Event listeners para cambios en título de tesis
+        document.querySelectorAll('input[name="tesis_titulo"]').forEach(input => {
+            input.removeEventListener('input', function() {
+                autoCheckTesis(this);
+            });
+            input.addEventListener('input', function() {
+                autoCheckTesis(this);
+            });
+        });
+        
+        // Event listeners para validar cambios en checkbox de tesis
+        document.querySelectorAll('input[name="tesis"]').forEach(checkbox => {
+            checkbox.removeEventListener('change', function() {
+                validateTesisCheckbox(this);
+            });
+            checkbox.addEventListener('change', function() {
+                validateTesisCheckbox(this);
+            });
+        });
+    }
+    
+    // Usar MutationObserver para detectar cuando se carga nuevo contenido en el modal
+    const modalPanel = document.getElementById('panel_documento');
+    if (modalPanel) {
+        const observer = new MutationObserver(function(mutations) {
+            // Pequeño delay para asegurar que el DOM esté completamente actualizado
+            setTimeout(function() {
+                toggleTesisCampos();
+                attachEventListeners();
+            }, 100);
+        });
+        
+        observer.observe(modalPanel, {
+            childList: true,
+            subtree: true
+        });
+    }
 </script>

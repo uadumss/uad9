@@ -1,7 +1,6 @@
-<div class="modal-dialog modal-lg" role="document" id="panel_docleg">
-    <form method="POST" action="{{url("entrega tramite apostilla")}}">
-        @csrf
-    <div class="modal-content border-bottom-primary shadow-lg">
+<form method="POST" action="{{url("entrega tramite apostilla")}}">
+    @csrf
+    <div class="modal-content border-bottom-primary shadow-lg apo-entrega-content">
         <div class="modal-header alert-primary">
             <h5 class="modal-title font-weight-bolder text-dark" id="exampleModalLabel"><i class="fas fa-hand-point-right"></i> Entregas de trámites</h5>
             <button class="close text-white" type="button" data-dismiss="modal" aria-label="Close">
@@ -46,5 +45,4 @@
             <button class="btn btn-sm btn-primary">Entregar</button>
         </div>
     </div>
-    </form>
-</div>
+</form>
