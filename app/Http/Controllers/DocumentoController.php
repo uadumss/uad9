@@ -7,7 +7,6 @@ use App\Imports\ImportarTitularidad;
 use App\Models\Carrera;
 use App\Models\D_observacion;
 use App\Models\Documento;
-use App\Models\FormularioConformidad;
 use App\Models\Funcionario;
 use App\Models\Titularidad;
 use App\Services\GenerarPDFDpaXMLService;
@@ -116,12 +115,7 @@ class DocumentoController extends Controller
         $pendingObsDocIds = $this->getPendingObservationDocIdsByFuncionario($cod_fun);
         $hasDpaCandidates = $hasDocumentosHabilitados;
 
-        $formularios = FormularioConformidad::with(['documentos'])
-            ->where('cod_fun', $cod_fun)
-            ->orderByDesc('created_at')
-            ->get();
-
-        return view('funcionario.documento.l_documento',compact('funcionario','documentos','cod_fun','titularidades','enviosDpa','enviosDpaDocumentos','hasDpaCandidates','hasPreviousDpaEnvio','requiresEduSuperior','pendingObsDocIds','formularios'));
+        return view('funcionario.documento.l_documento',compact('funcionario','documentos','cod_fun','titularidades','enviosDpa','enviosDpaDocumentos','hasDpaCandidates','hasPreviousDpaEnvio','requiresEduSuperior','pendingObsDocIds'));
     }
     public function fe_documento($cod_doc,$cod_fun){
         $documento='';
@@ -214,24 +208,8 @@ class DocumentoController extends Controller
                 $nombreArchivoPdf = 'documento-temp-' . date('Y-m-d_H-i-s') . '-' . $nombreOriginal . '.' . $extension;
             }
             
-            $codFcon = null;
-            if ($form->has('cf')) {
-                $startTime = session('conformidad_start_time_' . $form['cf']);
-                if ($startTime) {
-                    $formulario = DB::table('doc_adm.formularios_conformidad')
-                        ->where('cod_fun', $form['cf'])
-                        ->where('created_at', '>=', $startTime)
-                        ->orderByDesc('cod_fcon')
-                        ->first();
-                    if ($formulario) {
-                        $codFcon = $formulario->cod_fcon;
-                    }
-                }
-            }
-
             $documento=Documento::create([
                 'cod_fun'=>$form['cf'],
-                'cod_fcon'=>$codFcon,
                 'doc_titulo'=>$form['titulo'],
                 'doc_tipo'=>$form['tipo'],
                 'doc_gestion'=>$form['gestion'],
@@ -272,7 +250,7 @@ class DocumentoController extends Controller
             
             \Session::flash('exito','Se ha creado exitosamente el documento');
         }
-        return redirect('l_conformidad/'.$form['cf']);
+        return redirect('listar documentos funcionario/'.$form['cf']);
     }
     public function fe_eli_documento($cod_d,$cod_fun){
         $documento="";
@@ -414,7 +392,7 @@ class DocumentoController extends Controller
 
                 \Session::flash('exito','Se ha guardado exitosamente el documento de titularidad');
             }
-        return redirect('l_conformidad/'.$form['cf']);
+        return redirect('listar documentos funcionario/'.$form['cf']);
     }
     public function fe_eli_titularidad($cod_dt,$cod_fun){
         $titularidad="";
@@ -483,7 +461,7 @@ class DocumentoController extends Controller
     private function verifyRequiredDocuments($cod_fun, $funcionario){
         $required = $this->getRequiredDocuments($funcionario);
         $documentos = Documento::where('cod_fun', '=', $cod_fun)->get();
-        
+
         foreach($required as $req){
             if(isset($req['type'])){
                 $found = $documentos->filter(function($doc) use ($req){

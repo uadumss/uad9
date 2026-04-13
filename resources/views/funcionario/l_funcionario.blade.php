@@ -55,7 +55,10 @@
                         <a href="" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#docente"
                         onclick="cargarDatos('{{url('fe_funcionario/0')}}','panel_docente')">+ Funcionario</a>
                         @endcan
-                                            
+
+                        <a href="" class="btn btn-sm btn-success" data-toggle="modal" data-target="#conformidad"
+                        onclick="abrirFormularioConformidad()"><i class="fas fa-file-alt"></i> + Formulario de conformidad</a>
+
                         <a href="" class="btn btn-sm btn-outline-info text-dark" data-toggle="modal" data-target="#nuevaImportacion"><i class="fas fa-upload"> Nueva importación</i></a>
                     </div>
                 </div>

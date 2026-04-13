@@ -6,7 +6,6 @@ use App\Exports\ExportFuncionarioConsulta;
 use App\Helpers\UniversidadHelper;
 use App\Models\Carrera;
 use App\Models\Documento;
-use App\Models\FormularioConformidad;
 use App\Models\Funcionario;
 use App\Models\Nacionalidad;
 use App\Models\Titularidad;
@@ -15,7 +14,6 @@ use App\Models\Universidad;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Excel;
-use PhpOffice\PhpWord\TemplateProcessor;
 
 class FuncionarioController extends Controller
 {
@@ -867,192 +865,21 @@ class FuncionarioController extends Controller
      */
     public function guardar_conformidad(Request $request)
     {
-        $request->validate([
-            'cod_fun' => 'required|integer',
-            'lugarTrabajo' => 'required|string|max:255',
-            'carrera' => 'required|string|max:255',
-            'observaciones' => 'nullable|string',
-        ]);
-
         $codFun = $request->input('cod_fun');
         $observaciones = $request->input('observaciones', '');
-        $lugarTrabajo = $request->input('lugarTrabajo');
-        $carrera = $request->input('carrera');
+
+        if (!$codFun) {
+            return redirect()->back()->with('error', 'Debe seleccionar un funcionario');
+        }
 
         $funcionario = Funcionario::find($codFun);
         if (!$funcionario) {
             return redirect()->back()->with('error', 'Funcionario no encontrado');
         }
 
-        $startTime = session('conformidad_start_time_' . $codFun, now());
-
-        $contador = DB::table('doc_adm.formularios_conformidad')->count() + 1;
-
-        $codigo = 'DOC-' . str_pad($contador, 5, '0', STR_PAD_LEFT);
-
-        $codFcon = DB::table('doc_adm.formularios_conformidad')->insertGetId([
-            'cod_fun' => $codFun,
-            'codigo' => $codigo,
-            'lugar_trabajo' => $lugarTrabajo,
-            'carrera' => $carrera,
-            'observaciones' => $observaciones,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ], 'cod_fcon');
-
-        DB::table('doc_adm.documentos')
-            ->where('cod_fun', $codFun)
-            ->whereNull('cod_fcon')
-            ->where('created_at', '>=', $startTime)
-            ->update(['cod_fcon' => $codFcon]);
-
-        DB::table('doc_adm.titularidads')
-            ->where('cod_fun', $codFun)
-            ->whereNull('cod_fcon')
-            ->where('created_at', '>=', $startTime)
-            ->update(['cod_fcon' => $codFcon]);
-
-        session()->forget('conformidad_start_time_' . $codFun);
-
-        \Session::flash('exito', 'Formulario de conformidad guardado correctamente.');
-        return redirect(url('listar documentos funcionario/' . $codFun));
-    }
-
-    /**
-     * Mostrar formulario de conformidad para un funcionario
-     */
-    public function l_conformidad($cod_fun)
-    {
-        $funcionario = Funcionario::find($cod_fun);
-        if (!$funcionario) {
-            return redirect()->back()->with('error', 'Funcionario no encontrado');
-        }
-        $startTime = session('conformidad_start_time_' . $cod_fun, now());
-        session(['conformidad_start_time_' . $cod_fun => $startTime]);
-
-        $titularidades = DB::table('doc_adm.titularidads')
-            ->leftJoin('carreras','titularidads.cod_car','=','carreras.cod_car')
-            ->leftJoin('facultads','carreras.cod_fac','=','facultads.cod_fac')
-            ->select('titularidads.*','car_nombre','fac_nombre','fac_abreviacion')
-            ->where('cod_fun','=',$cod_fun)
-            ->where('titularidads.created_at', '>=', $startTime)
-            ->get();
-        $documentos = Documento::where('cod_fun','=',$cod_fun)
-            ->where('created_at', '>=', $startTime)
-            ->whereNull('cod_fcon')
-            ->orderBy('doc_tipo')->get();
-        $pendingObsDocIds = DB::table('doc_adm.d_observacions as o')
-            ->join('doc_adm.documentos as d', 'o.cod_doc', '=', 'd.cod_doc')
-            ->where('d.cod_fun', '=', $cod_fun)
-            ->where(function($query){
-                $query->whereNull('o.od_solucion')
-                    ->orWhereRaw("TRIM(o.od_solucion) = ''");
-            })
-            ->pluck('o.cod_doc')
-            ->unique()
-            ->toArray();
-
-        $formularios = FormularioConformidad::with(['documentos', 'titularidades'])
-            ->where('cod_fun', $cod_fun)
-            ->orderByDesc('created_at')
-            ->get();
-
-        $backUrl = url()->previous();
-        if ($backUrl === url('l_conformidad/'.$cod_fun) || str_contains($backUrl, 'guardar-conformidad')) {
-            $backUrl = url('listar funcionario/' . ($funcionario->fun_doc_adm === 'D' ? 'docente' : 'administrativo'));
-        }
-
-        return view('funcionario.documento.l_conformidad', compact('funcionario', 'titularidades', 'documentos', 'pendingObsDocIds', 'cod_fun', 'backUrl', 'formularios'));
-    }
-
-    /**
-     * Descargar el formulario de conformidad como .docx con los datos llenos
-     */
-    public function descargar_conformidad($cod_fcon)
-    {
-        $formulario = FormularioConformidad::find($cod_fcon);
-        if (!$formulario) {
-            return redirect()->back()->with('error', 'Formulario no encontrado.');
-        }
-
-        $funcionario = Funcionario::find($formulario->cod_fun);
-        if (!$funcionario) {
-            return redirect()->back()->with('error', 'Funcionario no encontrado.');
-        }
-
-        $plantilla = storage_path('app/plantillas/formulario_conformidad.docx');
-        if (!file_exists($plantilla)) {
-            return redirect()->back()->with('error', 'La plantilla del formulario no se encontró.');
-        }
-
-        $templateProcessor = new TemplateProcessor($plantilla);
-
-        $fecha = $formulario->created_at
-            ? \Carbon\Carbon::parse($formulario->created_at)->format('d/m/Y')
-            : date('d/m/Y');
-
-        $templateProcessor->setValue('nombre',      $funcionario->fun_nombre ?? '');
-        $templateProcessor->setValue('lugar:trabajo', $formulario->lugar_trabajo ?? '');
-        $templateProcessor->setValue('telefono',    $funcionario->fun_telefonos ?? '');
-        $templateProcessor->setValue('email',       $funcionario->fun_email ?? '');
-        $templateProcessor->setValue('fecha',       $fecha);
-
-        $nombreArchivo = 'conformidad-' . ($formulario->codigo ?? $cod_fcon) . '.docx';
-        $rutaTemporal  = storage_path('app/temp/' . $nombreArchivo);
-
-        if (!file_exists(storage_path('app/temp'))) {
-            mkdir(storage_path('app/temp'), 0755, true);
-        }
-
-        $templateProcessor->saveAs($rutaTemporal);
-
-        return response()->download($rutaTemporal, $nombreArchivo)->deleteFileAfterSend(true);
-    }
-
-    public function fe_formulario_conformidad($cod_fcon){
-        $formulario = FormularioConformidad::find($cod_fcon);
-        return view('funcionario.documento.fe_formulario_conformidad', compact('formulario'));
-    }
-
-    public function editar_conformidad(Request $request){
-        $request->validate([
-            'cod_fcon' => 'required|integer',
-            'lugar_trabajo' => 'required|string|max:255',
-            'carrera' => 'required|string|max:255',
-            'observaciones' => 'nullable|string',
-        ]);
-
-        $formulario = FormularioConformidad::find($request->cod_fcon);
-        if($formulario){
-            $formulario->lugar_trabajo = $request->lugar_trabajo;
-            $formulario->carrera = $request->carrera;
-            $formulario->observaciones = $request->observaciones;
-            // Eloquent automatically updates updated_at and leaves created_at alone.
-            $formulario->save();
-
-            \Session::flash('exito','El formulario se actualizó correctamente');
-        } else {
-            \Session::flash('error','Formulario no encontrado');
-        }
-        return redirect()->back();
-    }
-
-    public function fe_eli_conformidad($cod_fcon){
-        $formulario = FormularioConformidad::find($cod_fcon);
-        return view('funcionario.documento.f_eli_formulario_conformidad', compact('formulario'));
-    }
-
-    public function eliminar_conformidad(Request $request){
-        $request->validate([
-            'cod_fcon' => 'required|integer'
-        ]);
-        $formulario = FormularioConformidad::find($request->cod_fcon);
-        if($formulario){
-            $formulario->delete();
-            \Session::flash('exito','El formulario fue eliminado exitosamente');
-        } else {
-            \Session::flash('error','Formulario no encontrado');
-        }
+ 
+        \Session::flash('exito', 'Formulario de conformidad registrado para: ' . $funcionario->fun_nombre);
+        
         return redirect()->back();
     }
 }

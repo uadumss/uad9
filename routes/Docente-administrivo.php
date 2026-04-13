@@ -56,12 +56,7 @@ Route::group(['middleware'=>['permission:acceder al sistema - dya']],function(){
     // =======================CONFORMIDAD
     Route::get('buscar-funcionarios',[FuncionarioController::class,'buscar_funcionarios']);
     Route::post('guardar-conformidad',[FuncionarioController::class,'guardar_conformidad']);
-    Route::get('l_conformidad/{cod_fun}',[FuncionarioController::class,'l_conformidad']);
-    Route::get('descargar conformidad/{cod_fcon}',[FuncionarioController::class,'descargar_conformidad']);
-    Route::get('fe_formulario_conformidad/{cod_fcon}',[FuncionarioController::class,'fe_formulario_conformidad']);
-    Route::post('editar_conformidad',[FuncionarioController::class,'editar_conformidad']);
-    Route::get('fe_eliminar_conformidad/{cod_fcon}',[FuncionarioController::class,'fe_eli_conformidad']);
-    Route::post('eliminar_conformidad',[FuncionarioController::class,'eliminar_conformidad']);
+    //
     
     // =======================UNIVERSIDADES
     Route::get('listar universidades',[FuncionarioController::class,'listar_universidades'])->middleware('permission:listar universidades - dya');
