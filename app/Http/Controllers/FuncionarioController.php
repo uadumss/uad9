@@ -886,9 +886,13 @@ class FuncionarioController extends Controller
 
         $startTime = session('conformidad_start_time_' . $codFun, now());
 
-        $contador = DB::table('doc_adm.formularios_conformidad')->count() + 1;
+        $prefix = ($funcionario->fun_doc_adm === 'D') ? 'DOC' : 'ADM';
+        $contador = DB::table('doc_adm.formularios_conformidad')
+            ->where('codigo', 'like', $prefix . '-%')
+            ->count() + 1;
 
-        $codigo = 'DOC-' . str_pad($contador, 5, '0', STR_PAD_LEFT);
+        $anio = date('y'); //26
+        $codigo = $prefix . str_pad($contador, 2, '0', STR_PAD_LEFT) . '-' . $anio;//. '/' . $anio;
 
         $codFcon = DB::table('doc_adm.formularios_conformidad')->insertGetId([
             'cod_fun' => $codFun,
@@ -998,6 +1002,7 @@ class FuncionarioController extends Controller
         $templateProcessor->setValue('telefono',    $funcionario->fun_telefonos ?? '');
         $templateProcessor->setValue('email',       $funcionario->fun_email ?? '');
         $templateProcessor->setValue('fecha',       $fecha);
+        $templateProcessor->setValue('codigo',      $formulario->codigo ?? '');
 
         $documentos = \App\Models\Documento::where('cod_fcon', $cod_fcon)->orderBy('doc_tipo')->get();
         $templateProcessor->setValue('cantidad_documentos', count($documentos) + 1);
