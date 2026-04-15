@@ -20,13 +20,14 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class TramiteNoAtentadoController extends Controller
 {
     public function __construct()
     {
         $this->middleware(['permission:crear tramite - noa|editar tramite - noa'], ['only' => ['fe_noatentado_convocatoria','g_tramite_convocatoria','fe_candidato',
-            'g_candidato','fe_eli_candidato','eli_candidato','fe_agregar_excel','g_excel_noatentado','validar_pago_noatentado']]);
+            'g_candidato','fe_eli_candidato','eli_candidato','fe_agregar_excel','g_excel_noatentado','validar_pago_noatentado','importar_excel_temporal_noatentado']]);
         $this->middleware(['permission:eliminar tramite - noa'], ['only' => ['f_eli_tramite','eli_tramite']]);
         $this->middleware(['permission:generar glosa - noa'], ['only' => ['fe_glosa','generarPDF','generar_documento']]);
         $this->middleware(['permission:entregar tramite - noa'], ['only' => ['fe_entrega','g_apoderado','g_entrega','actualizar_lista_entrega']]);
@@ -74,15 +75,176 @@ class TramiteNoAtentadoController extends Controller
 
     public function validar_pago_noatentado(Request $request,$cod_con){
         $request->validate([
-            'tramite'=>'required|integer',
+            'tramite'=>'nullable|integer',
             'control'=>'required',
+            'documento_pago'=>'nullable|string',
+            'preimpreso_pago'=>'nullable|string',
+            'cantidad_candidatos'=>'nullable|integer|min:0',
+            'ci_candidato_unico'=>'nullable|string',
         ]);
 
         $control=trim((string)$request['control']);
-        $codTre=(int)$request['tramite'];
-        $validacion=$this->validarControlPagoNoAtentado($control,$codTre,0);
+        $codTre=(int)($request['tramite'] ?? 0);
+        $filtros=$this->construirFiltrosPagoNoAtentado([
+            'documento'=>$request['documento_pago'] ?? '',
+            'preimpreso'=>$request['preimpreso_pago'] ?? '',
+            'cantidad_candidatos'=>$request['cantidad_candidatos'] ?? 0,
+            'ci_candidato_unico'=>$request['ci_candidato_unico'] ?? '',
+        ]);
+        $validacion=$this->validarControlPagoNoAtentado($control,$codTre,0,$filtros);
 
         return response()->json($validacion);
+    }
+
+    public function importar_excel_temporal_noatentado(Request $request,$cod_con){
+        $request->validate([
+            'lista'=>'required|file|mimes:xlsx,xls',
+        ]);
+
+        $convocatoria=Convocatoria::find($cod_con);
+        if(!$convocatoria){
+            return response()->json([
+                'ok'=>false,
+                'message'=>'No se encontró la convocatoria para importar candidatos.',
+            ],404);
+        }
+
+        try{
+            $excel=IOFactory::load($request->file('lista')->getRealPath());
+            $hoja=$excel->getActiveSheet();
+            $filas=$hoja->toArray('',true,true,false);
+        }catch(\Throwable $e){
+            return response()->json([
+                'ok'=>false,
+                'message'=>'No se pudo leer el archivo Excel seleccionado.',
+            ],422);
+        }
+
+        if(!is_array($filas) || sizeof($filas)<2){
+            return response()->json([
+                'ok'=>false,
+                'message'=>'El archivo no contiene filas válidas para importar.',
+            ],422);
+        }
+
+        $cabecera=$filas[0] ?? [];
+        $indices=[];
+        foreach($cabecera as $idx=>$nombre){
+            $clave=$this->normalizarCabeceraExcelNoAtentado((string)$nombre);
+            if($clave!==''){
+                $indices[$clave]=$idx;
+            }
+        }
+
+        if(!array_key_exists('apellido',$indices) || !array_key_exists('nombre',$indices) || !array_key_exists('ci',$indices)){
+            return response()->json([
+                'ok'=>false,
+                'message'=>'El Excel debe contener como mínimo las columnas: apellido, nombre y ci.',
+            ],422);
+        }
+
+        $candidatos=[];
+        $ciProcesados=[];
+        $errores=[];
+
+        for($i=1;$i<sizeof($filas);$i++){
+            $fila=$filas[$i] ?? [];
+            $apellido=mb_strtoupper(trim((string)($fila[$indices['apellido']] ?? '')));
+            $nombre=mb_strtoupper(trim((string)($fila[$indices['nombre']] ?? '')));
+            $ci=mb_strtoupper(trim((string)($fila[$indices['ci']] ?? '')));
+
+            $sis='';
+            if(array_key_exists('sis',$indices)){
+                $sis=trim((string)($fila[$indices['sis']] ?? ''));
+            }
+
+            $cargo='';
+            if(array_key_exists('cargo',$indices)){
+                $cargo=mb_strtoupper(trim((string)($fila[$indices['cargo']] ?? '')));
+            }
+
+            $unidad='';
+            if(array_key_exists('unidad',$indices)){
+                $unidad=mb_strtoupper(trim((string)($fila[$indices['unidad']] ?? '')));
+            }
+
+            if($apellido==='' && $nombre==='' && $ci==='' && $sis==='' && $cargo==='' && $unidad===''){
+                continue;
+            }
+
+            if($apellido==='' || $nombre==='' || $ci===''){
+                $errores[]='Fila '.($i+1).': faltan datos obligatorios (apellido, nombre o ci).';
+                continue;
+            }
+
+            if(array_key_exists($ci,$ciProcesados)){
+                continue;
+            }
+            $ciProcesados[$ci]=true;
+
+            $cargoConvocatoria='';
+            if($cargo!==''){
+                $cargoDb=Cargo_convocatoria::where('cod_con','=',$cod_con)
+                    ->where('carg_nombre','=',$cargo)
+                    ->first();
+                if($cargoDb){
+                    $cargoConvocatoria=(string)$cargoDb->cod_carg;
+                }
+            }
+
+            $candidatos[]=[
+                'ci'=>$ci,
+                'nombre'=>$nombre,
+                'apellido'=>$apellido,
+                'cod_sis'=>$sis,
+                'cargo'=>$cargo,
+                'cargo_convocatoria'=>$cargoConvocatoria,
+                'cargo_nombre'=>$cargo,
+                'unidad'=>$unidad,
+            ];
+        }
+
+        if(sizeof($candidatos)===0){
+            return response()->json([
+                'ok'=>false,
+                'message'=>sizeof($errores)>0 ? implode(' ',$errores) : 'No se detectaron candidatos válidos en el archivo.',
+            ],422);
+        }
+
+        return response()->json([
+            'ok'=>true,
+            'message'=>'Se importaron '.sizeof($candidatos).' candidato(s) desde Excel.',
+            'candidatos'=>$candidatos,
+            'errores'=>$errores,
+        ]);
+    }
+
+    private function normalizarCabeceraExcelNoAtentado(string $texto): string
+    {
+        $valor=trim(mb_strtolower($texto));
+        if($valor===''){
+            return '';
+        }
+
+        $valor=strtr($valor,[
+            'á'=>'a',
+            'é'=>'e',
+            'í'=>'i',
+            'ó'=>'o',
+            'ú'=>'u',
+            'ñ'=>'n',
+        ]);
+        $valor=preg_replace('/\s+/',' ',$valor);
+
+        return match ($valor) {
+            'apellido','apellidos' => 'apellido',
+            'nombre','nombres' => 'nombre',
+            'ci','c.i.','cedula','cedula de identidad' => 'ci',
+            'cargo' => 'cargo',
+            'unidad' => 'unidad',
+            'sis','cod sis','codigo sis','codigo_sis' => 'sis',
+            default => '',
+        };
     }
 
     public function g_tramite_convocatoria(Request $form){
@@ -98,17 +260,39 @@ class TramiteNoAtentadoController extends Controller
                 return redirect('listar tramite convocatoria/'.$form['cc']);
             }
 
-            $antiguo=json_encode($tramite_noatentado);
-            $tramite_noatentado->dtra_interno=$form['tipo_tramite'];
-            $tramite_noatentado->dtra_control=$form['control'];
-            $tramite_noatentado->dtra_valorado_reintegro=$form['reintegro'];
-            $tramite_noatentado->save();
-            $nuevo=json_encode($tramite_noatentado);
-            SessionController::write('U',$antiguo,$nuevo,'d_tramitas','8',$tramite_noatentado->cod_dtra);
-            \Session::flash('exitoModal','Se ha editado satisfactoriamente el tramite');
+            $controlActual=trim((string)($tramite_noatentado->dtra_control ?? ''));
+            $controlFormulario=trim((string)($form['control'] ?? ''));
+            $reintegroActual=trim((string)($tramite_noatentado->dtra_valorado_reintegro ?? ''));
+            $reintegroFormulario=trim((string)($form['reintegro'] ?? ''));
+
+            if($controlFormulario!==$controlActual || $reintegroFormulario!==$reintegroActual){
+                \Session::flash('errorModal','No se permite modificar el pago en un trámite ya creado.');
+                return redirect('editar tramite convocatoria/'.$form['cc'].'/'.$tramite_noatentado->cod_dtra);
+            }
+
+            DB::beginTransaction();
+            try{
+                $antiguo=json_encode($tramite_noatentado);
+                $tramite_noatentado->dtra_interno=$form['tipo_tramite'];
+                $tramite_noatentado->save();
+
+                $nuevo=json_encode($tramite_noatentado);
+                SessionController::write('U',$antiguo,$nuevo,'d_tramitas','8',$tramite_noatentado->cod_dtra);
+
+                DB::commit();
+                \Session::flash('exitoModal','Se ha editado satisfactoriamente el tramite');
+            }catch(\Throwable $e){
+                DB::rollBack();
+                Log::error('Error al editar trámite no atentado.',[
+                    'cod_dtra'=>$tramite_noatentado->cod_dtra,
+                    'error'=>$e->getMessage(),
+                ]);
+                \Session::flash('errorModal','No se pudo guardar la edición del trámite.');
+                return redirect('editar tramite convocatoria/'.$form['cc'].'/'.$tramite_noatentado->cod_dtra);
+            }
         }else{
             $form->validate([
-                'tramite'=>'required',
+                'tramite'=>'nullable',
                 'candidatos_json'=>'required',
             ]);
 
@@ -118,10 +302,27 @@ class TramiteNoAtentadoController extends Controller
                 return redirect('editar tramite convocatoria/'.$form['cc'].'/0');
             }
 
-            $validacionPago=$this->validarControlPagoNoAtentado((string)$form['control'],(int)$form['tramite'],0);
+            $resumenCandidatos=$this->resumenCandidatosPagoNoAtentado($candidatos);
+            $codTreFormulario=(int)($form['tramite'] ?? 0);
+            $filtrosPago=$this->construirFiltrosPagoNoAtentado([
+                'documento'=>$form['documento_pago'] ?? '',
+                'preimpreso'=>$form['preimpreso_pago'] ?? '',
+                'cantidad_candidatos'=>$resumenCandidatos['cantidad'] ?? 0,
+                'ci_candidato_unico'=>$resumenCandidatos['documento_unico'] ?? '',
+            ]);
+            $validacionPago=$this->validarControlPagoNoAtentado((string)$form['control'],$codTreFormulario,0,$filtrosPago);
             if(!(bool)($validacionPago['ok'] ?? false)){
                 \Session::flash('errorModal',(string)($validacionPago['message'] ?? 'No se pudo validar el pago del trámite.'));
                 return redirect('editar tramite convocatoria/'.$form['cc'].'/0');
+            }
+
+            if($codTreFormulario<=0){
+                $codTreSugerido=(int)($validacionPago['tipo_noatentado_sugerido'] ?? 0);
+                if($codTreSugerido<=0){
+                    \Session::flash('errorModal','Seleccione el trámite sugerido por la validación de pago antes de guardar.');
+                    return redirect('editar tramite convocatoria/'.$form['cc'].'/0');
+                }
+                $codTreFormulario=$codTreSugerido;
             }
 
             $año_tramita=date('Y');
@@ -132,7 +333,7 @@ class TramiteNoAtentadoController extends Controller
             try{
                 $tramite_noatentado=D_tramita::create([
                     'cod_con'=>$form['cc'],
-                    'cod_tre'=>$form['tramite'],
+                    'cod_tre'=>$codTreFormulario,
                     'dtra_interno'=>$form['tipo_tramite'],
                     'dtra_control'=>$form['control'],
                     'dtra_valorado_reintegro'=>$form['reintegro'],
@@ -171,7 +372,80 @@ class TramiteNoAtentadoController extends Controller
         return redirect("editar tramite convocatoria/".$form['cc']."/".$tramite_noatentado->cod_dtra);
     }
 
-    private function validarControlPagoNoAtentado(string $control,int $codTre,int $codDtra=0): array
+    private function construirFiltrosPagoNoAtentado(array $datos): array
+    {
+        $documento=$this->normalizarDocumentoNoAtentado((string)($datos['documento'] ?? ''));
+        $preimpreso=$this->normalizarNumeroNoAtentado((string)($datos['preimpreso'] ?? ''));
+        $cantidad=max(0,(int)($datos['cantidad_candidatos'] ?? 0));
+        $documentoCandidatoUnico=$this->normalizarDocumentoNoAtentado((string)($datos['ci_candidato_unico'] ?? ''));
+        $forzarDocumentoCandidato=$cantidad===1 && $documentoCandidatoUnico!=='';
+
+        if($forzarDocumentoCandidato){
+            $documento=$documentoCandidatoUnico;
+        }
+
+        return [
+            'documento'=>$documento,
+            'preimpreso'=>$preimpreso,
+            'cantidad_candidatos'=>$cantidad,
+            'documento_candidato_unico'=>$documentoCandidatoUnico,
+            'forzar_documento_candidato'=>$forzarDocumentoCandidato,
+        ];
+    }
+
+    private function resumenCandidatosPagoNoAtentado(array $candidatos): array
+    {
+        $documentos=[];
+        foreach($candidatos as $item){
+            if(!is_array($item)){
+                continue;
+            }
+            $documento=$this->normalizarDocumentoNoAtentado((string)($item['ci'] ?? ''));
+            if($documento===''){
+                continue;
+            }
+            $documentos[$documento]=true;
+        }
+
+        $lista=array_keys($documentos);
+        return [
+            'cantidad'=>sizeof($lista),
+            'documento_unico'=>sizeof($lista)===1 ? (string)$lista[0] : '',
+        ];
+    }
+
+    private function resumenCandidatosTramiteNoAtentado(int $codDtra): array
+    {
+        if($codDtra<=0){
+            return [
+                'cantidad'=>0,
+                'documento_unico'=>'',
+            ];
+        }
+
+        $filas=DB::table('noatentado.noatentado')
+            ->join('personas','noatentado.id_per','=','personas.id_per')
+            ->where('noatentado.cod_dtra','=',$codDtra)
+            ->select('personas.per_ci')
+            ->get();
+
+        $documentos=[];
+        foreach($filas as $fila){
+            $documento=$this->normalizarDocumentoNoAtentado((string)($fila->per_ci ?? ''));
+            if($documento===''){
+                continue;
+            }
+            $documentos[$documento]=true;
+        }
+
+        $lista=array_keys($documentos);
+        return [
+            'cantidad'=>sizeof($lista),
+            'documento_unico'=>sizeof($lista)===1 ? (string)$lista[0] : '',
+        ];
+    }
+
+    private function validarControlPagoNoAtentado(string $control,int $codTre=0,int $codDtra=0,array $filtros=[]): array
     {
         $control=trim($control);
         if($control===''){
@@ -198,24 +472,54 @@ class TramiteNoAtentadoController extends Controller
             ];
         }
 
-        $tramite=Tramite::where('cod_tre','=',$codTre)->where('tre_tipo','=','A')->first();
-        if(!$tramite){
+        $tramiteSeleccionado=null;
+        if($codTre>0){
+            $tramiteSeleccionado=Tramite::where('cod_tre','=',$codTre)->where('tre_tipo','=','A')->first();
+            if(!$tramiteSeleccionado){
+                return [
+                    'ok'=>false,
+                    'code'=>'TRAMITE_INVALIDO',
+                    'message'=>'El trámite seleccionado no corresponde a No Atentado.',
+                ];
+            }
+
+            $cuentaSeleccionadaNormalizada=$this->normalizarNumeroNoAtentado((string)($tramiteSeleccionado->tre_numero_cuenta ?? ''));
+            if($cuentaSeleccionadaNormalizada===''){
+                return [
+                    'ok'=>false,
+                    'code'=>'CUENTA_TRAMITE_NO_CONFIGURADA',
+                    'message'=>'El trámite seleccionado no tiene número de cuenta configurado.',
+                ];
+            }
+        }
+
+        $tramitesNoAtentado=Tramite::where('tre_tipo','=','A')->get();
+        $tramitesPorCuenta=[];
+        foreach($tramitesNoAtentado as $itemTramite){
+            $cuentaItemNormalizada=$this->normalizarNumeroNoAtentado((string)($itemTramite->tre_numero_cuenta ?? ''));
+            if($cuentaItemNormalizada===''){
+                continue;
+            }
+            if(!array_key_exists($cuentaItemNormalizada,$tramitesPorCuenta)){
+                $tramitesPorCuenta[$cuentaItemNormalizada]=[];
+            }
+            $tramitesPorCuenta[$cuentaItemNormalizada][]=$itemTramite;
+        }
+
+        if(sizeof($tramitesPorCuenta)===0){
             return [
                 'ok'=>false,
-                'code'=>'TRAMITE_INVALIDO',
-                'message'=>'El tramite seleccionado no corresponde a No Atentado.',
+                'code'=>'NO_HAY_CUENTAS_NOATENTADO',
+                'message'=>'No hay trámites No Atentado con cuentas configuradas para validar el pago.',
             ];
         }
 
-        $cuentaEsperada=(string)($tramite->tre_numero_cuenta ?? '');
-        $cuentaEsperadaNormalizada=$this->normalizarNumeroNoAtentado($cuentaEsperada);
-        if($cuentaEsperadaNormalizada===''){
-            return [
-                'ok'=>false,
-                'code'=>'CUENTA_TRAMITE_NO_CONFIGURADA',
-                'message'=>'El tramite seleccionado no tiene numero de cuenta configurado.',
-            ];
-        }
+        $filtrosAplicados=array_key_exists('forzar_documento_candidato',$filtros)
+            ? $filtros
+            : $this->construirFiltrosPagoNoAtentado($filtros);
+        $documentoFiltro=(string)($filtrosAplicados['documento'] ?? '');
+        $preimpresoFiltro=(string)($filtrosAplicados['preimpreso'] ?? '');
+        $forzarDocumentoCandidato=(bool)($filtrosAplicados['forzar_documento_candidato'] ?? false);
 
         $consulta=$this->consultarControlRecaudacionesNoAtentado($control);
         if(!(bool)($consulta['ok'] ?? false)){
@@ -231,30 +535,87 @@ class TramiteNoAtentadoController extends Controller
             ];
         }
 
+        $usoEncontrado=null;
+        $cuentaDetectada='';
+        $coincidioConFiltros=false;
+        $pagosValidos=[];
+
         foreach($filas as $filaItem){
             $fila=(array)$filaItem;
             $codigoCuenta=(string)($fila['codigo_cuenta'] ?? '');
             $codigoCuentaNormalizado=$this->normalizarNumeroNoAtentado($codigoCuenta);
 
-            if($codigoCuentaNormalizado==='' || $codigoCuentaNormalizado!==$cuentaEsperadaNormalizada){
+            if($codigoCuentaNormalizado===''){
                 continue;
             }
 
+            if($cuentaDetectada===''){
+                $cuentaDetectada=(string)($fila['cuenta'] ?? $codigoCuenta);
+            }
+
+            $tiposPermitidosRaw=[];
+            if($tramiteSeleccionado){
+                $cuentaTramiteSeleccionado=$this->normalizarNumeroNoAtentado((string)($tramiteSeleccionado->tre_numero_cuenta ?? ''));
+                if($cuentaTramiteSeleccionado==='' || $cuentaTramiteSeleccionado!==$codigoCuentaNormalizado){
+                    continue;
+                }
+                $tiposPermitidosRaw[]=$tramiteSeleccionado;
+            }else{
+                if(!array_key_exists($codigoCuentaNormalizado,$tramitesPorCuenta)){
+                    continue;
+                }
+                $tiposPermitidosRaw=$tramitesPorCuenta[$codigoCuentaNormalizado];
+            }
+
+            $documentoFila=$this->normalizarDocumentoNoAtentado((string)($fila['documento'] ?? ''));
+            if($documentoFiltro!=='' && $documentoFila!==$documentoFiltro){
+                continue;
+            }
+
+            $preimpresoFilaNormalizado=$this->normalizarPreimpresoFilaNoAtentado($fila);
+            if($preimpresoFiltro!=='' && $preimpresoFilaNormalizado!==$preimpresoFiltro){
+                continue;
+            }
+
+            $coincidioConFiltros=true;
+
             $usoExistente=$this->usoRecaudacionExistenteNoAtentado($fila,$control,$codDtra);
             if($usoExistente){
-                return [
-                    'ok'=>false,
-                    'code'=>'PAGO_YA_USADO',
-                    'message'=>$this->mensajePagoUsadoNoAtentado($usoExistente),
-                ];
+                if(!$usoEncontrado){
+                    $usoEncontrado=$usoExistente;
+                }
+                continue;
             }
 
             $nombrePersona=$this->nombrePersonaFilaRecaudacionNoAtentado($fila);
             $preimpreso=(string)($fila['preimpreso'] ?? ($fila['fmesa_numero_preimpreso'] ?? ($fila['impreso'] ?? '')));
 
-            return [
+            $tiposPermitidos=[];
+            foreach($tiposPermitidosRaw as $tipoPermitido){
+                $tiposPermitidos[]=[
+                    'cod_tre'=>(int)$tipoPermitido->cod_tre,
+                    'tre_nombre'=>(string)$tipoPermitido->tre_nombre,
+                ];
+            }
+
+            $tipoSugerido=0;
+            $nombreTipoSugerido='';
+            $requiereSeleccionManual=false;
+            if(sizeof($tiposPermitidosRaw)===1){
+                $tipoSugerido=(int)$tiposPermitidosRaw[0]->cod_tre;
+                $nombreTipoSugerido=(string)$tiposPermitidosRaw[0]->tre_nombre;
+            }elseif(sizeof($tiposPermitidosRaw)>1){
+                $requiereSeleccionManual=true;
+            }
+
+            $mensaje='Pago validado correctamente para No Atentado.';
+            if($requiereSeleccionManual){
+                $mensaje='Pago válido. Seleccione el tipo de trámite permitido para la cuenta detectada.';
+            }
+
+            $pagosValidos[]=[
                 'ok'=>true,
-                'message'=>'Pago validado correctamente para No Atentado.',
+                'message'=>$mensaje,
                 'control'=>$control,
                 'identificador'=>(string)($fila['identificador'] ?? ''),
                 'codigo_cuenta'=>$codigoCuenta,
@@ -264,14 +625,86 @@ class TramiteNoAtentadoController extends Controller
                 'documento'=>(string)($fila['documento'] ?? ''),
                 'nombre_persona'=>$nombrePersona,
                 'preimpreso'=>$preimpreso,
+                'tipo_noatentado_sugerido'=>$tipoSugerido,
+                'nombre_tipo_noatentado_sugerido'=>$nombreTipoSugerido,
+                'tipos_noatentado_permitidos'=>$tiposPermitidos,
+                'requiere_seleccion_manual'=>$requiereSeleccionManual,
+            ];
+        }
+
+        if(sizeof($pagosValidos)===1){
+            return $pagosValidos[0];
+        }
+
+        if(sizeof($pagosValidos)>1){
+            return [
+                'ok'=>false,
+                'code'=>'PAGO_AMBIGUO',
+                'message'=>'Se encontraron varios pagos válidos para este control. Ingrese CI del pagador o preimpreso para identificar el correcto.',
+                'coincidencias'=>sizeof($pagosValidos),
+            ];
+        }
+
+        if(($documentoFiltro!=='' || $preimpresoFiltro!=='') && !$coincidioConFiltros){
+            if($forzarDocumentoCandidato){
+                return [
+                    'ok'=>false,
+                    'code'=>'CI_CANDIDATO_NO_COINCIDE',
+                    'message'=>'El CI del candidato único no coincide con el pago consultado.',
+                ];
+            }
+
+            if($documentoFiltro!=='' && $preimpresoFiltro!==''){
+                return [
+                    'ok'=>false,
+                    'code'=>'FILTRO_PAGO_SIN_COINCIDENCIA',
+                    'message'=>'No se encontró pago que coincida con CI y preimpreso para este número de control.',
+                ];
+            }
+
+            if($documentoFiltro!==''){
+                return [
+                    'ok'=>false,
+                    'code'=>'DOCUMENTO_PAGO_NO_COINCIDE',
+                    'message'=>'No se encontró pago con ese CI para este número de control.',
+                ];
+            }
+
+            return [
+                'ok'=>false,
+                'code'=>'PREIMPRESO_PAGO_NO_COINCIDE',
+                'message'=>'No se encontró pago con ese preimpreso para este número de control.',
+            ];
+        }
+
+        if($usoEncontrado){
+            return [
+                'ok'=>false,
+                'code'=>'PAGO_YA_USADO',
+                'message'=>$this->mensajePagoUsadoNoAtentado($usoEncontrado),
+            ];
+        }
+
+        if($tramiteSeleccionado){
+            return [
+                'ok'=>false,
+                'code'=>'CUENTA_NO_CORRESPONDE',
+                'message'=>'La boleta no corresponde al tipo de trámite No Atentado seleccionado.',
+            ];
+        }
+
+        if($cuentaDetectada!==''){
+            return [
+                'ok'=>false,
+                'code'=>'CUENTA_SIN_TRAMITE_HABILITADO',
+                'message'=>'La cuenta del pago no tiene un trámite No Atentado habilitado en el sistema: '.$cuentaDetectada.'.',
             ];
         }
 
         return [
             'ok'=>false,
-            'code'=>'CUENTA_NO_CORRESPONDE',
-            'message'=>'La boleta no corresponde al numero de cuenta del tramite No Atentado seleccionado.',
-            'cuenta_esperada'=>$cuentaEsperada,
+            'code'=>'CUENTA_NO_IDENTIFICADA',
+            'message'=>'No se pudo identificar una cuenta válida en la boleta para No Atentado.',
         ];
     }
 
@@ -584,6 +1017,19 @@ class TramiteNoAtentadoController extends Controller
         return preg_replace('/\D+/','',$texto) ?? '';
     }
 
+    private function normalizarDocumentoNoAtentado(string $texto): string
+    {
+        $valor=mb_strtoupper(trim($texto));
+        $valor=preg_replace('/\s+/','',$valor);
+        return preg_replace('/[^A-Z0-9]/','',(string)$valor) ?? '';
+    }
+
+    private function normalizarPreimpresoFilaNoAtentado(array $fila): string
+    {
+        $preimpreso=(string)($fila['preimpreso'] ?? ($fila['fmesa_numero_preimpreso'] ?? ($fila['impreso'] ?? '')));
+        return $this->normalizarNumeroNoAtentado($preimpreso);
+    }
+
     private function nombrePersonaFilaRecaudacionNoAtentado(array $fila): string
     {
         $nombre=trim((string)($fila['nombre_persona'] ?? ''));
@@ -595,18 +1041,38 @@ class TramiteNoAtentadoController extends Controller
         return $nombre;
     }
 
+    private function mensajeBloqueoGestionCandidatosNoAtentado(): string
+    {
+        return 'En edición no se permite agregar, eliminar o importar candidatos. Solo puede actualizar datos personales de candidatos existentes.';
+    }
+
     //=================== CANDIDATOS
     public function fe_candidato($cod_dtra,$cod_noa){
         $candidato=array();
         $tramite=D_tramita::find($cod_dtra);
-        //dd($tramite);
+        if(!$tramite){
+            abort(404,'No se encontró el trámite del candidato.');
+        }
+
+        if((int)$cod_noa===0){
+            abort(403,$this->mensajeBloqueoGestionCandidatosNoAtentado());
+        }
+
+        if((string)($tramite->dtra_generado ?? '')!==''){
+            abort(403,'El trámite ya fue generado y no permite editar candidatos.');
+        }
 
         $cargos=Cargo_convocatoria::where('cod_con','=',$tramite->cod_con)->get();
         if($cod_noa!=0){
             $candidato=DB::table('noatentado.noatentado')
                 ->join('personas','noatentado.id_per','=','personas.id_per')
                 ->leftJoin('claustros.cargo_convocatoria','noatentado.cod_carg','=','cargo_convocatoria.cod_carg')
-                ->where('cod_noa','=',$cod_noa)->first();
+                ->where('cod_noa','=',$cod_noa)
+                ->where('noatentado.cod_dtra','=',$cod_dtra)
+                ->first();
+            if(!$candidato){
+                abort(404,'No se encontró el candidato para este trámite.');
+            }
         }
         return view('servicios.no_atentado.tramite.fe_candidato',compact('candidato','cod_dtra','tramite','cargos'));
     }
@@ -623,107 +1089,85 @@ class TramiteNoAtentadoController extends Controller
             return redirect()->back();
         }
 
+        if((string)($tramite->dtra_generado ?? '')!==''){
+            \Session::flash('errorModal','El trámite ya fue generado y no permite editar candidatos.');
+            return redirect('editar tramite convocatoria/'.$tramite->cod_con.'/'.$tramite->cod_dtra);
+        }
+
+        if(!isset($form['cn']) || trim((string)$form['cn'])===''){
+            \Session::flash('errorModal',$this->mensajeBloqueoGestionCandidatosNoAtentado());
+            return redirect('editar tramite convocatoria/'.$tramite->cod_con.'/'.$tramite->cod_dtra);
+        }
+
         $ci=mb_strtoupper(trim((string)$form['ci']));
         $nombre=mb_strtoupper(trim((string)$form['nombre']));
         $apellido=mb_strtoupper(trim((string)$form['apellido']));
         $codSis=trim((string)($form['cod_sis'] ?? ''));
-        $unidad=trim((string)($form['unidad'] ?? ''));
 
-        if(isset($form['cn']) && $form['cn']!=''){
-            $noatentado=Noatentado::find($form['cn']);
-            if(!$noatentado){
-                \Session::flash('errorModal','No se encontró el candidato a editar.');
-                return redirect('editar tramite convocatoria/'.$tramite->cod_con.'/'.$tramite->cod_dtra);
-            }
-
-            $persona=Persona::where('per_ci','=',$ci)->first();
-            if(!$persona){
-                $persona=Persona::create([
-                    'per_ci'=>$ci,
-                    'per_nombre'=>$nombre,
-                    'per_apellido'=>$apellido,
-                    'per_cod_sis'=>$codSis,
-                    'per_sistema'=>8,
-                ]);
-                SessionController::write('C','',json_encode($persona),'personas','8',$persona->id_per);
-            }else{
-                $antiguoPersona=json_encode($persona);
-                $persona->per_nombre=$nombre;
-                $persona->per_apellido=$apellido;
-                $persona->per_cod_sis=$codSis;
-                $persona->save();
-                SessionController::write('U',$antiguoPersona,json_encode($persona),'personas','8',$persona->id_per);
-            }
-
-            $antiguoNoatentado=json_encode($noatentado);
-            $noatentado->id_per=$persona->id_per;
-            $noatentado->noa_unidad=$unidad;
-            $codCargo=$this->resolverCargoCandidatoNoAtentado(
-                (string)($form['cargo'] ?? ''),
-                (int)($form['cargo_convocatoria'] ?? 0),
-                $tramite
-            );
-            $noatentado->cod_carg=$codCargo>0 ? $codCargo : null;
-            $noatentado->save();
-            SessionController::write('U',$antiguoNoatentado,json_encode($noatentado),'noatentado.noatentado','8',$noatentado->cod_noa);
-
-        }else{
-            $persona=Persona::where('per_ci','=',$ci)->first();
-            $id_per=0;
-            if(!$persona){
-                $persona=Persona::create([
-                    'per_ci'=>$ci,
-                    'per_nombre'=>$nombre,
-                    'per_apellido'=>$apellido,
-                    'per_cod_sis'=>$codSis,
-                    'per_sistema'=>8,
-                ]);
-                $nuevo=json_encode($persona);
-                SessionController::write('C','',$nuevo,'personas','8',$persona->id_per);
-                $id_per=$persona->id_per;
-            }else{
-                $id_per=$persona->id_per;
-            }
-            $noatentado=Noatentado::create([
-                'cod_dtra'=>$form['cd'],
-                'id_per'=>$id_per,
-                'noa_unidad'=>$unidad,
-            ]);
-            $codCargo=$this->resolverCargoCandidatoNoAtentado(
-                (string)($form['cargo'] ?? ''),
-                (int)($form['cargo_convocatoria'] ?? 0),
-                $tramite
-            );
-            $noatentado->cod_carg=$codCargo>0 ? $codCargo : null;
-            $noatentado->save();
-            $nuevo=json_encode($noatentado);
-            SessionController::write('C','',$nuevo,'noatentado.noatentado','8',$noatentado->cod_noa);
+        $noatentado=Noatentado::find($form['cn']);
+        if(!$noatentado || (int)$noatentado->cod_dtra!==(int)$tramite->cod_dtra){
+            \Session::flash('errorModal','No se encontró el candidato a editar.');
+            return redirect('editar tramite convocatoria/'.$tramite->cod_con.'/'.$tramite->cod_dtra);
         }
+
+        $persona=Persona::where('per_ci','=',$ci)->first();
+        if(!$persona){
+            $persona=Persona::create([
+                'per_ci'=>$ci,
+                'per_nombre'=>$nombre,
+                'per_apellido'=>$apellido,
+                'per_cod_sis'=>$codSis,
+                'per_sistema'=>8,
+            ]);
+            SessionController::write('C','',json_encode($persona),'personas','8',$persona->id_per);
+        }else{
+            $antiguoPersona=json_encode($persona);
+            $persona->per_nombre=$nombre;
+            $persona->per_apellido=$apellido;
+            $persona->per_cod_sis=$codSis;
+            $persona->save();
+            SessionController::write('U',$antiguoPersona,json_encode($persona),'personas','8',$persona->id_per);
+        }
+
+        $antiguoNoatentado=json_encode($noatentado);
+        $noatentado->id_per=$persona->id_per;
+        $noatentado->save();
+        SessionController::write('U',$antiguoNoatentado,json_encode($noatentado),'noatentado.noatentado','8',$noatentado->cod_noa);
         return redirect("editar tramite convocatoria/".$tramite->cod_con."/".$tramite->cod_dtra);
     }
 
     public function fe_eli_candidato($cod_noa){
-        $candidato=DB::table('noatentado.noatentado')
-            ->join('personas','noatentado.id_per','=','personas.id_per')
-            ->leftJoin('claustros.cargo_convocatoria','noatentado.cod_carg','=','cargo_convocatoria.cod_carg')
-            ->where('cod_noa','=',$cod_noa)->first();
-        //dd($candidato);
-        return view('servicios.no_atentado.tramite.fe_eli_candidato',compact('candidato'));
+        $candidato=Noatentado::find($cod_noa);
+        if(!$candidato){
+            abort(404,'No se encontró el candidato.');
+        }
+
+        abort(403,$this->mensajeBloqueoGestionCandidatosNoAtentado());
     }
     public function eli_candidato(Request $form){
         $form->validate(['cn'=>'required']);
         $candidato=Noatentado::find($form['cn']);
-        $cod_dtra=$candidato->cod_dtra;
+        if(!$candidato){
+            \Session::flash('errorModal','No se encontró el candidato.');
+            return redirect()->back();
+        }
+
         $tramite=D_tramita::find($candidato->cod_dtra);
-        $candidato->delete();
-        $antiguo=json_encode($candidato);
-        SessionController::write('D',$antiguo,'','noatentado.noatentado','8',$candidato->cod_noa);
-        \Session::flash('exitoModal','Se ha eliminado correctamente el candidato');
-        return redirect("editar tramite convocatoria/".$tramite->cod_con."/".$tramite->cod_dtra);
+        \Session::flash('errorModal',$this->mensajeBloqueoGestionCandidatosNoAtentado());
+        if($tramite){
+            return redirect("editar tramite convocatoria/".$tramite->cod_con."/".$tramite->cod_dtra);
+        }
+
+        return redirect()->back();
     }
     public function fe_agregar_excel($cod_dtra){
         $tramite_noatentado=D_tramita::find($cod_dtra);
-        return view('servicios.no_atentado.tramite.fe_agregar_excel',compact('cod_dtra','tramite_noatentado'));
+        if(!$tramite_noatentado){
+            abort(404,'No se encontró el trámite.');
+        }
+
+        \Session::flash('errorModal',$this->mensajeBloqueoGestionCandidatosNoAtentado());
+        return redirect("editar tramite convocatoria/".$tramite_noatentado->cod_con."/".$tramite_noatentado->cod_dtra);
     }
 
     public function fe_glosa($cod_dtra){

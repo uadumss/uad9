@@ -10,7 +10,7 @@
         <div class="modal-body" style="font-size: smaller">
             <div class="bg-verde-oscuro centrar_bloque p-1 col-md-7 rounded shadow">
                 @if($candidato)
-                    <h6 class="text-white text-center">Formulario para editar candidato</h6>
+                    <h6 class="text-white text-center">Formulario para editar datos personales del candidato</h6>
                 @else
                     <h6 class="text-white text-center">Formulario para registrar candidato</h6>
                 @endif
@@ -51,37 +51,6 @@
                                 <input class="form-control form-control-sm border-0" placeholder=""
                                        required name="cod_sis" id="cod_sis" value="{{$candidato ? $candidato->per_cod_sis : ''}}" /></td>
                         </tr>
-                        <tr>
-                            <th class="text-right font-italic">Unidad: </th>
-                            <td class="border-bottom border-dark">
-                                <input class="form-control form-control-sm border-0" placeholder=""
-                                       name="unidad" id="unidad" value="{{$candidato ? $candidato->noa_unidad : ''}}" />
-                            </td>
-                        </tr>
-                        <tr>
-                            <th class="text-right font-italic">Cargo: </th>
-                            <td class="border-bottom border-dark">
-                                <input class="form-control form-control-sm border-0" placeholder=""
-                                       name="cargo" id="cargo" value="{{$candidato ? $candidato->carg_nombre : ''}}" />
-                            </td>
-                        </tr>
-                        <tr>
-                            <th class="text-right font-italic"></th>
-                            <td class="border-bottom border-dark">
-                                <span class="text-primary font-italic font-weight-bold"> * Cargo de convocatoria</span>
-                                <select class="custom-select custom-select-sm" name="cargo_convocatoria">
-                                    <option></option>
-                                    @foreach($cargos as $c)
-                                        @if($candidato && $candidato->cod_carg==$c->cod_carg)
-                                            <option value="{{$c->cod_carg}}" selected>{{$c->carg_nombre}}</option>
-                                        @else
-                                            <option value="{{$c->cod_carg}}">{{$c->carg_nombre}}</option>
-                                        @endif
-                                    @endforeach
-                                </select>
-                            </td>
-
-                        </tr>
                     </table>
                 </form>
             </div>
@@ -89,11 +58,21 @@
         <div class="modal-footer">
             <button class="btn btn-secondary" type="button" data-dismiss="modal">Cerrar</button>
             <button class="btn btn-primary" type="button"
-                    onclick="enviar('form_candidato','{{url('guardar candidato convocatoria')}}','panel_noatentado');$('#Noatentado_agregar').modal('hide');cargarDatos('{{url('actualizar lista tramite convocatoria/'.$tramite->cod_con)}}','panel_lista_tramites')">Guardar</button>
+                    data-save-url="{{url('guardar candidato convocatoria')}}"
+                    data-refresh-url="{{url('actualizar lista tramite convocatoria/'.$tramite->cod_con)}}"
+                    onclick="guardarEdicionCandidatoNoatentado(this)">Guardar</button>
         </div>
     </div>
 </div>
 <script>
+    function guardarEdicionCandidatoNoatentado(boton){
+        var rutaGuardar=boton.dataset.saveUrl;
+        var rutaRefresco=boton.dataset.refreshUrl;
+        enviar('form_candidato',rutaGuardar,'panel_noatentado');
+        $('#Noatentado_agregar').modal('hide');
+        cargarDatos(rutaRefresco,'panel_lista_tramites');
+    }
+
     function cargarDatosPersonales(ci){
         var link="{{url('datos_per/')}}"+"/"+ci;
         $.ajax({

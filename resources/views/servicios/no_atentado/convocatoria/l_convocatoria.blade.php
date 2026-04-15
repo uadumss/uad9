@@ -62,7 +62,7 @@
                                 <thead>
                                 <tr class="bg-gray-600 text-white" style="font-size: 0.9em">
                                     <th>N°</th>
-                                    <th>Título</th>
+                                    <th style="width: 40%;">Título</th>
                                     <th>Publicación</th>
                                     <th>Entrega de Documentos</th>
                                     <th>Gestión</th>
@@ -74,7 +74,7 @@
                                 @foreach($convocatorias as $c)
                                     <tr>
                                         <td>{{$i+=1}}</td>
-                                        <td>{{$c->con_nombre}} </td>
+                                        <td style="white-space: normal; overflow-wrap: anywhere; word-break: break-word;">{{$c->con_nombre}}</td>
                                         <td>@if($c->con_fecha_publicacion!='')
                                                 {{date('d/m/Y',strtotime($c->con_fecha_publicacion))}}
                                             @endif

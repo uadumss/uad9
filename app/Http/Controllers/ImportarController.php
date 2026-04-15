@@ -314,46 +314,13 @@ class ImportarController extends Controller
     public function g_excel_noatentado(Request $form){
         $form->validate(['cd'=>'required']);
         $tramite=D_tramita::find($form['cd']);
-        try {
-            if ($form->hasFile('lista')) {
-                $banderaIden = 0;
-                $ruta = 'imports/no-atentado/'.$tramite->dtra_gestion_tramite;
-                $extension = $form->file('lista')->getClientOriginalExtension();
-                $nombre = '';
-                $identificador = '';
-                while ($banderaIden == 0) {
-
-                    $identificador = Auth::user()->id . '-' . rand(0,999999) . '-'. $tramite->dtra_gestion_tramite;
-                    $nombre = $identificador.".".$extension;
-                    if (!Storage::exists('imports/no-atentado/'.$tramite->dtra_gestion_tramite.'/' . $nombre)) {
-                        $banderaIden = 1;
-                        \Session::put('identificador_noatentado', $nombre);
-                    }
-                }
-                \Session::put('cod_dtra', $tramite->cod_dtra);
-                \Session::put('cod_con', $tramite->cod_con);
-                $importado = Excel::import(new ImportarNoAtentado(), $form->file('lista'));
-                Storage::putFileAs($ruta, $form->file('lista'), $nombre);
-
-                $importacion = Importacion::create([
-                    'imp_usuario' => Auth::user()->name,
-                    'imp_id' => Auth::user()->id,
-                    'imp_fecha' => date('d-m-Y H:i:s'),
-                    'imp_tipo' => 'No atentado',
-                    'imp_gestion' => $tramite->dtra_gestion_tramite,
-                    'imp_usuario' => Auth::user()->name,
-                    'imp_archivo' => $nombre,
-                    'imp_sistema'=>8,
-                    'imp_identificador' => $identificador,
-                ]);
-
-                \Session::flash('exitoModal', 'Se ha importado con exito los datos');
-                return redirect("editar tramite convocatoria/".$tramite->cod_con."/".$tramite->cod_dtra);
-            }
-        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
-            $fallas = $e->failures();
-            return view('importacion.resultado_importacion', compact('fallas'));
+        if(!$tramite){
+            \Session::flash('errorModal', 'No se encontró el trámite para importar candidatos.');
+            return redirect()->back();
         }
+
+        \Session::flash('errorModal', 'En edición no se permite agregar, eliminar o importar candidatos. Solo puede actualizar datos personales de candidatos existentes.');
+        return redirect("editar tramite convocatoria/".$tramite->cod_con."/".$tramite->cod_dtra);
     }
     public function importarSancionado(Request $form){
         //return "estoy aqui";

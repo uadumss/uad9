@@ -27,6 +27,7 @@ Route::group(['middleware'=>['permission:acceder al sistema - noa']],function(){
     Route::get('listar tramite convocatoria/{cod_con}',[TramiteNoAtentadoController::class,'l_tramite_convocatoria']);
     Route::get('actualizar lista tramite convocatoria/{cod_con}',[TramiteNoAtentadoController::class,'tabla_tramite_convocatoria']);
     Route::get('editar tramite convocatoria/{cod_con}/{cod_dtra}',[TramiteNoAtentadoController::class,'fe_noatentado_convocatoria'])->middleware(['permission:crear tramite - noa|editar tramite - noa']);
+    Route::post('importar candidato excel temporal noatentado/{cod_con}',[TramiteNoAtentadoController::class,'importar_excel_temporal_noatentado'])->middleware(['permission:crear tramite - noa|editar tramite - noa']);
     Route::post('validar pago noatentado/{cod_con}',[TramiteNoAtentadoController::class,'validar_pago_noatentado'])->middleware(['permission:crear tramite - noa|editar tramite - noa']);
     Route::post('guardar tramite convocatoria noatentado',[TramiteNoAtentadoController::class,'g_tramite_convocatoria'])->middleware(['permission:crear tramite - noa|editar tramite - noa']);
     Route::get('formulario eliminar tramite noatentado/{cod_dtra}',[TramiteNoAtentadoController::class,'f_eli_tramite'])->middleware(['permission:eliminar tramite - noa']);
