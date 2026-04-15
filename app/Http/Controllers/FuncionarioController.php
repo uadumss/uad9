@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exports\ExportFuncionarioConsulta;
 use App\Helpers\UniversidadHelper;
 use App\Models\Carrera;
+use App\Models\CodigoSecuencial;
 use App\Models\Documento;
 use App\Models\FormularioConformidad;
 use App\Models\Funcionario;
@@ -887,12 +888,19 @@ class FuncionarioController extends Controller
         $startTime = session('conformidad_start_time_' . $codFun, now());
 
         $prefix = ($funcionario->fun_doc_adm === 'D') ? 'DOC' : 'ADM';
-        $contador = DB::table('doc_adm.formularios_conformidad')
-            ->where('codigo', 'like', $prefix . '-%')
-            ->count() + 1;
-
-        $anio = date('y'); //26
-        $codigo = $prefix . str_pad($contador, 2, '0', STR_PAD_LEFT) . '-' . $anio;//. '/' . $anio;
+        $anio = date('y'); // 26
+        
+        // Obtener o crear el registro del contador secuencial
+        $secuencial = CodigoSecuencial::firstOrCreate(
+            ['tipo' => $prefix, 'anio' => (int)$anio],
+            ['ultimo_numero' => 0]
+        );
+        
+        // Incrementar el contador
+        $secuencial->increment('ultimo_numero');
+        $numero = $secuencial->ultimo_numero;
+        
+        $codigo = $prefix . str_pad($numero, 5, '0', STR_PAD_LEFT) . '-' . $anio;
 
         $codFcon = DB::table('doc_adm.formularios_conformidad')->insertGetId([
             'cod_fun' => $codFun,
