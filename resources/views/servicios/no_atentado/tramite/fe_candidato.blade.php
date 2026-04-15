@@ -9,7 +9,11 @@
         </div>
         <div class="modal-body" style="font-size: smaller">
             <div class="bg-verde-oscuro centrar_bloque p-1 col-md-7 rounded shadow">
-                <h6 class="text-white text-center">Formulario para editar candidato</h6>
+                @if($candidato)
+                    <h6 class="text-white text-center">Formulario para editar candidato</h6>
+                @else
+                    <h6 class="text-white text-center">Formulario para registrar candidato</h6>
+                @endif
             </div>
             <hr class="sidebar-divider"/>
             <div>
@@ -27,31 +31,38 @@
                             <th class="text-right font-italic">CI : </th>
                             <td class="border-bottom border-dark">
                                 <input class="form-control form-control-sm border-0" placeholder=""
-                                       name="ci" onchange="cargarDatosPersonales(this.value)" /></td>
+                                       name="ci" value="{{$candidato ? $candidato->per_ci : ''}}" onchange="cargarDatosPersonales(this.value)" /></td>
                         </tr>
                         <tr>
                             <th class="text-right font-italic">Nombres : </th>
                             <td class="border-bottom border-dark">
                                 <input class="form-control form-control-sm border-0" placeholder=""
-                                       required name="nombre" id="nombre" /></td>
+                                       required name="nombre" id="nombre" value="{{$candidato ? $candidato->per_nombre : ''}}" /></td>
                         </tr>
                         <tr>
                             <th class="text-right font-italic">Apellidos : </th>
                             <td class="border-bottom border-dark">
                                 <input class="form-control form-control-sm border-0" placeholder=""
-                                       required name="apellido" id="apellido" /></td>
+                                       required name="apellido" id="apellido" value="{{$candidato ? $candidato->per_apellido : ''}}" /></td>
                         </tr>
                         <tr>
                             <th class="text-right font-italic">Código SIS: </th>
                             <td class="border-bottom border-dark">
                                 <input class="form-control form-control-sm border-0" placeholder=""
-                                       required name="cod_sis" id="cod_sis" /></td>
+                                       required name="cod_sis" id="cod_sis" value="{{$candidato ? $candidato->per_cod_sis : ''}}" /></td>
+                        </tr>
+                        <tr>
+                            <th class="text-right font-italic">Unidad: </th>
+                            <td class="border-bottom border-dark">
+                                <input class="form-control form-control-sm border-0" placeholder=""
+                                       name="unidad" id="unidad" value="{{$candidato ? $candidato->noa_unidad : ''}}" />
+                            </td>
                         </tr>
                         <tr>
                             <th class="text-right font-italic">Cargo: </th>
                             <td class="border-bottom border-dark">
                                 <input class="form-control form-control-sm border-0" placeholder=""
-                                       required name="cargo" id="cargo" />
+                                       name="cargo" id="cargo" value="{{$candidato ? $candidato->carg_nombre : ''}}" />
                             </td>
                         </tr>
                         <tr>
@@ -61,7 +72,11 @@
                                 <select class="custom-select custom-select-sm" name="cargo_convocatoria">
                                     <option></option>
                                     @foreach($cargos as $c)
-                                        <option value="{{$c->cod_carg}}">{{$c->carg_nombre}}</option>
+                                        @if($candidato && $candidato->cod_carg==$c->cod_carg)
+                                            <option value="{{$c->cod_carg}}" selected>{{$c->carg_nombre}}</option>
+                                        @else
+                                            <option value="{{$c->cod_carg}}">{{$c->carg_nombre}}</option>
+                                        @endif
                                     @endforeach
                                 </select>
                             </td>
