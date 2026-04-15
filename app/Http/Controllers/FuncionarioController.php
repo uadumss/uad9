@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exports\ExportFuncionarioConsulta;
 use App\Helpers\UniversidadHelper;
 use App\Models\Carrera;
+use App\Models\CodigoSecuencial;
 use App\Models\Documento;
 use App\Models\FormularioConformidad;
 use App\Models\Funcionario;
@@ -886,9 +887,20 @@ class FuncionarioController extends Controller
 
         $startTime = session('conformidad_start_time_' . $codFun, now());
 
-        $contador = DB::table('doc_adm.formularios_conformidad')->count() + 1;
-
-        $codigo = 'DOC-' . str_pad($contador, 5, '0', STR_PAD_LEFT);
+        $prefix = ($funcionario->fun_doc_adm === 'D') ? 'DOC' : 'ADM';
+        $anio = date('y'); // 26
+        
+        // Obtener o crear el registro del contador secuencial
+        $secuencial = CodigoSecuencial::firstOrCreate(
+            ['tipo' => $prefix, 'anio' => (int)$anio],
+            ['ultimo_numero' => 0]
+        );
+        
+        // Incrementar el contador
+        $secuencial->increment('ultimo_numero');
+        $numero = $secuencial->ultimo_numero;
+        
+        $codigo = $prefix . str_pad($numero, 5, '0', STR_PAD_LEFT) . '-' . $anio;
 
         $codFcon = DB::table('doc_adm.formularios_conformidad')->insertGetId([
             'cod_fun' => $codFun,
@@ -915,6 +927,7 @@ class FuncionarioController extends Controller
         session()->forget('conformidad_start_time_' . $codFun);
 
         \Session::flash('exito', 'Formulario de conformidad guardado correctamente.');
+        \Session::flash('descargar_conformidad', $codFcon);
         return redirect(url('listar documentos funcionario/' . $codFun));
     }
 
@@ -993,9 +1006,29 @@ class FuncionarioController extends Controller
 
         $templateProcessor->setValue('nombre',      $funcionario->fun_nombre ?? '');
         $templateProcessor->setValue('lugar:trabajo', $formulario->lugar_trabajo ?? '');
+        $templateProcessor->setValue('carrera',     $formulario->carrera ?? '');
         $templateProcessor->setValue('telefono',    $funcionario->fun_telefonos ?? '');
         $templateProcessor->setValue('email',       $funcionario->fun_email ?? '');
         $templateProcessor->setValue('fecha',       $fecha);
+        $templateProcessor->setValue('codigo',      $formulario->codigo ?? '');
+
+        $documentos = \App\Models\Documento::where('cod_fcon', $cod_fcon)->orderBy('doc_tipo')->get();
+        $templateProcessor->setValue('cantidad_documentos', count($documentos) + 1);
+        $valoresDocs = [];
+        foreach ($documentos as $doc) {
+            $valoresDocs[] = [
+                'doc_tipo' => htmlspecialchars($doc->doc_tipo ?? ''),
+                'doc_titulo' => htmlspecialchars($doc->doc_titulo ?? ''),
+            ];
+        }
+        
+        if (count($valoresDocs) > 0) {
+            $templateProcessor->cloneRowAndSetValues('doc_tipo', $valoresDocs);
+        } else {
+            $templateProcessor->cloneRowAndSetValues('doc_tipo', [
+                ['doc_tipo' => 'Sin documentos añadidos', 'doc_titulo' => '']
+            ]);
+        }
 
         $nombreArchivo = 'conformidad-' . ($formulario->codigo ?? $cod_fcon) . '.docx';
         $rutaTemporal  = storage_path('app/temp/' . $nombreArchivo);

@@ -8,6 +8,15 @@
             {!! session('exito') !!}
         </div>
     @endif
+    @if(Session::has('descargar_conformidad'))
+        <script>
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    window.location.href = "{{ url('descargar conformidad/' . session('descargar_conformidad')) }}";
+                }, 500);
+            });
+        </script>
+    @endif
     @if(Session::has('error'))
         <div class="alert alert-danger alert-dismissible">
             <button type="button" class="close" data-dismiss="alert" aria-label="close">
@@ -52,10 +61,12 @@
                         <h5 class=""><i class="fas fa-user-circle"></i>&nbsp;Funcionarios</h5>
                     </div>
                     <div class="col-md-6">
+                        {{--
                         <a href="" class="btn btn-sm btn-primary float-right mr-1" data-toggle="modal" data-target="#documento"
                            onclick="cargarDatos('{{url('fe_documento/0/'.$cod_fun)}}','panel_documento')">+ Documento</a>
                         <a href="" class="btn btn-sm btn-primary float-right mr-1" data-toggle="modal" data-target="#documento"
                            onclick="cargarDatos('{{url('fe_documento titularidad/0/'.$cod_fun)}}','panel_documento')">+ Titularidad</a>
+                        --}}
                         <a href="{{ url('l_conformidad/'.$cod_fun) }}" class="btn btn-sm btn-success float-right mr-1"><i class="fas fa-file-alt"></i> + Formulario de conformidad</a>
                     </div>
                 </div>
@@ -329,8 +340,8 @@
                                 <div class="bg-primary centrar_bloque p-1 col-md-3 rounded shadow mt-4">
                                     <h5 class="text-white text-center">Formularios de Conformidad</h5>
                                 </div>
-                                <div class="card mt-3">
-                                    <div class="card-body">
+                                <!--div class="card mt-3">
+                                    <div class="card-body"-->
                                         @if(isset($formularios) && $formularios->count() > 0)
                                             <table class="table table-sm table-hover" width="100%" cellspacing="0" style="font-size: 0.85em" id="tablaFormularios">
                                                 <thead>
@@ -364,12 +375,11 @@
                                                                 @endif
                                                             </td>
                                                             <td>
-                                                                {{--<a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_formulario_conformidad/'.$formulario->cod_fcon)}}','panel_documento')"
-                                                                   title="Editar formulario"><i class="fas fa-edit"></i>
-                                                                </a>--}}
+                                                                @can('borrar formulario de conformidad - dya')
                                                                 <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#documento" data-toggle="modal" onclick="cargarDatos('{{url('fe_eliminar_conformidad/'.$formulario->cod_fcon)}}','panel_documento')"
                                                                    title="Eliminar formulario"><i class="text-danger fas fa-trash-alt"></i>
                                                                 </a>
+                                                                @endcan
                                                                 <a href="{{ url('descargar conformidad/' . $formulario->cod_fcon) }}"
                                                                    class="btn btn-success btn-circle btn-sm"
                                                                    title="Descargar formulario .docx">
@@ -383,8 +393,8 @@
                                         @else
                                             <div class="alert alert-info mb-0">No hay formularios de conformidad registrados para este funcionario.</div>
                                         @endif
-                                    </div>
-                                </div>
+                                    <!--/div>
+                                </div-->
 
                     </div>
                 </div>
