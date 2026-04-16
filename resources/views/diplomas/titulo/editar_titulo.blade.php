@@ -232,21 +232,40 @@
                                                 <input type="text" class="form-control-sm form-control border border-primary text-danger" name="otra_modalidad"
                                                        placeholder="Ingrese la modalidad" value="{{$titulo[0]->tit_otra_modalidad}}">
                                             </div>
-                                            <script>
-                                                function e_habilitarMod(valor){
-                                                    if(valor=='Otro...'){
-                                                        $('#e_otraMod input').prop('disabled', false);
-                                                        $('#e_otraMod').show(250);
-                                                    }else{
-                                                        $('#e_otraMod input').prop('disabled', true);
-                                                        $('#e_otraMod').hide(250);
-                                                    }
-                                                }
-                                            </script>
+                                            
 
                                     </td>
                                 </tr>
                                 <?php }?>
+                                <!-- Fila del checkbox -->
+                                <tr>
+                                    <th class="text-right font-italic align-middle">Nota marginal:</th>
+                                    <td style="vertical-align: middle;">
+                                        <div class="form-check form-switch m-0">
+                                            <input 
+                                                class="form-check-input" 
+                                                type="checkbox"
+                                                id="nota_marginal_editado" 
+                                                name="nota_marginal" 
+                                                value="t"
+                                                {{ ($titulo[0]->nota_marginal ?? 'f') == 't' ? 'checked' : '' }}>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- Fila de resolución (oculta inicialmente) -->
+                                <tr id="bloque_nota_marginal" style="display:none;">
+                                    <th class="text-right font-italic">Resolucion de N/M:</th>
+                                    <td class="border-bottom border-dark">
+                                        <input type="text" class="form-control form-control-sm border-0" name="resolucion" id="resolucion" value="{{$titulo[0]->tit_resolucion ?? ''}}">
+                                    </td>
+                                </tr>
+                                <!-- Fila de fecha (oculta inicialmente) -->
+                                <tr id="bloque_fecha_nota" style="display:none;">
+                                    <th class="text-right font-italic align-middle">Fecha de resolución:</th>
+                                    <td class="border-bottom border-dark">
+                                        <input type="date" class="form-control form-control-sm border-0" name="fecha_resolucion" id="fecha_resolucion" value="{{ !empty($titulo[0]->tit_fecha_resolucion) ? date('Y-m-d', strtotime($titulo[0]->tit_fecha_resolucion)) : '' }}">
+                                    </td>
+                                </tr>
                             </table>
                         </div>
                     </div>
@@ -287,7 +306,57 @@
                     </div>
                 </div>
             </div>
+        <script>
+            console.log("SCRIPT NOTA MARGINAL CARGADO");
 
+            function e_habilitarMod(valor){
+                if(valor=='Otro...'){
+                    $('#e_otraMod input').prop('disabled', false);
+                    $('#e_otraMod').show(250);
+                }else{
+                    $('#e_otraMod input').prop('disabled', true);
+                    $('#e_otraMod').hide(250);
+                }
+            }
+
+            function toggleNotaMarginal() {
+                // Busca el checkbox dentro del modal visible usando su name
+                var checkbox = document.querySelector('.modal.show input[name="nota_marginal"]');
+                if (!checkbox) return;
+                
+                var mostrar = checkbox.checked;
+                console.log("toggleNotaMarginal, mostrar =", mostrar);
+                
+                // Busca las filas dentro del mismo modal
+                var modal = checkbox.closest('.modal.show');
+                if (!modal) return;
+                
+                var bloque1 = modal.querySelector('#bloque_nota_marginal');
+                var bloque2 = modal.querySelector('#bloque_fecha_nota');
+                var resolucion = modal.querySelector('#resolucion');
+                var fecha = modal.querySelector('#fecha_resolucion');
+                
+                if (mostrar) {
+                    if (bloque1) bloque1.style.display = 'table-row';
+                    if (bloque2) bloque2.style.display = 'table-row';
+                } else {
+                    if (bloque1) bloque1.style.display = 'none';
+                    if (bloque2) bloque2.style.display = 'none';
+                    if (resolucion) resolucion.value = '';
+                    if (fecha) fecha.value = '';
+                }
+            }
+
+            // Evento change (se dispara cuando el usuario hace clic)
+            $(document).on('change', '.modal.show input[name="nota_marginal"]', function() {
+                toggleNotaMarginal();
+            });
+
+            // Inicializar estado cuando el modal se abre (respetar el valor guardado en BD)
+            $(document).on('shown.bs.modal', '.modal', function() {
+                toggleNotaMarginal();
+            });
+        </script>
         <input type="hidden" name="tipo" id="tipo" value="{{$tipo}}">
         <input type="hidden" name="ctit" value="{{$titulo[0]->cod_tit}}">
         <input type="hidden" name="ct" value="{{$tomo['cod_tom']}}"/>

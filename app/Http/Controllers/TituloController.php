@@ -130,7 +130,6 @@ class TituloController extends Controller
         return view('diplomas.titulo.l_titulo',compact('titulo','tomo','tipo_completo','carrera','nacionalidad','modalidad','grado','listaTomo','tomo_carrera'));
     }
     public function GuardarTitulo(TituloRequest $form){
-
         $tomo=Tomo::find($form['ct']);
         if($tomo->tom_cerrado!='t'){
             $tipo=$form['tipo'];
@@ -160,6 +159,9 @@ class TituloController extends Controller
                     $titulo->tit_otra_modalidad=mb_strtoupper($form['otra_modalidad']);
                     $titulo->tit_reconocimiento=$form['reconocimiento']=='on' ? 't':'';
                     $titulo->tit_fecha_folio=$form['fecha_folio'];
+                    $titulo->nota_marginal = $form->has('nota_marginal') ? 't' : 'f';
+                    $titulo->tit_resolucion = $form['resolucion'];
+                    $titulo->tit_fecha_resolucion = $form['fecha_resolucion'];
                     $gestion=date('Y',strtotime($form['fecha']));
                     if($titulo->tit_gestion!=$gestion){
                         $titulo->tit_gestion=$gestion;
@@ -342,7 +344,7 @@ class TituloController extends Controller
                             }else{
                                 \Session::flash('error','No se puede guardar los datos personales debido a que el numero de CI: '  .$personaExistente[0]->per_ci
                                     .' esta registrado a nombre de: '.$personaExistente[0]->per_apellido.", ".$personaExistente[0]->per_nombre);
-                                return redirect('l_titulo/'.$form['ct']);
+                                    return redirect('l_titulo/'.$form['ct']);
                             }
                             $objetoCompleto=$personaExistente[0];
                         }
@@ -385,9 +387,10 @@ class TituloController extends Controller
                             'tit_otra_modalidad'=>mb_strtoupper($form['otra_modalidad']),
                             'tit_reconocimiento'=>$reconocimiento,
                             'tit_usr'=>Auth::user()->id,
+                            'nota_marginal' => $form->has('nota_marginal') ? 't' : 'f',
+                            'tit_resolucion' => $form['resolucion'] ?? null,
+                            'tit_fecha_resolucion' => $form['fecha_resolucion'] ?? null,
                         ]);
-
-                        //dd($objetoCompleto);
                         $objetoCompleto=(object) array_merge((array)$objetoCompleto,$titulo->toArray());
 
                         if($obs==1){
@@ -424,7 +427,7 @@ class TituloController extends Controller
             }else{
                 \Session::flash('error','No se ha podido guardar debido a que ya existe un título con el número '.$form['nro']);
                 if(!isset($form['ctit'])){
-                    return redirect('l_titulo/'.$form['ct']);
+                return redirect('l_titulo/'.$form['ct']);
                 }else{
                     return redirect('fe_titulo/'.$form['ctit']);
                 }
@@ -522,10 +525,11 @@ class TituloController extends Controller
                 ->where('titulos.cod_tit','=',$id_titulo)
                 ->select('tit_nro_titulo','tit_nro_folio','titulos.cod_tit','per_apellido','tit_fecha_emision','tit_titulo','tit_pdf','tit_antecedentes',
                     'tit_fecha_folio','tit_otra_modalidad','per_nombre','car_nombre','fac_nombre','tit_grado','diploma_academicos.cod_car','per_ci','per_sexo',
-                    'per_pasaporte','titulos.cod_mod','mod_nombre','personas.cod_nac','nac_nombre','tit_revalida','per_ci_exp','fac_abreviacion')
+                    'per_pasaporte','titulos.cod_mod','mod_nombre','personas.cod_nac','nac_nombre','tit_revalida','per_ci_exp','fac_abreviacion','titulos.nota_marginal',
+                    'titulos.tit_resolucion','titulos.tit_fecha_resolucion')
                 ->get();
 
-//return sizeof($titulo);
+        //return sizeof($titulo);
             if($tipo=='tp' && $titulo[0]->tit_revalida=='t'){
                 $tipo_revalida='t';
                 $revalida=DB::table('revalidas')
@@ -561,7 +565,7 @@ class TituloController extends Controller
                         ->where('cod_tit','=',$id_titulo)
                         ->select('tit_nro_titulo','tit_nro_folio','titulos.cod_tit','per_apellido','tit_fecha_emision','tit_titulo',
                             'tit_fecha_folio','tit_otra_modalidad','tit_pdf','tit_antecedentes','per_nombre','mod_nombre','tit_grado','per_ci','per_sexo',
-                            'per_pasaporte','titulos.cod_mod','personas.cod_nac','nac_nombre','per_ci_exp')
+                            'per_pasaporte','titulos.cod_mod','personas.cod_nac','nac_nombre','per_ci_exp','titulos.nota_marginal','titulos.tit_resolucion','titulos.tit_fecha_resolucion')
                         ->get();
                 }
             }

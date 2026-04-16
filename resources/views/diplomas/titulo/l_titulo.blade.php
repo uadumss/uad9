@@ -386,6 +386,11 @@
                                         </div>
                                     <div class="col-md-6">
                                         <span class="text-primary font-weight-bold float-right">DATOS PERSONALES</span>
+                                        <style>
+                                            .form-check-input {
+                                                margin-top: 0 !important;
+                                            }
+                                        </style>
                                         <table class="col-md-12">
                                             <tr>
                                                 <th class="text-right font-italic">Nº CI:</th>
@@ -474,6 +479,37 @@
                                             </tr>
 
                                             <?php }?>
+                                            <tr>
+                                                <th class="text-right font-italic align-middle">
+                                                    Nota marginal:
+                                                </th>
+                                                <td style="vertical-align: middle;">
+                                                        <!-- Valor por defecto -->
+                                                    <div class="form-check form-switch m-0">
+                                                        <input 
+                                                            class="form-check-input" 
+                                                            type="checkbox"
+                                                            id="nota_marginal_nuevo"
+                                                            name="nota_marginal" 
+                                                            value="t"
+                                                                onclick="toggleNotaMarginalNuevo()">
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr id="bloque_nota_marginal_nuevo" style="display:none;">
+                                                <th class="text-right font-italic">Resolucion de N/M:</th>
+                                                <td class="border-bottom border-dark">
+                                                    <input type="text" class="form-control form-control-sm border-0" name="resolucion" id="resolucion_nuevo">
+                                                </td>
+                                            </tr>
+                                            <tr id="bloque_fecha_nota_nuevo" style="display:none;">
+                                                <th class="text-right font-italic align-middle">
+                                                    Fecha de resolución:
+                                                </th>
+                                                <td class="border-bottom border-dark">
+                                                    <input type="date" class="form-control form-control-sm border-0" name="fecha_resolucion" id="fecha_resolucion_nuevo">
+                                                </td>
+                                            </tr>
                                         </table>
 
                                         <?php if($tipo=='re' || $tipo=='tp'){?>
@@ -741,7 +777,7 @@
                 //data:$('#form_editar').serialize(),
                 success: function (resp) {
                     $('#panel_editar').html(resp);
-
+                    $('#editarTitulo').modal('hide');
                     var fila=$('#fila').val();
                     var tipo="{{$tipo}}";
                     @if($tipo=='re')
@@ -779,7 +815,6 @@
                 }
             });
         }
-
         function verRevalida(){
             if($("#revalida").val()=='t'){
                 $("#revalida").val('f');
@@ -846,5 +881,20 @@
                 }
             });
         }
+        function toggleNotaMarginalNuevo() {
+            var mostrar = $('#nota_marginal_nuevo').prop('checked');
+            
+            if (mostrar) {
+                $('#bloque_nota_marginal_nuevo, #bloque_fecha_nota_nuevo').show();
+            } else {
+                $('#bloque_nota_marginal_nuevo, #bloque_fecha_nota_nuevo').hide();
+                $('#resolucion_nuevo, #fecha_resolucion_nuevo').val('');
+            }
+        }
+
+        $(document).on('change', '.modal.show input[name="nota_marginal"]', function() {  // cambiado
+            toggleNotaMarginalNuevo();
+        });
+            
     </script>
 @endsection

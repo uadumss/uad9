@@ -288,7 +288,6 @@
         }
         @endif
         function verDatos(id){
-
             var url="{{url('ver datos/')}}"+"/"+id;
             $.ajax({
                 url:url,
