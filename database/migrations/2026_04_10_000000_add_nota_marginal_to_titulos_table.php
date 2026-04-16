@@ -17,9 +17,6 @@ return new class extends Migration
             if (!Schema::hasColumn('public.titulos', 'nota_marginal')) {
                 $table->text('nota_marginal')->nullable()->comment('Nota marginal del título');
             }
-            if (!Schema::hasColumn('public.titulos', 'fecha_nota_marginal')) {
-                $table->date('fecha_nota_marginal')->nullable()->comment('Fecha de la nota marginal');
-            }
         });
     }
 
@@ -33,9 +30,6 @@ return new class extends Migration
         Schema::table('public.titulos', function (Blueprint $table) {
             if (Schema::hasColumn('public.titulos', 'nota_marginal')) {
                 $table->dropColumn('nota_marginal');
-            }
-            if (Schema::hasColumn('public.titulos', 'fecha_nota_marginal')) {
-                $table->dropColumn('fecha_nota_marginal');
             }
         });
     }
