@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class RecaudacionesController extends Controller
 {
@@ -77,11 +78,14 @@ class RecaudacionesController extends Controller
                 ]);
 
             if (!$response->successful()) {
+                Log::warning('OCR.Space respondió con error HTTP al extraer datos de recibo.', [
+                    'status' => $response->status(),
+                ]);
+
                 return response()->json([
                     'ok' => false,
                     'message' => 'OCR.Space respondio con error HTTP',
                     'status' => $response->status(),
-                    'error' => $response->json(),
                 ], $response->status());
             }
 
@@ -106,10 +110,13 @@ class RecaudacionesController extends Controller
                 ],
             ]);
         } catch (\Throwable $e) {
+            Log::error('Error al procesar OCR del documento.', [
+                'error' => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'ok' => false,
                 'message' => 'Error al procesar OCR del documento',
-                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -152,11 +159,14 @@ class RecaudacionesController extends Controller
                 ]);
 
             if (!$response->successful()) {
+                Log::warning('OCR.Space respondió con error HTTP al extraer datos de diploma.', [
+                    'status' => $response->status(),
+                ]);
+
                 return response()->json([
                     'ok' => false,
                     'message' => 'OCR.Space respondio con error HTTP',
                     'status' => $response->status(),
-                    'error' => $response->json(),
                 ], $response->status());
             }
 
@@ -181,10 +191,13 @@ class RecaudacionesController extends Controller
                 ],
             ]);
         } catch (\Throwable $e) {
+            Log::error('Error al procesar OCR del diploma.', [
+                'error' => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'ok' => false,
                 'message' => 'Error al procesar OCR del diploma',
-                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -280,23 +293,32 @@ class RecaudacionesController extends Controller
                 ], 200);
             }
 
+            Log::warning('La API de recaudaciones respondió con error.', [
+                'status' => $response->status(),
+            ]);
+
             return response()->json([
                 'ok' => false,
                 'message' => 'La API de recaudaciones respondio con error',
                 'status' => $response->status(),
-                'error' => $response->json(),
             ], $response->status());
         } catch (RequestException $e) {
+            Log::warning('Error de comunicación con la API de recaudaciones.', [
+                'error' => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'ok' => false,
                 'message' => 'Error en la comunicacion con la API de recaudaciones',
-                'error' => $e->getMessage(),
             ], 502);
         } catch (\Throwable $e) {
+            Log::error('Error inesperado en recaudaciones.', [
+                'error' => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'ok' => false,
                 'message' => 'Error inesperado en recaudaciones',
-                'error' => $e->getMessage(),
             ], 500);
         }
     }

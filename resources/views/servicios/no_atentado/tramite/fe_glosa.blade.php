@@ -13,7 +13,7 @@
                 <button type="button" class="close" data-dismiss="alert" aria-label="close">
                     <span aria-hidden="true">&times;</span>
                 </button>
-                <span class="font-weight-bold">{!! session('exito') !!}</span>
+                <span class="font-weight-bold">{{ session('exito') }}</span>
             </div>
         @endif
         <div class="alert-primary centrar_bloque p-1 col-md-7 rounded shadow">

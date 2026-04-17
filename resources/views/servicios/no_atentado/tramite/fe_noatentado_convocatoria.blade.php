@@ -14,7 +14,7 @@
                     <button type="button" class="close" data-dismiss="alert" aria-label="close">
                         <span aria-hidden="true">&times;</span>
                     </button>
-                    {!! session('exitoModal') !!}
+                    {{ session('exitoModal') }}
                 </div>
             @endif
             @if(Session::has('errorModal'))
@@ -22,7 +22,7 @@
                     <button type="button" class="close" data-dismiss="alert" aria-label="close">
                         <span aria-hidden="true">&times;</span>
                     </button>
-                    {!! session('errorModal') !!}
+                    {{ session('errorModal') }}
                 </div>
             @endif
             <div id="noa_feedback_js" class="mb-2" style="display:none;"></div>
@@ -395,6 +395,7 @@
     var candidatosNoAtentado=[];
     var pagoNoAtentadoValidado=false;
     var controlValidadoNoAtentado='';
+    var reintegroValidadoNoAtentado='';
     var tramiteValidadoNoAtentado='';
     var detalleValidacionPagoNoAtentado=null;
     var opcionesOriginalesTramiteNoa='';
@@ -615,6 +616,15 @@
                 if(resp && typeof resp==='object'){
                     if(resp.ok===false){
                         mostrarMensajeNoatentado('error',limpiarTextoNoAtentado(resp.message || 'No se pudo guardar el trámite.'));
+                        return;
+                    }
+
+                    if(resp.ok===true && resp.cerrar_modal===true){
+                        const urlLista=limpiarTextoNoAtentado(resp.refresh_url || "{{url('actualizar lista tramite convocatoria/'.$cod_con)}}");
+                        if(urlLista!==''){
+                            cargarDatos(urlLista,'panel_lista_tramites');
+                        }
+                        $('#Noatentado').modal('hide');
                         return;
                     }
 
@@ -966,11 +976,10 @@
     }
 
     function detalleDocumentoReintegroNoatentado(validacionReintegro){
-        const documento=limpiarTextoNoAtentado(validacionReintegro && validacionReintegro.documento_principal_usado ? validacionReintegro.documento_principal_usado : '');
-        if(documento===''){
+        if(!validacionReintegro || validacionReintegro.aplica!==true){
             return '';
         }
-        return 'CI usado para validar reintegro: '+documento+'.';
+        return 'Verificación de titular aplicada internamente.';
     }
 
     function mostrarIconoPagoNoatentado(campo,mostrar){
@@ -1027,7 +1036,6 @@
         const validando=validacionPagoNoaEnCurso===true && controlActual!=='';
         actualizarVisibilidadIconosPagoNoatentado();
         const validacionReintegro=(detalleValidacionPagoNoAtentado && detalleValidacionPagoNoAtentado.validacion_reintegro) ? detalleValidacionPagoNoAtentado.validacion_reintegro : null;
-        const reintegroValidado=limpiarTextoNoAtentado(validacionReintegro && validacionReintegro.control ? validacionReintegro.control : '');
 
         if(resumen.cantidad===0){
             actualizarIconoPagoNoatentado('reintegro','no_aplica','No aplica','Sin candidatos registrados.');
@@ -1052,7 +1060,7 @@
 
         if(pagoNoAtentadoValidado && controlActual!=='' && controlActual===controlValidadoNoAtentado){
             if(reintegro!==''){
-                const reintegroCoincideRespuesta=validacionReintegro && reintegroValidado!=='' && reintegroValidado===reintegro;
+                const reintegroCoincideRespuesta=validacionReintegro && reintegro===reintegroValidadoNoAtentado;
                 if(reintegroCoincideRespuesta && validacionReintegro.ok===true){
                     const detalleDocumento=detalleDocumentoReintegroNoatentado(validacionReintegro);
                     const mensajeOkBase=limpiarTextoNoAtentado(validacionReintegro.message || 'Control de reintegro validado en recaudaciones con control y CI del pagador principal.');
@@ -1130,6 +1138,7 @@
 
             pagoNoAtentadoValidado=false;
             controlValidadoNoAtentado='';
+            reintegroValidadoNoAtentado='';
             tramiteValidadoNoAtentado='';
             detalleValidacionPagoNoAtentado=null;
             detalleExtendidoPagoNoa='';
@@ -1211,24 +1220,14 @@
         }
 
         const partes=[];
-        const cuenta=limpiarTextoNoAtentado(resp.cuenta);
-        const codigoCuenta=normalizarNumeroNoAtentado(resp.codigo_cuenta);
-        const documento=limpiarTextoNoAtentado(resp.documento);
-        const nombre=limpiarTextoNoAtentado(resp.nombre_persona);
+        const principal=Number(resp && resp.monto_principal_validado ? resp.monto_principal_validado : 0);
+        const reintegro=Number(resp && resp.monto_reintegro_validado ? resp.monto_reintegro_validado : 0);
+        const total=Number(resp && resp.monto_total_validado ? resp.monto_total_validado : (principal+reintegro));
         const tipoSugerido=limpiarTextoNoAtentado(resp.nombre_tipo_noatentado_sugerido);
         const tiposPermitidos=obtenerTiposPermitidosNoatentado(resp);
 
-        if(cuenta!==''){
-            partes.push('Cuenta API: '+cuenta);
-        }
-        if(codigoCuenta!==''){
-            partes.push('Cod. cuenta: '+codigoCuenta);
-        }
-        if(nombre!==''){
-            partes.push('Pagador: '+nombre);
-        }
-        if(documento!==''){
-            partes.push('CI pago: '+documento);
+        if(isFinite(total) && total>0){
+            partes.push('Monto total validado: Bs '+total.toFixed(2));
         }
 
         if(tiposPermitidos.length>1){
@@ -1401,6 +1400,7 @@
     function resetValidacionPagoNoAtentado(){
         pagoNoAtentadoValidado=false;
         controlValidadoNoAtentado='';
+        reintegroValidadoNoAtentado='';
         tramiteValidadoNoAtentado='';
         detalleValidacionPagoNoAtentado=null;
         detalleExtendidoPagoNoa='';
@@ -1429,13 +1429,17 @@
             for(let i=0;i<candidatosNoAtentado.length;i++){
                 const candidato=candidatosNoAtentado[i];
                 const cargo=candidato.cargo!=='' ? candidato.cargo : candidato.cargo_nombre;
+                const nombreCompleto=escaparHtmlNoa((candidato.apellido || '')+' '+(candidato.nombre || ''));
+                const ciSeguro=escaparHtmlNoa(candidato.ci || '');
+                const codSisSeguro=escaparHtmlNoa(candidato.cod_sis || '');
+                const cargoSeguro=escaparHtmlNoa(cargo || '-');
                 tabla.append(
                     '<tr>'+
                     '<td>'+(i+1)+'</td>'+
-                    '<td>'+candidato.apellido+' '+candidato.nombre+'</td>'+
-                    '<td>'+candidato.ci+'</td>'+
-                    '<td>'+candidato.cod_sis+'</td>'+
-                    '<td>'+(cargo || '-')+'</td>'+
+                    '<td>'+nombreCompleto+'</td>'+
+                    '<td>'+ciSeguro+'</td>'+
+                    '<td>'+codSisSeguro+'</td>'+
+                    '<td>'+cargoSeguro+'</td>'+
                     '<td><button type="button" class="btn btn-sm btn-light btn-circle border" title="Quitar" onclick="quitarCandidatoNoAtentado('+i+')"><i class="fas fa-trash-alt text-danger"></i></button></td>'+
                     '</tr>'
                 );
@@ -1780,6 +1784,7 @@
 
         if(control!==controlValidadoNoAtentado){
             pagoNoAtentadoValidado=false;
+            reintegroValidadoNoAtentado='';
             tramiteValidadoNoAtentado='';
         }
 
@@ -1839,10 +1844,12 @@
                 }
 
                 validacionPagoNoaEnCurso=false;
+                const reintegroActual=limpiarTextoNoAtentado($('#reintegro_noa').val());
 
                 if(resp && resp.ok){
                     detalleValidacionPagoNoAtentado=resp;
                     controlValidadoNoAtentado=control;
+                    reintegroValidadoNoAtentado=reintegroActual;
                     asignarMontosValidadosNoatentado(resp);
                     aplicarAutoseleccionTramiteNoatentado(resp);
                     renderDetallePagoNoatentado(resp);
@@ -1871,6 +1878,7 @@
                     if(pendientePreimpreso){
                         pagoNoAtentadoValidado=false;
                         controlValidadoNoAtentado='';
+                        reintegroValidadoNoAtentado='';
                         tramiteValidadoNoAtentado='';
                         detalleValidacionPagoNoAtentado=null;
                         detalleExtendidoPagoNoa='';
@@ -1888,6 +1896,7 @@
                             validacion_reintegro:(resp && resp.validacion_reintegro) ? resp.validacion_reintegro : null,
                         });
                         controlValidadoNoAtentado=control;
+                        reintegroValidadoNoAtentado=reintegroActual;
                         asignarMontosValidadosNoatentado(resp || {});
                         aplicarAutoseleccionTramiteNoatentado(validacionPrincipal);
                         renderDetallePagoNoatentado(validacionPrincipal);
@@ -1903,6 +1912,7 @@
                     }else{
                         pagoNoAtentadoValidado=false;
                         controlValidadoNoAtentado='';
+                        reintegroValidadoNoAtentado='';
                         tramiteValidadoNoAtentado='';
                         detalleValidacionPagoNoAtentado=null;
                         detalleExtendidoPagoNoa='';
@@ -1936,6 +1946,7 @@
 
                 pagoNoAtentadoValidado=false;
                 controlValidadoNoAtentado='';
+                reintegroValidadoNoAtentado='';
                 tramiteValidadoNoAtentado='';
                 detalleValidacionPagoNoAtentado=null;
                 detalleExtendidoPagoNoa='';
@@ -2009,8 +2020,7 @@
             const validacionReintegro=(detalleValidacionPagoNoAtentado && detalleValidacionPagoNoAtentado.validacion_reintegro)
                 ? detalleValidacionPagoNoAtentado.validacion_reintegro
                 : null;
-            const controlReintegroValidado=limpiarTextoNoAtentado(validacionReintegro && validacionReintegro.control ? validacionReintegro.control : '');
-            const reintegroOk=!!(validacionReintegro && validacionReintegro.ok===true && validacionReintegro.aplica===true && controlReintegroValidado!=='' && controlReintegroValidado===reintegro);
+            const reintegroOk=!!(validacionReintegro && validacionReintegro.ok===true && validacionReintegro.aplica===true && reintegro===reintegroValidadoNoAtentado);
 
             if(!reintegroOk){
                 mostrarMensajeNoatentado('warning','No se guardó el trámite: el reintegro informado no fue validado. Corrija el control de reintegro o deje el campo vacío si no aplica.','#reintegro_noa');

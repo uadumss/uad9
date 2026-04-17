@@ -5,7 +5,7 @@
             <button type="button" class="close" data-dismiss="alert" aria-label="close">
                 <span aria-hidden="true">&times;</span>
             </button>
-            <span class="font-weight-bold">{!! session('exito') !!}</span>
+            <span class="font-weight-bold">{{ session('exito') }}</span>
         </div>
     @endif
 
@@ -14,7 +14,7 @@
             <button type="button" class="close" data-dismiss="alert" aria-label="close">
                 <span aria-hidden="true">&times;</span>
             </button>
-            <span class="font-weight-bold text-dark">{!! session('error') !!}</span>
+            <span class="font-weight-bold text-dark">{{ session('error') }}</span>
         </div>
     @endif
     @if(count($errors)>0)
