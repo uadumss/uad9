@@ -128,7 +128,7 @@
                                                 </div>
                                                 <div class="col-md-6 mb-2">
                                                     <label class="font-italic mb-0">Trámite</label>
-                                                    <select class="custom-select custom-select-sm" name="tramite" id="tramite_noa" onchange="onCambioTramiteNoa()">
+                                                    <select class="custom-select custom-select-sm" name="tramite" id="tramite_noa" disabled>
                                                         <option value="">Seleccione</option>
                                                         @foreach($tramites as $t)
                                                             <option value="{{$t->cod_tre}}">{{$t->tre_nombre}}</option>
@@ -137,37 +137,56 @@
                                                     <small id="ayuda_tramite_noa" class="text-secondary">Se define al validar el pago.</small>
                                                 </div>
 
-                                                <div class="col-md-6 mb-2">
+                                                <div class="col-md-3 mb-2">
                                                     <label class="font-italic mb-0 d-block">Tipo de trámite</label>
-                                                    <div class="border rounded p-2 bg-light">
-                                                        <input type="radio" name="tipo_tramite" checked value="t"> INTERNO&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                                        <input type="radio" name="tipo_tramite" value="f"> EXTERNO
+                                                    <div class="border rounded p-2 bg-light d-flex justify-content-between align-items-center flex-wrap">
+                                                        <label class="mb-0 font-weight-normal">
+                                                            <input type="radio" name="tipo_tramite" checked value="t"> INTERNO
+                                                        </label>
+                                                        <label class="mb-0 font-weight-normal ml-2">
+                                                            <input type="radio" name="tipo_tramite" value="f"> EXTERNO
+                                                        </label>
                                                     </div>
                                                 </div>
-                                                <div class="col-md-3 mb-2">
-                                                    <label class="font-italic mb-0">Nro. Control</label>
-                                                    <input class="form-control form-control-sm" required name="control" id="control_noa" onchange="resetValidacionPagoNoAtentado()">
+                                                <div class="col-md-5 mb-2">
+                                                    <div class="border rounded p-2 bg-light h-100">
+                                                        <label class="font-italic mb-1 d-block text-primary">Pago principal</label>
+                                                        <div class="form-row">
+                                                            <div class="col-md-7 mb-2 mb-md-0">
+                                                                <label class="font-italic mb-0">Nro. Control</label>
+                                                                <div class="input-group input-group-sm">
+                                                                    <input class="form-control form-control-sm" required name="control" id="control_noa" oninput="programarValidacionPagoNoAtentado();">
+                                                                    <div class="input-group-append">
+                                                                        <a href="#" class="btn btn-light btn-circle btn-sm text-secondary noa-estado-pago-icon" data-campo="estado-pago-control-icon" data-pago-campo="control" title="Ver detalle de validación de pago" onclick="abrirDetallePagoNoatentado(this); return false;"><i class="fas fa-minus-circle"></i></a>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-5">
+                                                                <label class="font-italic mb-0">Preimpreso (principal)</label>
+                                                                <div class="input-group input-group-sm">
+                                                                    <input class="form-control form-control-sm" name="preimpreso_pago" id="preimpreso_pago_noa" oninput="programarValidacionPagoNoAtentado();" disabled>
+                                                                    <div class="input-group-append">
+                                                                        <a href="#" class="btn btn-light btn-circle btn-sm text-muted noa-estado-pago-icon" data-campo="estado-pago-preimpreso-icon" data-pago-campo="preimpreso" title="Ver detalle de validación de pago" onclick="abrirDetallePagoNoatentado(this); return false;"><i class="fas fa-minus-circle"></i></a>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <small class="text-secondary d-block mt-1">Con varios candidatos, el preimpreso es obligatorio para el control principal.</small>
+                                                    </div>
                                                 </div>
-                                                <div class="col-md-3 mb-2">
-                                                    <label class="font-italic mb-0">Control Reintegro</label>
-                                                    <input class="form-control form-control-sm" name="reintegro" id="reintegro_noa" onchange="resetValidacionPagoNoAtentado()">
+                                                <div class="col-md-4 mb-2">
+                                                    <div class="border rounded p-2 bg-light h-100">
+                                                        <label class="font-italic mb-1 d-block text-primary">Reintegro (opcional)</label>
+                                                        <label class="font-italic mb-0">Nro. Control Reintegro</label>
+                                                        <div class="input-group input-group-sm">
+                                                            <input class="form-control form-control-sm" name="reintegro" id="reintegro_noa" oninput="programarValidacionPagoNoAtentado();">
+                                                            <div class="input-group-append">
+                                                                <a href="#" class="btn btn-light btn-circle btn-sm text-muted noa-estado-pago-icon" data-campo="estado-pago-reintegro-icon" data-pago-campo="reintegro" title="Ver detalle de validación de pago" onclick="abrirDetallePagoNoatentado(this); return false;"><i class="fas fa-minus-circle"></i></a>
+                                                            </div>
+                                                        </div>
+                                                        <small class="text-secondary d-block mt-1">Se valida en recaudaciones con N° control + CI del pagador principal (sin preimpreso).</small>
+                                                    </div>
                                                 </div>
-                                                <div class="col-md-3 mb-2">
-                                                    <label class="font-italic mb-0">Preimpreso</label>
-                                                    <input class="form-control form-control-sm" name="preimpreso_pago" id="preimpreso_pago_noa" onchange="resetValidacionPagoNoAtentado()" disabled>
-                                                </div>
-                                                <div class="col-md-9 mb-2 d-flex align-items-end">
-                                                    <small class="text-secondary" id="ayuda_filtro_pago_noa">Con un candidato, el CI se valida automáticamente. Si hay varios, ingrese preimpreso.</small>
-                                                </div>
-                                            </div>
-
-                                            <div class="mt-2 border rounded p-2 bg-light shadow-sm">
-                                                <div class="d-flex align-items-center flex-wrap">
-                                                    <button class="btn btn-info btn-sm" id="btn_validar_pago_noa" type="button" onclick="validarPagoNoAtentado()"><i class="fas fa-shield-alt"></i> Validar pago</button>
-                                                    <span id="estado_pago_noa" class="badge badge-warning ml-2">Pendiente</span>
-                                                </div>
-                                                <small id="detalle_pago_noa" class="text-secondary">Antes de guardar debe validar el número de control.</small>
-                                                <div id="detalle_pago_noa_extra" class="small text-muted mt-1"></div>
                                             </div>
                                         </div>
                                     </div>
@@ -331,6 +350,46 @@
     </div>
 </div>
 
+<style>
+.noa-estado-pago-icon {
+    cursor: pointer;
+    transition: transform 0.18s ease, color 0.18s ease, opacity 0.18s ease;
+}
+
+.noa-estado-pago-icon.noa-anim-pop {
+    animation: noaIconPop 0.28s ease-out;
+}
+
+.noa-estado-pago-icon.noa-anim-alert {
+    animation: noaIconAlert 0.32s ease-out;
+}
+
+@keyframes noaIconPop {
+    0% { transform: scale(0.82); }
+    55% { transform: scale(1.16); }
+    100% { transform: scale(1); }
+}
+
+@keyframes noaIconAlert {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    50% { transform: translateX(2px); }
+    75% { transform: translateX(-1px); }
+    100% { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .noa-estado-pago-icon {
+        transition: none;
+    }
+
+    .noa-estado-pago-icon.noa-anim-pop,
+    .noa-estado-pago-icon.noa-anim-alert {
+        animation: none;
+    }
+}
+</style>
+
 <script>
     let candidatosNoAtentado=[];
     let pagoNoAtentadoValidado=false;
@@ -338,6 +397,63 @@
     let tramiteValidadoNoAtentado='';
     let detalleValidacionPagoNoAtentado=null;
     let opcionesOriginalesTramiteNoa='';
+    let estadoControlPagoNoa={
+        resumen:'Pendiente',
+        clase:'badge-warning',
+        detalle:'Antes de guardar debe validar el número de control.',
+        codigo:'',
+    };
+    let detalleExtendidoPagoNoa='';
+    let montoPrincipalValidadoNoa=0;
+    let montoReintegroValidadoNoa=0;
+    let montoTotalValidadoNoa=0;
+    let timerValidacionPagoNoa=null;
+    let secuenciaValidacionPagoNoa=0;
+    let xhrValidacionPagoNoa=null;
+    let validacionPagoNoaEnCurso=false;
+
+    function reiniciarMontosValidadosNoatentado(){
+        montoPrincipalValidadoNoa=0;
+        montoReintegroValidadoNoa=0;
+        montoTotalValidadoNoa=0;
+        window.noaMontosValidados={
+            principal:0,
+            reintegro:0,
+            total:0,
+        };
+    }
+
+    function asignarMontosValidadosNoatentado(resp){
+        const principal=Number(resp && resp.monto_principal_validado ? resp.monto_principal_validado : 0);
+        const reintegro=Number(resp && resp.monto_reintegro_validado ? resp.monto_reintegro_validado : 0);
+        const total=Number(resp && resp.monto_total_validado ? resp.monto_total_validado : (principal+reintegro));
+
+        montoPrincipalValidadoNoa=isFinite(principal) ? principal : 0;
+        montoReintegroValidadoNoa=isFinite(reintegro) ? reintegro : 0;
+        montoTotalValidadoNoa=isFinite(total) ? total : 0;
+
+        window.noaMontosValidados={
+            principal:montoPrincipalValidadoNoa,
+            reintegro:montoReintegroValidadoNoa,
+            total:montoTotalValidadoNoa,
+        };
+    }
+
+    function programarValidacionPagoNoAtentado(inmediata=false){
+        if(timerValidacionPagoNoa){
+            clearTimeout(timerValidacionPagoNoa);
+            timerValidacionPagoNoa=null;
+        }
+
+        if(inmediata===true){
+            validarPagoNoAtentado();
+            return;
+        }
+
+        timerValidacionPagoNoa=setTimeout(function(){
+            validarPagoNoAtentado();
+        },450);
+    }
 
     function limpiarTextoNoAtentado(valor){
         return (valor || '').toString().trim();
@@ -368,12 +484,12 @@
         return {
             cantidad: lista.length,
             ciUnico: lista.length===1 ? lista[0] : '',
+            documentos: lista,
         };
     }
 
     function actualizarFiltroPreimpresoNoAtentado(){
         const inputCrear=$('#preimpreso_pago_noa');
-        const ayudaCrear=$('#ayuda_filtro_pago_noa');
         if(inputCrear.length){
             const resumenCrear=obtenerResumenCandidatosPagoNoAtentado();
             const habilitarCrear=resumenCrear.cantidad>1;
@@ -381,28 +497,469 @@
             if(!habilitarCrear){
                 inputCrear.val('');
             }
-
-            if(ayudaCrear.length){
-                if(resumenCrear.cantidad===0){
-                    ayudaCrear.text('Agregue candidatos para validar el pago.');
-                }else if(resumenCrear.cantidad===1){
-                    ayudaCrear.text('Con un candidato, el CI se valida automáticamente.');
-                }else{
-                    ayudaCrear.text('Hay varios candidatos: ingrese preimpreso para identificar el pago correcto.');
-                }
-            }
         }
     }
 
-    function actualizarEstadoPagoNoAtentado(estado,clase,detalle){
-        const badge=$('#estado_pago_noa');
-        const detallePago=$('#detalle_pago_noa');
-        if(badge.length===0 || detallePago.length===0){
+    function actualizarEstadoPagoNoAtentado(estado,clase,detalle,codigo=''){
+        estadoControlPagoNoa={
+            resumen: limpiarTextoNoAtentado(estado || 'Pendiente'),
+            clase: limpiarTextoNoAtentado(clase || 'badge-warning'),
+            detalle: limpiarTextoNoAtentado(detalle || ''),
+            codigo: limpiarTextoNoAtentado(codigo || ''),
+        };
+        refrescarEstadoControlPagoNoatentado();
+    }
+
+    function normalizarClavePagoNoatentado(valor){
+        return limpiarTextoNoAtentado(valor)
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g,'');
+    }
+
+    function selectorIconosPagoNoatentado(){
+        return '[data-campo="estado-pago-control-icon"],'
+            +'[data-campo="estado-pago-reintegro-icon"],'
+            +'[data-campo="estado-pago-preimpreso-icon"]';
+    }
+
+    function cerrarPopoversPagoNoatentado(excepto){
+        $(selectorIconosPagoNoatentado()).each(function(){
+            if(excepto && this===excepto){
+                return;
+            }
+            $(this).popover('hide').removeAttr('data-popover-visible');
+        });
+    }
+
+    function abrirDetallePagoNoatentado(trigger){
+        const icono=$(trigger);
+        if(!icono.length){
+            return false;
+        }
+
+        const visible=icono.attr('data-popover-visible')==='1';
+        if(visible){
+            icono.popover('hide').removeAttr('data-popover-visible');
+            return false;
+        }
+
+        cerrarPopoversPagoNoatentado(icono.get(0));
+
+        icono.popover('dispose');
+        icono.popover({
+            container:'body',
+            trigger:'manual',
+            placement:'top',
+            content:(icono.attr('data-detalle-pago') || 'Sin detalle disponible').toString(),
+            html:false,
+        }).popover('show');
+        icono.attr('data-popover-visible','1');
+        return false;
+    }
+
+    function tipoEstadoPagoNoatentadoDesdeClase(clase,resumen){
+        const claseNorm=limpiarTextoNoAtentado(clase).toLowerCase();
+        const resumenNorm=limpiarTextoNoAtentado(resumen).toLowerCase();
+        if(claseNorm==='badge-success'){
+            return 'ok';
+        }
+        if(claseNorm==='badge-danger'){
+            return 'error';
+        }
+        if(claseNorm==='badge-info'){
+            if(resumenNorm==='validando'){
+                return 'loading';
+            }
+            return 'info';
+        }
+        if(claseNorm==='badge-warning'){
+            if(resumenNorm==='pendiente'){
+                return 'pending';
+            }
+            if(resumenNorm==='no aplica'){
+                return 'no_aplica';
+            }
+            return 'warning';
+        }
+        return 'pending';
+    }
+
+    function categoriaEstadoPagoNoatentado(tipo,resumen,detalle,codigo){
+        const codigoNorm=limpiarTextoNoAtentado(codigo).toUpperCase();
+        if(tipo==='loading'){
+            return 'loading';
+        }
+        if(tipo==='ok'){
+            return 'ok';
+        }
+        if(tipo==='pending'){
+            return 'pending';
+        }
+        if(tipo==='no_aplica'){
+            return 'na';
+        }
+
+        if(codigoNorm==='RATE_LIMIT'){
+            return 'rate_limit';
+        }
+        if(codigoNorm==='SISTEMA_NO_CONFIGURADO'){
+            return 'not_configured';
+        }
+        if(codigoNorm==='API_NO_DISPONIBLE'){
+            return 'connection';
+        }
+        if(codigoNorm==='PAGO_YA_USADO'){
+            return 'used';
+        }
+        if(codigoNorm==='CONTROL_NO_ENCONTRADO'){
+            return 'not_found';
+        }
+        if(codigoNorm==='CUENTA_NO_CORRESPONDE' || codigoNorm==='CUENTA_SIN_TRAMITE_HABILITADO' || codigoNorm==='CUENTA_NO_IDENTIFICADA'){
+            return 'not_match';
+        }
+
+        if(codigoNorm.indexOf('REINTEGRO_')===0){
+            const codigoBase=codigoNorm.replace(/^REINTEGRO_/, '');
+            if(codigoBase==='RATE_LIMIT') return 'rate_limit';
+            if(codigoBase==='SISTEMA_NO_CONFIGURADO') return 'not_configured';
+            if(codigoBase==='API_NO_DISPONIBLE' || codigoBase==='API_RESPUESTA_INVALIDA') return 'connection';
+            if(codigoBase==='PAGO_YA_USADO') return 'used';
+            if(codigoBase==='CONTROL_NO_ENCONTRADO') return 'not_found';
+            return 'not_match';
+        }
+
+        const texto=normalizarClavePagoNoatentado((resumen || '')+' '+(detalle || ''));
+        if(texto.indexOf('too many')!==-1 || texto.indexOf('demasiadas solicitudes')!==-1 || texto.indexOf('429')!==-1 || texto.indexOf('rate limit')!==-1){
+            return 'rate_limit';
+        }
+        if(texto.indexOf('no esta configurado')!==-1 || texto.indexOf('no esta configurada')!==-1 || texto.indexOf('sistema_no_configurado')!==-1){
+            return 'not_configured';
+        }
+        if(texto.indexOf('sin conexion')!==-1 || texto.indexOf('sin conexión')!==-1 || texto.indexOf('no hay conexion')!==-1 || texto.indexOf('no se pudo conectar')!==-1 || texto.indexOf('api_no_disponible')!==-1 || texto.indexOf('timeout')!==-1){
+            return 'connection';
+        }
+        if(texto.indexOf('ya fue utilizado')!==-1 || texto.indexOf('ya usado')!==-1){
+            return 'used';
+        }
+        if(texto.indexOf('no se encontro')!==-1 || texto.indexOf('no se encontró')!==-1 || texto.indexOf('boleta no encontrada')!==-1){
+            return 'not_found';
+        }
+        if(texto.indexOf('no corresponde')!==-1){
+            return 'not_match';
+        }
+        return 'error';
+    }
+
+    function resumenCategoriaPagoNoatentado(categoria,resumenFallback){
+        if(categoria==='ok') return 'Validado';
+        if(categoria==='loading') return 'Validando';
+        if(categoria==='pending') return 'Pendiente';
+        if(categoria==='na') return 'No aplica';
+        if(categoria==='rate_limit') return 'Demasiadas solicitudes';
+        if(categoria==='not_configured') return 'API no configurada';
+        if(categoria==='connection') return 'Sin conexión';
+        if(categoria==='used') return 'Ya utilizado';
+        if(categoria==='not_found') return 'No encontrado';
+        if(categoria==='not_match') return 'No corresponde';
+        return limpiarTextoNoAtentado(resumenFallback || 'No válido');
+    }
+
+    function limpiarDetalleConResumenPagoNoatentado(resumen,detalle){
+        let detalleTxt=limpiarTextoNoAtentado(detalle || '');
+        if(detalleTxt===''){
+            return '';
+        }
+
+        const resumenNorm=normalizarClavePagoNoatentado(resumen || '');
+        const detalleNorm=normalizarClavePagoNoatentado(detalleTxt);
+        if(resumenNorm!=='' && (detalleNorm===resumenNorm || detalleNorm.indexOf(resumenNorm+' ')===0 || detalleNorm.indexOf(resumenNorm+':')===0 || detalleNorm.indexOf(resumenNorm+'.')===0)){
+            const escaped=(resumen || '').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+            detalleTxt=detalleTxt.replace(new RegExp('^'+escaped+'[\\s:\\.-]*','i'),'').trim();
+        }
+
+        return detalleTxt.replace(/^detalle\s*:\s*/i,'').trim();
+    }
+
+    function aplicarVisualCategoriaPagoNoatentado(icono,categoria){
+        icono.removeClass('text-success text-danger text-secondary text-muted text-info text-warning');
+
+        if(categoria==='ok'){
+            icono.addClass('text-success').html('<i class="fas fa-check-circle"></i>');
+            return;
+        }
+        if(categoria==='loading'){
+            icono.addClass('text-info').html('<i class="fas fa-spinner fa-spin"></i>');
+            return;
+        }
+        if(categoria==='rate_limit'){
+            icono.addClass('text-warning').html('<i class="fas fa-clock"></i>');
+            return;
+        }
+        if(categoria==='used'){
+            icono.addClass('text-warning').html('<i class="fas fa-ban"></i>');
+            return;
+        }
+        if(categoria==='connection'){
+            icono.addClass('text-warning').html('<i class="fas fa-plug"></i>');
+            return;
+        }
+        if(categoria==='not_configured'){
+            icono.addClass('text-muted').html('<i class="fas fa-cog"></i>');
+            return;
+        }
+        if(categoria==='pending'){
+            icono.addClass('text-secondary').html('<i class="fas fa-minus-circle"></i>');
+            return;
+        }
+        if(categoria==='na'){
+            icono.addClass('text-muted').html('<i class="fas fa-minus-circle"></i>');
+            return;
+        }
+        if(categoria==='not_match'){
+            icono.addClass('text-warning').html('<i class="fas fa-exclamation-circle"></i>');
+            return;
+        }
+        icono.addClass('text-danger').html('<i class="fas fa-times-circle"></i>');
+    }
+
+    function animarIconoPagoNoatentado(icono,categoria){
+        if(!icono || !icono.length){
             return;
         }
 
-        badge.removeClass('badge-warning badge-success badge-danger badge-info').addClass(clase).text(estado);
-        detallePago.text(detalle || '');
+        const nodo=icono.get(0);
+        if(!nodo){
+            return;
+        }
+
+        icono.removeClass('noa-anim-pop noa-anim-alert');
+        void nodo.offsetWidth;
+
+        if(categoria==='ok'){
+            icono.addClass('noa-anim-pop');
+            return;
+        }
+
+        if(categoria==='loading' || categoria==='pending' || categoria==='na'){
+            return;
+        }
+
+        icono.addClass('noa-anim-alert');
+    }
+
+    function actualizarIconoPagoNoatentado(campo,tipo,resumen,detalle,codigo=''){
+        const icono=$('[data-campo="estado-pago-'+campo+'-icon"]');
+        if(!icono.length){
+            return;
+        }
+
+        let etiqueta='Control principal';
+        if(campo==='reintegro'){
+            etiqueta='Control de reintegro';
+        }else if(campo==='preimpreso'){
+            etiqueta='Preimpreso control principal';
+        }
+
+        const resumenTxt=limpiarTextoNoAtentado(resumen || 'Pendiente');
+        const detalleTxt=limpiarTextoNoAtentado(detalle || '');
+        const categoria=categoriaEstadoPagoNoatentado(tipo,resumenTxt,detalleTxt,codigo);
+        const resumenVisible=resumenCategoriaPagoNoatentado(categoria,resumenTxt);
+        const detalleVisible=limpiarDetalleConResumenPagoNoatentado(resumenVisible,detalleTxt);
+
+        aplicarVisualCategoriaPagoNoatentado(icono,categoria);
+        animarIconoPagoNoatentado(icono,categoria);
+
+        let contenido=etiqueta+': '+resumenVisible+'.';
+        if(detalleVisible!==''){
+            contenido+=' Detalle: '+detalleVisible;
+        }
+
+        icono.attr('title','Ver detalle de validación de pago');
+        icono.attr('aria-label',etiqueta+': '+resumenVisible);
+        icono.attr('data-detalle-pago',contenido);
+        icono.removeAttr('data-popover-visible');
+        icono.popover('hide');
+    }
+
+    function detalleDocumentoReintegroNoatentado(validacionReintegro){
+        const documento=limpiarTextoNoAtentado(validacionReintegro && validacionReintegro.documento_principal_usado ? validacionReintegro.documento_principal_usado : '');
+        if(documento===''){
+            return '';
+        }
+        return 'CI usado para validar reintegro: '+documento+'.';
+    }
+
+    function mostrarIconoPagoNoatentado(campo,mostrar){
+        const icono=$('[data-campo="estado-pago-'+campo+'-icon"]');
+        if(!icono.length){
+            return;
+        }
+
+        if(mostrar){
+            icono.removeClass('invisible').attr('aria-hidden','false').css('pointer-events','auto');
+            return;
+        }
+
+        icono.popover('hide').removeAttr('data-popover-visible');
+        icono.addClass('invisible').attr('aria-hidden','true').css('pointer-events','none');
+    }
+
+    function actualizarVisibilidadIconosPagoNoatentado(){
+        const resumen=obtenerResumenCandidatosPagoNoAtentado();
+        const esMulti=resumen.cantidad>1;
+
+        // Regla UX: candidato único -> icono en control. Multi -> icono en preimpreso.
+        mostrarIconoPagoNoatentado('control',!esMulti);
+        mostrarIconoPagoNoatentado('preimpreso',esMulti);
+    }
+
+    function detalleControlPagoNoatentado(){
+        const partes=[];
+        const principal=limpiarTextoNoAtentado(estadoControlPagoNoa.detalle || '');
+        const extendido=limpiarTextoNoAtentado(detalleExtendidoPagoNoa || '');
+
+        if(principal!==''){
+            partes.push(principal);
+        }
+        if(extendido!==''){
+            partes.push(extendido);
+        }
+        return partes.join(' ');
+    }
+
+    function refrescarEstadoControlPagoNoatentado(){
+        const tipo=tipoEstadoPagoNoatentadoDesdeClase(estadoControlPagoNoa.clase,estadoControlPagoNoa.resumen);
+        actualizarIconoPagoNoatentado('control',tipo,estadoControlPagoNoa.resumen,detalleControlPagoNoatentado(),estadoControlPagoNoa.codigo || '');
+    }
+
+    function refrescarEstadoCamposPagoNoatentado(){
+        const resumen=obtenerResumenCandidatosPagoNoAtentado();
+        const controlActual=limpiarTextoNoAtentado($('#control_noa').val());
+        const reintegro=limpiarTextoNoAtentado($('#reintegro_noa').val());
+        const preimpreso=limpiarTextoNoAtentado($('#preimpreso_pago_noa').val());
+        const validando=validacionPagoNoaEnCurso===true && controlActual!=='';
+        actualizarVisibilidadIconosPagoNoatentado();
+        const validacionReintegro=(detalleValidacionPagoNoAtentado && detalleValidacionPagoNoAtentado.validacion_reintegro) ? detalleValidacionPagoNoAtentado.validacion_reintegro : null;
+        const reintegroValidado=limpiarTextoNoAtentado(validacionReintegro && validacionReintegro.control ? validacionReintegro.control : '');
+
+        if(resumen.cantidad===0){
+            actualizarIconoPagoNoatentado('reintegro','no_aplica','No aplica','Sin candidatos registrados.');
+            actualizarIconoPagoNoatentado('preimpreso','no_aplica','No aplica','Sin candidatos registrados.');
+            return;
+        }
+
+        if(validando){
+            if(resumen.cantidad>1){
+                actualizarIconoPagoNoatentado('preimpreso','loading','Validando','Consultando recaudaciones para confirmar control y preimpreso...');
+            }else{
+                actualizarIconoPagoNoatentado('preimpreso','no_aplica','No aplica','Con candidato único no se requiere preimpreso.');
+            }
+
+            if(reintegro!==''){
+                actualizarIconoPagoNoatentado('reintegro','loading','Validando','Consultando recaudaciones para validar reintegro...');
+            }else{
+                actualizarIconoPagoNoatentado('reintegro','no_aplica','Opcional','Sin reintegro.');
+            }
+            return;
+        }
+
+        if(pagoNoAtentadoValidado && controlActual!=='' && controlActual===controlValidadoNoAtentado){
+            if(reintegro!==''){
+                const reintegroCoincideRespuesta=validacionReintegro && reintegroValidado!=='' && reintegroValidado===reintegro;
+                if(reintegroCoincideRespuesta && validacionReintegro.ok===true){
+                    const detalleDocumento=detalleDocumentoReintegroNoatentado(validacionReintegro);
+                    const mensajeOkBase=limpiarTextoNoAtentado(validacionReintegro.message || 'Control de reintegro validado en recaudaciones con control y CI del pagador principal.');
+                    const mensajeOk=(mensajeOkBase+' '+detalleDocumento).trim();
+                    actualizarIconoPagoNoatentado('reintegro','ok','Validado',mensajeOk);
+                }else if(reintegroCoincideRespuesta && validacionReintegro.ok===false){
+                    const estadoReintegro=resolverEstadoErrorPagoNoatentado(validacionReintegro,0);
+                    const detalleDocumento=detalleDocumentoReintegroNoatentado(validacionReintegro);
+                    const detalleError=(limpiarTextoNoAtentado(estadoReintegro.detalle)+' '+detalleDocumento).trim();
+                    actualizarIconoPagoNoatentado('reintegro','warning','No válido',detalleError,estadoReintegro.codigo);
+                }else{
+                    actualizarIconoPagoNoatentado('reintegro','pending','Pendiente','Reintegro modificado; valide nuevamente para confirmar control y CI del pagador principal.');
+                }
+            }else{
+                actualizarIconoPagoNoatentado('reintegro','no_aplica','Opcional','Sin reintegro.');
+            }
+
+            if(resumen.cantidad>1){
+                actualizarIconoPagoNoatentado('preimpreso','ok','Validado','Preimpreso del control principal validado para identificar pago.');
+            }else{
+                actualizarIconoPagoNoatentado('preimpreso','no_aplica','No aplica','Con candidato único no se requiere preimpreso.');
+            }
+            return;
+        }
+
+        if(reintegro!==''){
+            actualizarIconoPagoNoatentado('reintegro','pending','Pendiente','Reintegro ingresado; se validará en recaudaciones con control y CI del pagador principal.');
+        }else{
+            actualizarIconoPagoNoatentado('reintegro','no_aplica','Opcional','Sin reintegro.');
+        }
+
+        if(resumen.cantidad>1){
+            if(preimpreso!==''){
+                actualizarIconoPagoNoatentado('preimpreso','pending','Pendiente','Preimpreso del control principal ingresado; valide pago para confirmar.');
+            }else{
+                actualizarIconoPagoNoatentado('preimpreso','pending','Pendiente','Ingrese preimpreso para seleccionar el valorado correcto del control principal.');
+            }
+            return;
+        }
+
+        actualizarIconoPagoNoatentado('preimpreso','no_aplica','No aplica','Con candidato único no se requiere preimpreso.');
+    }
+
+    function actualizarContextoControlPagoNoAtentado(){
+        const control=$('#control_noa');
+        if(control.length===0){
+            return;
+        }
+
+        const resumen=obtenerResumenCandidatosPagoNoAtentado();
+        const sinContexto=resumen.cantidad===0;
+        const reintegro=$('#reintegro_noa');
+        const preimpreso=$('#preimpreso_pago_noa');
+        const controlActual=limpiarTextoNoAtentado(control.val());
+
+        if(sinContexto){
+            control.val('').prop('disabled',true);
+            reintegro.val('').prop('disabled',true);
+            preimpreso.val('').prop('disabled',true);
+
+            if(xhrValidacionPagoNoa && xhrValidacionPagoNoa.readyState!==4){
+                xhrValidacionPagoNoa.abort();
+            }
+
+            pagoNoAtentadoValidado=false;
+            controlValidadoNoAtentado='';
+            tramiteValidadoNoAtentado='';
+            detalleValidacionPagoNoAtentado=null;
+            detalleExtendidoPagoNoa='';
+            restaurarOpcionesTramiteNoatentado();
+
+            actualizarEstadoPagoNoAtentado('Sin contexto','badge-warning','Agregue candidatos para validar con carnet.');
+            refrescarEstadoCamposPagoNoatentado();
+            $('#ayuda_tramite_noa').text('Primero registre candidatos para habilitar validación de pago.');
+            return;
+        }
+
+        control.prop('disabled',false);
+        reintegro.prop('disabled',false);
+
+        if(resumen.cantidad>1){
+            preimpreso.prop('disabled',false);
+        }else{
+            preimpreso.val('').prop('disabled',true);
+        }
+
+        if(controlActual===''){
+            actualizarEstadoPagoNoAtentado('Pendiente','badge-warning','Ingrese número de control y valide.');
+        }else if(validacionPagoNoaEnCurso===true){
+            actualizarEstadoPagoNoAtentado('Validando','badge-info','Consultando recaudaciones...');
+        }
+
+        refrescarEstadoCamposPagoNoatentado();
     }
 
     function inicializarOpcionesTramiteNoatentado(){
@@ -428,7 +985,7 @@
         if(actual!=='' && select.find('option[value="'+actual+'"]').length){
             select.val(actual);
         }
-        select.prop('disabled',false);
+        select.prop('disabled',true);
         select.find('option').prop('disabled',false).show();
     }
 
@@ -449,14 +1006,10 @@
         return tipos;
     }
 
-    function renderDetallePagoNoatentadoEnPanel(resp,panelId){
-        const panel=$(panelId);
-        if(!panel.length){
-            return;
-        }
-
+    function renderDetallePagoNoatentado(resp){
         if(!resp || !resp.ok){
-            panel.html('');
+            detalleExtendidoPagoNoa='';
+            refrescarEstadoControlPagoNoatentado();
             return;
         }
 
@@ -469,32 +1022,63 @@
         const tiposPermitidos=obtenerTiposPermitidosNoatentado(resp);
 
         if(cuenta!==''){
-            partes.push('<span class="mr-2"><strong>Cuenta API:</strong> '+escaparHtmlNoa(cuenta)+'</span>');
+            partes.push('Cuenta API: '+cuenta);
         }
         if(codigoCuenta!==''){
-            partes.push('<span class="mr-2"><strong>Cód. cuenta:</strong> '+escaparHtmlNoa(codigoCuenta)+'</span>');
+            partes.push('Cod. cuenta: '+codigoCuenta);
         }
         if(nombre!==''){
-            partes.push('<span class="mr-2"><strong>Pagador:</strong> '+escaparHtmlNoa(nombre)+'</span>');
+            partes.push('Pagador: '+nombre);
         }
         if(documento!==''){
-            partes.push('<span class="mr-2"><strong>CI pago:</strong> '+escaparHtmlNoa(documento)+'</span>');
+            partes.push('CI pago: '+documento);
         }
 
         if(tiposPermitidos.length>1){
             const nombres=tiposPermitidos.map(function(item){
                 return item.tre_nombre!=='' ? item.tre_nombre : item.cod_tre;
             }).join(', ');
-            partes.push('<div><strong>Tipos permitidos:</strong> '+escaparHtmlNoa(nombres)+'</div>');
+            if(nombres!==''){
+                partes.push('Tipos permitidos: '+nombres);
+            }
         }else if(tipoSugerido!==''){
-            partes.push('<div><strong>Tipo sugerido:</strong> '+escaparHtmlNoa(tipoSugerido)+'</div>');
+            partes.push('Tipo sugerido: '+tipoSugerido);
         }
 
-        panel.html(partes.join(' '));
+        detalleExtendidoPagoNoa=partes.join('. ');
+        refrescarEstadoControlPagoNoatentado();
     }
 
-    function renderDetallePagoNoatentado(resp){
-        renderDetallePagoNoatentadoEnPanel(resp,'#detalle_pago_noa_extra');
+    function aplicarEstadoReintegroDesdeRespuestaNoatentado(resp){
+        const reintegroActual=limpiarTextoNoAtentado($('#reintegro_noa').val());
+        if(reintegroActual===''){
+            actualizarIconoPagoNoatentado('reintegro','no_aplica','Opcional','Sin reintegro.');
+            return;
+        }
+
+        const validacionReintegro=(resp && resp.validacion_reintegro) ? resp.validacion_reintegro : null;
+        if(!validacionReintegro){
+            actualizarIconoPagoNoatentado('reintegro','pending','Pendiente','Reintegro ingresado; se validará en recaudaciones con control y CI del pagador principal.');
+            return;
+        }
+
+        if(validacionReintegro.ok===true){
+            const detalleDocumento=detalleDocumentoReintegroNoatentado(validacionReintegro);
+            const mensajeBase=limpiarTextoNoAtentado(validacionReintegro.message || 'Control de reintegro validado en recaudaciones con control y CI del pagador principal.');
+            const mensaje=(mensajeBase+' '+detalleDocumento).trim();
+            actualizarIconoPagoNoatentado('reintegro','ok','Validado',mensaje);
+            return;
+        }
+
+        if(validacionReintegro.ok===false){
+            const estadoReintegro=resolverEstadoErrorPagoNoatentado(validacionReintegro,0);
+            const detalleDocumento=detalleDocumentoReintegroNoatentado(validacionReintegro);
+            const detalle=(limpiarTextoNoAtentado(estadoReintegro.detalle)+' '+detalleDocumento).trim();
+            actualizarIconoPagoNoatentado('reintegro','warning','No válido',detalle,estadoReintegro.codigo);
+            return;
+        }
+
+        actualizarIconoPagoNoatentado('reintegro','pending','Pendiente','Reintegro ingresado; se validará en recaudaciones con control y CI del pagador principal.');
     }
 
     function aplicarAutoseleccionTramiteNoatentado(resp){
@@ -530,24 +1114,20 @@
                 }
             });
 
-            if(tiposPermitidos.length===1){
-                select.val(tiposPermitidos[0].cod_tre);
-                select.prop('disabled',true);
-                if(ayuda.length){
-                    ayuda.text('Tipo de trámite autoseleccionado según la cuenta del pago.');
-                }
-                return;
+            let sugeridoFinal=sugerido;
+            if(sugeridoFinal==='' || !select.find('option[value="'+sugeridoFinal+'"]').length){
+                sugeridoFinal=tiposPermitidos[0].cod_tre;
             }
 
-            if(sugerido!=='' && select.find('option[value="'+sugerido+'"]').length){
-                select.val(sugerido);
+            if(sugeridoFinal!=='' && select.find('option[value="'+sugeridoFinal+'"]').length){
+                select.val(sugeridoFinal);
             }else if(!permitidosMap[limpiarTextoNoAtentado(select.val())]){
                 select.val('');
             }
 
-            select.prop('disabled',false);
+            select.prop('disabled',true);
             if(ayuda.length){
-                ayuda.text('Seleccione manualmente uno de los trámites permitidos por la cuenta de pago.');
+                ayuda.text('Tipo de trámite autoseleccionado automáticamente según la cuenta del pago.');
             }
             return;
         }
@@ -557,11 +1137,15 @@
             if(ayuda.length){
                 ayuda.text('Tipo de trámite sugerido automáticamente desde la validación de pago.');
             }
-        }else if(ayuda.length){
-            ayuda.text('Se autoselecciona al validar el pago en recaudaciones.');
+            select.prop('disabled',true);
+            return;
         }
 
-        select.prop('disabled',false);
+        select.val('');
+        select.prop('disabled',true);
+        if(ayuda.length){
+            ayuda.text('No se pudo autoseleccionar el tipo de trámite.');
+        }
     }
 
     function intentarActivarPagoValidadoNoatentado(control){
@@ -585,11 +1169,6 @@
             if(!encontrado){
                 return false;
             }
-        }
-
-        const sugerido=limpiarTextoNoAtentado(detalleValidacionPagoNoAtentado.tipo_noatentado_sugerido);
-        if(permitidos.length===0 && sugerido!=='' && sugerido!==tramite && !detalleValidacionPagoNoAtentado.requiere_seleccion_manual){
-            return false;
         }
 
         pagoNoAtentadoValidado=true;
@@ -616,8 +1195,10 @@
         }else{
             pagoNoAtentadoValidado=false;
             tramiteValidadoNoAtentado='';
-            actualizarEstadoPagoNoAtentado('Selección requerida','badge-info','Seleccione un trámite permitido para completar la validación.');
+            actualizarEstadoPagoNoAtentado('Autoselección pendiente','badge-warning','No se pudo definir automáticamente el tipo de trámite.');
         }
+
+        programarValidacionPagoNoAtentado();
     }
 
     function resetValidacionPagoNoAtentado(){
@@ -625,10 +1206,17 @@
         controlValidadoNoAtentado='';
         tramiteValidadoNoAtentado='';
         detalleValidacionPagoNoAtentado=null;
+        detalleExtendidoPagoNoa='';
+        reiniciarMontosValidadosNoatentado();
         actualizarEstadoPagoNoAtentado('Pendiente','badge-warning','Antes de guardar debe validar el número de control.');
-        $('#detalle_pago_noa_extra').html('');
         restaurarOpcionesTramiteNoatentado();
         $('#ayuda_tramite_noa').text('Se define al validar el pago.');
+        actualizarContextoControlPagoNoAtentado();
+
+        const controlActual=limpiarTextoNoAtentado($('#control_noa').val());
+        if(controlActual!==''){
+            programarValidacionPagoNoAtentado();
+        }
     }
 
     function renderTablaCandidatosNoAtentado(){
@@ -650,7 +1238,7 @@
                     '<td>'+candidato.apellido+' '+candidato.nombre+'</td>'+
                     '<td>'+candidato.ci+'</td>'+
                     '<td>'+candidato.cod_sis+'</td>'+
-                    '<td>'+(cargo || '')+'</td>'+
+                    '<td>'+(cargo || '-')+'</td>'+
                     '<td><button type="button" class="btn btn-sm btn-light btn-circle border" title="Quitar" onclick="quitarCandidatoNoAtentado('+i+')"><i class="fas fa-trash-alt text-danger"></i></button></td>'+
                     '</tr>'
                 );
@@ -678,9 +1266,21 @@
         const nombre=limpiarTextoNoAtentado($('#noa_nombre').val()).toUpperCase();
         const apellido=limpiarTextoNoAtentado($('#noa_apellido').val()).toUpperCase();
         const codSis=limpiarTextoNoAtentado($('#noa_cod_sis').val());
-        const cargo=limpiarTextoNoAtentado($('#noa_cargo').val()).toUpperCase();
-        const cargoConvocatoria=$('#noa_cargo_convocatoria').val();
-        const cargoNombre=$('#noa_cargo_convocatoria option:selected').text();
+        let cargo=limpiarTextoNoAtentado($('#noa_cargo').val()).toUpperCase();
+        const cargoConvocatoria=limpiarTextoNoAtentado($('#noa_cargo_convocatoria').val());
+        const cargoNombreSeleccionado=limpiarTextoNoAtentado($('#noa_cargo_convocatoria option:selected').text()).toUpperCase();
+
+        if(cargo==='SELECCIONE' || cargo==='SELECCIONAR'){
+            cargo='';
+        }
+
+        let cargoNombre='';
+        if(cargoConvocatoria!==''){
+            cargoNombre=cargoNombreSeleccionado;
+            if(cargoNombre==='SELECCIONE' || cargoNombre==='SELECCIONAR'){
+                cargoNombre='';
+            }
+        }
 
         if(ci==='' || nombre==='' || apellido===''){
             alert('Debe ingresar CI, nombre y apellido del candidato.');
@@ -708,7 +1308,7 @@
             unidad:'',
             cargo:cargo,
             cargo_convocatoria:cargoConvocatoria,
-            cargo_nombre:limpiarTextoNoAtentado(cargoNombre),
+            cargo_nombre:cargoNombre,
         });
 
         renderTablaCandidatosNoAtentado();
@@ -812,9 +1412,15 @@
                         apellido:limpiarTextoNoAtentado(candidato.apellido).toUpperCase(),
                         cod_sis:limpiarTextoNoAtentado(candidato.cod_sis),
                         unidad:limpiarTextoNoAtentado(candidato.unidad).toUpperCase(),
-                        cargo:limpiarTextoNoAtentado(candidato.cargo).toUpperCase(),
+                        cargo:(function(){
+                            const valor=limpiarTextoNoAtentado(candidato.cargo).toUpperCase();
+                            return (valor==='SELECCIONE' || valor==='SELECCIONAR') ? '' : valor;
+                        })(),
                         cargo_convocatoria:limpiarTextoNoAtentado(candidato.cargo_convocatoria),
-                        cargo_nombre:limpiarTextoNoAtentado(candidato.cargo_nombre).toUpperCase(),
+                        cargo_nombre:(function(){
+                            const valor=limpiarTextoNoAtentado(candidato.cargo_nombre).toUpperCase();
+                            return (valor==='SELECCIONE' || valor==='SELECCIONAR') ? '' : valor;
+                        })(),
                     });
                     agregados++;
                 }
@@ -846,22 +1452,169 @@
         });
     }
 
+    function inferirCodigoErrorPagoNoatentado(mensaje,statusCode=0){
+        const texto=normalizarClavePagoNoatentado(mensaje || '');
+        if(parseInt(statusCode,10)===429 || texto.indexOf('too many')!==-1 || texto.indexOf('demasiadas solicitudes')!==-1 || texto.indexOf('rate limit')!==-1){
+            return 'RATE_LIMIT';
+        }
+        if(texto.indexOf('no esta configurado')!==-1 || texto.indexOf('no esta configurada')!==-1 || texto.indexOf('sistema_no_configurado')!==-1 || texto.indexOf('services/.env')!==-1){
+            return 'SISTEMA_NO_CONFIGURADO';
+        }
+        if(texto.indexOf('sin conexion')!==-1 || texto.indexOf('sin conexión')!==-1 || texto.indexOf('no se pudo conectar')!==-1 || texto.indexOf('api_no_disponible')!==-1 || texto.indexOf('timeout')!==-1){
+            return 'API_NO_DISPONIBLE';
+        }
+        if(texto.indexOf('no se encontro')!==-1 || texto.indexOf('no se encontró')!==-1 || texto.indexOf('boleta no encontrada')!==-1){
+            return 'CONTROL_NO_ENCONTRADO';
+        }
+        if(texto.indexOf('ya fue utilizado')!==-1 || texto.indexOf('ya usado')!==-1){
+            return 'PAGO_YA_USADO';
+        }
+        if(texto.indexOf('no corresponde')!==-1){
+            return 'CUENTA_NO_CORRESPONDE';
+        }
+        return 'API_RECAUDACIONES_ERROR';
+    }
+
+    function resolverEstadoErrorPagoNoatentado(resp,statusCode=0){
+        const mensaje=(resp && resp.message) ? limpiarTextoNoAtentado(resp.message) : 'No se pudo validar el pago.';
+        let codigo=(resp && resp.code) ? limpiarTextoNoAtentado(resp.code).toUpperCase() : '';
+        if(codigo===''){
+            codigo=inferirCodigoErrorPagoNoatentado(mensaje,statusCode);
+        }
+
+        if(codigo==='RATE_LIMIT'){
+            return {
+                resumen:'Demasiadas solicitudes',
+                clase:'badge-warning',
+                detalle:mensaje!=='' ? mensaje : 'El sistema está recibiendo muchas solicitudes. Intente nuevamente en unos segundos.',
+                codigo:codigo,
+            };
+        }
+
+        if(codigo==='SISTEMA_NO_CONFIGURADO'){
+            return {
+                resumen:'API no configurada',
+                clase:'badge-warning',
+                detalle:mensaje!=='' ? mensaje : 'Recaudaciones no está configurado. Contacte al área de sistemas.',
+                codigo:codigo,
+            };
+        }
+
+        if(codigo==='API_NO_DISPONIBLE' || codigo==='API_RESPUESTA_INVALIDA'){
+            return {
+                resumen:'Sin conexión',
+                clase:'badge-warning',
+                detalle:mensaje!=='' ? mensaje : 'Sin conexión con recaudaciones. Intente nuevamente.',
+                codigo:'API_NO_DISPONIBLE',
+            };
+        }
+
+        if(codigo==='CONTROL_NO_ENCONTRADO'){
+            return {
+                resumen:'No encontrado',
+                clase:'badge-danger',
+                detalle:mensaje!=='' ? mensaje : 'No se encontró información del número de control en recaudaciones.',
+                codigo:codigo,
+            };
+        }
+
+        if(codigo==='PAGO_YA_USADO'){
+            return {
+                resumen:'Ya utilizado',
+                clase:'badge-warning',
+                detalle:mensaje!=='' ? mensaje : 'Este pago ya fue utilizado en otro trámite.',
+                codigo:codigo,
+            };
+        }
+
+        if(codigo==='PREIMPRESO_REQUERIDO_MULTI_CANDIDATO'){
+            return {
+                resumen:'Preimpreso requerido',
+                clase:'badge-warning',
+                detalle:mensaje,
+                codigo:codigo,
+            };
+        }
+
+        if(codigo==='CONTEXTO_CANDIDATOS_REQUERIDO'){
+            return {
+                resumen:'Sin contexto',
+                clase:'badge-warning',
+                detalle:mensaje,
+                codigo:codigo,
+            };
+        }
+
+        if(codigo.indexOf('REINTEGRO_')===0){
+            return {
+                resumen:'Reintegro no válido',
+                clase:'badge-warning',
+                detalle:mensaje,
+                codigo:codigo,
+            };
+        }
+
+        if(codigo==='CI_CANDIDATO_NO_COINCIDE' || codigo==='CARNET_CANDIDATO_NO_COINCIDE' || codigo==='DOCUMENTO_PAGO_NO_COINCIDE' || codigo==='FILTRO_PAGO_SIN_COINCIDENCIA' || codigo==='PREIMPRESO_PAGO_NO_COINCIDE' || codigo==='CUENTA_NO_CORRESPONDE' || codigo==='CUENTA_SIN_TRAMITE_HABILITADO' || codigo==='CUENTA_NO_IDENTIFICADA'){
+            return {
+                resumen:'No corresponde',
+                clase:'badge-warning',
+                detalle:mensaje,
+                codigo:codigo,
+            };
+        }
+
+        return {
+            resumen:'Pago no válido',
+            clase:'badge-danger',
+            detalle:mensaje,
+            codigo:codigo,
+        };
+    }
+
     function validarPagoNoAtentado(){
         const control=limpiarTextoNoAtentado($('#control_noa').val());
         const tramite=limpiarTextoNoAtentado($('#tramite_noa').val());
-        const boton=$('#btn_validar_pago_noa');
+        const preimpreso=limpiarTextoNoAtentado($('#preimpreso_pago_noa').val());
         const resumenCandidatos=obtenerResumenCandidatosPagoNoAtentado();
+        const esPreconsultaMulti=resumenCandidatos.cantidad>1 && preimpreso==='';
 
-        if(control===''){
-            alert('Ingrese el número de control para validar.');
+        if(control!==controlValidadoNoAtentado){
+            pagoNoAtentadoValidado=false;
+            tramiteValidadoNoAtentado='';
+        }
+
+        if(resumenCandidatos.cantidad===0){
+            if(xhrValidacionPagoNoa && xhrValidacionPagoNoa.readyState!==4){
+                xhrValidacionPagoNoa.abort();
+            }
+            validacionPagoNoaEnCurso=false;
+            actualizarEstadoPagoNoAtentado('Sin contexto','badge-warning','Primero agregue candidatos para poder validar el pago.');
+            refrescarEstadoCamposPagoNoatentado();
             return;
         }
 
-        actualizarEstadoPagoNoAtentado('Validando','badge-info','Consultando recaudaciones...');
-        if(boton.length){
-            boton.prop('disabled',true);
+        if(control===''){
+            if(xhrValidacionPagoNoa && xhrValidacionPagoNoa.readyState!==4){
+                xhrValidacionPagoNoa.abort();
+            }
+            validacionPagoNoaEnCurso=false;
+            reiniciarMontosValidadosNoatentado();
+            actualizarEstadoPagoNoAtentado('Pendiente','badge-warning','Ingrese el número de control para validar.');
+            refrescarEstadoCamposPagoNoatentado();
+            return;
         }
-        $.ajax({
+
+        const secuencia=((secuenciaValidacionPagoNoa || 0)+1);
+        secuenciaValidacionPagoNoa=secuencia;
+
+        if(xhrValidacionPagoNoa && xhrValidacionPagoNoa.readyState!==4){
+            xhrValidacionPagoNoa.abort();
+        }
+
+        validacionPagoNoaEnCurso=true;
+        actualizarEstadoPagoNoAtentado('Validando','badge-info','Consultando recaudaciones...');
+        refrescarEstadoCamposPagoNoatentado();
+        xhrValidacionPagoNoa=$.ajax({
             url: "{{url('validar pago noatentado/'.$cod_con)}}",
             type: 'POST',
             data: {
@@ -869,39 +1622,124 @@
                 control: control,
                 tramite: tramite,
                 reintegro: limpiarTextoNoAtentado($('#reintegro_noa').val()),
-                preimpreso_pago: limpiarTextoNoAtentado($('#preimpreso_pago_noa').val()),
+                preimpreso_pago: preimpreso,
+                preconsulta_control: esPreconsultaMulti ? 1 : 0,
+                documento_pago: resumenCandidatos.ciUnico,
                 cantidad_candidatos: resumenCandidatos.cantidad,
                 ci_candidato_unico: resumenCandidatos.ciUnico,
+                ci_candidatos: JSON.stringify(resumenCandidatos.documentos),
             },
             success: function(resp){
+                if(secuenciaValidacionPagoNoa!==secuencia){
+                    return;
+                }
+
+                if(limpiarTextoNoAtentado($('#control_noa').val())!==control){
+                    return;
+                }
+
+                validacionPagoNoaEnCurso=false;
+
                 if(resp && resp.ok){
                     detalleValidacionPagoNoAtentado=resp;
                     controlValidadoNoAtentado=control;
+                    asignarMontosValidadosNoatentado(resp);
                     aplicarAutoseleccionTramiteNoatentado(resp);
                     renderDetallePagoNoatentado(resp);
 
                     if(intentarActivarPagoValidadoNoatentado(control)){
                         actualizarEstadoPagoNoAtentado('Pago válido','badge-success',resp.message || 'Pago validado correctamente.');
+                        if(resumenCandidatos.cantidad>1){
+                            actualizarIconoPagoNoatentado('preimpreso','ok','Validado','Preimpreso del control principal validado para identificar pago.');
+                        }else{
+                            actualizarIconoPagoNoatentado('preimpreso','no_aplica','No aplica','Con candidato único no se requiere preimpreso.');
+                        }
                     }else{
                         pagoNoAtentadoValidado=false;
                         tramiteValidadoNoAtentado='';
-                        actualizarEstadoPagoNoAtentado('Selección requerida','badge-info',resp.message || 'Pago validado. Seleccione el trámite permitido.');
+                        actualizarEstadoPagoNoAtentado('Autoselección pendiente','badge-warning',resp.message || 'Pago validado, pero no se pudo autoseleccionar el trámite.');
+                        refrescarEstadoCamposPagoNoatentado();
                     }
+
+                    aplicarEstadoReintegroDesdeRespuestaNoatentado(resp);
                 }else{
-                    pagoNoAtentadoValidado=false;
-                    controlValidadoNoAtentado='';
-                    tramiteValidadoNoAtentado='';
-                    detalleValidacionPagoNoAtentado=null;
-                    renderDetallePagoNoatentado(null);
-                    restaurarOpcionesTramiteNoatentado();
-                    actualizarEstadoPagoNoAtentado('Pago no válido','badge-danger',(resp && resp.message) ? resp.message : 'No se pudo validar el pago.');
+                    const estadoError=resolverEstadoErrorPagoNoatentado(resp || {},0);
+                    const validacionPrincipal=(resp && resp.validacion_principal && resp.validacion_principal.ok) ? resp.validacion_principal : null;
+                    const codigoError=limpiarTextoNoAtentado((resp && resp.code) ? resp.code : '').toUpperCase();
+                    const pendientePreimpreso=esPreconsultaMulti && (codigoError==='PREIMPRESO_REQUERIDO_MULTI_CANDIDATO' || codigoError==='PAGO_AMBIGUO');
+
+                    if(pendientePreimpreso){
+                        pagoNoAtentadoValidado=false;
+                        controlValidadoNoAtentado='';
+                        tramiteValidadoNoAtentado='';
+                        detalleValidacionPagoNoAtentado=null;
+                        detalleExtendidoPagoNoa='';
+                        reiniciarMontosValidadosNoatentado();
+                        renderDetallePagoNoatentado(null);
+                        restaurarOpcionesTramiteNoatentado();
+                        actualizarEstadoPagoNoAtentado('Pendiente','badge-info',resp && resp.message ? resp.message : 'Control encontrado. Ingrese preimpreso para seleccionar el valorado correcto.');
+                        refrescarEstadoCamposPagoNoatentado();
+                        aplicarEstadoReintegroDesdeRespuestaNoatentado(resp || {});
+                        return;
+                    }
+
+                    if(validacionPrincipal){
+                        detalleValidacionPagoNoAtentado=$.extend({},validacionPrincipal,{
+                            validacion_reintegro:(resp && resp.validacion_reintegro) ? resp.validacion_reintegro : null,
+                        });
+                        controlValidadoNoAtentado=control;
+                        asignarMontosValidadosNoatentado(resp || {});
+                        aplicarAutoseleccionTramiteNoatentado(validacionPrincipal);
+                        renderDetallePagoNoatentado(validacionPrincipal);
+
+                        const detallePrincipal=limpiarTextoNoAtentado(validacionPrincipal.message || 'Pago principal validado correctamente.');
+                        if(intentarActivarPagoValidadoNoatentado(control)){
+                            actualizarEstadoPagoNoAtentado('Pago principal válido','badge-success',detallePrincipal);
+                        }else{
+                            pagoNoAtentadoValidado=false;
+                            tramiteValidadoNoAtentado='';
+                            actualizarEstadoPagoNoAtentado('Autoselección pendiente','badge-warning',estadoError.detalle,estadoError.codigo);
+                        }
+                    }else{
+                        pagoNoAtentadoValidado=false;
+                        controlValidadoNoAtentado='';
+                        tramiteValidadoNoAtentado='';
+                        detalleValidacionPagoNoAtentado=null;
+                        detalleExtendidoPagoNoa='';
+                        reiniciarMontosValidadosNoatentado();
+                        renderDetallePagoNoatentado(null);
+                        restaurarOpcionesTramiteNoatentado();
+                        actualizarEstadoPagoNoAtentado(estadoError.resumen,estadoError.clase,estadoError.detalle,estadoError.codigo);
+                    }
+
+                    if(codigoError.indexOf('REINTEGRO_')===0){
+                        refrescarEstadoCamposPagoNoatentado();
+                        aplicarEstadoReintegroDesdeRespuestaNoatentado(resp || {});
+                        return;
+                    }
+                    refrescarEstadoCamposPagoNoatentado();
+                    aplicarEstadoReintegroDesdeRespuestaNoatentado(resp || {});
                 }
             },
             error: function(xhr){
+                if(secuenciaValidacionPagoNoa!==secuencia){
+                    return;
+                }
+                if(xhr && xhr.statusText==='abort'){
+                    return;
+                }
+                if(limpiarTextoNoAtentado($('#control_noa').val())!==control){
+                    return;
+                }
+
+                validacionPagoNoaEnCurso=false;
+
                 pagoNoAtentadoValidado=false;
                 controlValidadoNoAtentado='';
                 tramiteValidadoNoAtentado='';
                 detalleValidacionPagoNoAtentado=null;
+                detalleExtendidoPagoNoa='';
+                reiniciarMontosValidadosNoatentado();
                 renderDetallePagoNoatentado(null);
                 restaurarOpcionesTramiteNoatentado();
 
@@ -917,12 +1755,16 @@
                     }
                 }
 
-                actualizarEstadoPagoNoAtentado('Pago no válido','badge-danger',mensaje);
+                const estadoError=resolverEstadoErrorPagoNoatentado(xhr && xhr.responseJSON ? xhr.responseJSON : {message:mensaje},xhr && xhr.status ? xhr.status : 0);
+                actualizarEstadoPagoNoAtentado(estadoError.resumen,estadoError.clase,estadoError.detalle,estadoError.codigo);
+                refrescarEstadoCamposPagoNoatentado();
             },
             complete: function(){
-                if(boton.length){
-                    boton.prop('disabled',false);
+                validacionPagoNoaEnCurso=false;
+                if(secuenciaValidacionPagoNoa===secuencia){
+                    xhrValidacionPagoNoa=null;
                 }
+                actualizarContextoControlPagoNoAtentado();
             }
         });
     }
@@ -969,11 +1811,22 @@
     }
 
     $(function(){
+        $(document).off('click.noaPagoPopover').on('click.noaPagoPopover', function(e){
+            if($(e.target).closest(selectorIconosPagoNoatentado()+', .popover').length===0){
+                cerrarPopoversPagoNoatentado();
+            }
+        });
+
+        $('#Noatentado').off('hidden.bs.modal.noaPagoPopover').on('hidden.bs.modal.noaPagoPopover', function(){
+            cerrarPopoversPagoNoatentado();
+        });
+
         if($('#tabla_candidatos_noa').length>0){
             renderTablaCandidatosNoAtentado();
             inicializarOpcionesTramiteNoatentado();
             resetValidacionPagoNoAtentado();
             actualizarFiltroPreimpresoNoAtentado();
+            actualizarContextoControlPagoNoAtentado();
         }
 
         if($('#control_noa_edit').length>0){

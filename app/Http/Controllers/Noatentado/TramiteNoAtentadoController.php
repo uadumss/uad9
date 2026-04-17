@@ -15,6 +15,7 @@ use App\Models\Noatentado\Convocatoria;
 use App\Models\Noatentado\Noatentado;
 use App\Models\Persona;
 use App\Models\Tramite;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -77,23 +78,89 @@ class TramiteNoAtentadoController extends Controller
         $request->validate([
             'tramite'=>'nullable|integer',
             'control'=>'required',
+            'reintegro'=>'nullable|string',
+            'preconsulta_control'=>'nullable',
             'documento_pago'=>'nullable|string',
             'preimpreso_pago'=>'nullable|string',
             'cantidad_candidatos'=>'nullable|integer|min:0',
             'ci_candidato_unico'=>'nullable|string',
+            'ci_candidatos'=>'nullable',
         ]);
 
         $control=trim((string)$request['control']);
-        $codTre=(int)($request['tramite'] ?? 0);
+        // El tipo de trámite se determina automáticamente desde la cuenta del pago.
+        $codTre=0;
         $filtros=$this->construirFiltrosPagoNoAtentado([
             'documento'=>$request['documento_pago'] ?? '',
             'preimpreso'=>$request['preimpreso_pago'] ?? '',
             'cantidad_candidatos'=>$request['cantidad_candidatos'] ?? 0,
             'ci_candidato_unico'=>$request['ci_candidato_unico'] ?? '',
+            'ci_candidatos'=>$request['ci_candidatos'] ?? [],
         ]);
-        $validacion=$this->validarControlPagoNoAtentado($control,$codTre,0,$filtros);
+        $preimpresoIngresado=trim((string)($request['preimpreso_pago'] ?? ''));
+        $preconsultaControl=filter_var($request['preconsulta_control'] ?? false,FILTER_VALIDATE_BOOLEAN);
+        $esMultiSinPreimpreso=(int)($filtros['cantidad_candidatos'] ?? 0)>1 && $preimpresoIngresado==='';
 
-        return response()->json($validacion);
+        $validacionPrincipal=$this->validarControlPagoNoAtentado($control,$codTre,0,$filtros,[
+            'requerir_preimpreso_multi'=>!$preconsultaControl,
+        ]);
+
+        if($preconsultaControl && $esMultiSinPreimpreso){
+            if((bool)($validacionPrincipal['ok'] ?? false)){
+                $validacionPrincipal=[
+                    'ok'=>false,
+                    'code'=>'PREIMPRESO_REQUERIDO_MULTI_CANDIDATO',
+                    'message'=>'Control encontrado. Ingrese preimpreso para seleccionar el valorado correcto.',
+                    'preconsulta_control'=>true,
+                    'coincidencias'=>1,
+                ];
+            }elseif(trim((string)($validacionPrincipal['code'] ?? ''))==='PAGO_AMBIGUO'){
+                $validacionPrincipal['preconsulta_control']=true;
+            }
+        }
+
+        if((bool)($validacionPrincipal['ok'] ?? false) && !$this->documentoPagoPerteneceACandidatosNoAtentado(
+            $validacionPrincipal,
+            $filtros['documentos_candidatos'] ?? [],
+            (int)($filtros['cantidad_candidatos'] ?? 0),
+            (bool)($filtros['forzar_documento_candidato'] ?? false)
+        )){
+            $validacionPrincipal=[
+                'ok'=>false,
+                'code'=>'CARNET_CANDIDATO_NO_COINCIDE',
+                'message'=>'El pago no corresponde a ninguno de los carnets de candidatos del trámite.',
+            ];
+        }
+
+        $validacionReintegro=$this->estadoReintegroPendienteNoAtentado((string)($request['reintegro'] ?? ''));
+        if((bool)($validacionPrincipal['ok'] ?? false)){
+            $validacionReintegro=$this->validarControlReintegroPagoNoAtentado(
+                (string)($request['reintegro'] ?? ''),
+                (string)($validacionPrincipal['documento'] ?? ''),
+                $control,
+                0
+            );
+        }
+
+        if((bool)($validacionPrincipal['ok'] ?? false) && (bool)($validacionReintegro['ok'] ?? false)){
+            $respuesta=$validacionPrincipal;
+            $respuesta['validacion_reintegro']=$validacionReintegro;
+            $respuesta=$this->adjuntarMontosValidacionPagoNoAtentado($respuesta,$validacionPrincipal,$validacionReintegro);
+            return response()->json($respuesta);
+        }
+
+        if(!(bool)($validacionPrincipal['ok'] ?? false)){
+            $respuesta=$validacionPrincipal;
+            $respuesta['validacion_reintegro']=$validacionReintegro;
+            $respuesta=$this->adjuntarMontosValidacionPagoNoAtentado($respuesta,$validacionPrincipal,$validacionReintegro);
+            return response()->json($respuesta);
+        }
+
+        $respuestaReintegro=$validacionReintegro;
+        $respuestaReintegro['validacion_principal']=$validacionPrincipal;
+        $respuestaReintegro['validacion_reintegro']=$validacionReintegro;
+        $respuestaReintegro=$this->adjuntarMontosValidacionPagoNoAtentado($respuestaReintegro,$validacionPrincipal,$validacionReintegro);
+        return response()->json($respuestaReintegro);
     }
 
     public function importar_excel_temporal_noatentado(Request $request,$cod_con){
@@ -160,7 +227,7 @@ class TramiteNoAtentadoController extends Controller
 
             $cargo='';
             if(array_key_exists('cargo',$indices)){
-                $cargo=mb_strtoupper(trim((string)($fila[$indices['cargo']] ?? '')));
+                $cargo=$this->normalizarTextoCargoNoAtentado((string)($fila[$indices['cargo']] ?? ''));
             }
 
             $unidad='';
@@ -303,12 +370,14 @@ class TramiteNoAtentadoController extends Controller
             }
 
             $resumenCandidatos=$this->resumenCandidatosPagoNoAtentado($candidatos);
-            $codTreFormulario=(int)($form['tramite'] ?? 0);
+            // El tipo de trámite se define automáticamente desde recaudaciones.
+            $codTreFormulario=0;
             $filtrosPago=$this->construirFiltrosPagoNoAtentado([
                 'documento'=>$form['documento_pago'] ?? '',
                 'preimpreso'=>$form['preimpreso_pago'] ?? '',
                 'cantidad_candidatos'=>$resumenCandidatos['cantidad'] ?? 0,
                 'ci_candidato_unico'=>$resumenCandidatos['documento_unico'] ?? '',
+                'ci_candidatos'=>$resumenCandidatos['documentos'] ?? [],
             ]);
             $validacionPago=$this->validarControlPagoNoAtentado((string)$form['control'],$codTreFormulario,0,$filtrosPago);
             if(!(bool)($validacionPago['ok'] ?? false)){
@@ -316,14 +385,35 @@ class TramiteNoAtentadoController extends Controller
                 return redirect('editar tramite convocatoria/'.$form['cc'].'/0');
             }
 
-            if($codTreFormulario<=0){
-                $codTreSugerido=(int)($validacionPago['tipo_noatentado_sugerido'] ?? 0);
-                if($codTreSugerido<=0){
-                    \Session::flash('errorModal','Seleccione el trámite sugerido por la validación de pago antes de guardar.');
-                    return redirect('editar tramite convocatoria/'.$form['cc'].'/0');
-                }
-                $codTreFormulario=$codTreSugerido;
+            if(!$this->documentoPagoPerteneceACandidatosNoAtentado(
+                $validacionPago,
+                $resumenCandidatos['documentos'] ?? [],
+                (int)($resumenCandidatos['cantidad'] ?? 0),
+                false
+            )){
+                \Session::flash('errorModal','El CI del pago validado no pertenece a la lista de candidatos registrada.');
+                return redirect('editar tramite convocatoria/'.$form['cc'].'/0');
             }
+
+            $validacionReintegro=$this->validarControlReintegroPagoNoAtentado(
+                (string)($form['reintegro'] ?? ''),
+                (string)($validacionPago['documento'] ?? ''),
+                (string)$form['control'],
+                0
+            );
+            if(!(bool)($validacionReintegro['ok'] ?? false)){
+                \Session::flash('errorModal',(string)($validacionReintegro['message'] ?? 'No se pudo validar el control de reintegro.'));
+                return redirect('editar tramite convocatoria/'.$form['cc'].'/0');
+            }
+
+            $controlReintegroGuardar=trim((string)($validacionReintegro['control'] ?? ($form['reintegro'] ?? '')));
+
+            $codTreSugerido=(int)($validacionPago['tipo_noatentado_sugerido'] ?? 0);
+            if($codTreSugerido<=0){
+                \Session::flash('errorModal','No se pudo determinar automáticamente el tipo de trámite desde la validación de pago.');
+                return redirect('editar tramite convocatoria/'.$form['cc'].'/0');
+            }
+            $codTreFormulario=$codTreSugerido;
 
             $año_tramita=date('Y');
             $numero_tramite=DB::table('d_tramitas')->where('dtra_gestion_tramite','=',$año_tramita)->max('dtra_numero_tramite');
@@ -336,7 +426,7 @@ class TramiteNoAtentadoController extends Controller
                     'cod_tre'=>$codTreFormulario,
                     'dtra_interno'=>$form['tipo_tramite'],
                     'dtra_control'=>$form['control'],
-                    'dtra_valorado_reintegro'=>$form['reintegro'],
+                    'dtra_valorado_reintegro'=>$controlReintegroGuardar,
                     'dtra_numero_tramite'=>$numero_tramite,
                     'dtra_gestion_tramite'=>$año_tramita,
                     'dtra_posicion'=>1,
@@ -355,6 +445,13 @@ class TramiteNoAtentadoController extends Controller
                 $errorUso='';
                 if(!$this->registrarUsoRecaudacionNoAtentado($validacionPago,0,(int)$tramite_noatentado->cod_dtra,$errorUso)){
                     throw new \RuntimeException($errorUso!=='' ? $errorUso : 'No se pudo registrar el bloqueo del pago.');
+                }
+
+                if((bool)($validacionReintegro['aplica'] ?? false)){
+                    $errorUso='';
+                    if(!$this->registrarUsoRecaudacionNoAtentado($validacionReintegro,0,(int)$tramite_noatentado->cod_dtra,$errorUso)){
+                        throw new \RuntimeException($errorUso!=='' ? $errorUso : 'No se pudo registrar el bloqueo del reintegro.');
+                    }
                 }
 
                 DB::commit();
@@ -376,8 +473,22 @@ class TramiteNoAtentadoController extends Controller
     {
         $documento=$this->normalizarDocumentoNoAtentado((string)($datos['documento'] ?? ''));
         $preimpreso=$this->normalizarNumeroNoAtentado((string)($datos['preimpreso'] ?? ''));
-        $cantidad=max(0,(int)($datos['cantidad_candidatos'] ?? 0));
+        $documentosCandidatos=$this->normalizarDocumentosCandidatosNoAtentado($datos['ci_candidatos'] ?? []);
+        $cantidad=max(0,(int)($datos['cantidad_candidatos'] ?? sizeof($documentosCandidatos)));
         $documentoCandidatoUnico=$this->normalizarDocumentoNoAtentado((string)($datos['ci_candidato_unico'] ?? ''));
+
+        if($documentoCandidatoUnico!=='' && !in_array($documentoCandidatoUnico,$documentosCandidatos,true)){
+            $documentosCandidatos[]=$documentoCandidatoUnico;
+        }
+
+        if($cantidad===0){
+            $cantidad=sizeof($documentosCandidatos);
+        }
+
+        if($documentoCandidatoUnico==='' && sizeof($documentosCandidatos)===1){
+            $documentoCandidatoUnico=(string)$documentosCandidatos[0];
+        }
+
         $forzarDocumentoCandidato=$cantidad===1 && $documentoCandidatoUnico!=='';
 
         if($forzarDocumentoCandidato){
@@ -389,6 +500,7 @@ class TramiteNoAtentadoController extends Controller
             'preimpreso'=>$preimpreso,
             'cantidad_candidatos'=>$cantidad,
             'documento_candidato_unico'=>$documentoCandidatoUnico,
+            'documentos_candidatos'=>$documentosCandidatos,
             'forzar_documento_candidato'=>$forzarDocumentoCandidato,
         ];
     }
@@ -411,6 +523,7 @@ class TramiteNoAtentadoController extends Controller
         return [
             'cantidad'=>sizeof($lista),
             'documento_unico'=>sizeof($lista)===1 ? (string)$lista[0] : '',
+            'documentos'=>$lista,
         ];
     }
 
@@ -442,10 +555,11 @@ class TramiteNoAtentadoController extends Controller
         return [
             'cantidad'=>sizeof($lista),
             'documento_unico'=>sizeof($lista)===1 ? (string)$lista[0] : '',
+            'documentos'=>$lista,
         ];
     }
 
-    private function validarControlPagoNoAtentado(string $control,int $codTre=0,int $codDtra=0,array $filtros=[]): array
+    private function validarControlPagoNoAtentado(string $control,int $codTre=0,int $codDtra=0,array $filtros=[],array $opciones=[]): array
     {
         $control=trim($control);
         if($control===''){
@@ -519,7 +633,28 @@ class TramiteNoAtentadoController extends Controller
             : $this->construirFiltrosPagoNoAtentado($filtros);
         $documentoFiltro=(string)($filtrosAplicados['documento'] ?? '');
         $preimpresoFiltro=(string)($filtrosAplicados['preimpreso'] ?? '');
+        $documentosCandidatos=$this->normalizarDocumentosCandidatosNoAtentado($filtrosAplicados['documentos_candidatos'] ?? []);
         $forzarDocumentoCandidato=(bool)($filtrosAplicados['forzar_documento_candidato'] ?? false);
+        $requerirContextoCandidatos=(bool)($opciones['requerir_contexto_candidatos'] ?? true);
+        $requerirPreimpresoMulti=(bool)($opciones['requerir_preimpreso_multi'] ?? true);
+        $requerirDocumentoCandidato=(bool)($opciones['requerir_documento_candidato'] ?? true);
+        $requiereCoincidenciaDocumentoCandidato=$requerirDocumentoCandidato && ($forzarDocumentoCandidato || sizeof($documentosCandidatos)===1);
+
+        if($requerirContextoCandidatos && sizeof($documentosCandidatos)===0){
+            return [
+                'ok'=>false,
+                'code'=>'CONTEXTO_CANDIDATOS_REQUERIDO',
+                'message'=>'Debe registrar candidatos y validar con carnet para consultar el pago.',
+            ];
+        }
+
+        if($requerirPreimpresoMulti && sizeof($documentosCandidatos)>1 && $preimpresoFiltro===''){
+            return [
+                'ok'=>false,
+                'code'=>'PREIMPRESO_REQUERIDO_MULTI_CANDIDATO',
+                'message'=>'Con varios candidatos debe ingresar el preimpreso para validar el pago con seguridad.',
+            ];
+        }
 
         $consulta=$this->consultarControlRecaudacionesNoAtentado($control);
         if(!(bool)($consulta['ok'] ?? false)){
@@ -537,6 +672,7 @@ class TramiteNoAtentadoController extends Controller
 
         $usoEncontrado=null;
         $cuentaDetectada='';
+        $coincidioConCandidatos=false;
         $coincidioConFiltros=false;
         $pagosValidos=[];
 
@@ -568,6 +704,19 @@ class TramiteNoAtentadoController extends Controller
             }
 
             $documentoFila=$this->normalizarDocumentoNoAtentado((string)($fila['documento'] ?? ''));
+            if($documentoFila===''){
+                continue;
+            }
+
+            $esDocumentoCandidato=in_array($documentoFila,$documentosCandidatos,true);
+            if($esDocumentoCandidato){
+                $coincidioConCandidatos=true;
+            }
+
+            if($requiereCoincidenciaDocumentoCandidato && !$esDocumentoCandidato){
+                continue;
+            }
+
             if($documentoFiltro!=='' && $documentoFila!==$documentoFiltro){
                 continue;
             }
@@ -601,16 +750,15 @@ class TramiteNoAtentadoController extends Controller
             $tipoSugerido=0;
             $nombreTipoSugerido='';
             $requiereSeleccionManual=false;
-            if(sizeof($tiposPermitidosRaw)===1){
-                $tipoSugerido=(int)$tiposPermitidosRaw[0]->cod_tre;
-                $nombreTipoSugerido=(string)$tiposPermitidosRaw[0]->tre_nombre;
-            }elseif(sizeof($tiposPermitidosRaw)>1){
-                $requiereSeleccionManual=true;
+            $tramiteSugerido=$this->seleccionarTramiteSugeridoPagoNoAtentado($tiposPermitidosRaw,(string)($fila['cuenta'] ?? ''));
+            if($tramiteSugerido){
+                $tipoSugerido=(int)$tramiteSugerido->cod_tre;
+                $nombreTipoSugerido=(string)$tramiteSugerido->tre_nombre;
             }
 
             $mensaje='Pago validado correctamente para No Atentado.';
-            if($requiereSeleccionManual){
-                $mensaje='Pago válido. Seleccione el tipo de trámite permitido para la cuenta detectada.';
+            if($tipoSugerido>0){
+                $mensaje='Pago validado. Tipo de trámite definido automáticamente según la cuenta del pago.';
             }
 
             $pagosValidos[]=[
@@ -618,6 +766,8 @@ class TramiteNoAtentadoController extends Controller
                 'message'=>$mensaje,
                 'control'=>$control,
                 'identificador'=>(string)($fila['identificador'] ?? ''),
+                'total'=>(string)($fila['total'] ?? ''),
+                'monto_total'=>$this->normalizarMontoRecaudacionNoAtentado($fila['total'] ?? 0),
                 'codigo_cuenta'=>$codigoCuenta,
                 'cuenta'=>(string)($fila['cuenta'] ?? ''),
                 'fecha_pago'=>(string)($fila['fecha'] ?? ''),
@@ -640,8 +790,24 @@ class TramiteNoAtentadoController extends Controller
             return [
                 'ok'=>false,
                 'code'=>'PAGO_AMBIGUO',
-                'message'=>'Se encontraron varios pagos válidos para este control. Ingrese CI del pagador o preimpreso para identificar el correcto.',
+                'message'=>'Se encontraron varios pagos válidos para este control. Ingrese preimpreso para identificar el pago correcto.',
                 'coincidencias'=>sizeof($pagosValidos),
+            ];
+        }
+
+        if($requiereCoincidenciaDocumentoCandidato && !$coincidioConCandidatos){
+            if($forzarDocumentoCandidato || sizeof($documentosCandidatos)===1){
+                return [
+                    'ok'=>false,
+                    'code'=>'CI_CANDIDATO_NO_COINCIDE',
+                    'message'=>'El CI del candidato no coincide con el pago consultado.',
+                ];
+            }
+
+            return [
+                'ok'=>false,
+                'code'=>'CARNET_CANDIDATO_NO_COINCIDE',
+                'message'=>'El pago no corresponde a ninguno de los carnets de candidatos del trámite.',
             ];
         }
 
@@ -708,14 +874,307 @@ class TramiteNoAtentadoController extends Controller
         ];
     }
 
+    private function estadoReintegroPendienteNoAtentado(string $controlReintegro): array
+    {
+        $controlReintegro=trim($controlReintegro);
+        if($controlReintegro===''){
+            return [
+                'ok'=>true,
+                'aplica'=>false,
+                'control'=>'',
+                'monto_total'=>0.0,
+                'message'=>'Sin reintegro.',
+            ];
+        }
+
+        return [
+            'ok'=>true,
+            'aplica'=>false,
+            'pendiente'=>true,
+            'control'=>$controlReintegro,
+            'monto_total'=>0.0,
+            'message'=>'Reintegro pendiente: primero confirme control principal y preimpreso.',
+        ];
+    }
+
+    private function adjuntarMontosValidacionPagoNoAtentado(array $respuesta,array $validacionPrincipal,array $validacionReintegro): array
+    {
+        $montoPrincipal=(bool)($validacionPrincipal['ok'] ?? false)
+            ? $this->normalizarMontoRecaudacionNoAtentado($validacionPrincipal['monto_total'] ?? 0)
+            : 0.0;
+
+        $montoReintegro=((bool)($validacionReintegro['ok'] ?? false) && (bool)($validacionReintegro['aplica'] ?? false))
+            ? $this->normalizarMontoRecaudacionNoAtentado($validacionReintegro['monto_total'] ?? 0)
+            : 0.0;
+
+        $respuesta['monto_principal_validado']=$montoPrincipal;
+        $respuesta['monto_reintegro_validado']=$montoReintegro;
+        $respuesta['monto_total_validado']=round($montoPrincipal+$montoReintegro,2);
+        return $respuesta;
+    }
+
+    private function validarControlReintegroPagoNoAtentado(string $controlReintegro,string $documentoTitularPrincipal='',string $controlPrincipal='',int $codDtra=0): array
+    {
+        $controlReintegro=trim($controlReintegro);
+        if($controlReintegro===''){
+            return [
+                'ok'=>true,
+                'aplica'=>false,
+                'control'=>'',
+                'message'=>'Sin reintegro.',
+            ];
+        }
+
+        $documentoTitularPrincipal=$this->normalizarDocumentoNoAtentado($documentoTitularPrincipal);
+        $metaReintegro=$this->metaSolicitudReintegroNoAtentado($controlReintegro,$documentoTitularPrincipal);
+
+        if(!is_numeric($controlReintegro)){
+            return [
+                'ok'=>false,
+                'code'=>'REINTEGRO_CONTROL_INVALIDO',
+                'message'=>'El número de control de reintegro debe contener solo números.',
+                'aplica'=>true,
+                'control'=>$controlReintegro,
+                ...$metaReintegro,
+            ];
+        }
+
+        if($documentoTitularPrincipal===''){
+            return [
+                'ok'=>false,
+                'code'=>'REINTEGRO_DOCUMENTO_PRINCIPAL_REQUERIDO',
+                'message'=>'Control de reintegro: primero valide el pago principal para obtener el CI del pagador.',
+                'aplica'=>true,
+                'control'=>$controlReintegro,
+                ...$metaReintegro,
+            ];
+        }
+
+        $controlPrincipal=trim($controlPrincipal);
+        if($controlPrincipal!=='' && $controlPrincipal===$controlReintegro){
+            return [
+                'ok'=>false,
+                'code'=>'REINTEGRO_IGUAL_CONTROL',
+                'message'=>'El número de control de reintegro no puede ser igual al control principal.',
+                'aplica'=>true,
+                'control'=>$controlReintegro,
+                ...$metaReintegro,
+            ];
+        }
+
+        $consultaDocumento=$this->consultarControlDocumentoRecaudacionesNoAtentado($controlReintegro,$documentoTitularPrincipal);
+        if(!(bool)($consultaDocumento['ok'] ?? false)){
+            return $this->mapearErrorValidacionReintegroPagoNoAtentado($consultaDocumento,$controlReintegro,$metaReintegro);
+        }
+
+        $filasDocumento=$consultaDocumento['resultados'] ?? [];
+        if(!is_array($filasDocumento) || sizeof($filasDocumento)===0){
+            return [
+                'ok'=>false,
+                'code'=>'REINTEGRO_CONTROL_DOCUMENTO_NO_COINCIDE',
+                'message'=>'Control de reintegro: no se pudo validar la boleta con control y CI del pagador principal en recaudaciones.',
+                'aplica'=>true,
+                'control'=>$controlReintegro,
+                ...$metaReintegro,
+            ];
+        }
+
+        $usoEncontrado=null;
+        $pagosValidos=[];
+        $pagosProcesados=[];
+        foreach($filasDocumento as $filaItem){
+            $fila=(array)$filaItem;
+            $documentoFila=$this->normalizarDocumentoNoAtentado((string)($fila['documento'] ?? ''));
+            if($documentoFila==='' || $documentoFila!==$documentoTitularPrincipal){
+                continue;
+            }
+
+            $clavePago=$this->clavePagoRecaudacionNoAtentado($fila,$controlReintegro);
+            if(array_key_exists($clavePago,$pagosProcesados)){
+                continue;
+            }
+            $pagosProcesados[$clavePago]=true;
+
+            $usoExistente=$this->usoRecaudacionExistenteNoAtentado($fila,$controlReintegro,$codDtra);
+            if($usoExistente){
+                if(!$usoEncontrado){
+                    $usoEncontrado=$usoExistente;
+                }
+                continue;
+            }
+
+            $pagosValidos[]=[
+                'ok'=>true,
+                'aplica'=>true,
+                'control'=>$controlReintegro,
+                'identificador'=>(string)($fila['identificador'] ?? ''),
+                'total'=>(string)($fila['total'] ?? ''),
+                'monto_total'=>$this->normalizarMontoRecaudacionNoAtentado($fila['total'] ?? 0),
+                'codigo_cuenta'=>(string)($fila['codigo_cuenta'] ?? ''),
+                'cuenta'=>(string)($fila['cuenta'] ?? ''),
+                'fecha_pago'=>(string)($fila['fecha'] ?? ''),
+                'cajero'=>(string)($fila['cajero'] ?? ''),
+                'documento'=>(string)($fila['documento'] ?? ''),
+                'nombre_persona'=>$this->nombrePersonaFilaRecaudacionNoAtentado($fila),
+                'preimpreso'=>(string)($fila['preimpreso'] ?? ($fila['fmesa_numero_preimpreso'] ?? ($fila['impreso'] ?? ''))),
+                'message'=>'Control de reintegro validado en recaudaciones con control y CI del pagador principal.',
+                ...$metaReintegro,
+            ];
+        }
+
+        if(sizeof($pagosValidos)===1){
+            return $pagosValidos[0];
+        }
+
+        if($usoEncontrado){
+            return [
+                'ok'=>false,
+                'code'=>'REINTEGRO_PAGO_YA_USADO',
+                'message'=>'Control de reintegro: '.$this->mensajePagoUsadoNoAtentado($usoEncontrado),
+                'aplica'=>true,
+                'control'=>$controlReintegro,
+                ...$metaReintegro,
+            ];
+        }
+
+        if(sizeof($pagosValidos)>1){
+            return [
+                'ok'=>false,
+                'code'=>'REINTEGRO_PAGO_AMBIGUO',
+                'message'=>'Control de reintegro: se encontraron múltiples pagos para ese control y CI del pagador principal.',
+                'aplica'=>true,
+                'control'=>$controlReintegro,
+                ...$metaReintegro,
+            ];
+        }
+
+        return [
+            'ok'=>false,
+            'code'=>'REINTEGRO_CONTROL_DOCUMENTO_NO_COINCIDE',
+            'message'=>'Control de reintegro: no se pudo validar la boleta con control y CI del pagador principal en recaudaciones.',
+            'aplica'=>true,
+            'control'=>$controlReintegro,
+            ...$metaReintegro,
+        ];
+    }
+
+    private function metaSolicitudReintegroNoAtentado(string $control,string $documento): array
+    {
+        $controlNormalizado=$this->normalizarNumeroNoAtentado($control);
+        $documentoNormalizado=$this->normalizarDocumentoNoAtentado($documento);
+
+        return [
+            'documento_principal_usado'=>$documentoNormalizado,
+            'payload_consulta_reintegro'=>[
+                'unidad'=>122,
+                'recibo'=>$controlNormalizado!=='' ? (int)$controlNormalizado : 0,
+                'documento'=>$documentoNormalizado,
+            ],
+        ];
+    }
+
+    private function clavePagoRecaudacionNoAtentado(array $fila,string $control): string
+    {
+        $identificador=trim((string)($fila['identificador'] ?? ''));
+        if($identificador!==''){
+            return 'id:'.$identificador;
+        }
+
+        $fecha=trim((string)($fila['fecha'] ?? ''));
+        $documento=$this->normalizarDocumentoNoAtentado((string)($fila['documento'] ?? ''));
+        $preimpreso=$this->normalizarPreimpresoFilaNoAtentado($fila);
+        return 'alt:'.$control.'|'.$fecha.'|'.$documento.'|'.$preimpreso;
+    }
+
+    private function consultarControlDocumentoRecaudacionesNoAtentado(string $control,string $documento): array
+    {
+        try{
+            $request=Request::create('/api/recaudaciones/buscar-control-documento', 'POST',[
+                'unidad'=>122,
+                'recibo'=>(int)$control,
+                'documento'=>$documento,
+            ]);
+            $response=app(RecaudacionesController::class)->buscarPorControlYDocumento($request);
+            if(!($response instanceof JsonResponse)){
+                return [
+                    'ok'=>false,
+                    'code'=>'API_RESPUESTA_INVALIDA',
+                    'message'=>'No se pudo validar el control de reintegro en recaudaciones. Intente nuevamente.',
+                ];
+            }
+            $json=$response->getData(true);
+        }catch(\Throwable $e){
+            Log::warning('Error inesperado al consultar recaudaciones por control+documento para reintegro No Atentado.',[
+                'control'=>$control,
+                'documento'=>$documento,
+                'error'=>$e->getMessage(),
+            ]);
+            return [
+                'ok'=>false,
+                'code'=>'API_NO_DISPONIBLE',
+                'message'=>'No se pudo conectar con recaudaciones. Intente nuevamente.',
+            ];
+        }
+
+        if(!is_array($json) || !(bool)($json['ok'] ?? false)){
+            $mensaje=trim((string)($json['message'] ?? data_get($json,'error.message','')));
+            $status=(int)($json['status'] ?? 0);
+            $errorMap=$this->mapearMensajeErrorRecaudacionNoAtentado($mensaje,$status);
+
+            return [
+                'ok'=>false,
+                'code'=>$errorMap['code'],
+                'message'=>$errorMap['message'],
+            ];
+        }
+
+        $resultado=$this->extraerResultadoRecaudacionNoAtentado((array)($json['data'] ?? []));
+
+        return [
+            'ok'=>true,
+            'resultados'=>$resultado,
+        ];
+    }
+
+    private function mapearErrorValidacionReintegroPagoNoAtentado(array $resultado,string $controlReintegro,array $metaReintegro=[]): array
+    {
+        $codigo=trim((string)($resultado['code'] ?? ''));
+        if($codigo===''){
+            $codigo='REINTEGRO_INVALIDO';
+        }elseif(strpos($codigo,'REINTEGRO_')!==0){
+            $codigo='REINTEGRO_'.$codigo;
+        }
+
+        $mensaje=trim((string)($resultado['message'] ?? 'No se pudo validar el control de reintegro en recaudaciones.'));
+        if($mensaje===''){
+            $mensaje='No se pudo validar el control de reintegro en recaudaciones.';
+        }
+
+        return [
+            'ok'=>false,
+            'code'=>$codigo,
+            'message'=>'Control de reintegro: '.$mensaje,
+            'aplica'=>true,
+            'control'=>trim($controlReintegro),
+            ...$metaReintegro,
+        ];
+    }
+
     private function consultarControlRecaudacionesNoAtentado(string $control): array
     {
         try{
-            $request=Request::create('/', 'POST',[
+            $request=Request::create('/api/recaudaciones/buscar-control', 'POST',[
                 'unidad'=>122,
                 'recibo'=>(int)$control,
             ]);
-            $response=(new RecaudacionesController())->buscarPorControl($request);
+            $response=app(RecaudacionesController::class)->buscarPorControl($request);
+            if(!($response instanceof JsonResponse)){
+                return [
+                    'ok'=>false,
+                    'code'=>'API_RESPUESTA_INVALIDA',
+                    'message'=>'No se pudo validar el control en recaudaciones. Intente nuevamente.',
+                ];
+            }
             $json=$response->getData(true);
         }catch(\Throwable $e){
             Log::warning('Error inesperado al consultar recaudaciones para No Atentado.',[
@@ -729,27 +1188,15 @@ class TramiteNoAtentadoController extends Controller
             ];
         }
 
-        if(!(bool)($json['ok'] ?? false)){
+        if(!is_array($json) || !(bool)($json['ok'] ?? false)){
             $mensaje=trim((string)($json['message'] ?? data_get($json,'error.message','')));
-            if($mensaje===''){
-                $mensaje='No se pudo validar el control en recaudaciones.';
-            }
-
-            $msgNorm=mb_strtolower($mensaje);
-            if(strpos($msgNorm,'configur')!==false){
-                $mensaje='Recaudaciones no esta configurado. Contacte a sistemas.';
-            }elseif(
-                strpos($msgNorm,'comunicacion')!==false ||
-                strpos($msgNorm,'api')!==false ||
-                strpos($msgNorm,'timeout')!==false
-            ){
-                $mensaje='Sin conexion con recaudaciones. Intente nuevamente.';
-            }
+            $status=(int)($json['status'] ?? 0);
+            $errorMap=$this->mapearMensajeErrorRecaudacionNoAtentado($mensaje,$status);
 
             return [
                 'ok'=>false,
-                'code'=>'API_RECAUDACIONES_ERROR',
-                'message'=>$mensaje,
+                'code'=>$errorMap['code'],
+                'message'=>$errorMap['message'],
             ];
         }
 
@@ -758,6 +1205,70 @@ class TramiteNoAtentadoController extends Controller
         return [
             'ok'=>true,
             'resultados'=>$resultado,
+        ];
+    }
+
+    private function mapearMensajeErrorRecaudacionNoAtentado(string $mensajeApi,int $status=0): array
+    {
+        $mensajeApi=trim($mensajeApi);
+        $msgNorm=mb_strtolower($mensajeApi);
+
+        if($status===429 || strpos($msgNorm,'too many')!==false || strpos($msgNorm,'demasiadas solicitudes')!==false || strpos($msgNorm,'rate limit')!==false){
+            return [
+                'code'=>'RATE_LIMIT',
+                'message'=>'Demasiadas solicitudes a recaudaciones. Intente nuevamente en unos segundos.',
+            ];
+        }
+
+        if(
+            strpos($msgNorm,'configur')!==false ||
+            strpos($msgNorm,'services/.env')!==false ||
+            strpos($msgNorm,'no esta configurado')!==false ||
+            strpos($msgNorm,'no está configurado')!==false
+        ){
+            return [
+                'code'=>'SISTEMA_NO_CONFIGURADO',
+                'message'=>'Recaudaciones no está configurado. Contacte al área de sistemas.',
+            ];
+        }
+
+        if(
+            $status===404 ||
+            strpos($msgNorm,'not found')!==false ||
+            strpos($msgNorm,'no se encuentra')!==false ||
+            strpos($msgNorm,'no encontrado')!==false ||
+            strpos($msgNorm,'control')!==false ||
+            strpos($msgNorm,'recibo')!==false
+        ){
+            return [
+                'code'=>'CONTROL_NO_ENCONTRADO',
+                'message'=>'No se encontró información del número de control en recaudaciones.',
+            ];
+        }
+
+        if($status>0 && $status<500){
+            return [
+                'code'=>'API_RECAUDACIONES_ERROR',
+                'message'=>'No se pudo validar el control en recaudaciones. Verifique los datos e intente nuevamente.',
+            ];
+        }
+
+        if(
+            strpos($msgNorm,'comunicacion')!==false ||
+            strpos($msgNorm,'comunicación')!==false ||
+            strpos($msgNorm,'timeout')!==false ||
+            strpos($msgNorm,'sin conexion')!==false ||
+            strpos($msgNorm,'sin conexión')!==false
+        ){
+            return [
+                'code'=>'API_NO_DISPONIBLE',
+                'message'=>'Sin conexión con recaudaciones. Intente nuevamente.',
+            ];
+        }
+
+        return [
+            'code'=>'API_RECAUDACIONES_ERROR',
+            'message'=>'No se pudo validar el control en recaudaciones. Intente nuevamente.',
         ];
     }
 
@@ -938,7 +1449,7 @@ class TramiteNoAtentadoController extends Controller
             $apellido=mb_strtoupper(trim((string)($item['apellido'] ?? '')));
             $codSis=trim((string)($item['cod_sis'] ?? ''));
             $unidad=trim((string)($item['unidad'] ?? ''));
-            $cargoTexto=trim((string)($item['cargo'] ?? ''));
+            $cargoTexto=$this->normalizarTextoCargoNoAtentado((string)($item['cargo'] ?? ''));
             $cargoConvocatoria=(int)($item['cargo_convocatoria'] ?? 0);
 
             if($ci==='' || $nombre==='' || $apellido===''){
@@ -992,7 +1503,7 @@ class TramiteNoAtentadoController extends Controller
             }
         }
 
-        $cargoTexto=mb_strtoupper(trim($cargoTexto));
+        $cargoTexto=$this->normalizarTextoCargoNoAtentado($cargoTexto);
         if($cargoTexto===''){
             return 0;
         }
@@ -1017,6 +1528,125 @@ class TramiteNoAtentadoController extends Controller
         return preg_replace('/\D+/','',$texto) ?? '';
     }
 
+    private function normalizarMontoRecaudacionNoAtentado($valor): float
+    {
+        $texto=trim((string)$valor);
+        if($texto===''){
+            return 0.0;
+        }
+
+        $texto=preg_replace('/[^0-9,\.\-]/','',$texto) ?? '';
+        if($texto===''){
+            return 0.0;
+        }
+
+        if(strpos($texto,',')!==false && strpos($texto,'.')===false){
+            $texto=str_replace(',','.',$texto);
+        }elseif(strpos($texto,',')!==false && strpos($texto,'.')!==false){
+            $texto=str_replace(',','',$texto);
+        }
+
+        if(!is_numeric($texto)){
+            return 0.0;
+        }
+
+        return round((float)$texto,2);
+    }
+
+    private function normalizarTextoCargoNoAtentado(string $cargoTexto): string
+    {
+        $cargo=mb_strtoupper(trim($cargoTexto));
+        if($cargo===''){
+            return '';
+        }
+
+        $clave=mb_strtolower($cargo);
+        $clave=strtr($clave,[
+            'á'=>'a',
+            'é'=>'e',
+            'í'=>'i',
+            'ó'=>'o',
+            'ú'=>'u',
+        ]);
+        $clave=preg_replace('/\s+/',' ',trim((string)$clave)) ?? '';
+
+        if(in_array($clave,['seleccione','seleccionar','select','ninguno','sin cargo'],true)){
+            return '';
+        }
+
+        return $cargo;
+    }
+
+    private function seleccionarTramiteSugeridoPagoNoAtentado(array $tiposPermitidosRaw,string $nombreCuenta): ?Tramite
+    {
+        if(sizeof($tiposPermitidosRaw)===0){
+            return null;
+        }
+
+        $candidatos=[];
+        foreach($tiposPermitidosRaw as $item){
+            if($item instanceof Tramite){
+                $candidatos[]=$item;
+            }
+        }
+
+        if(sizeof($candidatos)===0){
+            return null;
+        }
+
+        if(sizeof($candidatos)===1){
+            return $candidatos[0];
+        }
+
+        $mejor=null;
+        $mejorScore=-1.0;
+        foreach($candidatos as $tramiteCand){
+            $score=$this->puntajeSimilitudCuentaNoAtentado($nombreCuenta,(string)($tramiteCand->tre_nombre ?? ''));
+            if($score>$mejorScore){
+                $mejorScore=$score;
+                $mejor=$tramiteCand;
+            }
+        }
+
+        if($mejor){
+            return $mejor;
+        }
+
+        return $candidatos[0];
+    }
+
+    private function puntajeSimilitudCuentaNoAtentado(string $cuentaApi,string $nombreTramite): float
+    {
+        $cuenta=$this->normalizarTextoComparacionNoAtentado($cuentaApi);
+        $tramite=$this->normalizarTextoComparacionNoAtentado($nombreTramite);
+        if($cuenta==='' || $tramite===''){
+            return 0.0;
+        }
+
+        if($cuenta===$tramite){
+            return 100.0;
+        }
+
+        similar_text($cuenta,$tramite,$porcentaje);
+        return (float)$porcentaje;
+    }
+
+    private function normalizarTextoComparacionNoAtentado(string $texto): string
+    {
+        $valor=mb_strtoupper(trim($texto));
+        $valor=strtr($valor,[
+            'Á'=>'A',
+            'É'=>'E',
+            'Í'=>'I',
+            'Ó'=>'O',
+            'Ú'=>'U',
+            'Ñ'=>'N',
+        ]);
+        $valor=preg_replace('/[^A-Z0-9 ]+/',' ',$valor) ?? '';
+        $valor=preg_replace('/\s+/',' ',trim((string)$valor)) ?? '';
+        return (string)$valor;
+    }
+
     private function normalizarDocumentoNoAtentado(string $texto): string
     {
         $valor=mb_strtoupper(trim($texto));
@@ -1024,10 +1654,68 @@ class TramiteNoAtentadoController extends Controller
         return preg_replace('/[^A-Z0-9]/','',(string)$valor) ?? '';
     }
 
+    private function normalizarDocumentosCandidatosNoAtentado($valor): array
+    {
+        if(is_string($valor)){
+            $texto=trim($valor);
+            if($texto===''){
+                return [];
+            }
+
+            $json=json_decode($texto,true);
+            if(json_last_error()===JSON_ERROR_NONE && is_array($json)){
+                $valor=$json;
+            }else{
+                $valor=preg_split('/[\s,;|]+/',$texto) ?: [];
+            }
+        }
+
+        if(!is_array($valor)){
+            $valor=[$valor];
+        }
+
+        $documentos=[];
+        foreach($valor as $item){
+            $documento=$this->normalizarDocumentoNoAtentado((string)$item);
+            if($documento===''){
+                continue;
+            }
+            // Evita que PHP convierta claves numéricas a int y rompa comparaciones estrictas.
+            $documentos['doc:'.$documento]=$documento;
+        }
+
+        return array_values($documentos);
+    }
+
     private function normalizarPreimpresoFilaNoAtentado(array $fila): string
     {
         $preimpreso=(string)($fila['preimpreso'] ?? ($fila['fmesa_numero_preimpreso'] ?? ($fila['impreso'] ?? '')));
         return $this->normalizarNumeroNoAtentado($preimpreso);
+    }
+
+    private function documentoPagoPerteneceACandidatosNoAtentado(array $validacionPago,$documentosCandidatos,int $cantidadCandidatos=0,bool $forzarDocumentoCandidato=false): bool
+    {
+        $documentos=$this->normalizarDocumentosCandidatosNoAtentado($documentosCandidatos);
+        if(sizeof($documentos)===0){
+            return false;
+        }
+
+        $cantidadNormalizada=sizeof($documentos);
+        if($cantidadNormalizada===0){
+            $cantidadNormalizada=max(0,$cantidadCandidatos);
+        }
+
+        $requiereCoincidenciaDocumento=$forzarDocumentoCandidato || $cantidadNormalizada<=1;
+        if(!$requiereCoincidenciaDocumento){
+            return true;
+        }
+
+        $documentoPago=$this->normalizarDocumentoNoAtentado((string)($validacionPago['documento'] ?? ''));
+        if($documentoPago===''){
+            return false;
+        }
+
+        return in_array($documentoPago,$documentos,true);
     }
 
     private function nombrePersonaFilaRecaudacionNoAtentado(array $fila): string
