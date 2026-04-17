@@ -25,6 +25,7 @@
                     {!! session('errorModal') !!}
                 </div>
             @endif
+            <div id="noa_feedback_js" class="mb-2" style="display:none;"></div>
 
             <div class="d-flex justify-content-center">
                 <div class="card-body" style="font-size: 14px;">
@@ -195,7 +196,7 @@
                                 </form>
 
                                 <div class="col-md-12 mt-1">
-                                    <button class="btn btn-primary btn-sm float-right" type="button" onclick="guardarTramiteNoAtentado()"><i class="fas fa-save"></i> Guardar trámite</button>
+                                    <button class="btn btn-primary btn-sm float-right" id="btn_guardar_noa" type="button" onclick="guardarTramiteNoAtentado()"><i class="fas fa-save"></i> Guardar trámite</button>
                                 </div>
                             </div>
                         </div>
@@ -283,7 +284,7 @@
 
                                 @can('editar tramite - noa')
                                     <div class="col-md-12 mt-2">
-                                        <button class="btn btn-primary btn-sm float-right" type="button" onclick="guardarEdicionTramiteNoAtentado()">Guardar cambios</button>
+                                        <button class="btn btn-primary btn-sm float-right" id="btn_guardar_noa_edit" type="button" onclick="guardarEdicionTramiteNoAtentado()">Guardar cambios</button>
                                     </div>
                                 @endcan
                             </div>
@@ -391,26 +392,27 @@
 </style>
 
 <script>
-    let candidatosNoAtentado=[];
-    let pagoNoAtentadoValidado=false;
-    let controlValidadoNoAtentado='';
-    let tramiteValidadoNoAtentado='';
-    let detalleValidacionPagoNoAtentado=null;
-    let opcionesOriginalesTramiteNoa='';
-    let estadoControlPagoNoa={
+    var candidatosNoAtentado=[];
+    var pagoNoAtentadoValidado=false;
+    var controlValidadoNoAtentado='';
+    var tramiteValidadoNoAtentado='';
+    var detalleValidacionPagoNoAtentado=null;
+    var opcionesOriginalesTramiteNoa='';
+    var estadoControlPagoNoa={
         resumen:'Pendiente',
         clase:'badge-warning',
         detalle:'Antes de guardar debe validar el número de control.',
         codigo:'',
     };
-    let detalleExtendidoPagoNoa='';
-    let montoPrincipalValidadoNoa=0;
-    let montoReintegroValidadoNoa=0;
-    let montoTotalValidadoNoa=0;
-    let timerValidacionPagoNoa=null;
-    let secuenciaValidacionPagoNoa=0;
-    let xhrValidacionPagoNoa=null;
-    let validacionPagoNoaEnCurso=false;
+    var detalleExtendidoPagoNoa='';
+    var montoPrincipalValidadoNoa=0;
+    var montoReintegroValidadoNoa=0;
+    var montoTotalValidadoNoa=0;
+    var timerValidacionPagoNoa=null;
+    var secuenciaValidacionPagoNoa=0;
+    var xhrValidacionPagoNoa=null;
+    var validacionPagoNoaEnCurso=false;
+    var guardandoTramiteNoaEnCurso=false;
 
     function reiniciarMontosValidadosNoatentado(){
         montoPrincipalValidadoNoa=0;
@@ -471,7 +473,188 @@
         return $('<div>').text((valor || '').toString()).html();
     }
 
+    function limpiarMensajeNoatentado(){
+        const contenedor=$('#noa_feedback_js');
+        if(contenedor.length===0){
+            return;
+        }
+        contenedor.stop(true,true).hide().html('');
+    }
+
+    function mostrarMensajeNoatentado(tipo,mensaje,enfocarSelector=''){
+        const contenedor=$('#noa_feedback_js');
+        const texto=limpiarTextoNoAtentado(mensaje);
+        if(contenedor.length===0 || texto===''){
+            return;
+        }
+
+        const mapaClases={
+            error:'alert-danger',
+            warning:'alert-warning',
+            success:'alert-success',
+            info:'alert-info',
+        };
+        const clase=mapaClases[tipo] || 'alert-warning';
+
+        contenedor.html(
+            '<div class="alert '+clase+' alert-dismissible fade show py-2 mb-0" role="alert">'+
+                '<span>'+escaparHtmlNoa(texto)+'</span>'+
+                '<button type="button" class="close" data-dismiss="alert" aria-label="close">'+
+                    '<span aria-hidden="true">&times;</span>'+
+                '</button>'+
+            '</div>'
+        ).show();
+
+        const modalBody=contenedor.closest('.modal-body');
+        if(modalBody.length>0){
+            modalBody.stop(true).animate({scrollTop:0},180);
+        }
+
+        if(enfocarSelector!==''){
+            const campo=$(enfocarSelector);
+            if(campo.length>0 && !campo.prop('disabled')){
+                campo.trigger('focus');
+                campo.addClass('is-invalid');
+                setTimeout(function(){
+                    campo.removeClass('is-invalid');
+                },1200);
+            }
+        }
+
+        if(tipo==='success' || tipo==='info'){
+            setTimeout(function(){
+                contenedor.find('.alert').alert('close');
+            },4500);
+        }
+    }
+
+    function obtenerMensajeAjaxNoatentado(xhr,mensajePorDefecto){
+        let mensaje=limpiarTextoNoAtentado(mensajePorDefecto || 'Error interno al procesar la solicitud.');
+
+        if(xhr && xhr.status===422 && xhr.responseJSON){
+            if(xhr.responseJSON.errors){
+                const errores=[];
+                Object.keys(xhr.responseJSON.errors).forEach(function(campo){
+                    const lista=xhr.responseJSON.errors[campo] || [];
+                    if(Array.isArray(lista)){
+                        for(let i=0;i<lista.length;i++){
+                            const texto=limpiarTextoNoAtentado(lista[i]);
+                            if(texto!==''){
+                                errores.push(texto);
+                            }
+                        }
+                    }
+                });
+                if(errores.length>0){
+                    mensaje=errores.join(' ');
+                }
+            }else if(xhr.responseJSON.message){
+                mensaje=limpiarTextoNoAtentado(xhr.responseJSON.message);
+            }
+        }else if(xhr && xhr.status===419){
+            mensaje='La sesión expiró. Recargue la página e intente nuevamente.';
+        }else if(xhr && xhr.status===403){
+            mensaje='No tiene permisos para esta acción.';
+        }else if(xhr && xhr.status===404){
+            mensaje='No se encontró la ruta solicitada.';
+        }else if(xhr && xhr.responseJSON && xhr.responseJSON.message){
+            mensaje=limpiarTextoNoAtentado(xhr.responseJSON.message);
+        }
+
+        return mensaje;
+    }
+
+    function actualizarEstadoGuardadoNoatentado(enCurso){
+        guardandoTramiteNoaEnCurso=enCurso===true;
+        const botones=$('#btn_guardar_noa, #btn_guardar_noa_edit');
+
+        botones.each(function(){
+            const boton=$(this);
+            if(!boton.data('texto-original')){
+                boton.data('texto-original',boton.html());
+            }
+
+            boton.prop('disabled',guardandoTramiteNoaEnCurso);
+            if(guardandoTramiteNoaEnCurso){
+                boton.html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
+            }else{
+                boton.html(boton.data('texto-original'));
+            }
+        });
+    }
+
+    function enviarFormularioTramiteNoAtentado(){
+        if(guardandoTramiteNoaEnCurso){
+            return;
+        }
+
+        const form=$('#form_tramite');
+        if(form.length===0){
+            return;
+        }
+
+        actualizarEstadoGuardadoNoatentado(true);
+        limpiarMensajeNoatentado();
+
+        const datosSerializados=form.serializeArray().filter(function(item){
+            if(item.name==='reintegro'){
+                return normalizarNumeroNoAtentado(item.value)!=='';
+            }
+            return true;
+        });
+
+        $.ajax({
+            type: 'POST',
+            url: "{{url('guardar tramite convocatoria noatentado')}}",
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json, text/html;q=0.9, */*;q=0.8'
+            },
+            data: $.param(datosSerializados),
+            success: function(resp){
+                if(resp && typeof resp==='object'){
+                    if(resp.ok===false){
+                        mostrarMensajeNoatentado('error',limpiarTextoNoAtentado(resp.message || 'No se pudo guardar el trámite.'));
+                        return;
+                    }
+
+                    if(resp.ok===true && resp.redirect){
+                        cargarDatos(resp.redirect,'panel_noatentado');
+                        cargarDatos("{{url('actualizar lista tramite convocatoria/'.$cod_con)}}",'panel_lista_tramites');
+                        return;
+                    }
+                }
+
+                $('#panel_noatentado').html(resp);
+                cargarDatos("{{url('actualizar lista tramite convocatoria/'.$cod_con)}}",'panel_lista_tramites');
+            },
+            error: function(xhr){
+                const mensaje=obtenerMensajeAjaxNoatentado(xhr,'No se pudo guardar el trámite. Revise los datos e intente nuevamente.');
+                mostrarMensajeNoatentado('error',mensaje);
+            },
+            complete: function(){
+                actualizarEstadoGuardadoNoatentado(false);
+            }
+        });
+    }
+
+    function sincronizarEstadoCandidatosNoAtentado(){
+        const tabla=$('#tabla_candidatos_noa tbody');
+        if(tabla.length===0){
+            return;
+        }
+
+        const filas=tabla.find('tr');
+        const sinFilasReales=filas.length===0 || (filas.length===1 && filas.first().attr('id')==='fila_vacia_candidatos_noa');
+        if(sinFilasReales && Array.isArray(candidatosNoAtentado) && candidatosNoAtentado.length>0){
+            candidatosNoAtentado=[];
+            $('#candidatos_json_noa').val('[]');
+        }
+    }
+
     function obtenerResumenCandidatosPagoNoAtentado(){
+        sincronizarEstadoCandidatosNoAtentado();
+
         const documentos={};
         for(let i=0;i<candidatosNoAtentado.length;i++){
             const doc=normalizarDocumentoNoAtentado(candidatosNoAtentado[i].ci);
@@ -838,6 +1021,9 @@
         const controlActual=limpiarTextoNoAtentado($('#control_noa').val());
         const reintegro=limpiarTextoNoAtentado($('#reintegro_noa').val());
         const preimpreso=limpiarTextoNoAtentado($('#preimpreso_pago_noa').val());
+        const codigoControl=limpiarTextoNoAtentado(estadoControlPagoNoa.codigo || '').toUpperCase();
+        const tipoControl=tipoEstadoPagoNoatentadoDesdeClase(estadoControlPagoNoa.clase,estadoControlPagoNoa.resumen);
+        const detalleControl=detalleControlPagoNoatentado();
         const validando=validacionPagoNoaEnCurso===true && controlActual!=='';
         actualizarVisibilidadIconosPagoNoatentado();
         const validacionReintegro=(detalleValidacionPagoNoAtentado && detalleValidacionPagoNoAtentado.validacion_reintegro) ? detalleValidacionPagoNoAtentado.validacion_reintegro : null;
@@ -900,6 +1086,17 @@
 
         if(resumen.cantidad>1){
             if(preimpreso!==''){
+                const hayErrorPrincipalConCodigo=codigoControl!=='' && codigoControl.indexOf('REINTEGRO_')!==0;
+                if(hayErrorPrincipalConCodigo && tipoControl!=='ok' && tipoControl!=='loading' && tipoControl!=='pending'){
+                    const estadoPrincipal=resolverEstadoErrorPagoNoatentado({
+                        code:codigoControl,
+                        message:detalleControl!=='' ? detalleControl : limpiarTextoNoAtentado(estadoControlPagoNoa.detalle || estadoControlPagoNoa.resumen || 'No se pudo validar el pago principal.'),
+                    },0);
+                    const tipoIcono=estadoPrincipal.clase==='badge-danger' ? 'error' : 'warning';
+                    actualizarIconoPagoNoatentado('preimpreso',tipoIcono,estadoPrincipal.resumen || 'No válido',estadoPrincipal.detalle,estadoPrincipal.codigo || codigoControl);
+                    return;
+                }
+
                 actualizarIconoPagoNoatentado('preimpreso','pending','Pendiente','Preimpreso del control principal ingresado; valide pago para confirmar.');
             }else{
                 actualizarIconoPagoNoatentado('preimpreso','pending','Pendiente','Ingrese preimpreso para seleccionar el valorado correcto del control principal.');
@@ -1262,7 +1459,9 @@
     }
 
     function agregarCandidatoNoAtentado(){
-        const ci=limpiarTextoNoAtentado($('#noa_ci').val()).toUpperCase();
+        sincronizarEstadoCandidatosNoAtentado();
+
+        const ci=normalizarDocumentoNoAtentado($('#noa_ci').val());
         const nombre=limpiarTextoNoAtentado($('#noa_nombre').val()).toUpperCase();
         const apellido=limpiarTextoNoAtentado($('#noa_apellido').val()).toUpperCase();
         const codSis=limpiarTextoNoAtentado($('#noa_cod_sis').val());
@@ -1283,20 +1482,20 @@
         }
 
         if(ci==='' || nombre==='' || apellido===''){
-            alert('Debe ingresar CI, nombre y apellido del candidato.');
+            mostrarMensajeNoatentado('warning','Complete CI, nombres y apellidos del candidato para agregarlo.','#noa_ci');
             return;
         }
 
         let duplicado=false;
         for(let i=0;i<candidatosNoAtentado.length;i++){
-            if(candidatosNoAtentado[i].ci===ci){
+            if(normalizarDocumentoNoAtentado(candidatosNoAtentado[i].ci)===ci){
                 duplicado=true;
                 break;
             }
         }
 
         if(duplicado){
-            alert('El candidato ya fue agregado en la lista.');
+            mostrarMensajeNoatentado('info','El CI '+ci+' ya está registrado en la lista de candidatos.','#noa_ci');
             return;
         }
 
@@ -1313,6 +1512,7 @@
 
         renderTablaCandidatosNoAtentado();
         limpiarFormularioCandidatoNoAtentado();
+        mostrarMensajeNoatentado('success','Candidato agregado correctamente.');
     }
 
     function quitarCandidatoNoAtentado(indice){
@@ -1365,7 +1565,7 @@
     function importarExcelCandidatosNoAtentado(){
         const controlArchivo=$('#excel_candidatos_noa');
         if(controlArchivo.length===0 || !controlArchivo[0].files || controlArchivo[0].files.length===0){
-            alert('Seleccione un archivo Excel para importar candidatos.');
+            mostrarMensajeNoatentado('warning','Seleccione un archivo Excel antes de importar.','#excel_candidatos_noa');
             return;
         }
 
@@ -1382,7 +1582,7 @@
             data: data,
             success: function(resp){
                 if(!resp || !resp.ok){
-                    alert((resp && resp.message) ? resp.message : 'No se pudo importar el archivo de candidatos.');
+                    mostrarMensajeNoatentado('error',(resp && resp.message) ? resp.message : 'No se pudo importar el archivo de candidatos.');
                     return;
                 }
 
@@ -1390,14 +1590,14 @@
                 let agregados=0;
                 for(let i=0;i<lista.length;i++){
                     const candidato=lista[i] || {};
-                    const ci=limpiarTextoNoAtentado(candidato.ci).toUpperCase();
+                    const ci=normalizarDocumentoNoAtentado(candidato.ci);
                     if(ci===''){
                         continue;
                     }
 
                     let existe=false;
                     for(let j=0;j<candidatosNoAtentado.length;j++){
-                        if((candidatosNoAtentado[j].ci || '')===ci){
+                        if(normalizarDocumentoNoAtentado(candidatosNoAtentado[j].ci)===ci){
                             existe=true;
                             break;
                         }
@@ -1433,7 +1633,7 @@
                 if(Array.isArray(resp.errores) && resp.errores.length>0){
                     mensaje+=' Observaciones: '+resp.errores.join(' ');
                 }
-                alert(mensaje);
+                mostrarMensajeNoatentado('success',mensaje);
             },
             error: function(xhr){
                 let mensaje='No se pudo importar el archivo de candidatos.';
@@ -1447,7 +1647,7 @@
                         }
                     }
                 }
-                alert(mensaje);
+                mostrarMensajeNoatentado('error',mensaje);
             }
         });
     }
@@ -1775,8 +1975,7 @@
             return;
         }
 
-        enviar('form_tramite',"{{url('guardar tramite convocatoria noatentado')}}",'panel_noatentado');
-        cargarDatos("{{url('actualizar lista tramite convocatoria/'.$cod_con)}}",'panel_lista_tramites');
+        enviarFormularioTramiteNoAtentado();
     }
 
     function guardarTramiteNoAtentado(){
@@ -1785,14 +1984,14 @@
         }
 
         if(candidatosNoAtentado.length===0){
-            alert('Debe agregar al menos un candidato antes de guardar.');
+            mostrarMensajeNoatentado('warning','Debe agregar al menos un candidato antes de guardar.','#noa_ci');
             return;
         }
 
         const control=limpiarTextoNoAtentado($('#control_noa').val());
         const tramite=limpiarTextoNoAtentado($('#tramite_noa').val());
         if(control==='' || tramite===''){
-            alert('Complete los datos de trámite y número de control.');
+            mostrarMensajeNoatentado('warning','Complete el número de control y confirme el trámite sugerido antes de guardar.','#control_noa');
             return;
         }
 
@@ -1801,13 +2000,26 @@
         }
 
         if(!pagoNoAtentadoValidado || controlValidadoNoAtentado!==control || tramiteValidadoNoAtentado!==tramite){
-            alert('Debe validar el pago del número de control antes de guardar.');
+            mostrarMensajeNoatentado('warning','No se guardó el trámite: primero valide correctamente el pago principal.','#control_noa');
             return;
         }
 
+        const reintegro=limpiarTextoNoAtentado($('#reintegro_noa').val());
+        if(reintegro!==''){
+            const validacionReintegro=(detalleValidacionPagoNoAtentado && detalleValidacionPagoNoAtentado.validacion_reintegro)
+                ? detalleValidacionPagoNoAtentado.validacion_reintegro
+                : null;
+            const controlReintegroValidado=limpiarTextoNoAtentado(validacionReintegro && validacionReintegro.control ? validacionReintegro.control : '');
+            const reintegroOk=!!(validacionReintegro && validacionReintegro.ok===true && validacionReintegro.aplica===true && controlReintegroValidado!=='' && controlReintegroValidado===reintegro);
+
+            if(!reintegroOk){
+                mostrarMensajeNoatentado('warning','No se guardó el trámite: el reintegro informado no fue validado. Corrija el control de reintegro o deje el campo vacío si no aplica.','#reintegro_noa');
+                return;
+            }
+        }
+
         $('#candidatos_json_noa').val(JSON.stringify(candidatosNoAtentado));
-        enviar('form_tramite',"{{url('guardar tramite convocatoria noatentado')}}",'panel_noatentado');
-        cargarDatos("{{url('actualizar lista tramite convocatoria/'.$cod_con)}}",'panel_lista_tramites');
+        enviarFormularioTramiteNoAtentado();
     }
 
     $(function(){

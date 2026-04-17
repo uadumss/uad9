@@ -319,12 +319,24 @@ class TramiteNoAtentadoController extends Controller
         $form->validate([
             'control'=>'required',
         ]);
+        $esPeticionAjax=(bool)($form->ajax() || $form->expectsJson());
+        $responderError=function(string $mensaje,string $ruta,int $status=422) use ($esPeticionAjax){
+            if($esPeticionAjax){
+                return response()->json([
+                    'ok'=>false,
+                    'message'=>$mensaje,
+                ],$status);
+            }
+
+            \Session::flash('errorModal',$mensaje);
+            return redirect($ruta);
+        };
+
         $tramite_noatentado=array();
         if(isset($form['cd']) && $form['cd']!=''){
             $tramite_noatentado=D_tramita::find($form['cd']);
             if(!$tramite_noatentado){
-                \Session::flash('errorModal','No se encontró el trámite a editar.');
-                return redirect('listar tramite convocatoria/'.$form['cc']);
+                return $responderError('No se encontró el trámite a editar.','listar tramite convocatoria/'.$form['cc'],404);
             }
 
             $controlActual=trim((string)($tramite_noatentado->dtra_control ?? ''));
@@ -333,8 +345,11 @@ class TramiteNoAtentadoController extends Controller
             $reintegroFormulario=trim((string)($form['reintegro'] ?? ''));
 
             if($controlFormulario!==$controlActual || $reintegroFormulario!==$reintegroActual){
-                \Session::flash('errorModal','No se permite modificar el pago en un trámite ya creado.');
-                return redirect('editar tramite convocatoria/'.$form['cc'].'/'.$tramite_noatentado->cod_dtra);
+                return $responderError(
+                    'No se permite modificar el pago en un trámite ya creado.',
+                    'editar tramite convocatoria/'.$form['cc'].'/'.$tramite_noatentado->cod_dtra,
+                    422
+                );
             }
 
             DB::beginTransaction();
@@ -354,8 +369,11 @@ class TramiteNoAtentadoController extends Controller
                     'cod_dtra'=>$tramite_noatentado->cod_dtra,
                     'error'=>$e->getMessage(),
                 ]);
-                \Session::flash('errorModal','No se pudo guardar la edición del trámite.');
-                return redirect('editar tramite convocatoria/'.$form['cc'].'/'.$tramite_noatentado->cod_dtra);
+                return $responderError(
+                    'No se pudo guardar la edición del trámite.',
+                    'editar tramite convocatoria/'.$form['cc'].'/'.$tramite_noatentado->cod_dtra,
+                    500
+                );
             }
         }else{
             $form->validate([
@@ -365,8 +383,11 @@ class TramiteNoAtentadoController extends Controller
 
             $candidatos=json_decode((string)$form['candidatos_json'],true);
             if(!is_array($candidatos) || sizeof($candidatos)===0){
-                \Session::flash('errorModal','Debe registrar al menos un candidato antes de guardar el trámite.');
-                return redirect('editar tramite convocatoria/'.$form['cc'].'/0');
+                return $responderError(
+                    'Debe registrar al menos un candidato antes de guardar el trámite.',
+                    'editar tramite convocatoria/'.$form['cc'].'/0',
+                    422
+                );
             }
 
             $resumenCandidatos=$this->resumenCandidatosPagoNoAtentado($candidatos);
@@ -381,8 +402,11 @@ class TramiteNoAtentadoController extends Controller
             ]);
             $validacionPago=$this->validarControlPagoNoAtentado((string)$form['control'],$codTreFormulario,0,$filtrosPago);
             if(!(bool)($validacionPago['ok'] ?? false)){
-                \Session::flash('errorModal',(string)($validacionPago['message'] ?? 'No se pudo validar el pago del trámite.'));
-                return redirect('editar tramite convocatoria/'.$form['cc'].'/0');
+                return $responderError(
+                    (string)($validacionPago['message'] ?? 'No se pudo validar el pago del trámite.'),
+                    'editar tramite convocatoria/'.$form['cc'].'/0',
+                    422
+                );
             }
 
             if(!$this->documentoPagoPerteneceACandidatosNoAtentado(
@@ -391,8 +415,11 @@ class TramiteNoAtentadoController extends Controller
                 (int)($resumenCandidatos['cantidad'] ?? 0),
                 false
             )){
-                \Session::flash('errorModal','El CI del pago validado no pertenece a la lista de candidatos registrada.');
-                return redirect('editar tramite convocatoria/'.$form['cc'].'/0');
+                return $responderError(
+                    'El CI del pago validado no pertenece a la lista de candidatos registrada.',
+                    'editar tramite convocatoria/'.$form['cc'].'/0',
+                    422
+                );
             }
 
             $validacionReintegro=$this->validarControlReintegroPagoNoAtentado(
@@ -402,16 +429,24 @@ class TramiteNoAtentadoController extends Controller
                 0
             );
             if(!(bool)($validacionReintegro['ok'] ?? false)){
-                \Session::flash('errorModal',(string)($validacionReintegro['message'] ?? 'No se pudo validar el control de reintegro.'));
-                return redirect('editar tramite convocatoria/'.$form['cc'].'/0');
+                return $responderError(
+                    (string)($validacionReintegro['message'] ?? 'No se pudo validar el control de reintegro.'),
+                    'editar tramite convocatoria/'.$form['cc'].'/0',
+                    422
+                );
             }
 
             $controlReintegroGuardar=trim((string)($validacionReintegro['control'] ?? ($form['reintegro'] ?? '')));
+            $controlReintegroNormalizado=$this->normalizarNumeroNoAtentado($controlReintegroGuardar);
+            $controlReintegroGuardarValor=$controlReintegroNormalizado!=='' ? $controlReintegroNormalizado : null;
 
             $codTreSugerido=(int)($validacionPago['tipo_noatentado_sugerido'] ?? 0);
             if($codTreSugerido<=0){
-                \Session::flash('errorModal','No se pudo determinar automáticamente el tipo de trámite desde la validación de pago.');
-                return redirect('editar tramite convocatoria/'.$form['cc'].'/0');
+                return $responderError(
+                    'No se pudo determinar automáticamente el tipo de trámite desde la validación de pago.',
+                    'editar tramite convocatoria/'.$form['cc'].'/0',
+                    422
+                );
             }
             $codTreFormulario=$codTreSugerido;
 
@@ -426,7 +461,7 @@ class TramiteNoAtentadoController extends Controller
                     'cod_tre'=>$codTreFormulario,
                     'dtra_interno'=>$form['tipo_tramite'],
                     'dtra_control'=>$form['control'],
-                    'dtra_valorado_reintegro'=>$controlReintegroGuardar,
+                    'dtra_valorado_reintegro'=>$controlReintegroGuardarValor,
                     'dtra_numero_tramite'=>$numero_tramite,
                     'dtra_gestion_tramite'=>$año_tramita,
                     'dtra_posicion'=>1,
@@ -462,11 +497,32 @@ class TramiteNoAtentadoController extends Controller
                     'cod_con'=>$form['cc'],
                     'error'=>$e->getMessage(),
                 ]);
-                \Session::flash('errorModal','No se pudo guardar el trámite. Intente nuevamente.');
-                return redirect('editar tramite convocatoria/'.$form['cc'].'/0');
+                $mensajeError='No se pudo guardar el trámite. Intente nuevamente.';
+                if($e instanceof \RuntimeException){
+                    $detalle=trim((string)$e->getMessage());
+                    if($detalle!==''){
+                        $mensajeError=$detalle;
+                    }
+                }elseif((bool)config('app.debug')){
+                    $detalle=trim((string)$e->getMessage());
+                    if($detalle!==''){
+                        $mensajeError='No se pudo guardar el trámite. '.$detalle;
+                    }
+                }
+
+                return $responderError($mensajeError,'editar tramite convocatoria/'.$form['cc'].'/0',($e instanceof \RuntimeException) ? 422 : 500);
             }
         }
-        return redirect("editar tramite convocatoria/".$form['cc']."/".$tramite_noatentado->cod_dtra);
+        $rutaRedireccion="editar tramite convocatoria/".$form['cc']."/".$tramite_noatentado->cod_dtra;
+        if($esPeticionAjax){
+            return response()->json([
+                'ok'=>true,
+                'redirect'=>url($rutaRedireccion),
+                'cod_dtra'=>$tramite_noatentado->cod_dtra,
+            ]);
+        }
+
+        return redirect($rutaRedireccion);
     }
 
     private function construirFiltrosPagoNoAtentado(array $datos): array
@@ -656,13 +712,25 @@ class TramiteNoAtentadoController extends Controller
             ];
         }
 
-        $consulta=$this->consultarControlRecaudacionesNoAtentado($control);
+        $consultaPorControlDocumentoPrincipal=$requiereCoincidenciaDocumentoCandidato && $documentoFiltro!=='';
+        $consulta=$consultaPorControlDocumentoPrincipal
+            ? $this->consultarControlPrincipalDocumentoRecaudacionesNoAtentado($control,$documentoFiltro)
+            : $this->consultarControlRecaudacionesNoAtentado($control);
+
         if(!(bool)($consulta['ok'] ?? false)){
             return $consulta;
         }
 
         $filas=$consulta['resultados'] ?? [];
         if(sizeof($filas)===0){
+            if($consultaPorControlDocumentoPrincipal){
+                return [
+                    'ok'=>false,
+                    'code'=>'CONTROL_DOCUMENTO_NO_ENCONTRADO',
+                    'message'=>'No se encontró información del número de control y carnet en recaudaciones.',
+                ];
+            }
+
             return [
                 'ok'=>false,
                 'code'=>'CONTROL_NO_ENCONTRADO',
@@ -1084,6 +1152,61 @@ class TramiteNoAtentadoController extends Controller
         $documento=$this->normalizarDocumentoNoAtentado((string)($fila['documento'] ?? ''));
         $preimpreso=$this->normalizarPreimpresoFilaNoAtentado($fila);
         return 'alt:'.$control.'|'.$fecha.'|'.$documento.'|'.$preimpreso;
+    }
+
+    private function consultarControlPrincipalDocumentoRecaudacionesNoAtentado(string $control,string $documento): array
+    {
+        try{
+            $request=Request::create('/api/recaudaciones/buscar-control-documento', 'POST',[
+                'unidad'=>122,
+                'recibo'=>(int)$control,
+                'documento'=>$documento,
+            ]);
+            $response=app(RecaudacionesController::class)->buscarPorControlYDocumento($request);
+            if(!($response instanceof JsonResponse)){
+                return [
+                    'ok'=>false,
+                    'code'=>'API_RESPUESTA_INVALIDA',
+                    'message'=>'No se pudo validar el control y carnet en recaudaciones. Intente nuevamente.',
+                ];
+            }
+            $json=$response->getData(true);
+        }catch(\Throwable $e){
+            Log::warning('Error inesperado al consultar recaudaciones por control+documento para pago principal No Atentado.',[
+                'control'=>$control,
+                'documento'=>$documento,
+                'error'=>$e->getMessage(),
+            ]);
+            return [
+                'ok'=>false,
+                'code'=>'API_NO_DISPONIBLE',
+                'message'=>'No se pudo conectar con recaudaciones. Intente nuevamente.',
+            ];
+        }
+
+        if(!is_array($json) || !(bool)($json['ok'] ?? false)){
+            $mensaje=trim((string)($json['message'] ?? data_get($json,'error.message','')));
+            $status=(int)($json['status'] ?? 0);
+            $errorMap=$this->mapearMensajeErrorRecaudacionNoAtentado($mensaje,$status);
+
+            if($errorMap['code']==='CONTROL_NO_ENCONTRADO'){
+                $errorMap['code']='CONTROL_DOCUMENTO_NO_ENCONTRADO';
+                $errorMap['message']='No se encontró información del número de control y carnet en recaudaciones.';
+            }
+
+            return [
+                'ok'=>false,
+                'code'=>$errorMap['code'],
+                'message'=>$errorMap['message'],
+            ];
+        }
+
+        $resultado=$this->extraerResultadoRecaudacionNoAtentado((array)($json['data'] ?? []));
+
+        return [
+            'ok'=>true,
+            'resultados'=>$resultado,
+        ];
     }
 
     private function consultarControlDocumentoRecaudacionesNoAtentado(string $control,string $documento): array
