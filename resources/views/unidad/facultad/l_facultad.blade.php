@@ -52,94 +52,98 @@
                 </div>
             </div>
         <div class="card-body">
-            <div class="row">
-                <div class="col-md-5">
-                    <div class="card shadow mb-4">
-                        <div class="card-header py-3" style="background-color:#e1edff">
-                            <div class="d-sm-flex align-items-center justify-content-between">
-                                <h5 class="text-dark"><i class="fas fa-university"></i>&nbsp;Lista facultades</h5>
-                                @can('crear editar facultad - f')
-                                    <a class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm text-white" data-toggle="modal" data-target="#facultad"
-                                       onclick="cargarDatos('fe_facultad/0','panel_contenido')" >
-                                        + Facultad
-                                    </a>
-                                @endcan
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <hr class="sidebar-divider">
-                                <table class="table table-sm table-hover" width="100%" cellspacing="0" style="font-size: 0.8em">
-                                    <thead>
-                                    <tr class="bg-gray-600 text-white">
-                                        <th>Nº</th>
-                                        <th class="">Nombre</th>
-                                        <th class="">Nombre corto</th>
-                                        <th>Opciones</th>
-                                    </tr>
-                                    </thead>
-                                    <!--<tfoot>
-                                    <tr class="bg-gradient-secondary text-white">
-                                        <th>Nº</th>
-                                        <th>Número de Tomo</th>
-                                        <th>Rango de documentos</th>
-                                        <th>Cantidad de registros</th>
-                                        <th>Observación</th>
-                                        <th>Opciones</th>
-                                    </tr>
-                                    </tfoot>-->
-                                    <tbody>
-                                    <?php $j=1;?>
-                                    @foreach($facultades as $f)
-                                        <tr>
-                                            <th class="border-right font-weight-bolder text-primary">{{$j}}</th>
-                                            <td class="text-left">{{$f['fac_nombre']}}</td>
-                                            <td class="text-left">{{$f['fac_abreviacion']}}</td>
-                                            <td class="text-right">
-                                                @can('crear editar facultad - f')
-                                                <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#efacultad" data-toggle="modal"
-                                                   onclick="cargarDatos('fe_facultad/{{$f['cod_fac']}}','panel_econtenido')" title="Editar facultad">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                @endcan
-                                                @can('eliminar facultad - f')
-                                                <a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-target="#efacultad" data-toggle="modal"
-                                                   onclick="cargarDatos('f_eli_facultad/{{$f['cod_fac']}}','panel_econtenido')" title="Eliminar facultad">
-                                                    <i class="fas fa-trash-alt"></i>
-                                                </a>
-                                                @endcan
-                                                &nbsp;&nbsp;
-                                                <a href="#panel_carrera" class="btn btn-light btn-circle btn-sm text-primary" data-target="#verImportacion" data-toggle="modal"
-                                                   onclick="cargarDatos('l_carrera/{{$f['cod_fac']}}','panel_carrera')" title="Ver carreras">
-                                                    <i class="fas fa-angle-right"></i>
-                                                </a>
-                                            </td>
-
-                                        </tr>
-                                        <?php $j++;?>
-                                    @endforeach
-                                    </tbody>
-                                </table>
-
-                        </div>
+            <div class="card shadow mb-4">
+                <div class="card-header py-3" style="background-color:#e1edff">
+                    <div class="d-sm-flex align-items-center justify-content-between">
+                        <h5 class="text-dark"><i class="fas fa-university"></i>&nbsp;Lista facultades</h5>
+                        @can('crear editar facultad - f')
+                            <a class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm text-white" data-toggle="modal" data-target="#facultad"
+                               onclick="cargarDatos('fe_facultad/0','panel_contenido')" >
+                                + Facultad
+                            </a>
+                        @endcan
                     </div>
                 </div>
-                <div class="col-md-7">
-                    <div class="card shadow mb-4">
-                        <div class="card-header py-3" style="background-color:#e1edff">
-                            <div class="d-sm-flex align-items-center justify-content-between">
-                                <h5 class="text-dark"><i class="fas fa-book"></i>&nbsp;Lista de carreras</h5>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div id="panel_carrera">
+                <div class="card-body" id="panel_lista_facultades">
+                    <hr class="sidebar-divider">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover" width="100%" cellspacing="0" style="font-size: 0.8em">
+                            <thead>
+                            <tr class="bg-gray-600 text-white">
+                                <th>Nº</th>
+                                <th class="">Nombre</th>
+                                <th class="">Nombre corto</th>
+                                <th class="text-center align-middle" style="width: 190px; min-width: 190px;">Opciones</th>
+                            </tr>
+                            </thead>
+                            <!--<tfoot>
+                            <tr class="bg-gradient-secondary text-white">
+                                <th>Nº</th>
+                                <th>Número de Tomo</th>
+                                <th>Rango de documentos</th>
+                                <th>Cantidad de registros</th>
+                                <th>Observación</th>
+                                <th>Opciones</th>
+                            </tr>
+                            </tfoot>-->
+                            <tbody>
+                            <?php $j=1;?>
+                            @foreach($facultades as $f)
+                                <tr>
+                                    <th class="border-right font-weight-bolder text-primary">{{$j}}</th>
+                                    <td class="text-left">{{$f['fac_nombre']}}</td>
+                                    <td class="text-left">{{$f['fac_abreviacion']}}</td>
+                                    <td class="text-center align-middle" style="min-width: 190px;">
+                                        <div class="d-inline-flex align-items-center justify-content-center flex-nowrap">
+                                            @can('crear editar facultad - f')
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary mr-1" data-target="#efacultad" data-toggle="modal"
+                                               onclick="cargarDatos('fe_facultad/{{$f['cod_fac']}}','panel_econtenido')" title="Editar facultad">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            @endcan
+                                            @can('eliminar facultad - f')
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-danger mr-1" data-target="#efacultad" data-toggle="modal"
+                                               onclick="cargarDatos('f_eli_facultad/{{$f['cod_fac']}}','panel_econtenido')" title="Eliminar facultad">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </a>
+                                            @endcan
+                                            @canany(['crear editar facultad - f','eliminar facultad - f'])
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-info mr-1" data-target="#efacultad" data-toggle="modal"
+                                               onclick="cargarDatos('f_historial_facultad/{{$f['cod_fac']}}','panel_econtenido')" title="Ver historial de nombres">
+                                                <i class="fas fa-history"></i>
+                                            </a>
+                                            @endcanany
+                                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary"
+                                               onclick="mostrarCarreras('{{$f['cod_fac']}}'); return false;" title="Ver carreras">
+                                                <i class="fas fa-angle-right"></i>
+                                            </a>
+                                        </div>
+                                    </td>
 
-                            </div>
-                        </div>
+                                </tr>
+                                <?php $j++;?>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow mb-4">
+                <div class="card-header py-3" style="background-color:#e1edff">
+                    <div class="d-sm-flex align-items-center justify-content-between">
+                        <h5 class="text-dark"><i class="fas fa-book"></i>&nbsp;Lista de carreras</h5>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="panel_carrera">
+
                     </div>
                 </div>
             </div>
 
         </div>
+    </div>
     </div>
 
     @can('acceso al sistema - f')
@@ -162,5 +166,16 @@
         <!--===========================END ==============================-->
     @endcan
     <!-- =============================== ====================-->
+
+    <script>
+        function mostrarCarreras(codFacultad){
+            cargarDatos('l_carrera/' + codFacultad, 'panel_carrera');
+
+            var panelCarrera = document.getElementById('panel_carrera');
+            if(panelCarrera){
+                panelCarrera.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+    </script>
 
 @endsection
