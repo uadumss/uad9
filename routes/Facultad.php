@@ -15,6 +15,7 @@ Route::group(['middleware'=>['permission:acceso al sistema - f']],function() {
     Route::get('l_carrera/{cod_fac}',[FacultadController::class,'l_carrera']);
     Route::get('fe_carrera/{cod_fac}/{cod_car}',[FacultadController::class,'fe_carrera'])->middleware(['permission:crear editar carrera - f']);
     Route::post('g_carrera',[FacultadController::class,'g_carrera'])->middleware(['permission:crear editar carrera - f']);
+    Route::get('f_historial_carrera/{cod_fac}/{cod_car}',[FacultadController::class,'f_historial_carrera']);
     Route::get('f_eli_carrera/{cod_fac}/{cod_car}',[FacultadController::class,'f_eli_carrera'])->middleware(['permission:eliminar carrera - f']);
     Route::post('eli_carrera',[FacultadController::class,'eli_carrera'])->middleware(['permission:eliminar carrera - f']);
 //==============================UNIDADES===================
