@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Carrera;
 use App\Models\Facultad;
+use App\Models\FacultadHistorialNombre;
 use App\Models\Unidad;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,20 +30,37 @@ class FacultadController extends Controller
         return view('unidad.facultad.fe_facultad',compact('facultad','cod_fac'));
     }
     public function g_facultad(Request $form){
-        $facultades=Facultad::all()->where('fac_nombre','=',$form['nombre'])->where('cod_fac','<>',$form['cf']);
+        $nombre=trim((string)$form['nombre']);
+        $corto=trim((string)$form['corto']);
+        $facultades=Facultad::all()->where('fac_nombre','=',$nombre)->where('cod_fac','<>',$form['cf']);
         if(sizeof($facultades)<1) {
             if (isset($form['cf'])) {
                 $facultad = Facultad::find($form['cf']);
+                $nombreAnterior=trim((string)$facultad->fac_nombre);
+                $abreviacionAnterior=trim((string)$facultad->fac_abreviacion);
                 $antiguo=json_encode($facultad);
-                $facultad->fac_nombre = $form['nombre'];
-                $facultad->fac_abreviacion = $form['corto'];
+                $facultad->fac_nombre = $nombre;
+                $facultad->fac_abreviacion = $corto;
                 $facultad->save();
+
+                $nombreNuevo=trim((string)$facultad->fac_nombre);
+                $abreviacionNueva=trim((string)$facultad->fac_abreviacion);
+                if($nombreAnterior!==$nombreNuevo || $abreviacionAnterior!==$abreviacionNueva){
+                    FacultadHistorialNombre::create([
+                        'cod_fac'=>$facultad->cod_fac,
+                        'nombre_anterior'=>$nombreAnterior,
+                        'nombre_nuevo'=>$nombreNuevo,
+                        'abreviacion_anterior'=>$abreviacionAnterior,
+                        'abreviacion_nueva'=>$abreviacionNueva,
+                    ]);
+                }
+
                 $nuevo=json_encode($facultad);
                 SessionController::write('U',$antiguo,$nuevo,'Facultads','1',$facultad->cod_fac);
             } else {
                 $facultad = Facultad::create([
-                    'fac_nombre' => $form['nombre'],
-                    'fac_abreviacion' => $form['corto'],
+                    'fac_nombre' => $nombre,
+                    'fac_abreviacion' => $corto,
                 ]);
                 $nuevo=json_encode($facultad);
                 SessionController::write('C','',$nuevo,'Facultads','1',$facultad->cod_fac);
@@ -61,6 +79,19 @@ class FacultadController extends Controller
             $eliminar=0;
         }
         return view('unidad.facultad.f_eli_facultad',compact('facultad','eliminar'));
+    }
+    public function f_historial_facultad($cod_fac){
+        $facultad=Facultad::find($cod_fac);
+        if(!$facultad){
+            return response('<div class="modal-content"><div class="modal-body"><div class="alert alert-danger mb-0">No se encontró la facultad solicitada.</div></div></div>');
+        }
+
+        $historial=FacultadHistorialNombre::where('cod_fac','=',$cod_fac)
+            ->orderByDesc('fecha_cambio')
+            ->orderByDesc('cod_fhn')
+            ->get();
+
+        return view('unidad.facultad.f_historial_facultad',compact('facultad','historial'));
     }
     public function eli_facultad(Request $form){
         $facultad=Facultad::find($form['cf']);

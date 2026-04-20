@@ -29,43 +29,45 @@
         <span class="font-weight-bold text-danger font-italic">* {{$facultad->fac_nombre}}</span>
 
         <br/><br/>
-        <table class="table table-sm table-hover" width="100%" cellspacing="0" style="font-size: 0.8em">
-            <thead>
-            <tr class="bg-gray-600 text-white">
-                <th>Nº</th>
-                <th class="">Nombre</th>
-                <th>Nombre corto</th>
-                <th>Opciones</th>
-            </tr>
-            </thead>
-            <tbody>
-            <?php $j=1;?>
-            @foreach($carreras as $c)
-                <tr>
-                    <th class="border-right font-weight-bolder text-primary">{{$j}}</th>
-                    <td class="text-left">{{$c['car_nombre']}}</td>
-                    <td class="text-left">{{$c['car_abreviacion']}}</td>
-                    <td class="text-right">
-                        @can('crear editar carrera - f')
-                        <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#facultad" data-toggle="modal"
-                           onclick="cargarDatos('fe_carrera/0/{{$c['cod_car']}}','panel_contenido')" title="Editar carrera">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                        @endcan
-                        @can('eliminar carrera - f')
-                        <a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-target="#efacultad" data-toggle="modal"
-                           onclick="cargarDatos('f_eli_carrera/0/{{$c['cod_car']}}','panel_econtenido')" title="Eliminar carrera">
-                            <i class="fas fa-trash-alt"></i>
-                        </a>
-                        @endcan
-                        &nbsp;&nbsp;
-                    </td>
-
+        <div class="table-responsive">
+            <table class="table table-sm table-hover" width="100%" cellspacing="0" style="font-size: 0.8em">
+                <thead>
+                <tr class="bg-gray-600 text-white">
+                    <th>Nº</th>
+                    <th class="">Nombre</th>
+                    <th>Nombre corto</th>
+                    <th>Opciones</th>
                 </tr>
-                <?php $j++;?>
-            @endforeach
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                <?php $j=1;?>
+                @foreach($carreras as $c)
+                    <tr>
+                        <th class="border-right font-weight-bolder text-primary">{{$j}}</th>
+                        <td class="text-left">{{$c['car_nombre']}}</td>
+                        <td class="text-left">{{$c['car_abreviacion']}}</td>
+                        <td class="text-right">
+                            @can('crear editar carrera - f')
+                            <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#facultad" data-toggle="modal"
+                               onclick="cargarDatos('fe_carrera/0/{{$c['cod_car']}}','panel_contenido')" title="Editar carrera">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            @endcan
+                            @can('eliminar carrera - f')
+                            <a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-target="#efacultad" data-toggle="modal"
+                               onclick="cargarDatos('f_eli_carrera/0/{{$c['cod_car']}}','panel_econtenido')" title="Eliminar carrera">
+                                <i class="fas fa-trash-alt"></i>
+                            </a>
+                            @endcan
+                            &nbsp;&nbsp;
+                        </td>
+
+                    </tr>
+                    <?php $j++;?>
+                @endforeach
+                </tbody>
+            </table>
+        </div>
     @else
         <br/><br/>
         <div class="alert-info p-3">
