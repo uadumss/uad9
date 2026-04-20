@@ -35,6 +35,15 @@
                         </div>
                         <hr class="sidebar-divider text-bg-dark">
 
+                        <div class="text-right mb-2">
+                            <button class="btn btn-outline-primary btn-sm" type="button"
+                                    data-toggle="modal" data-target="#Noatentado_agregar"
+                                    data-url="{{url('lista escala precios noatentado')}}"
+                                    onclick="cargarDatos(this.dataset.url,'panel_agregar')">
+                                <i class="fas fa-table"></i> Ver escala de precios
+                            </button>
+                        </div>
+
                         <div class="row">
                             <div class="col-md-12 table">
                                 <form id="form_tramite">
@@ -206,6 +215,15 @@
                         </div>
                         <hr class="sidebar-divider text-bg-dark">
 
+                        <div class="text-right mb-2">
+                            <button class="btn btn-outline-primary btn-sm" type="button"
+                                    data-toggle="modal" data-target="#Noatentado_agregar"
+                                    data-url="{{url('lista escala precios noatentado')}}"
+                                    onclick="cargarDatos(this.dataset.url,'panel_agregar')">
+                                <i class="fas fa-table"></i> Ver escala de precios
+                            </button>
+                        </div>
+
                         <div class="row">
                             <div class="col-md-12 mb-2">
                                 <div class="border rounded bg-light p-2 d-flex justify-content-between align-items-center flex-wrap shadow-sm">
@@ -340,6 +358,7 @@
                                 </div>
                             </div>
                        @endif
+
                     </div>
                 </div>
                 <input type="hidden" name="cc" value="{{$convocatoria->cod_con}}">
@@ -379,6 +398,18 @@
     100% { transform: translateX(0); }
 }
 
+.noa-cupo-panel {
+    background: linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);
+}
+
+#tabla_candidatos_noa tbody tr.noa-candidato-permitido {
+    background-color: #e9f9ef;
+}
+
+#tabla_candidatos_noa tbody tr.noa-candidato-exceso {
+    background-color: #fff1f1;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .noa-estado-pago-icon {
         transition: none;
@@ -390,6 +421,8 @@
     }
 }
 </style>
+
+<script type="application/json" id="noa_escala_candidatos_json">{!! json_encode($escalaCandidatosNoa ?? [], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) !!}</script>
 
 <script>
     var candidatosNoAtentado=[];
@@ -409,6 +442,9 @@
     var montoPrincipalValidadoNoa=0;
     var montoReintegroValidadoNoa=0;
     var montoTotalValidadoNoa=0;
+    var escalaCandidatosNoa=[];
+    var escalaCandidatosNoaNormalizada=[];
+    var codTramitePlanchaNoa=Number("{{ (int)($codTramitePlanchaNoa ?? 0) }}");
     var timerValidacionPagoNoa=null;
     var secuenciaValidacionPagoNoa=0;
     var xhrValidacionPagoNoa=null;
@@ -424,6 +460,7 @@
             reintegro:0,
             total:0,
         };
+        actualizarControlCupoCandidatosNoatentado();
     }
 
     function asignarMontosValidadosNoatentado(resp){
@@ -440,9 +477,284 @@
             reintegro:montoReintegroValidadoNoa,
             total:montoTotalValidadoNoa,
         };
+        actualizarControlCupoCandidatosNoatentado();
+    }
+
+    function formatoMontoNoatentado(valor){
+        const numero=Number(valor);
+        return isFinite(numero) ? numero.toFixed(2) : '0.00';
+    }
+
+    function esTramitePlanchaNoatentado(codTramite){
+        const cod=Number(codTramite || 0);
+        const codPlancha=Number(codTramitePlanchaNoa || 0);
+        if(!isFinite(cod) || cod<=0 || !isFinite(codPlancha) || codPlancha<=0){
+            return false;
+        }
+
+        return cod===codPlancha;
+    }
+
+    function obtenerEscalaCandidatosConfigNoatentado(){
+        const nodo=document.getElementById('noa_escala_candidatos_json');
+        if(!nodo){
+            return [];
+        }
+
+        try{
+            const data=JSON.parse(nodo.textContent || '[]');
+            return Array.isArray(data) ? data : [];
+        }catch(e){
+            return [];
+        }
+    }
+
+    function rangoTextoEscalaNoatentado(regla){
+        if(!regla){
+            return '';
+        }
+
+        const min=Number(regla.cantidad_min || 0);
+        const max=Number(regla.cantidad_max || 0);
+        if(!isFinite(min) || !isFinite(max) || max<=0){
+            return '';
+        }
+
+        if(min===max){
+            return String(max);
+        }
+
+        return String(min)+' a '+String(max);
+    }
+
+    function normalizarEscalaCandidatosNoatentado(){
+        if(!Array.isArray(escalaCandidatosNoa)){
+            return [];
+        }
+
+        const salida=[];
+        for(let i=0;i<escalaCandidatosNoa.length;i++){
+            const fila=escalaCandidatosNoa[i] || {};
+            const cantidadMin=Number(fila.cantidad_min || 0);
+            const cantidadMax=Number(fila.cantidad_max || 0);
+            let montoTotal=Number(fila.monto_total || 0);
+            const costo=Number(fila.costo || 0);
+            const aporte=Number(fila.aporte_umss || 0);
+
+            if(!isFinite(montoTotal) || montoTotal<=0){
+                montoTotal=(isFinite(costo) ? costo : 0)+(isFinite(aporte) ? aporte : 0);
+            }
+
+            if(!isFinite(montoTotal) || montoTotal<=0 || !isFinite(cantidadMax) || cantidadMax<=0){
+                continue;
+            }
+
+            const minFinal=(isFinite(cantidadMin) && cantidadMin>0) ? cantidadMin : 1;
+            const maxFinal=Math.max(minFinal,cantidadMax);
+
+            salida.push({
+                cantidad_min:minFinal,
+                cantidad_max:maxFinal,
+                monto_total:montoTotal,
+                costo:isFinite(costo) ? costo : 0,
+                aporte_umss:isFinite(aporte) ? aporte : 0,
+            });
+        }
+
+        salida.sort(function(a,b){
+            if(a.monto_total===b.monto_total){
+                return a.cantidad_max-b.cantidad_max;
+            }
+            return a.monto_total-b.monto_total;
+        });
+
+        return salida;
+    }
+
+    function resolverCupoCandidatosPorMontoNoatentado(montoTotal){
+        const escala=escalaCandidatosNoaNormalizada;
+        const monto=Number(montoTotal || 0);
+
+        if(!Array.isArray(escala) || escala.length===0){
+            return {
+                ok:false,
+                maxPermitidos:0,
+                resumen:'Sin escala',
+                detalle:'No hay escala de precios configurada para controlar candidatos.',
+                regla:null,
+            };
+        }
+
+        if(!isFinite(monto) || monto<=0){
+            return {
+                ok:false,
+                maxPermitidos:0,
+                resumen:'Monto pendiente',
+                detalle:'Valide el pago para calcular la cantidad permitida de candidatos.',
+                regla:null,
+            };
+        }
+
+        let regla=null;
+        const tolerancia=0.01;
+        for(let i=0;i<escala.length;i++){
+            if((monto+tolerancia)>=escala[i].monto_total){
+                regla=escala[i];
+                continue;
+            }
+            break;
+        }
+
+        if(!regla){
+            return {
+                ok:false,
+                maxPermitidos:0,
+                resumen:'Monto insuficiente',
+                detalle:'El monto validado Bs '+formatoMontoNoatentado(monto)+' es menor al mínimo de escala Bs '+formatoMontoNoatentado(escala[0].monto_total)+'.',
+                regla:null,
+            };
+        }
+
+        return {
+            ok:true,
+            maxPermitidos:parseInt(regla.cantidad_max,10) || 0,
+            resumen:'Hasta '+(parseInt(regla.cantidad_max,10) || 0)+' candidato(s)',
+            detalle:'Escala aplicada: rango '+rangoTextoEscalaNoatentado(regla)+' para Bs '+formatoMontoNoatentado(regla.monto_total)+'.',
+            regla:regla,
+        };
+    }
+
+    function aplicarSemaforoFilasCandidatosNoatentado(maxPermitidos,activar){
+        const filas=$('#tabla_candidatos_noa tbody tr[data-candidato-index]');
+        filas.removeClass('noa-candidato-permitido noa-candidato-exceso');
+
+        if(!activar){
+            return;
+        }
+
+        const limite=Math.max(0,parseInt(maxPermitidos,10) || 0);
+        filas.each(function(){
+            const fila=$(this);
+            const indice=parseInt(fila.attr('data-candidato-index'),10);
+            if(!isFinite(indice)){
+                return;
+            }
+
+            if(indice<limite){
+                fila.addClass('noa-candidato-permitido');
+            }else{
+                fila.addClass('noa-candidato-exceso');
+            }
+        });
+    }
+
+    function actualizarControlCupoCandidatosNoatentado(){
+        const panel=$('#noa_cupo_candidatos_panel');
+        if(panel.length===0){
+            return;
+        }
+
+        const badge=$('#noa_cupo_resumen');
+        const detalle=$('#noa_cupo_detalle');
+        const montos=$('#noa_cupo_montos');
+        const progress=$('#noa_cupo_progress');
+        const cantidad=candidatosNoAtentado.length;
+
+        badge.removeClass('badge-success badge-danger badge-warning badge-info badge-secondary').addClass('badge-secondary').text('Pendiente');
+        detalle.text('Valide el pago para calcular cuántos candidatos permite el monto principal + reintegro.');
+        montos.text('Monto validado: principal Bs '+formatoMontoNoatentado(montoPrincipalValidadoNoa)+' + reintegro Bs '+formatoMontoNoatentado(montoReintegroValidadoNoa)+' = total Bs '+formatoMontoNoatentado(montoTotalValidadoNoa)+'.');
+        progress.removeClass('bg-success bg-danger bg-warning bg-info bg-secondary').addClass('bg-secondary').css('width','0%');
+
+        if(cantidad===0){
+            detalle.text('Aún no hay candidatos registrados.');
+            aplicarSemaforoFilasCandidatosNoatentado(0,false);
+            return;
+        }
+
+        const cupo=resolverCupoCandidatosPorMontoNoatentado(montoTotalValidadoNoa);
+        if(!cupo.ok){
+            badge.removeClass('badge-secondary').addClass('badge-warning').text(cupo.resumen || 'Pendiente');
+            detalle.text(cupo.detalle || 'Valide el pago para controlar el cupo de candidatos.');
+            progress.removeClass('bg-secondary').addClass('bg-warning').css('width','0%');
+            aplicarSemaforoFilasCandidatosNoatentado(0,false);
+            return;
+        }
+
+        const permitidos=Math.max(0,parseInt(cupo.maxPermitidos,10) || 0);
+        const porcentaje=permitidos>0 ? Math.min(100,Math.round((cantidad/permitidos)*100)) : 0;
+
+        if(cantidad<=permitidos){
+            badge.removeClass('badge-secondary').addClass('badge-success').text(cantidad+' / '+permitidos+' OK');
+            detalle.text('Cantidad registrada dentro del límite. '+(cupo.detalle || ''));
+            progress.removeClass('bg-secondary').addClass('bg-success').css('width',String(porcentaje)+'%');
+        }else{
+            badge.removeClass('badge-secondary').addClass('badge-danger').text(cantidad+' / '+permitidos+' Excede');
+            detalle.text('La lista excede el límite para el monto validado. '+(cupo.detalle || ''));
+            progress.removeClass('bg-secondary').addClass('bg-danger').css('width','100%');
+        }
+
+        aplicarSemaforoFilasCandidatosNoatentado(permitidos,true);
+    }
+
+    function validarCantidadCandidatosPorMontoNoatentadoUI(){
+        const cantidad=candidatosNoAtentado.length;
+        if(cantidad===0){
+            return {
+                ok:false,
+                message:'Debe agregar al menos un candidato antes de guardar.',
+            };
+        }
+
+        const tramiteSeleccionado=limpiarTextoNoAtentado($('#tramite_noa').val());
+        if(tramiteSeleccionado===''){
+            return {
+                ok:false,
+                message:'Debe seleccionar el tipo de trámite antes de guardar.',
+            };
+        }
+
+        if(!esTramitePlanchaNoatentado(tramiteSeleccionado)){
+            if(cantidad>1){
+                return {
+                    ok:false,
+                    message:'Para este tipo de trámite solo se permite registrar un candidato por cuenta/pago.',
+                };
+            }
+
+            return {
+                ok:true,
+                message:'Cantidad de candidatos válida para este tipo de trámite.',
+            };
+        }
+
+        const cupo=resolverCupoCandidatosPorMontoNoatentado(montoTotalValidadoNoa);
+        if(!cupo.ok){
+            return {
+                ok:false,
+                message:cupo.detalle || 'No se pudo determinar el cupo de candidatos con el monto validado.',
+            };
+        }
+
+        const permitidos=Math.max(0,parseInt(cupo.maxPermitidos,10) || 0);
+        if(cantidad>permitidos){
+            return {
+                ok:false,
+                message:'Con el monto validado (Bs '+formatoMontoNoatentado(montoTotalValidadoNoa)+') solo se permiten hasta '+permitidos+' candidato(s). Registró '+cantidad+'.',
+            };
+        }
+
+        return {
+            ok:true,
+            message:'Cantidad de candidatos válida para el monto pagado.',
+        };
     }
 
     function programarValidacionPagoNoAtentado(inmediata=false){
+        const controlActual=limpiarTextoNoAtentado($('#control_noa').val());
+        if(controlActual==='' || controlActual!==controlValidadoNoAtentado){
+            limpiarSeleccionTramiteNoatentado('Se define al validar el pago.');
+        }
+
         if(timerValidacionPagoNoa){
             clearTimeout(timerValidacionPagoNoa);
             timerValidacionPagoNoa=null;
@@ -1142,11 +1454,10 @@
             tramiteValidadoNoAtentado='';
             detalleValidacionPagoNoAtentado=null;
             detalleExtendidoPagoNoa='';
-            restaurarOpcionesTramiteNoatentado();
+            limpiarSeleccionTramiteNoatentado('Primero registre candidatos para habilitar validación de pago.');
 
             actualizarEstadoPagoNoAtentado('Sin contexto','badge-warning','Agregue candidatos para validar con carnet.');
             refrescarEstadoCamposPagoNoatentado();
-            $('#ayuda_tramite_noa').text('Primero registre candidatos para habilitar validación de pago.');
             return;
         }
 
@@ -1161,6 +1472,7 @@
 
         if(controlActual===''){
             actualizarEstadoPagoNoAtentado('Pendiente','badge-warning','Ingrese número de control y valide.');
+            limpiarSeleccionTramiteNoatentado('Se define al validar el pago.');
         }else if(validacionPagoNoaEnCurso===true){
             actualizarEstadoPagoNoAtentado('Validando','badge-info','Consultando recaudaciones...');
         }
@@ -1193,6 +1505,22 @@
         }
         select.prop('disabled',true);
         select.find('option').prop('disabled',false).show();
+    }
+
+    function limpiarSeleccionTramiteNoatentado(mensaje='Se define al validar el pago.'){
+        const select=$('#tramite_noa');
+        if(!select.length){
+            return;
+        }
+
+        restaurarOpcionesTramiteNoatentado();
+        select.val('');
+        select.prop('disabled',true);
+
+        const ayuda=$('#ayuda_tramite_noa');
+        if(ayuda.length){
+            ayuda.text(limpiarTextoNoAtentado(mensaje));
+        }
     }
 
     function obtenerTiposPermitidosNoatentado(resp){
@@ -1288,6 +1616,7 @@
 
         const tiposPermitidos=obtenerTiposPermitidosNoatentado(resp);
         const sugerido=limpiarTextoNoAtentado(resp && resp.tipo_noatentado_sugerido);
+        const requiereSeleccionManual=!!(resp && resp.requiere_seleccion_manual===true);
 
         if(tiposPermitidos.length>0){
             const permitidosMap={};
@@ -1309,6 +1638,19 @@
                     opcion.prop('disabled',true).hide();
                 }
             });
+
+            if(requiereSeleccionManual){
+                const valorActual=limpiarTextoNoAtentado(select.val());
+                if(valorActual!=='' && !permitidosMap[valorActual]){
+                    select.val('');
+                }
+
+                select.prop('disabled',false);
+                if(ayuda.length){
+                    ayuda.text('Existen varios tipos de trámite con el mismo monto total. Seleccione una opción manualmente.');
+                }
+                return;
+            }
 
             let sugeridoFinal=sugerido;
             if(sugeridoFinal==='' || !select.find('option[value="'+sugeridoFinal+'"]').length){
@@ -1406,8 +1748,7 @@
         detalleExtendidoPagoNoa='';
         reiniciarMontosValidadosNoatentado();
         actualizarEstadoPagoNoAtentado('Pendiente','badge-warning','Antes de guardar debe validar el número de control.');
-        restaurarOpcionesTramiteNoatentado();
-        $('#ayuda_tramite_noa').text('Se define al validar el pago.');
+        limpiarSeleccionTramiteNoatentado('Se define al validar el pago.');
         actualizarContextoControlPagoNoAtentado();
 
         const controlActual=limpiarTextoNoAtentado($('#control_noa').val());
@@ -1434,7 +1775,7 @@
                 const codSisSeguro=escaparHtmlNoa(candidato.cod_sis || '');
                 const cargoSeguro=escaparHtmlNoa(cargo || '-');
                 tabla.append(
-                    '<tr>'+
+                    '<tr data-candidato-index="'+i+'">'+
                     '<td>'+(i+1)+'</td>'+
                     '<td>'+nombreCompleto+'</td>'+
                     '<td>'+ciSeguro+'</td>'+
@@ -1450,7 +1791,10 @@
         actualizarFiltroPreimpresoNoAtentado();
         if($('#control_noa').length>0){
             resetValidacionPagoNoAtentado();
+            return;
         }
+
+        actualizarControlCupoCandidatosNoatentado();
     }
 
     function limpiarFormularioCandidatoNoAtentado(){
@@ -1500,6 +1844,12 @@
 
         if(duplicado){
             mostrarMensajeNoatentado('info','El CI '+ci+' ya está registrado en la lista de candidatos.','#noa_ci');
+            return;
+        }
+
+        const tramiteSeleccionado=limpiarTextoNoAtentado($('#tramite_noa').val());
+        if(tramiteSeleccionado!=='' && !esTramitePlanchaNoatentado(tramiteSeleccionado) && candidatosNoAtentado.length>=1){
+            mostrarMensajeNoatentado('warning','Para este tipo de trámite solo se permite registrar un candidato.','#noa_ci');
             return;
         }
 
@@ -1786,6 +2136,7 @@
             pagoNoAtentadoValidado=false;
             reintegroValidadoNoAtentado='';
             tramiteValidadoNoAtentado='';
+            limpiarSeleccionTramiteNoatentado('Se define al validar el pago.');
         }
 
         if(resumenCandidatos.cantidad===0){
@@ -1793,6 +2144,7 @@
                 xhrValidacionPagoNoa.abort();
             }
             validacionPagoNoaEnCurso=false;
+            limpiarSeleccionTramiteNoatentado('Primero registre candidatos para habilitar validación de pago.');
             actualizarEstadoPagoNoAtentado('Sin contexto','badge-warning','Primero agregue candidatos para poder validar el pago.');
             refrescarEstadoCamposPagoNoatentado();
             return;
@@ -1804,6 +2156,7 @@
             }
             validacionPagoNoaEnCurso=false;
             reiniciarMontosValidadosNoatentado();
+            limpiarSeleccionTramiteNoatentado('Se define al validar el pago.');
             actualizarEstadoPagoNoAtentado('Pendiente','badge-warning','Ingrese el número de control para validar.');
             refrescarEstadoCamposPagoNoatentado();
             return;
@@ -2028,11 +2381,22 @@
             }
         }
 
+        const controlCantidad=validarCantidadCandidatosPorMontoNoatentadoUI();
+        if(!controlCantidad.ok){
+            mostrarMensajeNoatentado('warning',controlCantidad.message,'#control_noa');
+            return;
+        }
+
         $('#candidatos_json_noa').val(JSON.stringify(candidatosNoAtentado));
         enviarFormularioTramiteNoAtentado();
     }
 
     $(function(){
+        escalaCandidatosNoa=obtenerEscalaCandidatosConfigNoatentado();
+        escalaCandidatosNoaNormalizada=normalizarEscalaCandidatosNoatentado();
+
+        $('#tramite_noa').off('change.noaTramite').on('change.noaTramite',onCambioTramiteNoa);
+
         $(document).off('click.noaPagoPopover').on('click.noaPagoPopover', function(e){
             if($(e.target).closest(selectorIconosPagoNoatentado()+', .popover').length===0){
                 cerrarPopoversPagoNoatentado();
@@ -2049,6 +2413,7 @@
             resetValidacionPagoNoAtentado();
             actualizarFiltroPreimpresoNoAtentado();
             actualizarContextoControlPagoNoAtentado();
+            actualizarControlCupoCandidatosNoatentado();
         }
 
         if($('#control_noa_edit').length>0){

@@ -12,6 +12,7 @@ use App\Models\Funciones;
 use App\Models\Glosa;
 use App\Models\Noatentado\Cargo_convocatoria;
 use App\Models\Noatentado\Convocatoria;
+use App\Models\Noatentado\EscalaCandidato;
 use App\Models\Noatentado\Noatentado;
 use App\Models\Persona;
 use App\Models\Tramite;
@@ -68,6 +69,8 @@ class TramiteNoAtentadoController extends Controller
         $convocatoria=Convocatoria::find($cod_con);
         $tramites=Tramite::where('tre_tipo','=','A')->get();
         $cargos=Cargo_convocatoria::where('cod_con','=',$cod_con)->orderBy('carg_nombre','ASC')->get();
+        $escalaCandidatosNoa=$this->escalaCandidatosMontoNoAtentado();
+        $codTramitePlanchaNoa=$this->obtenerCodTramitePlanchaNoAtentado();
         $tramite_noatentado=array();
         $noatentados=array();
         if($cod_dtra!=0){
@@ -89,7 +92,13 @@ class TramiteNoAtentadoController extends Controller
                 ->select('personas.*','noatentado.*','cargo_convocatoria.*')->get();
         }
         //dd($tramite_noatentado);
-        return view('servicios.no_atentado.tramite.fe_noatentado_convocatoria',compact('convocatoria','tramites','tramite_noatentado','noatentados','cod_con','cargos'));
+        return view('servicios.no_atentado.tramite.fe_noatentado_convocatoria',compact('convocatoria','tramites','tramite_noatentado','noatentados','cod_con','cargos','escalaCandidatosNoa','codTramitePlanchaNoa'));
+    }
+
+    public function l_escala_precios_noatentado()
+    {
+        $escalaCandidatosNoa=$this->escalaCandidatosMontoNoAtentado();
+        return view('servicios.no_atentado.tramite.l_escala_precios_noatentado',compact('escalaCandidatosNoa'));
     }
 
     public function validar_pago_noatentado(Request $request,$cod_con){
@@ -117,7 +126,7 @@ class TramiteNoAtentadoController extends Controller
         ]);
 
         $control=trim((string)$request['control']);
-        // El tipo de trámite se determina automáticamente desde la cuenta del pago.
+        // El tipo de trámite se resuelve al validar el pago (automático o manual según reglas de reintegro/monto).
         $codTre=0;
         $filtros=$this->construirFiltrosPagoNoAtentado([
             'documento'=>$request['documento_pago'] ?? '',
@@ -172,6 +181,27 @@ class TramiteNoAtentadoController extends Controller
         }
 
         $montos=$this->adjuntarMontosValidacionPagoNoAtentado([], $validacionPrincipal, $validacionReintegro);
+        $resolucionTipos=$this->resolverTiposTramitePagoNoAtentado($validacionPrincipal,$validacionReintegro,$montos);
+        if(!(bool)($resolucionTipos['ok'] ?? false)){
+            $validacionPrincipal['ok']=false;
+            $validacionPrincipal['code']=trim((string)($resolucionTipos['code'] ?? 'TIPO_TRAMITE_NO_RESUELTO'));
+            $validacionPrincipal['message']=trim((string)($resolucionTipos['message'] ?? 'No se pudo resolver el tipo de trámite para el pago validado.'));
+            $validacionPrincipal['tipo_noatentado_sugerido']=0;
+            $validacionPrincipal['nombre_tipo_noatentado_sugerido']='';
+            $validacionPrincipal['tipos_noatentado_permitidos']=[];
+            $validacionPrincipal['requiere_seleccion_manual']=false;
+        }else{
+            $validacionPrincipal['tipo_noatentado_sugerido']=(int)($resolucionTipos['tipo_noatentado_sugerido'] ?? 0);
+            $validacionPrincipal['nombre_tipo_noatentado_sugerido']=trim((string)($resolucionTipos['nombre_tipo_noatentado_sugerido'] ?? ''));
+            $validacionPrincipal['tipos_noatentado_permitidos']=$resolucionTipos['tipos_noatentado_permitidos'] ?? [];
+            $validacionPrincipal['requiere_seleccion_manual']=(bool)($resolucionTipos['requiere_seleccion_manual'] ?? false);
+
+            $mensajeResolucion=trim((string)($resolucionTipos['message'] ?? ''));
+            if($mensajeResolucion!==''){
+                $validacionPrincipal['message']=$mensajeResolucion;
+            }
+        }
+
         $respuesta=$this->respuestaPublicaValidacionPagoNoAtentado($validacionPrincipal,$validacionReintegro,$montos);
         return response()->json($respuesta);
     }
@@ -441,7 +471,7 @@ class TramiteNoAtentadoController extends Controller
             }
 
             $resumenCandidatos=$this->resumenCandidatosPagoNoAtentado($candidatos);
-            // El tipo de trámite se define automáticamente desde recaudaciones.
+            // El tipo de trámite se resuelve por validación de pago y puede requerir selección manual.
             $codTreFormulario=0;
             $filtrosPago=$this->construirFiltrosPagoNoAtentado([
                 'documento'=>$form['documento_pago'] ?? '',
@@ -486,19 +516,46 @@ class TramiteNoAtentadoController extends Controller
                 );
             }
 
-            $controlReintegroGuardar=trim((string)($validacionReintegro['control'] ?? ($form['reintegro'] ?? '')));
-            $controlReintegroNormalizado=$this->normalizarNumeroNoAtentado($controlReintegroGuardar);
-            $controlReintegroGuardarValor=$controlReintegroNormalizado!=='' ? $controlReintegroNormalizado : null;
+            $montosValidados=$this->adjuntarMontosValidacionPagoNoAtentado([], $validacionPago, $validacionReintegro);
+            $montoTotalValidado=(float)($montosValidados['monto_total_validado'] ?? 0);
 
-            $codTreSugerido=(int)($validacionPago['tipo_noatentado_sugerido'] ?? 0);
-            if($codTreSugerido<=0){
+            $resolucionTipos=$this->resolverTiposTramitePagoNoAtentado($validacionPago,$validacionReintegro,$montosValidados);
+            if(!(bool)($resolucionTipos['ok'] ?? false)){
                 return $responderError(
-                    'No se pudo determinar automáticamente el tipo de trámite desde la validación de pago.',
+                    (string)($resolucionTipos['message'] ?? 'No se pudo resolver el tipo de trámite para el pago validado.'),
                     'editar tramite convocatoria/'.$form['cc'].'/0',
                     422
                 );
             }
-            $codTreFormulario=$codTreSugerido;
+
+            $codTreFormulario=0;
+            $errorCodTre='';
+            $codTreFormulario=$this->resolverCodTramiteGuardarNoAtentado($resolucionTipos,(string)($form['tramite'] ?? ''),$errorCodTre);
+            if($codTreFormulario<=0){
+                return $responderError(
+                    $errorCodTre!=='' ? $errorCodTre : 'No se pudo determinar el tipo de trámite para guardar.',
+                    'editar tramite convocatoria/'.$form['cc'].'/0',
+                    422
+                );
+            }
+
+            $controlCantidad=$this->validarCantidadCandidatosPorTipoNoAtentado(
+                $codTreFormulario,
+                (int)($resumenCandidatos['cantidad'] ?? 0),
+                $montoTotalValidado
+            );
+            if(!(bool)($controlCantidad['ok'] ?? false)){
+                return $responderError(
+                    (string)($controlCantidad['message'] ?? 'La cantidad de candidatos no corresponde al tipo de trámite seleccionado.'),
+                    'editar tramite convocatoria/'.$form['cc'].'/0',
+                    422
+                );
+            }
+
+            $controlReintegroGuardar=trim((string)($validacionReintegro['control'] ?? ($form['reintegro'] ?? '')));
+            $controlReintegroNormalizado=$this->normalizarNumeroNoAtentado($controlReintegroGuardar);
+            $controlReintegroGuardarValor=$controlReintegroNormalizado!=='' ? $controlReintegroNormalizado : null;
+
             $dtraControlGuardar=$this->normalizarNumeroNoAtentado((string)($validacionPago['control'] ?? $form['control']));
             if($dtraControlGuardar===''){
                 return $responderError(
@@ -639,6 +696,455 @@ class TramiteNoAtentadoController extends Controller
             'documento_unico'=>sizeof($lista)===1 ? (string)$lista[0] : '',
             'documentos'=>$lista,
         ];
+    }
+
+    private function escalaCandidatosMontoNoAtentado(): array
+    {
+        if(!Schema::hasTable('noatentado.escala_candidatos')){
+            return [];
+        }
+
+        $reglas=EscalaCandidato::query()
+            ->where('habilitado','=',true)
+            ->orderBy('monto_total','ASC')
+            ->orderBy('cantidad_max','ASC')
+            ->orderBy('orden','ASC')
+            ->get(['cantidad_min','cantidad_max','costo','aporte_umss','monto_total'])
+            ->map(function($fila){
+                return [
+                    'cantidad_min'=>(int)($fila->cantidad_min ?? 0),
+                    'cantidad_max'=>(int)($fila->cantidad_max ?? 0),
+                    'costo'=>(float)($fila->costo ?? 0),
+                    'aporte_umss'=>(float)($fila->aporte_umss ?? 0),
+                    'monto_total'=>(float)($fila->monto_total ?? 0),
+                ];
+            })
+            ->toArray();
+
+        if(!is_array($reglas)){
+            return [];
+        }
+
+        $normalizadas=[];
+        foreach($reglas as $fila){
+            if(!is_array($fila)){
+                continue;
+            }
+
+            $cantidadMin=max(1,(int)($fila['cantidad_min'] ?? 0));
+            $cantidadMax=max($cantidadMin,(int)($fila['cantidad_max'] ?? 0));
+            $costo=$this->normalizarMontoRecaudacionNoAtentado($fila['costo'] ?? 0);
+            $aporte=$this->normalizarMontoRecaudacionNoAtentado($fila['aporte_umss'] ?? 0);
+            $montoTotal=$this->normalizarMontoRecaudacionNoAtentado($fila['monto_total'] ?? 0);
+
+            if($montoTotal<=0){
+                $montoTotal=round($costo+$aporte,2);
+            }
+
+            if($montoTotal<=0){
+                continue;
+            }
+
+            $normalizadas[]=[
+                'cantidad_min'=>$cantidadMin,
+                'cantidad_max'=>$cantidadMax,
+                'costo'=>$costo,
+                'aporte_umss'=>$aporte,
+                'monto_total'=>$montoTotal,
+            ];
+        }
+
+        usort($normalizadas,function(array $a,array $b){
+            $cmpMonto=(float)$a['monto_total'] <=> (float)$b['monto_total'];
+            if($cmpMonto!==0){
+                return $cmpMonto;
+            }
+            return (int)$a['cantidad_max'] <=> (int)$b['cantidad_max'];
+        });
+
+        return $normalizadas;
+    }
+
+    private function resolverCupoCandidatosPorMontoNoAtentado(float $montoTotalValidado): array
+    {
+        $escala=$this->escalaCandidatosMontoNoAtentado();
+        if(sizeof($escala)===0){
+            return [
+                'ok'=>false,
+                'code'=>'ESCALA_CANDIDATOS_NO_CONFIGURADA',
+                'message'=>'No existe una escala de candidatos configurada para validar el monto.',
+                'max_permitidos'=>0,
+            ];
+        }
+
+        $montoTotalValidado=$this->normalizarMontoRecaudacionNoAtentado($montoTotalValidado);
+        if($montoTotalValidado<=0){
+            return [
+                'ok'=>false,
+                'code'=>'MONTO_VALIDADO_NO_DISPONIBLE',
+                'message'=>'No se pudo determinar el monto total validado para controlar la cantidad de candidatos.',
+                'max_permitidos'=>0,
+            ];
+        }
+
+        $tolerancia=$this->normalizarMontoRecaudacionNoAtentado(config('noatentado.tolerancia_monto',0.01));
+        if($tolerancia<0){
+            $tolerancia=0.0;
+        }
+
+        $reglaSeleccionada=null;
+        foreach($escala as $regla){
+            if($montoTotalValidado+$tolerancia>=(float)$regla['monto_total']){
+                $reglaSeleccionada=$regla;
+                continue;
+            }
+            break;
+        }
+
+        if(!$reglaSeleccionada){
+            $primeraRegla=$escala[0];
+            return [
+                'ok'=>false,
+                'code'=>'MONTO_INSUFICIENTE_PARA_ESCALA',
+                'message'=>'El monto validado (Bs '.number_format($montoTotalValidado,2,'.','').') es menor al mínimo de la escala (Bs '.number_format((float)$primeraRegla['monto_total'],2,'.','').').',
+                'max_permitidos'=>0,
+            ];
+        }
+
+        return [
+            'ok'=>true,
+            'code'=>'',
+            'message'=>'Monto validado dentro de escala para candidatos.',
+            'max_permitidos'=>(int)$reglaSeleccionada['cantidad_max'],
+            'regla'=>$reglaSeleccionada,
+        ];
+    }
+
+    private function validarCantidadCandidatosPorMontoNoAtentado(int $cantidadCandidatos,float $montoTotalValidado): array
+    {
+        $cantidadCandidatos=max(0,$cantidadCandidatos);
+        if($cantidadCandidatos===0){
+            return [
+                'ok'=>false,
+                'code'=>'SIN_CANDIDATOS',
+                'message'=>'Debe registrar al menos un candidato.',
+                'max_permitidos'=>0,
+            ];
+        }
+
+        $cupo=$this->resolverCupoCandidatosPorMontoNoAtentado($montoTotalValidado);
+        if(!(bool)($cupo['ok'] ?? false)){
+            return $cupo;
+        }
+
+        $maxPermitidos=(int)($cupo['max_permitidos'] ?? 0);
+        if($maxPermitidos>0 && $cantidadCandidatos>$maxPermitidos){
+            return [
+                'ok'=>false,
+                'code'=>'CANTIDAD_CANDIDATOS_SUPERA_MONTO',
+                'message'=>'Con el monto validado (Bs '.number_format($this->normalizarMontoRecaudacionNoAtentado($montoTotalValidado),2,'.','').') solo se permiten hasta '.$maxPermitidos.' candidato(s). Registró '.$cantidadCandidatos.'.',
+                'max_permitidos'=>$maxPermitidos,
+            ];
+        }
+
+        return [
+            'ok'=>true,
+            'code'=>'',
+            'message'=>'Cantidad de candidatos válida para el monto pagado.',
+            'max_permitidos'=>$maxPermitidos,
+        ];
+    }
+
+    private function validarCantidadCandidatosPorTipoNoAtentado(int $codTre,int $cantidadCandidatos,float $montoTotalValidado): array
+    {
+        $cantidadCandidatos=max(0,$cantidadCandidatos);
+        if($cantidadCandidatos===0){
+            return [
+                'ok'=>false,
+                'code'=>'SIN_CANDIDATOS',
+                'message'=>'Debe registrar al menos un candidato.',
+                'max_permitidos'=>0,
+            ];
+        }
+
+        if($this->esTramitePlanchaEstudiantesNoAtentado($codTre)){
+            return $this->validarCantidadCandidatosPorMontoNoAtentado($cantidadCandidatos,$montoTotalValidado);
+        }
+
+        if($cantidadCandidatos>1){
+            return [
+                'ok'=>false,
+                'code'=>'CANTIDAD_CANDIDATOS_SOLO_UNO',
+                'message'=>'Para este tipo de trámite solo se permite registrar un candidato por cuenta/pago.',
+                'max_permitidos'=>1,
+            ];
+        }
+
+        return [
+            'ok'=>true,
+            'code'=>'',
+            'message'=>'Cantidad de candidatos válida para el tipo de trámite seleccionado.',
+            'max_permitidos'=>1,
+        ];
+    }
+
+    private function resolverTiposTramitePagoNoAtentado(array $validacionPrincipal,array $validacionReintegro,array $montos): array
+    {
+        if(!(bool)($validacionPrincipal['ok'] ?? false)){
+            return [
+                'ok'=>false,
+                'code'=>'PAGO_PRINCIPAL_NO_VALIDO',
+                'message'=>trim((string)($validacionPrincipal['message'] ?? 'No se pudo validar el pago principal.')),
+            ];
+        }
+
+        $tiposPermitidos=$this->normalizarTiposPermitidosNoAtentado($validacionPrincipal['tipos_noatentado_permitidos'] ?? []);
+        $tipoSugerido=(int)($validacionPrincipal['tipo_noatentado_sugerido'] ?? 0);
+        $nombreTipoSugerido=trim((string)($validacionPrincipal['nombre_tipo_noatentado_sugerido'] ?? ''));
+        $requiereSeleccionManual=(bool)($validacionPrincipal['requiere_seleccion_manual'] ?? false);
+
+        if($tipoSugerido>0){
+            $existeSugerido=false;
+            foreach($tiposPermitidos as $tipoItem){
+                if((int)($tipoItem['cod_tre'] ?? 0)===$tipoSugerido){
+                    $existeSugerido=true;
+                    if($nombreTipoSugerido===''){
+                        $nombreTipoSugerido=trim((string)($tipoItem['tre_nombre'] ?? ''));
+                    }
+                    break;
+                }
+            }
+
+            if(!$existeSugerido){
+                $tramite=Tramite::query()->where('cod_tre','=',$tipoSugerido)->where('tre_tipo','=','A')->first();
+                if($tramite){
+                    $tiposPermitidos[]=[
+                        'cod_tre'=>(int)$tramite->cod_tre,
+                        'tre_nombre'=>trim((string)$tramite->tre_nombre),
+                    ];
+                    if($nombreTipoSugerido===''){
+                        $nombreTipoSugerido=trim((string)$tramite->tre_nombre);
+                    }
+                }
+            }
+        }
+
+        $reintegroAplica=(bool)($validacionReintegro['ok'] ?? false) && (bool)($validacionReintegro['aplica'] ?? false);
+        if($reintegroAplica){
+            $montoTotal=$this->normalizarMontoRecaudacionNoAtentado($montos['monto_total_validado'] ?? 0);
+            if($montoTotal<=0){
+                return [
+                    'ok'=>false,
+                    'code'=>'MONTO_TOTAL_REINTEGRO_INVALIDO',
+                    'message'=>'No se pudo calcular el monto total validado para resolver el tipo de trámite con reintegro.',
+                ];
+            }
+
+            $tiposPorMonto=$this->buscarTiposNoAtentadoPorMontoTotal($montoTotal);
+            if(sizeof($tiposPorMonto)===0){
+                return [
+                    'ok'=>false,
+                    'code'=>'MONTO_SIN_TRAMITE_NOATENTADO',
+                    'message'=>'Con el monto total validado (Bs '.number_format($montoTotal,2,'.','').') no existe un tipo de trámite No Atentado configurado.',
+                ];
+            }
+
+            if(sizeof($tiposPorMonto)===1){
+                $tipoUnico=$tiposPorMonto[0];
+                return [
+                    'ok'=>true,
+                    'tipo_noatentado_sugerido'=>(int)($tipoUnico['cod_tre'] ?? 0),
+                    'nombre_tipo_noatentado_sugerido'=>trim((string)($tipoUnico['tre_nombre'] ?? '')),
+                    'tipos_noatentado_permitidos'=>$tiposPorMonto,
+                    'requiere_seleccion_manual'=>false,
+                    'message'=>'Pago validado. El tipo de trámite se resolvió por monto total (principal + reintegro).',
+                ];
+            }
+
+            return [
+                'ok'=>true,
+                'tipo_noatentado_sugerido'=>0,
+                'nombre_tipo_noatentado_sugerido'=>'',
+                'tipos_noatentado_permitidos'=>$tiposPorMonto,
+                'requiere_seleccion_manual'=>true,
+                'message'=>'Pago validado. Existen múltiples tipos de trámite con el mismo monto total; seleccione uno manualmente.',
+            ];
+        }
+
+        if($tipoSugerido<=0 && sizeof($tiposPermitidos)===1){
+            $tipoSugerido=(int)($tiposPermitidos[0]['cod_tre'] ?? 0);
+            $nombreTipoSugerido=trim((string)($tiposPermitidos[0]['tre_nombre'] ?? ''));
+        }
+
+        return [
+            'ok'=>true,
+            'tipo_noatentado_sugerido'=>$tipoSugerido,
+            'nombre_tipo_noatentado_sugerido'=>$nombreTipoSugerido,
+            'tipos_noatentado_permitidos'=>$tiposPermitidos,
+            'requiere_seleccion_manual'=>$requiereSeleccionManual,
+            'message'=>'',
+        ];
+    }
+
+    private function resolverCodTramiteGuardarNoAtentado(array $resolucionTipos,string $codTreFormularioRaw,string &$error=''): int
+    {
+        $error='';
+        $tiposPermitidos=$this->normalizarTiposPermitidosNoAtentado($resolucionTipos['tipos_noatentado_permitidos'] ?? []);
+        $permitidos=[];
+        foreach($tiposPermitidos as $tipoItem){
+            $cod=(int)($tipoItem['cod_tre'] ?? 0);
+            if($cod>0){
+                $permitidos[]=$cod;
+            }
+        }
+
+        $codTreFormulario=(int)$codTreFormularioRaw;
+        $requiereManual=(bool)($resolucionTipos['requiere_seleccion_manual'] ?? false);
+        if($requiereManual){
+            if($codTreFormulario<=0){
+                $error='Debe seleccionar manualmente el tipo de trámite para el monto validado.';
+                return 0;
+            }
+
+            if(sizeof($permitidos)>0 && !in_array($codTreFormulario,$permitidos,true)){
+                $error='El tipo de trámite seleccionado no está permitido para el monto validado.';
+                return 0;
+            }
+
+            return $codTreFormulario;
+        }
+
+        if($codTreFormulario>0){
+            if(sizeof($permitidos)>0 && !in_array($codTreFormulario,$permitidos,true)){
+                $error='El tipo de trámite seleccionado no coincide con la validación del pago.';
+                return 0;
+            }
+
+            return $codTreFormulario;
+        }
+
+        $codTreSugerido=(int)($resolucionTipos['tipo_noatentado_sugerido'] ?? 0);
+        if($codTreSugerido>0){
+            return $codTreSugerido;
+        }
+
+        if(sizeof($permitidos)===1){
+            return (int)$permitidos[0];
+        }
+
+        if(sizeof($permitidos)>1){
+            $error='Debe seleccionar manualmente uno de los tipos de trámite permitidos para el monto validado.';
+            return 0;
+        }
+
+        $error='No se pudo determinar un tipo de trámite válido para guardar.';
+        return 0;
+    }
+
+    private function normalizarTiposPermitidosNoAtentado($tipos): array
+    {
+        if(!is_array($tipos)){
+            return [];
+        }
+
+        $normalizados=[];
+        foreach($tipos as $item){
+            if(!is_array($item)){
+                continue;
+            }
+
+            $codTre=(int)($item['cod_tre'] ?? 0);
+            if($codTre<=0){
+                continue;
+            }
+
+            $normalizados[$codTre]=[
+                'cod_tre'=>$codTre,
+                'tre_nombre'=>trim((string)($item['tre_nombre'] ?? '')),
+            ];
+        }
+
+        return array_values($normalizados);
+    }
+
+    private function buscarTiposNoAtentadoPorMontoTotal(float $montoTotal): array
+    {
+        $montoTotal=$this->normalizarMontoRecaudacionNoAtentado($montoTotal);
+        if($montoTotal<=0){
+            return [];
+        }
+
+        $tolerancia=$this->normalizarMontoRecaudacionNoAtentado(config('noatentado.tolerancia_monto',0.01));
+        if($tolerancia<0.01){
+            $tolerancia=0.01;
+        }
+
+        $coincidentes=[];
+        $tramites=Tramite::query()
+            ->where('tre_tipo','=','A')
+            ->orderBy('cod_tre','ASC')
+            ->get(['cod_tre','tre_nombre','tre_costo']);
+
+        foreach($tramites as $tramite){
+            $costo=$this->normalizarMontoRecaudacionNoAtentado($tramite->tre_costo ?? 0);
+            if($costo<=0){
+                continue;
+            }
+
+            if(abs($costo-$montoTotal)>$tolerancia){
+                continue;
+            }
+
+            $coincidentes[]=[
+                'cod_tre'=>(int)$tramite->cod_tre,
+                'tre_nombre'=>trim((string)$tramite->tre_nombre),
+            ];
+        }
+
+        return $coincidentes;
+    }
+
+    private function esNombreTramitePlanchaEstudiantesNoAtentado(string $nombreTramite): bool
+    {
+        $nombre=$this->normalizarTextoComparacionNoAtentado($nombreTramite);
+        if($nombre===''){
+            return false;
+        }
+
+        return strpos($nombre,'PLANCHA')!==false && strpos($nombre,'ESTUDIANT')!==false;
+    }
+
+    private function obtenerCodTramitePlanchaNoAtentado(): int
+    {
+        $tramites=Tramite::query()
+            ->where('tre_tipo','=','A')
+            ->get(['cod_tre','tre_nombre']);
+
+        foreach($tramites as $tramite){
+            if($this->esNombreTramitePlanchaEstudiantesNoAtentado((string)($tramite->tre_nombre ?? ''))){
+                return (int)($tramite->cod_tre ?? 0);
+            }
+        }
+
+        return 0;
+    }
+
+    private function esTramitePlanchaEstudiantesNoAtentado(int $codTre): bool
+    {
+        if($codTre<=0){
+            return false;
+        }
+
+        $tramite=Tramite::query()
+            ->where('cod_tre','=',$codTre)
+            ->where('tre_tipo','=','A')
+            ->first(['cod_tre','tre_nombre']);
+
+        if(!$tramite){
+            return false;
+        }
+
+        return $this->esNombreTramitePlanchaEstudiantesNoAtentado((string)($tramite->tre_nombre ?? ''));
     }
 
     private function resumenCandidatosTramiteNoAtentado(int $codDtra): array
