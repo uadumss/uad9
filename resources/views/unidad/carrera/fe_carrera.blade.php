@@ -226,7 +226,7 @@
                                     <input type="date" class="form-control form-control-sm campos-acred" name="int_fecha_vencimiento" id="int_fecha_vencimiento" value="{{$intFechaVenc}}" required />
                                 </div>
                                 <div class="form-group col-md-2 mb-2">
-                                    <label class="mb-1">Estado automatico</label>
+                                    <label class="mb-1">Estado</label>
                                     <input type="text" class="form-control form-control-sm campos-acred" id="int_estado_texto" value="{{$intEstado}}" readonly required />
                                 </div>
                                 <div class="form-group col-md-2 mb-2">

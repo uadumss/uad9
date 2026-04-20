@@ -36,7 +36,7 @@
                     <th rowspan="2">Nº</th>
                     <th rowspan="2" class="text-left">Nombre</th>
                     <th rowspan="2">Nombre corto</th>
-                    <th rowspan="2">ACRED.</th>
+                    <th rowspan="2">ACRED</th>
                     <th rowspan="2">Tipo</th>
                     <th rowspan="2">Sistema</th>
                     <th colspan="4">NRO. TOTAL DE PROCESOS</th>
