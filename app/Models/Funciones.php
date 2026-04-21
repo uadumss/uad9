@@ -51,6 +51,16 @@ class Funciones extends Model
         $glosa= str_replace("{supletorio}", $supletorio, $glosa);
         $glosa= str_replace("{titulosupletorio}", $tituloSupletorio, $glosa);
 
+        // Género e interesado
+        $sexo = mb_strtoupper(trim((string)($persona->per_sexo ?? '')));
+        $esFemenino = in_array($sexo, ['F', 'FEMENINO', 'MUJER']);
+        $tratamiento = $esFemenino ? 'la señora' : 'el señor';
+        $interesado = $esFemenino ? 'DE LA INTERESADA' : 'DEL INTERESADO';
+
+        $glosa= str_replace("{--el la señora--}", $tratamiento, $glosa);
+        $glosa= str_replace("{el la señora}", $tratamiento, $glosa);
+        $glosa= str_replace("{--DEL INTERESADO--}", $interesado, $glosa);
+        $glosa= str_replace("{DEL INTERESADO}", $interesado, $glosa);
 
         $glosa= str_replace("{nombre}", mb_strtoupper($nombre), $glosa);
         $glosa= str_replace("{titulo_glosa}", $titulo_glosa, $glosa);
@@ -58,6 +68,10 @@ class Funciones extends Model
         //$glosa= str_replace("{fecha_tramite}", $fecha_tramite, $glosa);
         //$glosa= str_replace("{numero_tramite}", $numero_tramite, $glosa);
         $glosa= str_replace("{fecha_tramite}", $fecha_tramite, $glosa);
+        
+        // CI disponible ahora sin depender de $titulo
+        $glosa= str_replace("{ci}", $persona->per_ci, $glosa);
+        
         $numero="";
         if($docleg->dtra_numero==0) {
             $numero = "<span style='font-weight:bold'>" . "-/" . substr($docleg->dtra_gestion, -2) . "</span>"; // numero del detalle de tramite
@@ -90,7 +104,7 @@ class Funciones extends Model
 
         //========================
         if($titulo) {
-            $f_e= date('d',strtotime($titulo->tit_fecha_emision))." de ".Funciones::mes(date('n')).' de '.date('Y',strtotime($titulo->tit_fecha_emision));
+            $f_e= date('d',strtotime($titulo->tit_fecha_emision))." de ".Funciones::mes((int)date('n',strtotime($titulo->tit_fecha_emision))).' de '.date('Y',strtotime($titulo->tit_fecha_emision));
             $gr=$titulo->tit_grado;
             $numero_folio=$titulo->tit_nro_folio;
             $f_folio=$titulo->tit_fecha_folio;
@@ -102,7 +116,7 @@ class Funciones extends Model
                 $numero="<span style='font-weight:bold'>".$docleg->dtra_numero."/".substr($docleg->dtra_gestion,-2)."</span>"; // numero del detalle de tramite
             }
             $numero="<span style='font-weight:bold'>".$docleg->dtra_numero."/".substr($docleg->dtra_gestion,-2)."</span>"; // numero del detalle de tramite
-            $titulo = "<span style='font-weight:bold'>" . $titulo->tit_titulo . "</span>"; //numero de titulo
+            $titulo_formatted = "<span style='font-weight:bold'>" . $titulo->tit_titulo . "</span>"; //numero de titulo
             $fecha_titulo = "<span style='font-weight:bold'>" . $f_e . "</span>"; // fecha emision del titulo
             $grado = "<span style='font-weight:bold'>" . $gr . "</span>";// grado del titulo
             $autoridad = "<span style='font-weight:bold'>AUT 1 </span>"; // firma autoridad 1
@@ -120,10 +134,9 @@ class Funciones extends Model
             $fecha_folio="<span style='font-weight:bold'>".date('d-m-Y',strtotime($f_folio))."</span>";//fecha del folio del documento
 
             $glosa= str_replace("{numero}", $numero, $glosa);
-            $glosa= str_replace("{titulo}", $titulo, $glosa);
+            $glosa= str_replace("{titulo}", $titulo_formatted, $glosa);
             $glosa= str_replace("{fecha_titulo}", $fecha_titulo, $glosa);
             $glosa= str_replace("{titulo_glosa}", $titulo_glosa, $glosa);
-            $glosa= str_replace("{ci}", $persona->per_ci, $glosa);
 
             $glosa= str_replace("{grado}", $grado, $glosa);
             $glosa= str_replace("{autoridad}", $autoridad, $glosa);
@@ -131,7 +144,49 @@ class Funciones extends Model
             $glosa= str_replace("{n_folio}", $n_folio, $glosa);
             $glosa= str_replace("{fecha_folio}", $fecha_folio, $glosa);
 
+        } else {
+            // Fallback para {titulo} y {fecha_titulo} si no existe $titulo
+            $tituloFallback = trim((string)$docleg->dtra_titulo);
+            if ($tituloFallback !== '') {
+                $glosa= str_replace("{titulo}", "<span style='font-weight:bold'>".$tituloFallback."</span>", $glosa);
+            }
         }
+        
+        // Resolución de acreditación (aplica siempre)
+        if (!empty($unidadAcademica) && !empty($unidadAcademica->cod_car)) {
+            $acreditacion = DB::table('carrera_acreditaciones')
+                ->where('cod_car', '=', $unidadAcademica->cod_car)
+                ->orderByDesc('resolucion_fecha_emision')
+                ->orderByDesc('cod_cac')
+                ->first();
+
+            if ($acreditacion) {
+                $numero_res = trim((string)($acreditacion->resolucion_numero ?? ''));
+                $anio_res = trim((string)($acreditacion->resolucion_anio ?? ''));
+                if ($numero_res !== '' && $anio_res !== '' && strpos($numero_res, '/') === false) {
+                    $numero_res .= '/'.$anio_res;
+                }
+                if ($numero_res !== '') {
+                    $glosa= str_replace("{resolucion_numero}", $numero_res, $glosa);
+                    $glosa= str_replace("{numero_resolucion}", $numero_res, $glosa);
+                    $glosa= str_replace("{--0036/2024--}", $numero_res, $glosa);
+                }
+
+                $fechaResolucion = $acreditacion->resolucion_fecha_emision
+                    ?: $acreditacion->resolucion_inicio
+                    ?: $acreditacion->fecha_acreditacion;
+                if ($fechaResolucion) {
+                    $fecha_res_ts = strtotime((string)$fechaResolucion);
+                    if ($fecha_res_ts !== false) {
+                        $fecha_res_literal = date('j', $fecha_res_ts).' de '.self::mes((int)date('n', $fecha_res_ts)).' de '.date('Y', $fecha_res_ts);
+                        $glosa= str_replace("{resolucion_fecha}", $fecha_res_literal, $glosa);
+                        $glosa= str_replace("{fecha_resolucion}", $fecha_res_literal, $glosa);
+                        $glosa= str_replace("{--5 de octubre de 2023--}", $fecha_res_literal, $glosa);
+                    }
+                }
+            }
+        }
+        
         return $glosa;
     }
     public static function glosa_noatentado($tramite,$modelo_glosa,$tramite_noatentado,$convocatoria,$candidatos){
