@@ -156,7 +156,7 @@
                                 </div>
                                 <div class="form-group col-md-2 mb-2">
                                     <label class="mb-1">Puntaje numerico</label>
-                                    <input type="text" class="form-control form-control-sm campos-acred" name="nac_puntaje_numero" id="nac_puntaje_numero" value="{{$nacPuntajeNumero}}" placeholder="Ej: 84.5/100" required />
+                                    <input type="text" class="form-control form-control-sm campos-acred" name="nac_puntaje_numero" id="nac_puntaje_numero" value="{{$nacPuntajeNumero}}" placeholder="Ej: 84.5" inputmode="decimal" autocomplete="off" required />
                                 </div>
                             </div>
 
@@ -241,7 +241,7 @@
                                 </div>
                                 <div class="form-group col-md-2 mb-2">
                                     <label class="mb-1">Puntaje numerico</label>
-                                    <input type="text" class="form-control form-control-sm campos-acred" name="int_puntaje_numero" id="int_puntaje_numero" value="{{$intPuntajeNumero}}" placeholder="Ej: 84.5/100" required />
+                                    <input type="text" class="form-control form-control-sm campos-acred" name="int_puntaje_numero" id="int_puntaje_numero" value="{{$intPuntajeNumero}}" placeholder="Ej: 84.5" inputmode="decimal" autocomplete="off" required />
                                 </div>
                             </div>
 
@@ -347,6 +347,36 @@
         inputNumero.prop('disabled', true);
     }
 
+    function normalizarPuntajeNumerico(prefijo){
+        var inputNumero = $('#' + prefijo + '_puntaje_numero');
+        var valor = String(inputNumero.val() || '').trim().replace(',', '.');
+
+        if(valor === ''){
+            inputNumero.val('');
+            inputNumero.get(0).setCustomValidity('');
+            return;
+        }
+
+        if(!/^\d+(\.\d+)?$/.test(valor)){
+            inputNumero.get(0).setCustomValidity('Ingrese un numero valido. Use coma o punto para decimales.');
+            return;
+        }
+
+        var numero = parseFloat(valor);
+        if(isNaN(numero)){
+            inputNumero.get(0).setCustomValidity('Ingrese un numero valido.');
+            return;
+        }
+
+        if(numero < 0 || numero > 100){
+            inputNumero.get(0).setCustomValidity('El puntaje numerico debe estar entre 0 y 100.');
+            return;
+        }
+
+        inputNumero.get(0).setCustomValidity('');
+        inputNumero.val(numero.toFixed(2).replace(/\.00$/, '').replace(/(\.\d*[1-9])0+$/, '$1'));
+    }
+
     function actualizarPanelAcreditacion(prefijo){
         var habilitada = $('#' + prefijo + '_habilitada').is(':checked');
         $('#' + prefijo + '_panel .campos-acred').prop('disabled', !habilitada);
@@ -377,7 +407,12 @@
             actualizarModoPuntaje(prefijo);
         });
 
+        $('#' + prefijo + '_puntaje_numero').on('blur change', function(){
+            normalizarPuntajeNumerico(prefijo);
+        });
+
         actualizarPanelAcreditacion(prefijo);
+        normalizarPuntajeNumerico(prefijo);
     }
 
     $(document).ready(function(){

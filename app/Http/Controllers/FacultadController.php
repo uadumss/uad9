@@ -116,7 +116,24 @@ class FacultadController extends Controller
                 ->orderByDesc('fecha_acreditacion')
                 ->orderByDesc('cod_cac')
                 ->get()
-                ->groupBy('cod_car');
+                ->map(function ($item) {
+                    $item->tipo_vista=$this->resolverTipoAcreditacion($item);
+                    $item->estado_vista=$this->calcularEstadoAcreditacion(
+                        $item->fecha_acreditacion,
+                        $item->fecha_vencimiento,
+                        $item->proc_sc,
+                        $item->proc_nc
+                    );
+                    return $item;
+                })
+                ->groupBy('cod_car')
+                ->map(function ($items) {
+                    return $items->groupBy(function ($item) {
+                        return $item->tipo_vista;
+                    })->map(function ($grupoTipo) {
+                        return $grupoTipo->first();
+                    })->values();
+                });
         }
 
         return view('unidad.carrera.l_carrera',compact('facultad','carreras','cod_fac','acreditacionesCarrera'));
@@ -236,7 +253,31 @@ class FacultadController extends Controller
             ->orderByDesc('cod_cac')
             ->get();
 
-        return view('unidad.carrera.f_historial_carrera',compact('facultad','carrera','historial','acreditaciones'));
+        $acreditaciones=$acreditaciones->map(function ($item) {
+            $item->tipo_vista=$this->resolverTipoAcreditacion($item);
+            $item->estado_vista=$this->calcularEstadoAcreditacion(
+                $item->fecha_acreditacion,
+                $item->fecha_vencimiento,
+                $item->proc_sc,
+                $item->proc_nc
+            );
+            return $item;
+        });
+
+        $acreditacionesNacional=$acreditaciones->where('tipo_vista','Nacional')->values();
+        $acreditacionesInternacional=$acreditaciones->where('tipo_vista','Internacional')->values();
+        $codAcreditacionNacionalActiva=$acreditacionesNacional->first()->cod_cac ?? 0;
+        $codAcreditacionInternacionalActiva=$acreditacionesInternacional->first()->cod_cac ?? 0;
+
+        return view('unidad.carrera.f_historial_carrera',compact(
+            'facultad',
+            'carrera',
+            'historial',
+            'acreditacionesNacional',
+            'acreditacionesInternacional',
+            'codAcreditacionNacionalActiva',
+            'codAcreditacionInternacionalActiva'
+        ));
     }
     public function f_eli_carrera($cod_fac,$cod_car){
         $carrera=Carrera::find($cod_car);
@@ -282,9 +323,18 @@ class FacultadController extends Controller
         }
 
         if(!$registrar){
-            if($acreditacion){
-                $acreditacion->delete();
-            }
+            CarreraAcreditacion::where('cod_car','=',$codCar)
+                ->where(function ($query) use ($tipo) {
+                    $query->where('tipo','=',$tipo);
+
+                    if($tipo==='Nacional'){
+                        $query->orWhereRaw('UPPER(TRIM(COALESCE(sistema,\'\'))) = ?', ['CEUB'])
+                            ->orWhereRaw('TRIM(COALESCE(tipo,\'\')) = ?',[""]);
+                    }else{
+                        $query->orWhereRaw('UPPER(TRIM(COALESCE(sistema,\'\'))) = ?', ['ARCU SUR']);
+                    }
+                })
+                ->delete();
             return;
         }
 
@@ -304,7 +354,7 @@ class FacultadController extends Controller
 
         $puntaje=null;
         if($puntajeModo==='NUMERO'){
-            $puntaje=$puntajeNumero!=='' ? $puntajeNumero : null;
+            $puntaje=$this->toNullableScore($puntajeNumero);
         }elseif(in_array($puntajeModo,['Cumple','Homologado','S/D'])){
             $puntaje=$puntajeModo;
         }
@@ -324,14 +374,55 @@ class FacultadController extends Controller
             'certificado'=>strtoupper(trim((string)($form[$prefijo.'_certificado'] ?? 'NO')))==='SI',
         ];
 
-        if($acreditacion){
-            $acreditacion->fill($datosAcreditacion);
-            $acreditacion->save();
+        if($acreditacion && !$this->acreditacionTieneCambios($acreditacion,$datosAcreditacion)){
             return;
         }
 
         $datosAcreditacion['cod_car']=$codCar;
         CarreraAcreditacion::create($datosAcreditacion);
+    }
+
+    private function acreditacionTieneCambios(CarreraAcreditacion $acreditacion,array $datosAcreditacion){
+        $camposBooleanos=['acreditada','certificado'];
+        $camposNumericos=['anio','proc_sc','proc_nc','proc_total'];
+        $camposFecha=['fecha_acreditacion','fecha_vencimiento'];
+
+        foreach($datosAcreditacion as $campo=>$nuevoValor){
+            $valorActual=$acreditacion->{$campo};
+
+            if(in_array($campo,$camposBooleanos,true)){
+                if((bool)$valorActual!==((bool)$nuevoValor)){
+                    return true;
+                }
+                continue;
+            }
+
+            if(in_array($campo,$camposNumericos,true)){
+                $actualNormalizado=$valorActual===null ? null : (int)$valorActual;
+                $nuevoNormalizado=$nuevoValor===null ? null : (int)$nuevoValor;
+                if($actualNormalizado!==$nuevoNormalizado){
+                    return true;
+                }
+                continue;
+            }
+
+            if(in_array($campo,$camposFecha,true)){
+                $actualNormalizado=$valorActual ? date('Y-m-d',strtotime($valorActual)) : null;
+                $nuevoNormalizado=$nuevoValor ? date('Y-m-d',strtotime($nuevoValor)) : null;
+                if($actualNormalizado!==$nuevoNormalizado){
+                    return true;
+                }
+                continue;
+            }
+
+            $actualNormalizado=$valorActual===null ? null : trim((string)$valorActual);
+            $nuevoNormalizado=$nuevoValor===null ? null : trim((string)$nuevoValor);
+            if($actualNormalizado!==$nuevoNormalizado){
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function calcularEstadoAcreditacion($fechaAcreditacion,$fechaVencimiento,$procSc,$procNc){
@@ -363,6 +454,23 @@ class FacultadController extends Controller
         return '';
     }
 
+    private function resolverTipoAcreditacion(CarreraAcreditacion $acreditacion){
+        $tipo=trim((string)$acreditacion->tipo);
+        if(in_array($tipo,['Nacional','Internacional'],true)){
+            return $tipo;
+        }
+
+        $sistema=strtoupper(trim((string)$acreditacion->sistema));
+        if($sistema==='CEUB'){
+            return 'Nacional';
+        }
+        if($sistema==='ARCU SUR'){
+            return 'Internacional';
+        }
+
+        return 'OTRO';
+    }
+
     private function toNullableInt($valor){
         $texto=trim((string)$valor);
         if($texto===''){
@@ -375,6 +483,28 @@ class FacultadController extends Controller
     private function toNullableDate($valor){
         $texto=trim((string)$valor);
         return $texto!=='' ? $texto : null;
+    }
+
+    private function toNullableScore($valor){
+        $texto=str_replace(',','.',trim((string)$valor));
+        if($texto===''){
+            return null;
+        }
+
+        if(!is_numeric($texto)){
+            return null;
+        }
+
+        $numero=(float)$texto;
+        if($numero<0){
+            $numero=0;
+        }
+        if($numero>100){
+            $numero=100;
+        }
+
+        $formateado=number_format($numero,2,'.','');
+        return rtrim(rtrim($formateado,'0'),'.');
     }
 
 }
