@@ -98,7 +98,7 @@
                             $total = (int)($acreditacion->proc_sc ?? 0) + (int)($acreditacion->proc_nc ?? 0);
                         }
 
-                        $estado = $acreditacion ? trim((string)$acreditacion->estado) : '';
+                        $estado = $acreditacion ? trim((string)($acreditacion->estado_vista ?? $acreditacion->estado)) : '';
                         $puntaje = $acreditacion ? trim((string)$acreditacion->puntaje) : '';
                         ?>
                         <tr>
@@ -186,6 +186,10 @@
 
     function enviar(formulario,accion){
         var formElement = document.getElementById(formulario);
+        if(typeof window.normalizarPuntajeNumerico === 'function'){
+            window.normalizarPuntajeNumerico('nac');
+            window.normalizarPuntajeNumerico('int');
+        }
         var fechasOk = validarRangoFechas('nac') && validarRangoFechas('int');
 
         if(formElement){
