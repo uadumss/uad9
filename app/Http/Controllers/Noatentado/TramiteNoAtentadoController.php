@@ -2358,7 +2358,9 @@ class TramiteNoAtentadoController extends Controller
             $codSis=$this->limpiarTextoPlanoNoAtentado((string)($item['cod_sis'] ?? ''),50);
             $unidad=$this->limpiarTextoPlanoNoAtentado((string)($item['unidad'] ?? ''),120);
             $cargoTexto=$this->normalizarTextoCargoNoAtentado($this->limpiarTextoPlanoNoAtentado((string)($item['cargo'] ?? ''),120));
+            $cargoNombre=$this->normalizarTextoCargoNoAtentado($this->limpiarTextoPlanoNoAtentado((string)($item['cargo_nombre'] ?? ''),120));
             $cargoConvocatoria=(int)($item['cargo_convocatoria'] ?? 0);
+            $cargoNoatentado=$cargoTexto!=='' ? $cargoTexto : $cargoNombre;
 
             if($ci==='' || $nombre==='' || $apellido===''){
                 continue;
@@ -2385,9 +2387,10 @@ class TramiteNoAtentadoController extends Controller
                 'cod_dtra'=>$tramite->cod_dtra,
                 'id_per'=>$persona->id_per,
                 'noa_unidad'=>$unidad,
+                'noa_cargo'=>$cargoNoatentado!=='' ? $cargoNoatentado : null,
             ]);
 
-            $codCargo=$this->resolverCargoCandidatoNoAtentado($cargoTexto,$cargoConvocatoria,$tramite);
+            $codCargo=$this->resolverCargoCandidatoNoAtentado($cargoNoatentado,$cargoConvocatoria,$tramite);
             if($codCargo>0){
                 $noatentado->cod_carg=$codCargo;
                 $noatentado->save();

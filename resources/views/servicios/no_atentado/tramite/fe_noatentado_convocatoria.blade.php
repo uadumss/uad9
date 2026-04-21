@@ -2237,7 +2237,7 @@
                         detalleExtendidoPagoNoa='';
                         reiniciarMontosValidadosNoatentado();
                         renderDetallePagoNoatentado(null);
-                        restaurarOpcionesTramiteNoatentado();
+                        limpiarSeleccionTramiteNoatentado('Ingrese preimpreso para poder definir el tipo de trámite.');
                         actualizarEstadoPagoNoAtentado('Pendiente','badge-info',resp && resp.message ? resp.message : 'Control encontrado. Ingrese preimpreso para seleccionar el valorado correcto.');
                         refrescarEstadoCamposPagoNoatentado();
                         aplicarEstadoReintegroDesdeRespuestaNoatentado(resp || {});
@@ -2271,7 +2271,7 @@
                         detalleExtendidoPagoNoa='';
                         reiniciarMontosValidadosNoatentado();
                         renderDetallePagoNoatentado(null);
-                        restaurarOpcionesTramiteNoatentado();
+                        limpiarSeleccionTramiteNoatentado('Se define al validar el pago.');
                         actualizarEstadoPagoNoAtentado(estadoError.resumen,estadoError.clase,estadoError.detalle,estadoError.codigo);
                     }
 
@@ -2305,7 +2305,7 @@
                 detalleExtendidoPagoNoa='';
                 reiniciarMontosValidadosNoatentado();
                 renderDetallePagoNoatentado(null);
-                restaurarOpcionesTramiteNoatentado();
+                limpiarSeleccionTramiteNoatentado('Se define al validar el pago.');
 
                 let mensaje='No se pudo validar el pago.';
                 if(xhr && xhr.responseJSON){
