@@ -178,11 +178,12 @@ class Funciones extends Model
                                 ";
                 $j=1;
                 foreach ($sin_sancion as $s):
+                    $cargoCandidato=self::resolverCargoCandidatoGlosaNoAtentado($s);
                     $glosa_grupal.="<tr style='font-size: 9px'>
                                     <td style='border: 1px solid'>".$j++."</td>
                                     <td style='border: 1px solid'>".$s->per_apellido." ".$s->per_nombre."</td>
                                     <td style='border: 1px solid'>".$s->per_ci."</td>
-                                    <td style='border: 1px solid'>".$s->carg_nombre."</td>
+                                    <td style='border: 1px solid'>".$cargoCandidato."</td>
 
                                 </tr>";
                 endforeach;
@@ -240,6 +241,41 @@ class Funciones extends Model
         }
         return $glosa;
     }
+
+    private static function resolverCargoCandidatoGlosaNoAtentado($candidato): string
+    {
+        $cargo=self::normalizarCargoGlosaNoAtentado((string)($candidato->noa_cargo ?? ''));
+        if($cargo!==''){
+            return $cargo;
+        }
+
+        $cargo=self::normalizarCargoGlosaNoAtentado((string)($candidato->carg_nombre ?? ''));
+        if($cargo!==''){
+            return $cargo;
+        }
+
+        $titular=mb_strtolower(trim((string)($candidato->noa_titular ?? '')));
+        if($titular==='t'){
+            return 'TITULAR';
+        }
+        if($titular==='f'){
+            return 'SUPLENTE';
+        }
+
+        return '-';
+    }
+
+    private static function normalizarCargoGlosaNoAtentado(string $cargo): string
+    {
+        $cargo=trim($cargo);
+        if($cargo===''){
+            return '';
+        }
+
+        $cargo=preg_replace('/\s+/u',' ',$cargo);
+        return mb_strtoupper((string)$cargo);
+    }
+
     public static function glosa_consejo($tramite,$glosa,$docleg,$persona){
         $glosa=$glosa->glo_glosa;
         $nombrado="";

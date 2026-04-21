@@ -9,7 +9,11 @@
         </div>
         <div class="modal-body" style="font-size: smaller">
             <div class="bg-verde-oscuro centrar_bloque p-1 col-md-7 rounded shadow">
-                <h6 class="text-white text-center">Formulario para editar candidato</h6>
+                @if($candidato)
+                    <h6 class="text-white text-center">Formulario para editar datos personales del candidato</h6>
+                @else
+                    <h6 class="text-white text-center">Formulario para registrar candidato</h6>
+                @endif
             </div>
             <hr class="sidebar-divider"/>
             <div>
@@ -27,45 +31,25 @@
                             <th class="text-right font-italic">CI : </th>
                             <td class="border-bottom border-dark">
                                 <input class="form-control form-control-sm border-0" placeholder=""
-                                       name="ci" onchange="cargarDatosPersonales(this.value)" /></td>
+                                       name="ci" value="{{$candidato ? $candidato->per_ci : ''}}" onchange="cargarDatosPersonales(this.value)" /></td>
                         </tr>
                         <tr>
                             <th class="text-right font-italic">Nombres : </th>
                             <td class="border-bottom border-dark">
                                 <input class="form-control form-control-sm border-0" placeholder=""
-                                       required name="nombre" id="nombre" /></td>
+                                       required name="nombre" id="nombre" value="{{$candidato ? $candidato->per_nombre : ''}}" /></td>
                         </tr>
                         <tr>
                             <th class="text-right font-italic">Apellidos : </th>
                             <td class="border-bottom border-dark">
                                 <input class="form-control form-control-sm border-0" placeholder=""
-                                       required name="apellido" id="apellido" /></td>
+                                       required name="apellido" id="apellido" value="{{$candidato ? $candidato->per_apellido : ''}}" /></td>
                         </tr>
                         <tr>
                             <th class="text-right font-italic">Código SIS: </th>
                             <td class="border-bottom border-dark">
                                 <input class="form-control form-control-sm border-0" placeholder=""
-                                       required name="cod_sis" id="cod_sis" /></td>
-                        </tr>
-                        <tr>
-                            <th class="text-right font-italic">Cargo: </th>
-                            <td class="border-bottom border-dark">
-                                <input class="form-control form-control-sm border-0" placeholder=""
-                                       required name="cargo" id="cargo" />
-                            </td>
-                        </tr>
-                        <tr>
-                            <th class="text-right font-italic"></th>
-                            <td class="border-bottom border-dark">
-                                <span class="text-primary font-italic font-weight-bold"> * Cargo de convocatoria</span>
-                                <select class="custom-select custom-select-sm" name="cargo_convocatoria">
-                                    <option></option>
-                                    @foreach($cargos as $c)
-                                        <option value="{{$c->cod_carg}}">{{$c->carg_nombre}}</option>
-                                    @endforeach
-                                </select>
-                            </td>
-
+                                       required name="cod_sis" id="cod_sis" value="{{$candidato ? $candidato->per_cod_sis : ''}}" /></td>
                         </tr>
                     </table>
                 </form>
@@ -74,11 +58,21 @@
         <div class="modal-footer">
             <button class="btn btn-secondary" type="button" data-dismiss="modal">Cerrar</button>
             <button class="btn btn-primary" type="button"
-                    onclick="enviar('form_candidato','{{url('guardar candidato convocatoria')}}','panel_noatentado');$('#Noatentado_agregar').modal('hide');cargarDatos('{{url('actualizar lista tramite convocatoria/'.$tramite->cod_con)}}','panel_lista_tramites')">Guardar</button>
+                    data-save-url="{{url('guardar candidato convocatoria')}}"
+                    data-refresh-url="{{url('actualizar lista tramite convocatoria/'.$tramite->cod_con)}}"
+                    onclick="guardarEdicionCandidatoNoatentado(this)">Guardar</button>
         </div>
     </div>
 </div>
 <script>
+    function guardarEdicionCandidatoNoatentado(boton){
+        var rutaGuardar=boton.dataset.saveUrl;
+        var rutaRefresco=boton.dataset.refreshUrl;
+        enviar('form_candidato',rutaGuardar,'panel_noatentado');
+        $('#Noatentado_agregar').modal('hide');
+        cargarDatos(rutaRefresco,'panel_lista_tramites');
+    }
+
     function cargarDatosPersonales(ci){
         var link="{{url('datos_per/')}}"+"/"+ci;
         $.ajax({

@@ -1112,16 +1112,20 @@ class ApostillaController extends Controller
             );
         }
 
+        $status=(int)$response->getStatusCode();
         $json=$response->getData(true);
         if(!is_array($json) || !($json['ok'] ?? false)){
             $msg='';
+            $statusApi=0;
             if(is_array($json)){
                 $msg=(string)($json['error']['message'] ?? '');
                 if(trim($msg)===''){
                     $msg=(string)($json['message'] ?? '');
                 }
+                $statusApi=(int)($json['status'] ?? 0);
             }
-            $errMap=$this->mapearMensajeErrorRecaudacionApostilla($msg);
+            $statusFinal=$statusApi>0 ? $statusApi : $status;
+            $errMap=$this->mapearMensajeErrorRecaudacionApostilla($msg,$statusFinal);
             return $this->respuestaErrorValidacionApostilla($errMap['code'],$errMap['message']);
         }
 
@@ -1153,10 +1157,17 @@ class ApostillaController extends Controller
         ],$extra);
     }
 
-    private function mapearMensajeErrorRecaudacionApostilla(string $mensajeApi): array
+    private function mapearMensajeErrorRecaudacionApostilla(string $mensajeApi,int $status=0): array
     {
         $mensajeApi=trim($mensajeApi);
         $msgNorm=mb_strtolower($mensajeApi);
+
+        if($status===429 || strpos($msgNorm,'too many')!==false || strpos($msgNorm,'demasiadas solicitudes')!==false || strpos($msgNorm,'rate limit')!==false){
+            return [
+                'code'=>'RATE_LIMIT',
+                'message'=>'Demasiadas solicitudes a recaudaciones. Intente nuevamente en unos segundos.',
+            ];
+        }
 
         if(
             strpos($msgNorm,'configuracion')!==false ||
@@ -1171,32 +1182,40 @@ class ApostillaController extends Controller
         }
 
         if(
-            strpos($msgNorm,'comunicacion')!==false ||
-            strpos($msgNorm,'comunicación')!==false ||
-            strpos($msgNorm,'error en la comunicacion con la api de recaudaciones')!==false ||
-            strpos($msgNorm,'la api de recaudaciones respondio con error')!==false ||
-            strpos($msgNorm,'error inesperado en recaudaciones')!==false ||
-            strpos($msgNorm,'timeout')!==false
-        ){
-            return [
-                'code'=>'API_NO_DISPONIBLE',
-                'message'=>'No se pudo conectar con recaudaciones. Intente nuevamente en unos minutos.',
-            ];
-        }
-
-        if(
-            $mensajeApi==='' ||
+            $status===404 ||
             strpos($msgNorm,'not found')!==false ||
             strpos($msgNorm,'no se encuentra')!==false ||
             strpos($msgNorm,'no encontrado')!==false ||
-            strpos($msgNorm,'recibo')!==false ||
             strpos($msgNorm,'control')!==false ||
+            strpos($msgNorm,'recibo')!==false ||
             strpos($msgNorm,'valido')!==false ||
             strpos($msgNorm,'válido')!==false
         ){
             return [
                 'code'=>'BOLETA_NO_EXISTE',
                 'message'=>'Ingrese un numero de control valido.',
+            ];
+        }
+
+        if($status>0 && $status<500){
+            return [
+                'code'=>'API_RECAUDACIONES_ERROR',
+                'message'=>'No se pudo validar el control en recaudaciones. Verifique los datos e intente nuevamente.',
+            ];
+        }
+
+        if(
+            strpos($msgNorm,'comunicacion')!==false ||
+            strpos($msgNorm,'comunicación')!==false ||
+            strpos($msgNorm,'error en la comunicacion con la api de recaudaciones')!==false ||
+            strpos($msgNorm,'error inesperado en recaudaciones')!==false ||
+            strpos($msgNorm,'sin conexion')!==false ||
+            strpos($msgNorm,'sin conexión')!==false ||
+            strpos($msgNorm,'timeout')!==false
+        ){
+            return [
+                'code'=>'API_NO_DISPONIBLE',
+                'message'=>'No se pudo conectar con recaudaciones. Intente nuevamente en unos minutos.',
             ];
         }
 
