@@ -15,6 +15,11 @@
     }
     $nacFechaAcred = ($acredNac && $acredNac->fecha_acreditacion) ? date('Y-m-d', strtotime($acredNac->fecha_acreditacion)) : '';
     $nacFechaVenc = ($acredNac && $acredNac->fecha_vencimiento) ? date('Y-m-d', strtotime($acredNac->fecha_vencimiento)) : '';
+    $nacResolucionInicio = ($acredNac && $acredNac->resolucion_inicio) ? date('Y-m-d', strtotime($acredNac->resolucion_inicio)) : '';
+    $nacResolucionFin = ($acredNac && $acredNac->resolucion_fin) ? date('Y-m-d', strtotime($acredNac->resolucion_fin)) : '';
+    $nacResolucionFechaEmision = ($acredNac && $acredNac->resolucion_fecha_emision) ? date('Y-m-d', strtotime($acredNac->resolucion_fecha_emision)) : '';
+    $nacResolucionNumero = $acredNac ? trim((string)($acredNac->resolucion_numero ?? '')) : '';
+    $nacResolucionAnio = $acredNac ? trim((string)($acredNac->resolucion_anio ?? '')) : '';
     $nacEstado = $acredNac ? trim((string)$acredNac->estado) : '';
     $nacPuntajeGuardado = $acredNac ? trim((string)$acredNac->puntaje) : '';
     $nacPuntajeModo = '';
@@ -36,6 +41,11 @@
     }
     $intFechaAcred = ($acredInt && $acredInt->fecha_acreditacion) ? date('Y-m-d', strtotime($acredInt->fecha_acreditacion)) : '';
     $intFechaVenc = ($acredInt && $acredInt->fecha_vencimiento) ? date('Y-m-d', strtotime($acredInt->fecha_vencimiento)) : '';
+    $intResolucionInicio = ($acredInt && $acredInt->resolucion_inicio) ? date('Y-m-d', strtotime($acredInt->resolucion_inicio)) : '';
+    $intResolucionFin = ($acredInt && $acredInt->resolucion_fin) ? date('Y-m-d', strtotime($acredInt->resolucion_fin)) : '';
+    $intResolucionFechaEmision = ($acredInt && $acredInt->resolucion_fecha_emision) ? date('Y-m-d', strtotime($acredInt->resolucion_fecha_emision)) : '';
+    $intResolucionNumero = $acredInt ? trim((string)($acredInt->resolucion_numero ?? '')) : '';
+    $intResolucionAnio = $acredInt ? trim((string)($acredInt->resolucion_anio ?? '')) : '';
     $intEstado = $acredInt ? trim((string)$acredInt->estado) : '';
     $intPuntajeGuardado = $acredInt ? trim((string)$acredInt->puntaje) : '';
     $intPuntajeModo = '';
@@ -161,6 +171,29 @@
                             </div>
 
                             <div class="form-row">
+                                <div class="form-group col-md-2 mb-2">
+                                    <label class="mb-1">Resol. inicio</label>
+                                    <input type="date" class="form-control form-control-sm campos-acred" name="nac_resolucion_inicio" id="nac_resolucion_inicio" value="{{$nacResolucionInicio}}" />
+                                </div>
+                                <div class="form-group col-md-2 mb-2">
+                                    <label class="mb-1">Resol. fin</label>
+                                    <input type="date" class="form-control form-control-sm campos-acred" name="nac_resolucion_fin" id="nac_resolucion_fin" value="{{$nacResolucionFin}}" />
+                                </div>
+                                <div class="form-group col-md-2 mb-2">
+                                    <label class="mb-1">Fecha emision</label>
+                                    <input type="date" class="form-control form-control-sm campos-acred" name="nac_resolucion_fecha_emision" id="nac_resolucion_fecha_emision" value="{{$nacResolucionFechaEmision}}" />
+                                </div>
+                                <div class="form-group col-md-4 mb-2">
+                                    <label class="mb-1">Nro de resolucion</label>
+                                    <div class="d-flex align-items-center">
+                                        <input type="text" class="form-control form-control-sm campos-acred" name="nac_resolucion_numero" id="nac_resolucion_numero" value="{{$nacResolucionNumero}}" maxlength="10" pattern="\d+" inputmode="numeric" placeholder="XXX" />
+                                        <span class="px-2 text-muted">/</span>
+                                        <input type="text" class="form-control form-control-sm campos-acred" name="nac_resolucion_anio" id="nac_resolucion_anio" value="{{$nacResolucionAnio}}" maxlength="4" pattern="\d{4}" inputmode="numeric" placeholder="AÑO" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
                                 <div class="form-group col-md-2 mb-0">
                                     <label class="mb-1">Certificados</label>
                                     <select class="form-control form-control-sm campos-acred" name="nac_certificado" id="nac_certificado" required>
@@ -242,6 +275,29 @@
                                 <div class="form-group col-md-2 mb-2">
                                     <label class="mb-1">Puntaje numerico</label>
                                     <input type="text" class="form-control form-control-sm campos-acred" name="int_puntaje_numero" id="int_puntaje_numero" value="{{$intPuntajeNumero}}" placeholder="Ej: 84.5" inputmode="decimal" autocomplete="off" required />
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group col-md-2 mb-2">
+                                    <label class="mb-1">Resol. inicio</label>
+                                    <input type="date" class="form-control form-control-sm campos-acred" name="int_resolucion_inicio" id="int_resolucion_inicio" value="{{$intResolucionInicio}}" />
+                                </div>
+                                <div class="form-group col-md-2 mb-2">
+                                    <label class="mb-1">Resol. fin</label>
+                                    <input type="date" class="form-control form-control-sm campos-acred" name="int_resolucion_fin" id="int_resolucion_fin" value="{{$intResolucionFin}}" />
+                                </div>
+                                <div class="form-group col-md-2 mb-2">
+                                    <label class="mb-1">Fecha emision</label>
+                                    <input type="date" class="form-control form-control-sm campos-acred" name="int_resolucion_fecha_emision" id="int_resolucion_fecha_emision" value="{{$intResolucionFechaEmision}}" />
+                                </div>
+                                <div class="form-group col-md-4 mb-2">
+                                    <label class="mb-1">Nro de resolucion</label>
+                                    <div class="d-flex align-items-center">
+                                        <input type="text" class="form-control form-control-sm campos-acred" name="int_resolucion_numero" id="int_resolucion_numero" value="{{$intResolucionNumero}}" maxlength="10" pattern="\d+" inputmode="numeric" placeholder="XXX" />
+                                        <span class="px-2 text-muted">/</span>
+                                        <input type="text" class="form-control form-control-sm campos-acred" name="int_resolucion_anio" id="int_resolucion_anio" value="{{$intResolucionAnio}}" maxlength="4" pattern="\d{4}" inputmode="numeric" placeholder="AÑO" />
+                                    </div>
                                 </div>
                             </div>
 
@@ -377,6 +433,25 @@
         inputNumero.val(numero.toFixed(2).replace(/\.00$/, '').replace(/(\.\d*[1-9])0+$/, '$1'));
     }
 
+    function normalizarResolucion(prefijo){
+        var inputNumero = $('#' + prefijo + '_resolucion_numero');
+        var inputAnio = $('#' + prefijo + '_resolucion_anio');
+        var numero = String(inputNumero.val() || '').replace(/\D/g, '');
+        var anio = String(inputAnio.val() || '').replace(/\D/g, '');
+
+        inputNumero.val(numero);
+        inputAnio.val(anio);
+
+        var elementoAnio = inputAnio.get(0);
+        if(elementoAnio){
+            if(anio !== '' && anio.length !== 4){
+                elementoAnio.setCustomValidity('El año de la resolucion debe tener 4 digitos.');
+            }else{
+                elementoAnio.setCustomValidity('');
+            }
+        }
+    }
+
     function actualizarPanelAcreditacion(prefijo){
         var habilitada = $('#' + prefijo + '_habilitada').is(':checked');
         $('#' + prefijo + '_panel .campos-acred').prop('disabled', !habilitada);
@@ -411,8 +486,13 @@
             normalizarPuntajeNumerico(prefijo);
         });
 
+        $('#' + prefijo + '_resolucion_numero,#' + prefijo + '_resolucion_anio').on('input blur change', function(){
+            normalizarResolucion(prefijo);
+        });
+
         actualizarPanelAcreditacion(prefijo);
         normalizarPuntajeNumerico(prefijo);
+        normalizarResolucion(prefijo);
     }
 
     $(document).ready(function(){

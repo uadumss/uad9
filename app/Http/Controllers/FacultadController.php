@@ -348,6 +348,11 @@ class FacultadController extends Controller
 
         $fechaAcreditacion=$this->toNullableDate($form[$prefijo.'_fecha_acreditacion'] ?? null);
         $fechaVencimiento=$this->toNullableDate($form[$prefijo.'_fecha_vencimiento'] ?? null);
+        $resolucionInicio=$this->toNullableDate($form[$prefijo.'_resolucion_inicio'] ?? null);
+        $resolucionFin=$this->toNullableDate($form[$prefijo.'_resolucion_fin'] ?? null);
+        $resolucionFechaEmision=$this->toNullableDate($form[$prefijo.'_resolucion_fecha_emision'] ?? null);
+        $resolucionNumero=$this->toNullableResolutionNumber($form[$prefijo.'_resolucion_numero'] ?? null);
+        $resolucionAnio=$this->toNullableInt($form[$prefijo.'_resolucion_anio'] ?? null);
 
         $puntajeModo=trim((string)($form[$prefijo.'_puntaje_modo'] ?? ''));
         $puntajeNumero=trim((string)($form[$prefijo.'_puntaje_numero'] ?? ''));
@@ -369,6 +374,11 @@ class FacultadController extends Controller
             'proc_total'=>$procTotal,
             'fecha_acreditacion'=>$fechaAcreditacion,
             'fecha_vencimiento'=>$fechaVencimiento,
+            'resolucion_inicio'=>$resolucionInicio,
+            'resolucion_fin'=>$resolucionFin,
+            'resolucion_fecha_emision'=>$resolucionFechaEmision,
+            'resolucion_numero'=>$resolucionNumero,
+            'resolucion_anio'=>$resolucionAnio,
             'estado'=>$this->calcularEstadoAcreditacion($fechaAcreditacion,$fechaVencimiento,$procSc,$procNc),
             'puntaje'=>$puntaje,
             'certificado'=>strtoupper(trim((string)($form[$prefijo.'_certificado'] ?? 'NO')))==='SI',
@@ -384,8 +394,8 @@ class FacultadController extends Controller
 
     private function acreditacionTieneCambios(CarreraAcreditacion $acreditacion,array $datosAcreditacion){
         $camposBooleanos=['acreditada','certificado'];
-        $camposNumericos=['anio','proc_sc','proc_nc','proc_total'];
-        $camposFecha=['fecha_acreditacion','fecha_vencimiento'];
+        $camposNumericos=['anio','proc_sc','proc_nc','proc_total','resolucion_anio'];
+        $camposFecha=['fecha_acreditacion','fecha_vencimiento','resolucion_inicio','resolucion_fin','resolucion_fecha_emision'];
 
         foreach($datosAcreditacion as $campo=>$nuevoValor){
             $valorActual=$acreditacion->{$campo};
@@ -483,6 +493,15 @@ class FacultadController extends Controller
     private function toNullableDate($valor){
         $texto=trim((string)$valor);
         return $texto!=='' ? $texto : null;
+    }
+
+    private function toNullableResolutionNumber($valor){
+        $texto=trim((string)$valor);
+        if($texto===''){
+            return null;
+        }
+
+        return preg_match('/^\d+$/',$texto) ? $texto : null;
     }
 
     private function toNullableScore($valor){

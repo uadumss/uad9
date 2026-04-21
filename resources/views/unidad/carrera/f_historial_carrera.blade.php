@@ -29,6 +29,7 @@
                     <th>Acred.</th>
                     <th>Gestion / Procesos</th>
                     <th>Acreditacion / Venc.</th>
+                    <th>Resolucion</th>
                     <th>Estado</th>
                     <th>Puntaje</th>
                     <th>Certif.</th>
@@ -41,6 +42,16 @@
                         <?php
                         $total = $a->proc_total;
                         $esActiva = (int)$a->cod_cac === (int)$codAcreditacionNacionalActiva;
+                        $resolucionNumero = trim((string)($a->resolucion_numero ?? ''));
+                        $resolucionAnio = trim((string)($a->resolucion_anio ?? ''));
+                        $resolucionCompleta = '';
+                        if($resolucionNumero !== '' && $resolucionAnio !== ''){
+                            $resolucionCompleta = $resolucionNumero.'/'.$resolucionAnio;
+                        }elseif($resolucionNumero !== ''){
+                            $resolucionCompleta = $resolucionNumero;
+                        }elseif($resolucionAnio !== ''){
+                            $resolucionCompleta = $resolucionAnio;
+                        }
                         if($total === null && ($a->proc_sc !== null || $a->proc_nc !== null)){
                             $total = (int)($a->proc_sc ?? 0) + (int)($a->proc_nc ?? 0);
                         }
@@ -58,6 +69,12 @@
                                 <div><span class="text-muted">Acred.:</span> {{$a->fecha_acreditacion ? date('d/m/Y', strtotime($a->fecha_acreditacion)) : ''}}</div>
                                 <div><span class="text-muted">Venc.:</span> {{$a->fecha_vencimiento ? date('d/m/Y', strtotime($a->fecha_vencimiento)) : ''}}</div>
                             </td>
+                            <td class="text-left">
+                                <div><span class="text-muted">Inicio:</span> {{$a->resolucion_inicio ? date('d/m/Y', strtotime($a->resolucion_inicio)) : ''}}</div>
+                                <div><span class="text-muted">Fin:</span> {{$a->resolucion_fin ? date('d/m/Y', strtotime($a->resolucion_fin)) : ''}}</div>
+                                <div><span class="text-muted">Emision:</span> {{$a->resolucion_fecha_emision ? date('d/m/Y', strtotime($a->resolucion_fecha_emision)) : ''}}</div>
+                                <div><span class="text-muted">Nro:</span> {{$resolucionCompleta}}</div>
+                            </td>
                             <td class="text-left">{{$a->estado_vista ?? ''}}</td>
                             <td class="text-left">{{$a->puntaje ?? ''}}</td>
                             <td class="text-center">{{$a->certificado === null ? '' : ($a->certificado ? 'SI' : 'NO')}}</td>
@@ -66,7 +83,7 @@
                     @endforeach
                 @else
                     <tr>
-                        <td class="text-center text-muted" colspan="7">Sin historial de acreditaciones CEUB.</td>
+                        <td class="text-center text-muted" colspan="8">Sin historial de acreditaciones CEUB.</td>
                     </tr>
                 @endif
                 </tbody>
@@ -82,6 +99,7 @@
                     <th>Acred.</th>
                     <th>Gestion / Procesos</th>
                     <th>Acreditacion / Venc.</th>
+                    <th>Resolucion</th>
                     <th>Estado</th>
                     <th>Puntaje</th>
                     <th>Certif.</th>
@@ -94,6 +112,16 @@
                         <?php
                         $total = $a->proc_total;
                         $esActiva = (int)$a->cod_cac === (int)$codAcreditacionInternacionalActiva;
+                        $resolucionNumero = trim((string)($a->resolucion_numero ?? ''));
+                        $resolucionAnio = trim((string)($a->resolucion_anio ?? ''));
+                        $resolucionCompleta = '';
+                        if($resolucionNumero !== '' && $resolucionAnio !== ''){
+                            $resolucionCompleta = $resolucionNumero.'/'.$resolucionAnio;
+                        }elseif($resolucionNumero !== ''){
+                            $resolucionCompleta = $resolucionNumero;
+                        }elseif($resolucionAnio !== ''){
+                            $resolucionCompleta = $resolucionAnio;
+                        }
                         if($total === null && ($a->proc_sc !== null || $a->proc_nc !== null)){
                             $total = (int)($a->proc_sc ?? 0) + (int)($a->proc_nc ?? 0);
                         }
@@ -111,6 +139,12 @@
                                 <div><span class="text-muted">Acred.:</span> {{$a->fecha_acreditacion ? date('d/m/Y', strtotime($a->fecha_acreditacion)) : ''}}</div>
                                 <div><span class="text-muted">Venc.:</span> {{$a->fecha_vencimiento ? date('d/m/Y', strtotime($a->fecha_vencimiento)) : ''}}</div>
                             </td>
+                            <td class="text-left">
+                                <div><span class="text-muted">Inicio:</span> {{$a->resolucion_inicio ? date('d/m/Y', strtotime($a->resolucion_inicio)) : ''}}</div>
+                                <div><span class="text-muted">Fin:</span> {{$a->resolucion_fin ? date('d/m/Y', strtotime($a->resolucion_fin)) : ''}}</div>
+                                <div><span class="text-muted">Emision:</span> {{$a->resolucion_fecha_emision ? date('d/m/Y', strtotime($a->resolucion_fecha_emision)) : ''}}</div>
+                                <div><span class="text-muted">Nro:</span> {{$resolucionCompleta}}</div>
+                            </td>
                             <td class="text-left">{{$a->estado_vista ?? ''}}</td>
                             <td class="text-left">{{$a->puntaje ?? ''}}</td>
                             <td class="text-center">{{$a->certificado === null ? '' : ($a->certificado ? 'SI' : 'NO')}}</td>
@@ -119,7 +153,7 @@
                     @endforeach
                 @else
                     <tr>
-                        <td class="text-center text-muted" colspan="7">Sin historial de acreditaciones ARCU SUR.</td>
+                        <td class="text-center text-muted" colspan="8">Sin historial de acreditaciones ARCU SUR.</td>
                     </tr>
                 @endif
                 </tbody>
