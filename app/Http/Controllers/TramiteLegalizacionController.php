@@ -461,16 +461,13 @@ class TramiteLegalizacionController extends Controller
             $form->merge([
                 'tipo'=>(int)$tramita->cod_tre,
             ]);
-            $buscarEnSitra=(string)($tramita->tre_buscar_en ?? '');
-            if($datosTramita->tra_tipo_tramite=='B' && !empty($form['buscar_en'])){
-                $buscarEnSitra=explode('-', (string)$form['buscar_en'])[0] ?? '';
-            }
-            $a=strtolower(trim((string)$buscarEnSitra));
+            $buscarEnSitra=$this->obtenerBuscarEnSitraLegalizacion($tramita,(string)($form['buscar_en'] ?? ''));
+            $a=$buscarEnSitra;
             $respuesta="";
-            $verificar_sitra=in_array($a,['db','ca','da','tp'],true) ? '2' : '';
+            $verificar_sitra=$this->debeValidarSitraConBuscarEn($a) ? '2' : '';
             $numeroDoc=$form['numero'];
 
-            if(!in_array($datosTramita->tra_tipo_tramite,['E','F'],true) && ($a=='db' || $a=='ca' || $a=='da' || $a=='tp' || $a=='re' || $a=='su')){
+            if(!in_array($datosTramita->tra_tipo_tramite,['E','F'],true) && $this->debeValidarSitraConBuscarEn($a)){
                 try {
                     $respuesta=TramiteLegalizacionController::verificarSitra($persona->per_ci,$form['numero'],$buscarEnSitra);
                 } catch (\Throwable $e) {
@@ -1564,16 +1561,16 @@ class TramiteLegalizacionController extends Controller
 
         $buscarEn='';
         if(!empty($data['buscar_en'])){
-            $buscarEn=explode('-', (string)$data['buscar_en'])[0] ?? '';
+            $buscarEn=$this->normalizarBuscarEnSitra((string)$data['buscar_en']);
         }
         if($buscarEn==='' && !empty($data['tipo'])){
             $tipoDoc=Tramite::find((int)$data['tipo']);
             if($tipoDoc){
-                $buscarEn=(string)($tipoDoc->tre_buscar_en ?? '');
+                $buscarEn=$this->normalizarBuscarEnSitra((string)($tipoDoc->tre_buscar_en ?? ''));
             }
         }
 
-        if(!in_array($buscarEn,['db','ca','da','tp','re','su'],true)){
+        if(!$this->debeValidarSitraConBuscarEn($buscarEn)){
             return response()->json([
                 'ok'=>true,
                 'aplica'=>false,
@@ -2800,6 +2797,32 @@ class TramiteLegalizacionController extends Controller
         }
 
         return strpos($local,$sitra)!==false || strpos($sitra,$local)!==false;
+    }
+
+    private function normalizarBuscarEnSitra(string $buscarEn): string
+    {
+        $buscarEn=trim($buscarEn);
+        if($buscarEn===''){
+            return '';
+        }
+
+        $buscarEn=explode('-', $buscarEn)[0] ?? '';
+        return strtolower(trim($buscarEn));
+    }
+
+    private function obtenerBuscarEnSitraLegalizacion(Tramita $tramita, string $buscarEnFormulario=''): string
+    {
+        $buscarEn=$this->normalizarBuscarEnSitra($buscarEnFormulario);
+        if($buscarEn!==''){
+            return $buscarEn;
+        }
+
+        return $this->normalizarBuscarEnSitra((string)($tramita->tre_buscar_en ?? ''));
+    }
+
+    private function debeValidarSitraConBuscarEn(string $buscarEn): bool
+    {
+        return trim((string)Funciones::DocumentoSitra($buscarEn))!=='';
     }
 
     private function buscarRespaldoInternoSitra(int $idPer, string $numero, string $buscarEn, string $gestion=''): ?Titulo

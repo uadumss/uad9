@@ -403,6 +403,8 @@ class Funciones extends Model
             case "da":  return 'AC'; break;
             case "ca":  return 'CA'; break;
             case "tp":  return 'PN'; break;
+            case "di":  return 'DI'; break;
+            case "tpos": return 'TPOS'; break;
             case "re":  return 'RE'; break;
             case "su":  return 'SU'; break;
         }
