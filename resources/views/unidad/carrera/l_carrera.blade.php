@@ -41,6 +41,7 @@
                     <th rowspan="2">Sistema</th>
                     <th colspan="4">NRO. TOTAL DE PROCESOS</th>
                     <th colspan="5">ULTIMA ACREDITACION</th>
+                    <th colspan="4">RESOLUCION</th>
                     <th rowspan="2" style="min-width: 170px;">Opciones</th>
                 </tr>
                 <tr class="bg-gray-600 text-white text-center align-middle">
@@ -53,6 +54,10 @@
                     <th>Estado</th>
                     <th>Puntaje</th>
                     <th>Certificados</th>
+                    <th>Inicio</th>
+                    <th>Fin</th>
+                    <th>F. emision</th>
+                    <th>Nro</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -100,6 +105,16 @@
 
                         $estado = $acreditacion ? trim((string)($acreditacion->estado_vista ?? $acreditacion->estado)) : '';
                         $puntaje = $acreditacion ? trim((string)$acreditacion->puntaje) : '';
+                        $resolucionNumero = $acreditacion ? trim((string)($acreditacion->resolucion_numero ?? '')) : '';
+                        $resolucionAnio = $acreditacion ? trim((string)($acreditacion->resolucion_anio ?? '')) : '';
+                        $resolucionCompleta = '';
+                        if($resolucionNumero !== '' && $resolucionAnio !== ''){
+                            $resolucionCompleta = $resolucionNumero.'/'.$resolucionAnio;
+                        }elseif($resolucionNumero !== ''){
+                            $resolucionCompleta = $resolucionNumero;
+                        }elseif($resolucionAnio !== ''){
+                            $resolucionCompleta = $resolucionAnio;
+                        }
                         ?>
                         <tr>
                             @if($indiceAcred===0)
@@ -119,6 +134,10 @@
                             <td class="text-center">{{$estado}}</td>
                             <td class="text-center">{{$puntaje}}</td>
                             <td class="text-center">{{$acreditacion ? ($acreditacion->certificado===null ? '' : ($acreditacion->certificado ? 'SI' : 'NO')) : ''}}</td>
+                            <td class="text-center">{{$acreditacion && $acreditacion->resolucion_inicio ? date('d/m/Y', strtotime($acreditacion->resolucion_inicio)) : ''}}</td>
+                            <td class="text-center">{{$acreditacion && $acreditacion->resolucion_fin ? date('d/m/Y', strtotime($acreditacion->resolucion_fin)) : ''}}</td>
+                            <td class="text-center">{{$acreditacion && $acreditacion->resolucion_fecha_emision ? date('d/m/Y', strtotime($acreditacion->resolucion_fecha_emision)) : ''}}</td>
+                            <td class="text-center">{{$resolucionCompleta}}</td>
                             @if($indiceAcred===0)
                                 <td class="text-center align-middle" style="min-width: 170px;" rowspan="{{$rowspan}}">
                                     <div class="d-inline-flex align-items-center justify-content-center flex-nowrap">
@@ -189,6 +208,10 @@
         if(typeof window.normalizarPuntajeNumerico === 'function'){
             window.normalizarPuntajeNumerico('nac');
             window.normalizarPuntajeNumerico('int');
+        }
+        if(typeof window.normalizarResolucion === 'function'){
+            window.normalizarResolucion('nac');
+            window.normalizarResolucion('int');
         }
         var fechasOk = validarRangoFechas('nac') && validarRangoFechas('int');
 
