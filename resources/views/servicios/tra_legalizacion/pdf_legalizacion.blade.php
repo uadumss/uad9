@@ -95,7 +95,7 @@
     </footer>
 
     <div>
-        <div id="watermark ">
+        <div id="watermark">
             <img src="../public/img/icon/logo-umss-fondo.jpg" style="width: 220px; height: 260px"/>
         </div>
         <table>
