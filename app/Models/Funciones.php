@@ -5,9 +5,34 @@ namespace App\Models;
 use App\Http\Controllers\Noatentado\SancionadosController;
 use App\Models\Noatentado\D_sancion;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class Funciones extends Model
 {
+    private static function fechaLiteralDesdeValor($fecha): string
+    {
+        $valor = trim((string)$fecha);
+        if ($valor === '') {
+            return '';
+        }
+
+        $formatos = ['Y-m-d', 'd/m/Y', 'd-m-Y', 'Y/m/d', 'Y-m-d H:i:s', 'd/m/Y H:i:s', 'd-m-Y H:i:s'];
+        foreach ($formatos as $formato) {
+            $dt = \DateTime::createFromFormat($formato, $valor);
+            if ($dt instanceof \DateTime) {
+                return $dt->format('d').' de '.self::mes((int)$dt->format('n')).' de '.$dt->format('Y');
+            }
+        }
+
+        $timestamp = strtotime($valor);
+        if ($timestamp !== false) {
+            return date('d', $timestamp).' de '.self::mes((int)date('n', $timestamp)).' de '.date('Y', $timestamp);
+        }
+
+        // Si no se puede parsear, se usa el texto original para no perder el dato cargado.
+        return $valor;
+    }
+
     public static function dia($fecha)
     {
         $array_dias['Sunday'] = "Domingo";
@@ -56,11 +81,22 @@ class Funciones extends Model
         $esFemenino = in_array($sexo, ['F', 'FEMENINO', 'MUJER']);
         $tratamiento = $esFemenino ? 'la señora' : 'el señor';
         $interesado = $esFemenino ? 'DE LA INTERESADA' : 'DEL INTERESADO';
+        $delSenor = $esFemenino ? 'de la señora' : 'del señor';
 
         $glosa= str_replace("{--el la señora--}", $tratamiento, $glosa);
+        $glosa= str_replace("{--el la se&ntilde;ora--}", $tratamiento, $glosa);
         $glosa= str_replace("{el la señora}", $tratamiento, $glosa);
+        $glosa= str_replace("{el la se&ntilde;ora}", $tratamiento, $glosa);
         $glosa= str_replace("{--DEL INTERESADO--}", $interesado, $glosa);
         $glosa= str_replace("{DEL INTERESADO}", $interesado, $glosa);
+        $glosa= str_replace("{--del señor--}", $delSenor, $glosa);
+        $glosa= str_replace("{--del se&ntilde;or--}", $delSenor, $glosa);
+        $glosa= str_replace("{del señor}", $delSenor, $glosa);
+        $glosa= str_replace("{del se&ntilde;or}", $delSenor, $glosa);
+
+        // TinyMCE puede partir placeholders con etiquetas; cubrir ese formato también.
+        $glosa = preg_replace('/\{--\s*el\s+la\s+se(?:ñ|&ntilde;)ora\s*--(?:\s*<[^>]+>\s*)*\}/iu', $tratamiento, $glosa);
+        $glosa = preg_replace('/\{--\s*del\s+se(?:ñ|&ntilde;)or\s*--(?:\s*<[^>]+>\s*)*\}/iu', $delSenor, $glosa);
 
         $glosa= str_replace("{nombre}", mb_strtoupper($nombre), $glosa);
         $glosa= str_replace("{titulo_glosa}", $titulo_glosa, $glosa);
@@ -104,7 +140,7 @@ class Funciones extends Model
 
         //========================
         if($titulo) {
-            $f_e= date('d',strtotime($titulo->tit_fecha_emision))." de ".Funciones::mes((int)date('n',strtotime($titulo->tit_fecha_emision))).' de '.date('Y',strtotime($titulo->tit_fecha_emision));
+            $f_e = self::fechaLiteralDesdeValor($titulo->tit_fecha_emision ?? '');
             $gr=$titulo->tit_grado;
             $numero_folio=$titulo->tit_nro_folio;
             $f_folio=$titulo->tit_fecha_folio;
@@ -116,13 +152,17 @@ class Funciones extends Model
                 $numero="<span style='font-weight:bold'>".$docleg->dtra_numero."/".substr($docleg->dtra_gestion,-2)."</span>"; // numero del detalle de tramite
             }
             $numero="<span style='font-weight:bold'>".$docleg->dtra_numero."/".substr($docleg->dtra_gestion,-2)."</span>"; // numero del detalle de tramite
-            $titulo_formatted = "<span style='font-weight:bold'>" . $titulo->tit_titulo . "</span>"; //numero de titulo
+            $tituloBase = trim((string)($titulo->tit_titulo ?? ''));
+            if ($tituloBase === '') {
+                $tituloBase = trim((string)($docleg->dtra_titulo ?? ''));
+            }
+            $titulo_formatted = "<span style='font-weight:bold'>" . $tituloBase . "</span>"; //numero de titulo
             $fecha_titulo = "<span style='font-weight:bold'>" . $f_e . "</span>"; // fecha emision del titulo
             $grado = "<span style='font-weight:bold'>" . $gr . "</span>";// grado del titulo
             $autoridad = "<span style='font-weight:bold'>AUT 1 </span>"; // firma autoridad 1
             $autoridad2 = "<span style='font-wight:bold'>AUT 2</span>"; // firma autoridad 2
 
-            if(($tipo=="da" || $tipo=="ca" || $tipo=="tp") && $unidadAcademica){
+            if($unidadAcademica && !empty($unidadAcademica->car_nombre)){
                 $facultad = "<span style='font-weight:bold'>" . $unidadAcademica->fac_nombre . "</span>"; // nombre de la facultad
                 $carrera = "<span style='font-weight:bold'>" . $unidadAcademica->car_nombre . "</span>"; // nombre de la carrera
 
@@ -145,11 +185,15 @@ class Funciones extends Model
             $glosa= str_replace("{fecha_folio}", $fecha_folio, $glosa);
 
         } else {
-            // Fallback para {titulo} y {fecha_titulo} si no existe $titulo
-            $tituloFallback = trim((string)$docleg->dtra_titulo);
-            if ($tituloFallback !== '') {
-                $glosa= str_replace("{titulo}", "<span style='font-weight:bold'>".$tituloFallback."</span>", $glosa);
-            }
+            // Si no hay título, se mantiene el placeholder original.
+        }
+
+        if ($titulo && strpos($glosa, '{fecha_titulo}') !== false) {
+            $fechaTituloValor = self::fechaLiteralDesdeValor($titulo->tit_fecha_emision ?? '');
+            $glosa = str_replace('{fecha_titulo}', "<span style='font-weight:bold'>".$fechaTituloValor."</span>", $glosa);
+        }
+        if (strpos($glosa, '{carrera}') !== false && !empty($unidadAcademica) && !empty($unidadAcademica->car_nombre)) {
+            $glosa = str_replace('{carrera}', "<span style='font-weight:bold'>".$unidadAcademica->car_nombre."</span>", $glosa);
         }
         
         // Resolución de acreditación (aplica siempre)
@@ -186,6 +230,8 @@ class Funciones extends Model
                 }
             }
         }
+
+        // Si no hay datos de respaldo, se mantienen placeholders para revisión manual.
         
         return $glosa;
     }
