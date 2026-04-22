@@ -2622,14 +2622,23 @@ class TramiteLegalizacionController extends Controller
         return $porcentaje>=92;
     }
 
+    private function normalizarCodigoCuenta(string $codigo): string
+    {
+        return str_replace('.', '', $codigo);
+    }
+
     private function buscarTramiteSugeridoDesdeFilaRecaudacion(array $fila, string $tipoTramite): ?Tramite
     {
         $codigoCuenta=trim((string)($fila['codigo_cuenta'] ?? ''));
         $nombreCuenta=trim((string)($fila['cuenta'] ?? ''));
 
         if($codigoCuenta!==''){
+            // Normalizar: la API puede devolver "151038.043" y la BD tener "151038043" (sin punto) o viceversa.
+            $codigoCuentaNorm=$this->normalizarCodigoCuenta($codigoCuenta);
+            $variantesCuenta=array_unique(array_filter([$codigoCuenta,$codigoCuentaNorm],'strlen'));
+
             $porCuenta=Tramite::where('tre_hab','=','t')
-                ->where('tre_numero_cuenta','=',$codigoCuenta)
+                ->whereIn('tre_numero_cuenta',$variantesCuenta)
                 ->get();
 
             $porTipo=$porCuenta->where('tre_tipo','=',$tipoTramite)->values();
