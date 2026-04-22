@@ -18,7 +18,6 @@ use Illuminate\Support\Facades\Schema;
 
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
-
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -408,7 +407,37 @@ class ApostillaController extends Controller
             $documento->dapo_valorado_preimpreso=$controlIngresado;
             $documento->dapo_valorado_gestion=$gestion_valorado;
 
-            $documento->dapo_buscar_en=$apostilla->lis_tipo;
+            // lis_tipo ya contiene el valor buscar_en (da, db, tpos, etc.) configurado al crear el tipo de apostilla
+            $buscarEnSitra=trim((string)($apostilla->lis_tipo ?? ''));
+            $documento->dapo_buscar_en=$buscarEnSitra;
+
+            // Verificar en SITRA si corresponde (igual que en servicios)
+            $verificarSitra='';
+            $numeroDocumento=trim((string)($form['numero'] ?? ''));
+            $debeVerificarSitra=($buscarEnSitra!=='' && $buscarEnSitra!=='sid' && $buscarEnSitra!=='res' && $numeroDocumento!=='' && $numeroDocumento!=='-');
+            if($debeVerificarSitra){
+                $verificarSitra='2'; // por defecto: no existe
+                try{
+                    $respuestaSitra=$this->verificarSitraApostilla((string)$persona->per_ci,$numeroDocumento,$buscarEnSitra);
+                    $nombreSitra=trim((string)($respuestaSitra->nombre ?? ''));
+                    $tipoSitra=strtolower(trim((string)($respuestaSitra->tipo ?? '')));
+                    $numeroSitra=trim((string)($respuestaSitra->numero ?? ''));
+                    $nombreLocal=mb_strtoupper(trim((string)(($persona->per_apellido ?? '').' '.($persona->per_nombre ?? ''))));
+                    $tipoLocal=strtolower(trim((string)Funciones::DocumentoSitra($buscarEnSitra)));
+                    $numeroLocal=trim((string)$numeroDocumento);
+                    if($nombreSitra!=='' || $tipoSitra!=='' || $numeroSitra!==''){
+                        $coincideNombre=(bool)preg_match('/'.preg_quote(explode(' ',$nombreSitra)[0] ?? '','/').'/i',$nombreLocal);
+                        if($coincideNombre && $tipoLocal===$tipoSitra && $numeroLocal===$numeroSitra){
+                            $verificarSitra='0'; // coincide
+                        }else{
+                            $verificarSitra='1'; // no coincide
+                        }
+                    }
+                }catch(\Throwable $e){
+                    $verificarSitra='2';
+                }
+            }
+            $documento->dapo_verificacion_sitra=$verificarSitra;
             $documento->save();
 
             $errorUso='';
@@ -429,6 +458,47 @@ class ApostillaController extends Controller
         }else{
             return $this->responderAgregarTramiteApostilla($form,false,'No se puede agregar más documentos',$codApos);
         }
+    }
+
+    public function verificacion_sitra_apostilla(string $cod_dapo)
+    {
+        $docleg=Detalle_apostilla::find($cod_dapo);
+        if(!$docleg){
+            return response()->json(['error'=>'Documento no encontrado'],404);
+        }
+        $tramiteApostilla=Apostilla::find($docleg->cod_apos);
+        $persona=$tramiteApostilla ? Persona::find($tramiteApostilla->id_per) : null;
+        $apostilla=Lista_doc_apostilla::find($docleg->cod_lis);
+
+        $buscarEn=trim((string)($docleg->dapo_buscar_en ?? ''));
+        $buscarEnNombre=Funciones::nombre_titulo($buscarEn);
+        $respuesta=(object)[];
+        $fuente='sitra';
+
+        if($buscarEn!=='' && $buscarEn!=='sid' && $buscarEn!=='res'){
+            try{
+                $respuesta=$this->verificarSitraApostilla(
+                    (string)($persona->per_ci ?? ''),
+                    (string)($docleg->dapo_numero_documento ?? ''),
+                    $buscarEn
+                );
+            }catch(\Throwable $e){
+                $respuesta=(object)[];
+            }
+            if(!is_object($respuesta)){
+                $respuesta=(object)[];
+            }
+        }
+
+        return view('apostilla.tramite.verificacion_sitra_apostilla',compact('docleg','persona','apostilla','respuesta','fuente','buscarEnNombre'));
+    }
+
+    private function verificarSitraApostilla(string $ci, string $numero, string $buscarEn): object
+    {
+        $documento=Funciones::DocumentoSitra($buscarEn);
+        $ruta='http://sitra.umss.net/consulta/api/ci/'.$ci.'/numero/'.$numero.'/tipo/'.$documento;
+        $data=json_decode(file_get_contents($ruta));
+        return is_object($data) ? $data : (object)[];
     }
 
     private function responderAgregarTramiteApostilla(Request $request, bool $ok, string $message, string $codApos)

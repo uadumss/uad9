@@ -276,34 +276,36 @@
         }
     </script>
     <script>
-        $('#dataTable').dataTable( {
-            "pageLength": 500
+        $(document).ready(function(){
+            $('#dataTable').dataTable( {
+                "pageLength": 500
+            });
+
+            $(document)
+                .off('show.bs.modal.apoSecundaria','#tramite_apostilla')
+                .on('show.bs.modal.apoSecundaria','#tramite_apostilla', function () {
+                    var modalPrincipal=$('#apostilla');
+                    if(modalPrincipal.hasClass('show')){
+                        modalPrincipal.attr('data-apo-secundaria-abierta','1').css('visibility','hidden');
+                    }
+                });
+
+            $(document)
+                .off('hidden.bs.modal.apoSecundaria','#tramite_apostilla')
+                .on('hidden.bs.modal.apoSecundaria','#tramite_apostilla', function () {
+                    var modalPrincipal=$('#apostilla');
+                    $('#panel_tramite_apostilla').html('');
+                    if(modalPrincipal.attr('data-apo-secundaria-abierta')==='1'){
+                        modalPrincipal.css('visibility','').removeAttr('data-apo-secundaria-abierta');
+                    }
+                });
+
+            $(document)
+                .off('hidden.bs.modal.apoPrincipal','#apostilla')
+                .on('hidden.bs.modal.apoPrincipal','#apostilla', function () {
+                    $(this).css('visibility','').removeAttr('data-apo-secundaria-abierta');
+                    $('#panel_tramite_apostilla').html('');
+                });
         });
-
-        $(document)
-            .off('show.bs.modal.apoSecundaria','#tramite_apostilla')
-            .on('show.bs.modal.apoSecundaria','#tramite_apostilla', function () {
-                var modalPrincipal=$('#apostilla');
-                if(modalPrincipal.hasClass('show')){
-                    modalPrincipal.attr('data-apo-secundaria-abierta','1').css('visibility','hidden');
-                }
-            });
-
-        $(document)
-            .off('hidden.bs.modal.apoSecundaria','#tramite_apostilla')
-            .on('hidden.bs.modal.apoSecundaria','#tramite_apostilla', function () {
-                var modalPrincipal=$('#apostilla');
-                $('#panel_tramite_apostilla').html('');
-                if(modalPrincipal.attr('data-apo-secundaria-abierta')==='1'){
-                    modalPrincipal.css('visibility','').removeAttr('data-apo-secundaria-abierta');
-                }
-            });
-
-        $(document)
-            .off('hidden.bs.modal.apoPrincipal','#apostilla')
-            .on('hidden.bs.modal.apoPrincipal','#apostilla', function () {
-                $(this).css('visibility','').removeAttr('data-apo-secundaria-abierta');
-                $('#panel_tramite_apostilla').html('');
-            });
     </script>
 @endsection

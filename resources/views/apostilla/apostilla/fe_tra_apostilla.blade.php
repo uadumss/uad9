@@ -55,7 +55,7 @@
                                     <select class="custom-select custom-select-sm border-0 " name="tipo">
                                         <option></option>
                                         <option value="db">DIPLOMA DE BACHILLER</option>
-                                        <option value="ca">CERTIFICADO ACEDEMICO</option>
+                                        <option value="ca">CERTIFICADO ACADEMICO</option>
                                         <option value="da">DIPLOMA ACADEMICO</option>
                                         <option value="tp">TITULO PROFESIONAL</option>
                                         <option value="di">DIPLOMADO</option>
@@ -108,7 +108,7 @@
                                             <th class="text-right font-italic border-bottom">Buscar en :</th>
                                             <td class="border-bottom border-dark">
                                                 <select class="custom-select custom-select-sm border-0 " name="tipo">
-                                                    <option value="{{$tramite['tre_buscar_en']}}">{{strtoupper($tramite['lis_tipo'])}}</option>
+                                                    <option value="{{$tramite['lis_tipo']}}">{{strtoupper($tramite['lis_tipo'])}}</option>
                                                     <option></option>
                                                     <option value="db">DB</option>
                                                     <option value="ca">CA</option>
@@ -118,6 +118,7 @@
                                                     <option value="tpos">TPOS</option>
                                                     <option value="re">RE</option>
                                                     <option value="su">SU</option>
+                                                    <option value="sid">SID</option>
                                                 </select>
                                             </td>
                                         </tr>
