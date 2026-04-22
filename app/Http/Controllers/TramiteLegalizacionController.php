@@ -2810,7 +2810,7 @@ class TramiteLegalizacionController extends Controller
         return strtolower(trim($buscarEn));
     }
 
-    private function obtenerBuscarEnSitraLegalizacion(Tramita $tramita, string $buscarEnFormulario=''): string
+    private function obtenerBuscarEnSitraLegalizacion(Tramite $tramita, string $buscarEnFormulario=''): string
     {
         $buscarEn=$this->normalizarBuscarEnSitra($buscarEnFormulario);
         if($buscarEn!==''){
