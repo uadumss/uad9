@@ -554,12 +554,20 @@ class TramiteLegalizacionController extends Controller
                             ->where('id_per','=',$datosTramita->id_per)->first();
 
                     }else{
-
                         $titulo=Titulo::where('tit_nro_titulo','=',$form['numero'])
                             ->where('tit_gestion','=',$form['gestion'])
                             ->where('tit_tipo','=',$buscar_en[0])
 			                ->where('id_per','=',$datosTramita->id_per)->first();
                     }
+                }
+
+                if(!$titulo){
+                    $titulo=$this->buscarRespaldoInternoSitra(
+                        (int)$datosTramita->id_per,
+                        (string)$form['numero'],
+                        (string)$buscar_en[0],
+                        (string)$form['gestion']
+                    );
                 }
             }
             //dd($titulo);
@@ -2862,6 +2870,61 @@ class TramiteLegalizacionController extends Controller
         ]);
         return $query->first();
     }
+
+    private function resolverTituloParaGlosa(?Titulo $titulo, int $idPer, string $numero, string $buscarEn, string $gestion=''): ?Titulo
+    {
+        if ($titulo) {
+            return $titulo;
+        }
+
+        $buscarEn = trim($buscarEn);
+        if ($idPer <= 0 || trim($numero) === '' || $buscarEn === '') {
+            return null;
+        }
+
+        $buscarBase = explode('-', $buscarEn)[0];
+        $titulo = $this->buscarRespaldoInternoSitra($idPer, $numero, $buscarBase, $gestion);
+        if ($titulo) {
+            return $titulo;
+        }
+
+        return $this->buscarRespaldoInternoSitra($idPer, $numero, $buscarBase, '');
+    }
+
+    private function resolverTituloPorPersonaYBuscarEn(int $idPer, string $buscarEn): ?Titulo
+    {
+        if ($idPer <= 0) {
+            return null;
+        }
+
+        $buscarBase = strtolower(trim(explode('-', $buscarEn)[0] ?? ''));
+        $idsPersona = [$idPer];
+        $ciPersona = trim((string)DB::table('personas')->where('id_per', '=', $idPer)->value('per_ci'));
+        if ($ciPersona !== '') {
+            $idsCi = DB::table('personas')->where('per_ci', '=', $ciPersona)->pluck('id_per')->all();
+            if (!empty($idsCi)) {
+                $idsPersona = $idsCi;
+            }
+        }
+
+        $query = Titulo::whereIn('id_per', $idsPersona)
+            ->whereNotNull('tit_fecha_emision');
+
+        if ($buscarBase === 'da') {
+            $query->whereIn('tit_tipo', ['da', 'ca'])
+                ->whereExists(function ($subQuery) {
+                $subQuery->select(DB::raw(1))
+                    ->from('diploma_academicos')
+                    ->whereColumn('diploma_academicos.cod_tit', 'titulos.cod_tit');
+            });
+        } elseif ($buscarBase === 'tpos') {
+            $query->whereIn('tit_tipo', ['tpos', 'di']);
+        } elseif ($buscarBase !== '') {
+            $query->where('tit_tipo', '=', $buscarBase);
+        }
+
+        return $query->orderByDesc('tit_fecha_emision')->orderByDesc('cod_tit')->first();
+    }
     public function obs_docleg($cod_dtra){
         $docleg=DB::table('d_tramitas')->join('tramites','d_tramitas.cod_tre','=','tramites.cod_tre')
             ->where('cod_dtra',$cod_dtra)
@@ -2934,15 +2997,16 @@ class TramiteLegalizacionController extends Controller
         $tramita = Tramita::find($docleg->cod_tra);
         $persona = Persona::find($tramita->id_per);
             $titulo = Titulo::find($docleg->dtra_cod_tit);
-            $tipo = $titulo ? $titulo->tit_tipo : $tramite->tre_buscar_en;
+            if (!$titulo) {
+                $titulo = $this->resolverTituloPorPersonaYBuscarEn((int)$tramita->id_per, (string)$tramite->tre_buscar_en);
+            }
+            $tipo = $titulo ? mb_strtolower((string)$titulo->tit_tipo) : mb_strtolower((string)$tramite->tre_buscar_en);
             $unidadAcademica = '';
             if ($titulo){
-                if ($tipo == 'ca' || $tipo == 'da' || $tipo == 'tp') {
-                    $unidadAcademica = DB::table('diploma_academicos')->join('carreras', 'diploma_academicos.cod_car', '=', 'carreras.cod_car')
-                        ->join('facultads', 'carreras.cod_fac', '=', 'facultads.cod_fac')
-                        ->select('carreras.cod_car', 'carreras.cod_fac', 'car_nombre', 'fac_nombre')
-                        ->where('cod_tit', '=', $titulo->cod_tit)->first();
-                }
+                $unidadAcademica = DB::table('diploma_academicos')->join('carreras', 'diploma_academicos.cod_car', '=', 'carreras.cod_car')
+                    ->join('facultads', 'carreras.cod_fac', '=', 'facultads.cod_fac')
+                    ->select('carreras.cod_car', 'carreras.cod_fac', 'car_nombre', 'fac_nombre')
+                    ->where('cod_tit', '=', $titulo->cod_tit)->first();
             }
 
             $apoderado="";
@@ -2962,13 +3026,34 @@ class TramiteLegalizacionController extends Controller
                 }
             }else{
                 $glosa=Glosa::find($docleg->dtra_cod_glosa);
-                /*if($glosa){
-                    //return "glosa no vacia";
+                if($glosa){
+                    $titulo = Titulo::find($docleg->dtra_cod_tit);
+                    if (!$titulo) {
+                        $titulo = $this->resolverTituloPorPersonaYBuscarEn((int)$tramita->id_per, (string)$tramite->tre_buscar_en);
+                    }
+                    $unidadAcademica = '';
+                    if ($titulo) {
+                        $unidadAcademica = DB::table('diploma_academicos')->join('carreras', 'diploma_academicos.cod_car', '=', 'carreras.cod_car')
+                            ->join('facultads', 'carreras.cod_fac', '=', 'facultads.cod_fac')
+                            ->select('carreras.cod_car', 'carreras.cod_fac', 'car_nombre', 'fac_nombre')
+                            ->where('cod_tit', '=', $titulo->cod_tit)->first();
+                    }
                     $docleg->dtra_glosa=Funciones::glosa_tarmites($tramite,$glosa,$docleg,$persona,$titulo,$unidadAcademica);
                 }else{
                     \Session::flash('error','La glosa anteriormente seleccionada fue eliminada, se procesdio a elegir otra glosa');
+                    $titulo = Titulo::find($docleg->dtra_cod_tit);
+                    if (!$titulo) {
+                        $titulo = $this->resolverTituloPorPersonaYBuscarEn((int)$tramita->id_per, (string)$tramite->tre_buscar_en);
+                    }
+                    $unidadAcademica = '';
+                    if ($titulo) {
+                        $unidadAcademica = DB::table('diploma_academicos')->join('carreras', 'diploma_academicos.cod_car', '=', 'carreras.cod_car')
+                            ->join('facultads', 'carreras.cod_fac', '=', 'facultads.cod_fac')
+                            ->select('carreras.cod_car', 'carreras.cod_fac', 'car_nombre', 'fac_nombre')
+                            ->where('cod_tit', '=', $titulo->cod_tit)->first();
+                    }
                     $docleg->dtra_glosa=Funciones::glosa_tarmites($tramite,$glosas[0],$docleg,$persona,$titulo,$unidadAcademica);
-                }*/
+                }
             }
             $qr=$this->valorQR(date('d'),date('m'),date('Y'));
             $qr_generado='http://www.archivos.umss.edu.bo/verificar_tramite/index.php?q='.$qr;
@@ -2996,15 +3081,16 @@ class TramiteLegalizacionController extends Controller
         $tramita = Tramita::find($docleg->cod_tra);
         $persona = Persona::find($tramita->id_per);
         $titulo = Titulo::find($docleg->dtra_cod_tit);
-        $tipo = $titulo ? $titulo->tit_tipo : $tramite->tre_buscar_en;
+        if (!$titulo) {
+            $titulo = $this->resolverTituloPorPersonaYBuscarEn((int)$tramita->id_per, (string)$tramite->tre_buscar_en);
+        }
+        $tipo = $titulo ? mb_strtolower((string)$titulo->tit_tipo) : mb_strtolower((string)$tramite->tre_buscar_en);
         $unidadAcademica = '';
         if ($titulo){
-            if ($tipo == 'ca' || $tipo == 'da' || $tipo == 'tp') {
-                $unidadAcademica = DB::table('diploma_academicos')->join('carreras', 'diploma_academicos.cod_car', '=', 'carreras.cod_car')
-                    ->join('facultads', 'carreras.cod_fac', '=', 'facultads.cod_fac')
-                    ->select('carreras.cod_car', 'carreras.cod_fac', 'car_nombre', 'fac_nombre')
-                    ->where('cod_tit', '=', $titulo->cod_tit)->first();
-            }
+            $unidadAcademica = DB::table('diploma_academicos')->join('carreras', 'diploma_academicos.cod_car', '=', 'carreras.cod_car')
+                ->join('facultads', 'carreras.cod_fac', '=', 'facultads.cod_fac')
+                ->select('carreras.cod_car', 'carreras.cod_fac', 'car_nombre', 'fac_nombre')
+                ->where('cod_tit', '=', $titulo->cod_tit)->first();
         }
         $docleg->dtra_glosa=Funciones::glosa_tarmites($tramite,$glosa,$docleg,$persona,$titulo,$unidadAcademica);
         $docleg->save();
