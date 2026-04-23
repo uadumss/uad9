@@ -254,13 +254,27 @@ class PersonaController extends Controller
             return (string)$item['ci'];
         },$registrosLista);
 
-        $personas=Persona::whereIn('per_ci',$ciLista)
+        $personas=Persona::where(function($q) use ($ciLista){
+                $q->whereIn('per_ci',$ciLista)
+                    ->orWhereIn(
+                        DB::raw("REGEXP_REPLACE(UPPER(COALESCE(per_ci,'')),'[^A-Z0-9]','','g')"),
+                        $ciLista
+                    );
+            })
             ->select('id_per','per_ci','per_apellido','per_nombre')
+            ->orderBy('id_per')
             ->get();
 
         $personasPorCi=[];
         foreach($personas as $persona){
-            $personasPorCi[(string)$persona->per_ci]=$persona;
+            $ciPersonaNormalizado=$this->normalizarCiCuadis((string)$persona->per_ci);
+            if($ciPersonaNormalizado===''){
+                continue;
+            }
+
+            if(!isset($personasPorCi[$ciPersonaNormalizado])){
+                $personasPorCi[$ciPersonaNormalizado]=$persona;
+            }
         }
 
         $totalPersonasNuevas=0;
@@ -568,12 +582,7 @@ class PersonaController extends Controller
             return PersonaCuadis::where('id_per','=',$idPer)->first();
         }
 
-        $ci=$this->normalizarCiCuadis($ci);
-        if($ci===''){
-            return null;
-        }
-
-        $persona=Persona::where('per_ci','=',$ci)->select('id_per')->first();
+        $persona=$this->buscarPersonaPorCiNormalizado($ci);
         if(!$persona){
             return null;
         }
@@ -593,6 +602,28 @@ class PersonaController extends Controller
         $ci=preg_replace('/[^A-Z0-9]/','',$ci);
 
         return substr((string)$ci,0,12);
+    }
+
+    private function buscarPersonaPorCiNormalizado(string $ci): ?Persona
+    {
+        $ci=$this->normalizarCiCuadis($ci);
+        if($ci===''){
+            return null;
+        }
+
+        $persona=Persona::where('per_ci','=',$ci)
+            ->select('id_per','per_ci')
+            ->orderBy('id_per')
+            ->first();
+
+        if($persona){
+            return $persona;
+        }
+
+        return Persona::whereRaw("REGEXP_REPLACE(UPPER(COALESCE(per_ci,'')),'[^A-Z0-9]','','g') = ?",[$ci])
+            ->select('id_per','per_ci')
+            ->orderBy('id_per')
+            ->first();
     }
     public function lista_duplicados($tipo){
         switch ($tipo){

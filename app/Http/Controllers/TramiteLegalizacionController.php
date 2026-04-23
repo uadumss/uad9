@@ -1214,7 +1214,7 @@ class TramiteLegalizacionController extends Controller
 
     private function esPersonaRegistradaCuadis(string $ci,int $idPer=0): bool
     {
-        $ci=trim($ci);
+        $ci=mb_strtoupper(trim($ci));
         if($ci==='' && $idPer<=0){
             return false;
         }
@@ -1223,23 +1223,35 @@ class TramiteLegalizacionController extends Controller
             return false;
         }
 
-        $query=DB::table('personas_cuadis')
+        $partesCi=preg_split('/\s+/',$ci);
+        $ciNormalizado=$partesCi && isset($partesCi[0]) ? (string)$partesCi[0] : $ci;
+        $ciNormalizado=preg_replace('/[^A-Z0-9]/','',$ciNormalizado);
+        $ciNormalizado=substr((string)$ciNormalizado,0,12);
+
+        $queryBase=DB::table('personas_cuadis')
             ->where(function($q){
                 $q->whereNull('pcu_hab')
                     ->orWhere('pcu_hab','=',true);
             });
 
         if($idPer>0){
-            $query->where('id_per','=',$idPer);
-            return $query->exists();
+            $encontradoPorId=(clone $queryBase)
+                ->where('id_per','=',$idPer)
+                ->exists();
+
+            if($encontradoPorId){
+                return true;
+            }
         }
 
-        if($ci!==''){
-            $query->join('personas as p','p.id_per','=','personas_cuadis.id_per')
-                ->where('p.per_ci','=',$ci);
+        if($ciNormalizado!==''){
+            return (clone $queryBase)
+                ->join('personas as p','p.id_per','=','personas_cuadis.id_per')
+                ->whereRaw("REGEXP_REPLACE(UPPER(COALESCE(p.per_ci,'')),'[^A-Z0-9]','','g') = ?",[$ciNormalizado])
+                ->exists();
         }
 
-        return $query->exists();
+        return false;
     }
 
     private function resolverSeleccionTipoLegalizacionSegura(
