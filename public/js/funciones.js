@@ -1,4 +1,20 @@
 //==================Funciones en servicios
+function obtenerDetalleErrorHttp(xhr){
+    if(!xhr){
+        return 'Error desconocido.';
+    }
+
+    if(xhr.responseJSON && xhr.responseJSON.message){
+        return xhr.responseJSON.message;
+    }
+
+    if(typeof xhr.responseText === 'string' && xhr.responseText.trim() !== ''){
+        return xhr.responseText.trim();
+    }
+
+    return 'Sin detalle disponible.';
+}
+
 function cargarDatos(ruta,panel){
     $('#'+panel).html("<br/><br/><div class='d-flex justify-content-center text-warning'><div class='spinner-border' role='status'> <span class='visually-hidden'></span></div><span class='text-white font-weight-bold'>&nbsp;  Cargando ...</span></div>");
     $.ajax({
@@ -9,6 +25,13 @@ function cargarDatos(ruta,panel){
             $('#'+panel).html(resp);
         },
         error: function (xhr) {
+            console.error('Error al cargar la ventana AJAX:', {
+                ruta: ruta,
+                status: xhr ? xhr.status : null,
+                statusText: xhr ? xhr.statusText : null,
+                response: obtenerDetalleErrorHttp(xhr)
+            });
+
             var mensaje='Ocurrio un error interno al cargar la ventana.';
             if(xhr && xhr.status===403){
                 mensaje='No tiene permisos para esta acción.';
@@ -16,6 +39,8 @@ function cargarDatos(ruta,panel){
                 mensaje='No se encontro la ruta solicitada.';
             }else if(xhr && xhr.status===419){
                 mensaje='La sesion expiro. Recargue la pagina e intente nuevamente.';
+            }else if(xhr && xhr.status===500){
+                mensaje='Error interno del servidor.';
             }
             $('#'+panel).html("<span class='text-white font-weight-bold bg-danger rounded p-1'>"+mensaje+"</span>");
         }
@@ -54,6 +79,14 @@ function enviar(formulario,ruta,panel){
                 $('#'+panel).html(resp);
             },
             error:function(xhr) {
+                console.error('Error en envio AJAX:', {
+                    ruta: ruta,
+                    formulario: formulario,
+                    status: xhr ? xhr.status : null,
+                    statusText: xhr ? xhr.statusText : null,
+                    response: obtenerDetalleErrorHttp(xhr)
+                });
+
                 var mensaje='Error interno al procesar la solicitud.';
 
                 if(xhr && xhr.status===422){
@@ -80,11 +113,7 @@ function enviar(formulario,ruta,panel){
                 }else if(xhr && xhr.status===404){
                     mensaje='No se encontro la ruta solicitada.';
                 }else if(xhr && xhr.status===500){
-                    if(xhr.responseJSON && xhr.responseJSON.message){
-                        mensaje=xhr.responseJSON.message;
-                    }else{
-                        mensaje='Error interno del servidor.';
-                    }
+                    mensaje='Error interno del servidor.';
                 }else if(xhr && xhr.responseJSON && xhr.responseJSON.message){
                     mensaje=xhr.responseJSON.message;
                 }

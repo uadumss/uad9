@@ -28,6 +28,12 @@
                 <h6 class="text-white text-center">Formulario para editar tramite de apostilla</h6>
             </div>
             <hr class="sidebar-divider"/>
+            @php
+                $urlGuardarTramiteApostilla = url('guardar tramite apostilla');
+                $urlGuardarApoderadoTramiteApostilla = url('guardar apoderado tramite apostilla');
+                $urlTablaTramiteApostilla = url('listar tramite apostilla tabla/' . date('Y-m-d'));
+                $urlMostrarObservacionApostilla = url('mostrar observacion tramite apostilla/' . ($tramite_apostilla->cod_apos ?? ''));
+            @endphp
             <div class="row apo-edit-layout {{ $cod_apos!=0 ? 'apo-edit-layout--quick-two' : '' }}">
                 <div class="col-md-3 apo-col-left">
 
@@ -107,7 +113,7 @@
                             <input type="hidden" name="ca" value="{{$cod_apos}}">
                         </form>
                             @can('crear trámite - apo')
-                                <button type="submit" class="btn btn-primary btn-sm float-md-right" onclick="enviar('form_tramite_apostilla','{{url("guardar tramite apostilla")}}','panel_apostilla');cargarDatos('{{url("listar tramite apostilla tabla/".date('Y-m-d'))}}','panel_tabla_tramites')"> Guardar </button>
+                                <button type="button" class="btn btn-primary btn-sm float-md-right" onclick="enviar('form_tramite_apostilla','{{$urlGuardarTramiteApostilla}}','panel_apostilla');cargarDatos('{{$urlTablaTramiteApostilla}}','panel_tabla_tramites');return false;"> Guardar </button>
                             @endcan
                     @else
                         <form id="form_tramite_apostilla">
@@ -192,7 +198,7 @@
                         </form>
                             @can('editar apoderado - apo')
                                 @if(!$apoderado)
-                                    <button type="submit" class="btn btn-primary btn-sm float-md-right" onclick="enviar('form_tramite_apostilla','{{url("guardar apoderado tramite apostilla")}}','panel_apostilla')"> Guardar Apoderado </button>
+                                    <button type="button" class="btn btn-primary btn-sm float-md-right" onclick="enviar('form_tramite_apostilla','{{$urlGuardarApoderadoTramiteApostilla}}','panel_apostilla');return false;"> Guardar Apoderado </button>
                                 @endif
                             @endcan
                     @endif
@@ -302,12 +308,14 @@
 
                                         <td>
                                             @if(($d->dapo_verificacion_sitra ?? '') === '0')
-                                                <a href="#" class="btn btn-light btn-circle btn-sm text-success"
-                                                   onclick="cargarDatos('{{url(\"verificacion sitra apostilla/$d->cod_dapo\")}}','panel_docleg');$('#docleg').modal('show');"
+                                                                <a href="#" class="btn btn-light btn-circle btn-sm text-success"
+                                                                    data-url="{{ url('verificacion sitra apostilla/' . $d->cod_dapo) }}"
+                                                                    onclick="cargarDatos(this.dataset.url,'panel_docleg');$('#docleg').modal('show');return false;"
                                                    title="Coincide en SITRA"><i class="fas fa-check-circle"></i></a>
                                             @elseif(($d->dapo_verificacion_sitra ?? '') === '1' || ($d->dapo_verificacion_sitra ?? '') === '2')
-                                                <a href="#" class="btn btn-light btn-circle btn-sm text-danger"
-                                                   onclick="cargarDatos('{{url(\"verificacion sitra apostilla/$d->cod_dapo\")}}','panel_docleg');$('#docleg').modal('show');"
+                                                                <a href="#" class="btn btn-light btn-circle btn-sm text-danger"
+                                                                    data-url="{{ url('verificacion sitra apostilla/' . $d->cod_dapo) }}"
+                                                                    onclick="cargarDatos(this.dataset.url,'panel_docleg');$('#docleg').modal('show');return false;"
                                                    title="No coincide o no existe en SITRA"><i class="fas fa-times-circle"></i></a>
                                             @else
                                                 <span class="btn btn-light btn-circle btn-sm text-secondary" title="Sin verificación SITRA"><i class="fas fa-minus-circle"></i></span>
@@ -318,7 +326,7 @@
                                             @can('quitar doumento - apo')
                                                 @if($tramite_apostilla->apos_estado<=1)
                                                     <a href="#" class="btn btn-light btn-circle btn-sm text-dark"
-                                                       onclick="cargarDatos('{{url("eliminar tramite agregado apostilla/$d->cod_dapo")}}','panel_lista_tramites_apostilla');cargarDatos('{{url("listar tramite apostilla tabla/".date('Y-m-d',strtotime($tramite_apostilla->apos_fecha_ingreso)))}}','panel_tabla_tramites')"
+                                                                         onclick="cargarDatos('{{ url('eliminar tramite agregado apostilla/' . $d->cod_dapo) }}','panel_lista_tramites_apostilla');cargarDatos('{{ url('listar tramite apostilla tabla/' . date('Y-m-d',strtotime($tramite_apostilla->apos_fecha_ingreso))) }}','panel_tabla_tramites')"
                                                        title="Eliminar trámite"> <i class="fas fa-trash-alt"></i>
                                                     </a>
                                                 @else
@@ -340,7 +348,7 @@
                         </div>
                         <br/>
                         <a href="#tramite_apostilla" class="btn btn-sm btn-primary text-white" data-toggle="modal"
-                           onclick="cargarDatos('{{url('mostrar observacion tramite apostilla/'.$tramite_apostilla->cod_apos)}}','panel_tramite_apostilla');"
+                                    onclick="cargarDatos('{{$urlMostrarObservacionApostilla}}','panel_tramite_apostilla');"
                            title="Observaciones">Observar
                         </a>
                         @can('generar pdf - apo')
