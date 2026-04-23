@@ -168,11 +168,6 @@ class Funciones extends Model
 
                 $glosa= str_replace("{facultad}", $facultad, $glosa);
                 $glosa= str_replace("{carrera}", $carrera, $glosa);
-
-                // Nuevos campos CINE UNESCO
-                $glosa= str_replace("{campo_amplio}", $unidadAcademica->car_campo_amplio, $glosa);
-                $glosa= str_replace("{campo_especifico}", $unidadAcademica->car_campo_especifico, $glosa);
-                $glosa= str_replace("{campo_detallado}", $unidadAcademica->car_campo_detallado, $glosa);
             }
 
             $n_folio="<span style='font-weight:bold'>".$numero_folio."</span>"; // numero de folio del documento
