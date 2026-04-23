@@ -263,7 +263,10 @@
                                                 <input type="text" class="form-control form-control-sm" name="gestion" pattern="[0-9]{4}" autocomplete="off">
                                             </div>
                                             <div class="col-md-3 mb-2 apo-quick-col apo-quick-col-boton">
-                                                <button type="button" class="btn btn-sm btn-primary btn-block" onclick="return submitAgregarApostillaRapida();">+ Agregar trámite</button>
+                                                <div class="d-flex align-items-center justify-content-end">
+                                                    <a href="#" class="btn btn-light btn-circle btn-sm text-danger mr-2" data-campo="estado-sitra-icon" title="Ver detalle de validación SITRA" onclick="abrirModalSitraFormularioApostilla(this); return false;"><i class="fas fa-minus-circle"></i></a>
+                                                    <button type="button" class="btn btn-sm btn-primary" onclick="return submitAgregarApostillaRapida();">+ Agregar trámite</button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -273,6 +276,8 @@
                                     <input type="hidden" name="gestion_valorado" value="" data-campo="gestion-api">
                                     <input type="hidden" value="0" data-campo="validacion-recaudacion-ok">
                                     <input type="hidden" value="" data-campo="preimpreso-api">
+                                    <input type="hidden" value="" data-campo="estado-sitra">
+                                    <input type="hidden" value="" data-campo="fuente-sitra">
                                 </form>
 
                             </div>
@@ -309,11 +314,13 @@
                                         <td>
                                             @if(($d->dapo_verificacion_sitra ?? '') === '0')
                                                                 <a href="#" class="btn btn-light btn-circle btn-sm text-success"
+                                                                    data-target="#docleg" data-toggle="modal"
                                                                     data-url="{{ url('verificacion sitra apostilla/' . $d->cod_dapo) }}"
                                                                     onclick="cargarDatos(this.dataset.url,'panel_docleg');$('#docleg').modal('show');return false;"
                                                    title="Coincide en SITRA"><i class="fas fa-check-circle"></i></a>
                                             @elseif(($d->dapo_verificacion_sitra ?? '') === '1' || ($d->dapo_verificacion_sitra ?? '') === '2')
                                                                 <a href="#" class="btn btn-light btn-circle btn-sm text-danger"
+                                                                    data-target="#docleg" data-toggle="modal"
                                                                     data-url="{{ url('verificacion sitra apostilla/' . $d->cod_dapo) }}"
                                                                     onclick="cargarDatos(this.dataset.url,'panel_docleg');$('#docleg').modal('show');return false;"
                                                    title="No coincide o no existe en SITRA"><i class="fas fa-times-circle"></i></a>
@@ -420,6 +427,7 @@
     let apostillaRapidaValidacionSeq=0;
     let apostillaRapidaRetryTimer=null;
     let apostillaRapidaDetallePago='Pendiente de validacion.';
+    let apostillaRapidaSitraSeq=0;
 
     function compactarMensajeUxPagoApostilla(mensaje,respaldo){
         const texto=(mensaje || '').toString().trim();
@@ -696,6 +704,173 @@
         return false;
     }
 
+    function compactarMensajeSitraUxApostilla(mensaje,respaldo){
+        const texto=(mensaje || '').toString().trim();
+        const fallback=(respaldo || '').toString().trim();
+        if(texto===''){
+            return fallback;
+        }
+        if(texto.length>110){
+            return fallback!=='' ? fallback : texto.substring(0,107)+'...';
+        }
+        return texto;
+    }
+
+    function actualizarEstadoSitraRapido(formulario,clase,mensaje){
+        const icono=formulario.find('[data-campo="estado-sitra-icon"]');
+        if(!icono.length){
+            return;
+        }
+
+        const resumen=compactarMensajeSitraUxApostilla(mensaje,'SITRA pendiente.');
+        const estadoInput=formulario.find('[data-campo="estado-sitra"]');
+        icono.removeClass('text-danger text-success text-secondary text-muted text-info');
+
+        if(clase==='text-success'){
+            icono.addClass('text-success').html('<i class="fas fa-check-circle"></i>');
+            estadoInput.val('0');
+        }else if(clase==='text-danger'){
+            icono.addClass('text-danger').html('<i class="fas fa-times-circle"></i>');
+            if(estadoInput.val()===''){
+                estadoInput.val('1');
+            }
+        }else if(clase==='text-info'){
+            icono.addClass('text-info').html('<i class="fas fa-spinner fa-spin"></i>');
+            estadoInput.val('');
+        }else{
+            icono.addClass('text-secondary').html('<i class="fas fa-minus-circle"></i>');
+            if(mensaje==='SITRA: no aplica para este tipo.' || mensaje==='SITRA pendiente.' || mensaje==='Complete gestión para validar SITRA.' || mensaje==='Seleccione trámite para validar SITRA.'){
+                estadoInput.val('');
+            }
+        }
+
+        icono.attr('title','Ver detalle de validación SITRA');
+        icono.attr('aria-label',resumen);
+        icono.attr('data-detalle-sitra',resumen);
+        icono.removeAttr('data-popover-visible');
+        icono.popover('hide');
+    }
+
+    function abrirModalSitraFormularioApostilla(trigger){
+        const form=$(trigger).closest('form');
+        const estado=(form.find('[data-campo="estado-sitra"]').val() || '').toString();
+        const fuente=(form.find('[data-campo="fuente-sitra"]').val() || 'sitra').toString();
+        let detalle=(($(trigger).attr('data-detalle-sitra') || '').toString() || '').trim();
+
+        if(detalle===''){
+            if(estado==='0'){
+                detalle='Coincide en SITRA/SID.';
+            }else if(estado==='1'){
+                detalle='Existe, pero no coincide.';
+            }else if(estado==='2'){
+                detalle='No existe en SITRA/SID.';
+            }else{
+                detalle='SITRA pendiente.';
+            }
+        }
+
+        if(fuente==='sid'){
+            detalle+=' Fuente: SID.';
+        }else if(fuente==='sitra_sid'){
+            detalle+=' Fuente: SITRA y SID.';
+        }
+
+        const icono=$(trigger);
+        const visible=icono.attr('data-popover-visible')==='1';
+        icono.popover('dispose');
+        if(visible){
+            icono.removeAttr('data-popover-visible');
+            return false;
+        }
+
+        $('[data-campo="estado-pago-icon"],[data-campo="estado-sitra-icon"]').not(icono).popover('hide').removeAttr('data-popover-visible');
+        icono.popover({
+            container:'body',
+            trigger:'manual',
+            placement:'top',
+            content:detalle,
+            html:false,
+        }).popover('show');
+        icono.attr('data-popover-visible','1');
+        return false;
+    }
+
+    function validarSitraRapidaApostilla(){
+        const form=formApostillaRapida();
+        if(!form.length){ return; }
+
+        const numero=(form.find('input[name="numero"]').val() || '').toString().trim();
+        const gestion=(form.find('input[name="gestion"]').val() || '').toString().trim();
+        const codLis=(form.find('input[name="cl"]').val() || '').toString().trim();
+        const requestSeq=++apostillaRapidaSitraSeq;
+
+        form.find('[data-campo="fuente-sitra"]').val('');
+
+        if(numero==='' || numero==='-'){
+            actualizarEstadoSitraRapido(form,'text-muted','SITRA pendiente.');
+            return;
+        }
+
+        if(codLis===''){
+            actualizarEstadoSitraRapido(form,'text-muted','Seleccione trámite para validar SITRA.');
+            return;
+        }
+
+        if(gestion===''){
+            actualizarEstadoSitraRapido(form,'text-muted','Complete gestión para validar SITRA.');
+            return;
+        }
+
+        actualizarEstadoSitraRapido(form,'text-info','Validando en SITRA/SID...');
+
+        $.ajax({
+            url:'{{url("validar sitra apostilla/".$cod_apos)}}',
+            type:'POST',
+            dataType:'json',
+            data:{
+                _token:form.find('input[name="_token"]').val(),
+                numero:numero,
+                gestion:gestion,
+                cl:parseInt(codLis,10) || 0,
+            },
+            success:function(resp){
+                if(requestSeq!==apostillaRapidaSitraSeq){ return; }
+                if((form.find('input[name="numero"]').val() || '').toString().trim()!==numero){ return; }
+                if((form.find('input[name="gestion"]').val() || '').toString().trim()!==gestion){ return; }
+
+                if(!resp || resp.aplica===false){
+                    form.find('[data-campo="estado-sitra"]').val('');
+                    form.find('[data-campo="fuente-sitra"]').val('');
+                    actualizarEstadoSitraRapido(form,'text-muted',resp && resp.message ? resp.message : 'SITRA: no aplica para este tipo.');
+                    return;
+                }
+
+                const estado=(resp.estado || '').toString();
+                form.find('[data-campo="estado-sitra"]').val(estado);
+                form.find('[data-campo="fuente-sitra"]').val((resp.fuente || 'sitra').toString());
+
+                if(estado==='0'){
+                    actualizarEstadoSitraRapido(form,'text-success','Coincide en SITRA/SID.');
+                }else if(estado==='1'){
+                    actualizarEstadoSitraRapido(form,'text-danger','Existe, pero no coincide en SITRA/SID.');
+                }else if(estado==='2'){
+                    actualizarEstadoSitraRapido(form,'text-danger','No existe en SITRA/SID.');
+                }else{
+                    actualizarEstadoSitraRapido(form,'text-muted','SITRA pendiente.');
+                }
+            },
+            error:function(xhr){
+                if(requestSeq!==apostillaRapidaSitraSeq){ return; }
+                const msg=(xhr.responseJSON && xhr.responseJSON.message)
+                    ? xhr.responseJSON.message
+                    : 'SITRA/SID no disponible.';
+                form.find('[data-campo="estado-sitra"]').val('2');
+                form.find('[data-campo="fuente-sitra"]').val('sitra_sid');
+                actualizarEstadoSitraRapido(form,'text-danger',msg);
+            }
+        });
+    }
+
     function obtenerControlRapidoApostilla(){
         const form=formApostillaRapida();
         if(!form.length){ return ''; }
@@ -738,6 +913,9 @@
         form.find('[data-campo="tramite-detectado"]').val('');
         aplicarEtiquetaDocumentoRapida('N° título / resolución');
         setIconoPagoRapido('pending','Pendiente de validacion.');
+        form.find('[data-campo="estado-sitra"]').val('');
+        form.find('[data-campo="fuente-sitra"]').val('');
+        actualizarEstadoSitraRapido(form,'text-muted','SITRA pendiente.');
     }
 
     function solicitarValidacionRapidaApostilla(callbackOk,callbackError){
@@ -821,6 +999,7 @@
                     resumen='Pago validado. Tramite: '+resp.lis_alias_sugerido+'.';
                 }
                 estadoRegistroRapido('ok',resumen);
+                validarSitraRapidaApostilla();
 
                 if(typeof callbackOk==='function'){ callbackOk(resp); }
             },
@@ -960,12 +1139,18 @@
         });
 
     $(document)
+        .off('input.apoSitraRapida','#form_agregar_tramite_rapido input[name="numero"],#form_agregar_tramite_rapido input[name="gestion"]')
+        .on('input.apoSitraRapida','#form_agregar_tramite_rapido input[name="numero"],#form_agregar_tramite_rapido input[name="gestion"]',function(){
+            validarSitraRapidaApostilla();
+        });
+
+    $(document)
         .off('click.apoEstadoPagoDetalle')
         .on('click.apoEstadoPagoDetalle',function(e){
-            if($(e.target).closest('[data-campo="estado-pago-icon"], .popover').length===0){
-                const icono=$('[data-campo="estado-pago-icon"]');
-                if(icono.length){
-                    icono.popover('hide').removeAttr('data-popover-visible');
+            if($(e.target).closest('[data-campo="estado-pago-icon"],[data-campo="estado-sitra-icon"], .popover').length===0){
+                const iconos=$('[data-campo="estado-pago-icon"],[data-campo="estado-sitra-icon"]');
+                if(iconos.length){
+                    iconos.popover('hide').removeAttr('data-popover-visible');
                 }
             }
         });
@@ -974,6 +1159,7 @@
         const form=formApostillaRapida();
         if(form.length){
             estadoRegistroRapido('pending','Pendiente de validacion.');
+            actualizarEstadoSitraRapido(form,'text-muted','SITRA pendiente.');
         }
     });
 </script>

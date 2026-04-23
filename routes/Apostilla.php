@@ -48,6 +48,7 @@ Route::group(['middleware'=>['permission:acceso al sistema - apo']],function(){
     Route::post('guardar observacion tramite apostilla',[ApostillaController::class,'g_observacion_tramite_apostilla']);
 
     // SITRA
+    Route::post('validar sitra apostilla/{cod_apos}',[ApostillaController::class,'validar_sitra_previa_apostilla']);
     Route::get('verificacion sitra apostilla/{cod_dapo}',[ApostillaController::class,'verificacion_sitra_apostilla']);
 
 

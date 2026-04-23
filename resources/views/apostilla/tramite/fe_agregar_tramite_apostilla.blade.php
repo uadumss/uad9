@@ -116,9 +116,10 @@
                                 <tr>
                                     <th class="text-dark font-italic">Numero del título : </th>
                                     <td class="border-bottom border-dark">
-                                        <div class="input-group">
-                                            <input type="text" class="form-control form-control-sm col-sm-3" name="numero"> &nbsp;&nbsp;/&nbsp;&nbsp; Gestión : &nbsp;&nbsp;
-                                            <input type="text" class="form-control form-control-sm col-sm-3" pattern="[0-9]{4}" name="gestion">
+                                        <div class="input-group pt-1">
+                                            <input type="text" class="form-control form-control-sm col-md-3" name="numero" data-campo="numero-sitra"> &nbsp;&nbsp;/&nbsp;&nbsp; Gestión : &nbsp;&nbsp;
+                                            <input type="text" class="form-control form-control-sm col-md-3" pattern="[0-9]{4}" name="gestion" data-campo="gestion-sitra">
+                                            &nbsp;&nbsp;<span class="btn btn-light btn-circle btn-sm text-muted" data-campo="icono-sitra-estado" title="Verificación SITRA"><i class="fas fa-minus-circle"></i></span>
                                         </div>
                                     </td>
                                 </tr>
@@ -457,7 +458,30 @@
             programarValidacionControlApostilla();
         });
 
+    function validarSitraApostilla(){
+        const numeroDocumento=$('input[data-campo="numero-sitra"]').val().trim();
+        const iconoElement=$('span[data-campo="icono-sitra-estado"]');
+        
+        if(numeroDocumento===''){
+            iconoElement.removeClass('text-success text-warning text-danger').addClass('text-muted');
+            iconoElement.find('i').attr('class','fas fa-minus-circle');
+            iconoElement.attr('title','Verificación SITRA');
+            return;
+        }
+
+        iconoElement.removeClass('text-success text-warning text-danger').addClass('text-info');
+        iconoElement.find('i').attr('class','fas fa-spinner fa-spin');
+        iconoElement.attr('title','Validando SITRA...');
+    }
+
+    $(document)
+        .off('input.apostillaSitra','input[data-campo="numero-sitra"]')
+        .on('input.apostillaSitra','input[data-campo="numero-sitra"]',function(){
+            validarSitraApostilla();
+        });
+
     // Tipo fijo del trámite en este formulario (comportamiento original).
+
 </script>
 
 

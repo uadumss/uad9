@@ -21,6 +21,7 @@
         <th>N° trámite</th>
         <th>N° Documento</th>
         <th>Valorado</th>
+        <th>SITRA</th>
         <th>Opciones</th>
     </tr>
     <?php $i=1?>
@@ -31,6 +32,23 @@
             <td>{{$d->dapo_numero}}</td>
             <td><span class="font-weight-bolder">{{$d->dapo_numero_documento}}</span>{{" / ".$d->dapo_gestion_documento}}</td>
             <td class="bg-gray-200 text-right"><span class="font-weight-bolder">{{$d->dapo_valorado_preimpreso}}</span>{{" / ".$d->dapo_valorado_gestion}}</td>
+            <td>
+                @if(($d->dapo_verificacion_sitra ?? '') === '0')
+                    <a href="#" class="btn btn-light btn-circle btn-sm text-success"
+                       data-target="#docleg" data-toggle="modal"
+                       data-url="{{ url('verificacion sitra apostilla/' . $d->cod_dapo) }}"
+                       onclick="cargarDatos(this.dataset.url,'panel_docleg');$('#docleg').modal('show');return false;"
+                       title="Coincide en SITRA/SID"><i class="fas fa-check-circle"></i></a>
+                @elseif(($d->dapo_verificacion_sitra ?? '') === '1' || ($d->dapo_verificacion_sitra ?? '') === '2')
+                    <a href="#" class="btn btn-light btn-circle btn-sm text-danger"
+                       data-target="#docleg" data-toggle="modal"
+                       data-url="{{ url('verificacion sitra apostilla/' . $d->cod_dapo) }}"
+                       onclick="cargarDatos(this.dataset.url,'panel_docleg');$('#docleg').modal('show');return false;"
+                       title="No coincide o no existe en SITRA/SID"><i class="fas fa-times-circle"></i></a>
+                @else
+                    <span class="btn btn-light btn-circle btn-sm text-secondary" title="SITRA/SID pendiente"><i class="fas fa-minus-circle"></i></span>
+                @endif
+            </td>
             <td>
                 @can('quitar doumento - apo')
                     @if($tramite_apostilla->apos_estado<=1)

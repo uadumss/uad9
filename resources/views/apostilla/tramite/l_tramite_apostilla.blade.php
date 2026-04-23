@@ -205,6 +205,14 @@
         </div>
     </div>
     <!--===========================END ==============================-->
+
+    <!-- ================== MODAL DOCLEG (DETALLE SITRA) ====================-->
+    <div class="modal fade" id="docleg" data-backdrop="false" role="dialog" style="z-index: 3200; margin-top: 40px;">
+        <div class="modal-dialog modal-lg" role="document" id="panel_docleg">
+
+        </div>
+    </div>
+    <!--===========================END ==============================-->
     
 
     <script>

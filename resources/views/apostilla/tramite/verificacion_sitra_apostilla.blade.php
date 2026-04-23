@@ -5,7 +5,7 @@
     @if($estado === '0')
     <div class="modal-content border-bottom-primary shadow-lg">
         <div class="modal-header bg-verde-oscuro">
-            <h5 class="modal-title text-white"><i class="fas fa-check-circle"></i>&nbsp;&nbsp;Verificación en SITRA</h5>
+            <h5 class="modal-title text-white"><i class="fas fa-check-circle"></i>&nbsp;&nbsp;Verificación en SITRA/SID</h5>
             <button class="close" type="button" data-dismiss="modal" aria-label="Close">
                 <span aria-hidden="true">×</span>
             </button>
@@ -13,7 +13,7 @@
     @else
         <div class="modal-content border-bottom-danger shadow-lg">
             <div class="modal-header bg-danger">
-                <h5 class="modal-title text-white"><i class="fas fa-times-circle"></i>&nbsp;&nbsp;Verificación en SITRA</h5>
+                <h5 class="modal-title text-white"><i class="fas fa-times-circle"></i>&nbsp;&nbsp;Verificación en SITRA/SID</h5>
                 <button class="close" type="button" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">×</span>
                 </button>
@@ -33,6 +33,17 @@
             <span>{{ $buscarEnNombre }}</span> |
             <span class="font-weight-bold">Trámite:</span>
             <span>{{ $apostilla->lis_nombre ?? '-' }}</span>
+        </span>
+        <br/>
+        <span class="text-info font-italic" style="font-size: 0.85em">
+            Fuente:
+            @if(($fuente ?? 'sitra')==='sid')
+                SID
+            @elseif(($fuente ?? 'sitra')==='sitra_sid')
+                SITRA y SID
+            @else
+                SITRA
+            @endif
         </span>
         <br/><br/>
 
@@ -73,7 +84,7 @@
                     @if($estado === '1')
                         <p>El documento existe en SITRA, pero los datos no coinciden.</p>
                     @else
-                        <p>No se encontró el documento en SITRA.</p>
+                        <p>No se encontró el documento en SITRA ni en SID.</p>
                     @endif
                 </div>
                 <div class="pt-2 col-md-2 text-danger font-weight-bolder text-left"><h1><i class="fas fa-times-circle"></i></h1></div>
@@ -82,7 +93,7 @@
 
         <br/>
         @if($estado === '0')
-            <div class="text-success font-italic font-weight-bold border border-success rounded col-md-4" style="font-size: 1.2em">Verificación Correcta (SITRA)</div>
+            <div class="text-success font-italic font-weight-bold border border-success rounded col-md-5" style="font-size: 1.2em">Verificación Correcta {{($fuente ?? 'sitra')==='sid' ? '(SID)' : '(SITRA)'}}</div>
         @elseif($estado === '')
             <div class="text-secondary font-italic font-weight-bold border border-secondary rounded col-md-4" style="font-size: 1.1em">Sin verificación SITRA</div>
         @else
