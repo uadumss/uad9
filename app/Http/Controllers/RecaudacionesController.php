@@ -2,10 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
+use App\Services\RecaudacionesService;
 
 class RecaudacionesController extends Controller
 {
@@ -17,7 +15,13 @@ class RecaudacionesController extends Controller
             'documento' => ['required', 'string'],
         ]);
 
-        return $this->consultarRecaudaciones($payload);
+        $resultado = app(RecaudacionesService::class)->buscarPorControlYDocumento(
+            (int) $payload['unidad'],
+            (int) $payload['recibo'],
+            (string) $payload['documento']
+        );
+
+        return response()->json($resultado, (int) ($resultado['status'] ?? 200));
     }
 
     public function buscarPorControl(Request $request)
@@ -27,7 +31,12 @@ class RecaudacionesController extends Controller
             'recibo' => ['required', 'integer'],
         ]);
 
-        return $this->consultarRecaudaciones($payload);
+        $resultado = app(RecaudacionesService::class)->buscarPorControl(
+            (int) $payload['unidad'],
+            (int) $payload['recibo']
+        );
+
+        return response()->json($resultado, (int) ($resultado['status'] ?? 200));
     }
 
     public function buscarPorDocumento(Request $request)
@@ -37,7 +46,12 @@ class RecaudacionesController extends Controller
             'documento' => ['required', 'string'],
         ]);
 
-        return $this->consultarRecaudaciones($payload);
+        $resultado = app(RecaudacionesService::class)->buscarPorDocumento(
+            (int) $payload['unidad'],
+            (string) $payload['documento']
+        );
+
+        return response()->json($resultado, (int) ($resultado['status'] ?? 200));
     }
 
     public function extraerDatosDocumento(Request $request)
@@ -263,63 +277,4 @@ class RecaudacionesController extends Controller
         return trim((string) $valor, " \t\n\r\0\x0B:;,.!?");
     }
 
-    private function consultarRecaudaciones(array $payload)
-    {
-        $baseUrl = rtrim((string) config('services.recaudaciones.url'), '/');
-        $token = (string) config('services.recaudaciones.token');
-        $verifySsl = filter_var(config('services.recaudaciones.verify_ssl'), FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
-        if ($verifySsl === null) {
-            $verifySsl = true;
-        }
-
-        if ($baseUrl === '' || $token === '') {
-            return response()->json([
-                'ok' => false,
-                'message' => 'El sistema de recaudaciones no esta configurado. Contacte al area de sistemas.',
-            ], 500);
-        }
-
-        try {
-            $response = Http::withToken($token)
-                ->acceptJson()
-                ->timeout(20)
-                ->withOptions(['verify' => $verifySsl])
-                ->post($baseUrl, $payload);
-
-            if ($response->successful()) {
-                return response()->json([
-                    'ok' => true,
-                    'data' => $response->json(),
-                ], 200);
-            }
-
-            Log::warning('La API de recaudaciones respondió con error.', [
-                'status' => $response->status(),
-            ]);
-
-            return response()->json([
-                'ok' => false,
-                'message' => 'La API de recaudaciones respondio con error',
-                'status' => $response->status(),
-            ], $response->status());
-        } catch (RequestException $e) {
-            Log::warning('Error de comunicación con la API de recaudaciones.', [
-                'error' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'ok' => false,
-                'message' => 'Error en la comunicacion con la API de recaudaciones',
-            ], 502);
-        } catch (\Throwable $e) {
-            Log::error('Error inesperado en recaudaciones.', [
-                'error' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'ok' => false,
-                'message' => 'Error inesperado en recaudaciones',
-            ], 500);
-        }
-    }
 }

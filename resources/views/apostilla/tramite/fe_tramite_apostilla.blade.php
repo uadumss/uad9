@@ -492,10 +492,56 @@
         if(normal.indexOf('no se encontro')!==-1){
             return 'not_found';
         }
-        if(normal.indexOf('no corresponde')!==-1){
+        if(normal.indexOf('no corresponde')!==-1 || normal.indexOf('no pertenece')!==-1){
             return 'not_match';
         }
         return 'error';
+    }
+
+    function visualizarCategoriaPagoIconoApostilla(icono,categoria){
+        icono.removeClass('text-success text-danger text-secondary text-muted text-info text-warning');
+
+        if(categoria==='ok'){
+            icono.addClass('text-success').html('<i class="fas fa-check-circle"></i>');
+            return;
+        }
+        if(categoria==='loading'){
+            icono.addClass('text-info').html('<i class="fas fa-spinner fa-spin"></i>');
+            return;
+        }
+        if(categoria==='rate_limit'){
+            icono.addClass('text-warning').html('<i class="fas fa-clock"></i>');
+            return;
+        }
+        if(categoria==='used'){
+            icono.addClass('text-warning').html('<i class="fas fa-ban"></i>');
+            return;
+        }
+        if(categoria==='connection'){
+            icono.addClass('text-warning').html('<i class="fas fa-plug"></i>');
+            return;
+        }
+        if(categoria==='not_configured'){
+            icono.addClass('text-muted').html('<i class="fas fa-cog"></i>');
+            return;
+        }
+        if(categoria==='pending'){
+            icono.addClass('text-secondary').html('<i class="fas fa-minus-circle"></i>');
+            return;
+        }
+        if(categoria==='na'){
+            icono.addClass('text-muted').html('<i class="fas fa-minus-circle"></i>');
+            return;
+        }
+        if(categoria==='not_match'){
+            icono.addClass('text-warning').html('<i class="fas fa-exclamation-circle"></i>');
+            return;
+        }
+        if(categoria==='not_found'){
+            icono.addClass('text-warning').html('<i class="fas fa-exclamation-circle"></i>');
+            return;
+        }
+        icono.addClass('text-danger').html('<i class="fas fa-times-circle"></i>');
     }
 
     function resumenCategoriaPagoUxApostilla(categoria,resumenFallback){
@@ -572,7 +618,7 @@
         return $('#form_agregar_tramite_rapido');
     }
 
-    function setIconoPagoRapido(tipo,mensaje){
+    function setIconoPagoRapido(tipo,mensaje,categoriaForzada){
         const form=formApostillaRapida();
         if(!form.length){ return; }
 
@@ -580,49 +626,16 @@
         if(!icono.length){ return; }
 
         let title=(mensaje || 'Pendiente de validacion.').toString();
-        const categoria=detectarCategoriaPagoUxApostilla(tipo,title);
+        const categoria=(categoriaForzada || detectarCategoriaPagoUxApostilla(tipo,title)).toString();
         title=compactarMensajeUxPagoApostilla(title,resumenCategoriaPagoUxApostilla(categoria,title));
 
-        let color='text-secondary';
-        let iconClass='fa-minus-circle';
-        if(categoria==='ok'){
-            color='text-success';
-            iconClass='fa-check-circle';
-        }else if(categoria==='loading'){
-            color='text-info';
-            iconClass='fa-spinner fa-spin';
-        }else if(categoria==='rate_limit'){
-            color='text-warning';
-            iconClass='fa-clock';
-        }else if(categoria==='used'){
-            color='text-warning';
-            iconClass='fa-ban';
-        }else if(categoria==='connection'){
-            color='text-warning';
-            iconClass='fa-plug';
-        }else if(categoria==='not_configured'){
-            color='text-muted';
-            iconClass='fa-cog';
-        }else if(categoria==='pending'){
-            color='text-secondary';
-            iconClass='fa-minus-circle';
-        }else if(tipo==='warn'){
-            color='text-warning';
-            iconClass='fa-exclamation-circle';
-        }else{
-            color='text-danger';
-            iconClass='fa-times-circle';
-        }
-
         icono
-            .removeClass('text-secondary text-info text-success text-danger text-warning')
-            .addClass(color)
             .attr('title','Ver detalle de validación de pago')
             .attr('data-detalle-pago',title)
             .attr('aria-label',title)
             .removeAttr('data-popover-visible');
         icono.popover('hide');
-        icono.find('i').attr('class','fas '+iconClass);
+        visualizarCategoriaPagoIconoApostilla(icono,categoria);
     }
 
     function estadoRegistroRapido(tipo,mensaje){
@@ -643,7 +656,7 @@
             }
         }
         apostillaRapidaDetallePago=construirDetalleUxPagoApostilla(tipo,mensajeOriginal,texto);
-        setIconoPagoRapido(tipo,texto);
+        setIconoPagoRapido(tipo,texto,categoria);
 
         const form=formApostillaRapida();
         if(form.length){

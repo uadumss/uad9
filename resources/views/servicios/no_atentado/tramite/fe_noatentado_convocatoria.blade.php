@@ -1221,6 +1221,10 @@
             icono.addClass('text-muted').html('<i class="fas fa-minus-circle"></i>');
             return;
         }
+        if(categoria==='not_found'){
+            icono.addClass('text-warning').html('<i class="fas fa-exclamation-circle"></i>');
+            return;
+        }
         if(categoria==='not_match'){
             icono.addClass('text-warning').html('<i class="fas fa-exclamation-circle"></i>');
             return;

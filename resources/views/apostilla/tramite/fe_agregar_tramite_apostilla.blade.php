@@ -161,16 +161,64 @@
         return ((sid ? sid.value : '') || (other ? other.value : '') || '').trim();
     }
 
-    function setResultadoValidacionApostilla(tipo,mensaje){
+    function normalizarTextoApostilla(valor){
+        return (valor || '').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    }
+
+    function categoriaResultadoValidacionApostilla(tipo,mensaje,codigo){
+        const codigoNorm=normalizarTextoApostilla(codigo).toUpperCase();
+        if(tipo==='loading') return 'loading';
+        if(tipo==='ok') return 'ok';
+        if(codigoNorm==='RATE_LIMIT') return 'rate_limit';
+        if(codigoNorm==='SISTEMA_NO_CONFIGURADO') return 'not_configured';
+        if(codigoNorm==='API_NO_DISPONIBLE' || codigoNorm==='API_RESPUESTA_INVALIDA') return 'connection';
+        if(codigoNorm==='BOLETA_YA_USADA') return 'used';
+        if(codigoNorm==='BOLETA_NO_EXISTE' || codigoNorm==='CONTROL_NO_ENCONTRADO') return 'not_found';
+        if(codigoNorm==='BOLETA_NO_PERTENECE_PERSONA' || codigoNorm==='BOLETA_NO_CORRESPONDE_TRAMITE' || codigoNorm==='BOLETA_NO_VALIDA') return 'not_match';
+
+        const texto=normalizarTextoApostilla((mensaje || '')+' '+codigoNorm);
+        if(texto.indexOf('too many')!==-1 || texto.indexOf('demasiadas solicitudes')!==-1 || texto.indexOf('rate limit')!==-1 || texto.indexOf('429')!==-1) return 'rate_limit';
+        if(texto.indexOf('no esta configurado')!==-1 || texto.indexOf('no está configurado')!==-1 || texto.indexOf('sistema_no_configurado')!==-1) return 'not_configured';
+        if(texto.indexOf('sin conexion')!==-1 || texto.indexOf('sin conexión')!==-1 || texto.indexOf('no se pudo conectar')!==-1 || texto.indexOf('api_no_disponible')!==-1 || texto.indexOf('timeout')!==-1) return 'connection';
+        if(texto.indexOf('ya usado')!==-1 || texto.indexOf('ya fue utilizado')!==-1 || texto.indexOf('ya utilizado')!==-1) return 'used';
+        if(texto.indexOf('no se encontro')!==-1 || texto.indexOf('no se encontró')!==-1 || texto.indexOf('boleta no encontrada')!==-1 || texto.indexOf('control no encontrado')!==-1) return 'not_found';
+        if(texto.indexOf('no corresponde')!==-1 || texto.indexOf('no pertenece')!==-1 || texto.indexOf('no valida')!==-1 || texto.indexOf('no válida')!==-1) return 'not_match';
+        return tipo==='error' ? 'error' : 'warning';
+    }
+
+    function iconoCategoriaResultadoValidacionApostilla(categoria){
+        if(categoria==='ok') return {clase:'text-success',icon:'fa-check-circle'};
+        if(categoria==='loading') return {clase:'text-info',icon:'fa-spinner fa-spin'};
+        if(categoria==='rate_limit') return {clase:'text-warning',icon:'fa-clock'};
+        if(categoria==='used') return {clase:'text-warning',icon:'fa-ban'};
+        if(categoria==='connection') return {clase:'text-warning',icon:'fa-plug'};
+        if(categoria==='not_configured') return {clase:'text-muted',icon:'fa-cog'};
+        if(categoria==='not_found') return {clase:'text-warning',icon:'fa-search'};
+        if(categoria==='not_match') return {clase:'text-warning',icon:'fa-exclamation-circle'};
+        if(categoria==='warning') return {clase:'text-warning',icon:'fa-exclamation-circle'};
+        return {clase:'text-danger',icon:'fa-times-circle'};
+    }
+
+    function setResultadoValidacionApostilla(tipo,mensaje,codigo=''){
         const panel=$('#validacion-resultado');
         if(!panel.length){ return; }
-        if(tipo==='ok'){
-            panel.html('<div class="alert alert-success py-2 mb-0">'+mensaje+'</div>');
-        }else if(tipo==='loading'){
-            panel.html('<div class="alert alert-info py-2 mb-0">Validando número de control...</div>');
-        }else{
-            panel.html('<div class="alert alert-danger py-2 mb-0">'+mensaje+'</div>');
+
+        const categoria=categoriaResultadoValidacionApostilla(tipo,mensaje,codigo);
+        const icono=iconoCategoriaResultadoValidacionApostilla(categoria);
+        let clase='alert-danger';
+        let texto=mensaje || 'No se pudo validar el control del pago.';
+
+        if(categoria==='ok'){
+            clase='alert-success';
+            texto=mensaje || 'Validado.';
+        }else if(categoria==='loading'){
+            clase='alert-info';
+            texto='Validando número de control...';
+        }else if(categoria==='rate_limit' || categoria==='connection' || categoria==='not_configured' || categoria==='not_found' || categoria==='not_match' || categoria==='used' || categoria==='warning'){
+            clase='alert-warning';
         }
+
+        panel.html('<div class="alert '+clase+' py-2 mb-0 d-flex align-items-center"><span class="mr-2 '+icono.clase+'"><i class="fas '+icono.icon+'"></i></span><span>'+texto+'</span></div>');
     }
 
     function extraerAnioDesdeFechaPago(fechaPago){
@@ -207,13 +255,13 @@
                 const msg=(resp && resp.message)
                     ? resp.message
                     : 'No se pudo validar el control del pago.';
-                onFail(msg);
+                onFail(msg,(resp && resp.code) ? resp.code : '');
             },
             error:function(xhr){
                 const msg=(xhr.responseJSON && xhr.responseJSON.message)
                     ? xhr.responseJSON.message
                     : 'No hay conexión. Intente en unos momentos.';
-                onFail(msg);
+                onFail(msg,(xhr.responseJSON && xhr.responseJSON.code) ? xhr.responseJSON.code : 'API_NO_DISPONIBLE');
             }
         });
     }
@@ -268,11 +316,11 @@
                 msg+=' - Caja '+resp.cajero;
             }
             setResultadoValidacionApostilla('ok',msg);
-        },function(msg){
+        },function(msg,codigo){
             validacionControlOk=false;
             controlValidadoValor='';
             form.find('[data-campo="validacion-recaudacion-ok"]').val('0');
-            setResultadoValidacionApostilla('error',msg);
+            setResultadoValidacionApostilla('error',msg,codigo);
         });
     }
 
@@ -332,13 +380,13 @@
                     const msg=(resp && resp.message)
                         ? resp.message
                         : 'No se pudo registrar el trámite.';
-                    setResultadoValidacionApostilla('error',msg);
+                    setResultadoValidacionApostilla('error',msg,(resp && resp.code) ? resp.code : '');
                 },
                 error:function(xhr){
                     const msg=(xhr.responseJSON && xhr.responseJSON.message)
                         ? xhr.responseJSON.message
                         : 'No se pudo registrar el trámite. Intente nuevamente.';
-                    setResultadoValidacionApostilla('error',msg);
+                    setResultadoValidacionApostilla('error',msg,(xhr.responseJSON && xhr.responseJSON.code) ? xhr.responseJSON.code : 'API_NO_DISPONIBLE');
                 }
             });
             return false;
@@ -388,11 +436,11 @@
                     setResultadoValidacionApostilla('error',msg);
                 }
             });
-        },function(msg){
+        },function(msg,codigo){
             validacionControlOk=false;
             controlValidadoValor='';
             form.find('[data-campo="validacion-recaudacion-ok"]').val('0');
-            setResultadoValidacionApostilla('error',msg);
+            setResultadoValidacionApostilla('error',msg,codigo);
         });
         return false;
     }

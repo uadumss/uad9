@@ -437,7 +437,6 @@ class ApostillaController extends Controller
                     $verificarSitra='2';
                 }
             }
-            $documento->dapo_verificacion_sitra=$verificarSitra;
             $documento->save();
 
             $errorUso='';
@@ -1161,13 +1160,7 @@ class ApostillaController extends Controller
     private function consultarRecaudacionDesdeEndpointExistente(int $recibo, string $documento): array
     {
         try{
-            $request=Request::create('/api/recaudaciones/buscar-control-documento','POST',[
-                'unidad'=>122,
-                'recibo'=>$recibo,
-                'documento'=>$documento,
-            ]);
-
-            $response=app(RecaudacionesController::class)->buscarPorControlYDocumento($request);
+            $response=app(\App\Services\RecaudacionesService::class)->buscarPorControlYDocumento(122,$recibo,$documento);
         }catch(\Throwable $e){
             return $this->respuestaErrorValidacionApostilla(
                 'API_NO_DISPONIBLE',
@@ -1175,31 +1168,21 @@ class ApostillaController extends Controller
             );
         }
 
-        if(!($response instanceof \Illuminate\Http\JsonResponse)){
+        if(!is_array($response)){
             return $this->respuestaErrorValidacionApostilla(
                 'API_RESPUESTA_INVALIDA',
                 'No se pudo validar la boleta en recaudaciones. Intente nuevamente.'
             );
         }
 
-        $status=(int)$response->getStatusCode();
-        $json=$response->getData(true);
-        if(!is_array($json) || !($json['ok'] ?? false)){
-            $msg='';
-            $statusApi=0;
-            if(is_array($json)){
-                $msg=(string)($json['error']['message'] ?? '');
-                if(trim($msg)===''){
-                    $msg=(string)($json['message'] ?? '');
-                }
-                $statusApi=(int)($json['status'] ?? 0);
-            }
-            $statusFinal=$statusApi>0 ? $statusApi : $status;
-            $errMap=$this->mapearMensajeErrorRecaudacionApostilla($msg,$statusFinal);
+        if(!($response['ok'] ?? false)){
+            $msg=(string)($response['message'] ?? '');
+            $status=(int)($response['status'] ?? 0);
+            $errMap=$this->mapearMensajeErrorRecaudacionApostilla($msg,$status);
             return $this->respuestaErrorValidacionApostilla($errMap['code'],$errMap['message']);
         }
 
-        $data=(array)($json['data'] ?? []);
+        $data=(array)($response['data'] ?? []);
         $lista=$data['data']['result'] ?? [];
         if(sizeof($lista)===0){
             $lista=$data['result'] ?? [];

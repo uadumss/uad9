@@ -1663,49 +1663,21 @@ class TramiteLegalizacionController extends Controller
         bool $permitirTipoDistintoConReintegro = false
     ): array
     {
-        $baseUrl = rtrim((string) config('services.recaudaciones.url'), '/');
-        $token = (string) config('services.recaudaciones.token');
-        $verifySsl = filter_var(config('services.recaudaciones.verify_ssl', true), FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
-        if ($verifySsl === null) {
-            $verifySsl = true;
-        }
-
-        if($baseUrl==='' || $token===''){
+        $response=app(\App\Services\RecaudacionesService::class)->buscarPorControlYDocumento(122,(int)$control,$ci);
+        if(!is_array($response)){
             return $this->respuestaErrorValidacionLegalizacion(
-                'SISTEMA_NO_CONFIGURADO',
-                'El sistema de recaudaciones no esta configurado. Contacte al area de sistemas.'
+                'API_RESPUESTA_INVALIDA',
+                'No se pudo validar el pago en recaudaciones. Intente nuevamente.'
             );
         }
 
-        try {
-            $response=Http::withToken($token)
-                ->acceptJson()
-                ->timeout(20)
-                ->withOptions(['verify'=>$verifySsl])
-                ->post($baseUrl,[
-                'unidad'=>122,
-                'recibo'=>(int)$control,
-                'documento'=>$ci,
-            ]);
-        } catch (\Throwable $e) {
-            return $this->respuestaErrorValidacionLegalizacion(
-                'API_NO_DISPONIBLE',
-                'No se pudo conectar con recaudaciones. Intente nuevamente en unos minutos.'
-            );
-        }
-
-        if(!$response->successful()){
-            $json=$response->json();
-            $msg=(string)($json['error']['message'] ?? '');
-            if(trim($msg)===''){
-                $msg=(string)($json['message'] ?? '');
-            }
-            $errMap=$this->mapearMensajeErrorRecaudacionLegalizacion($msg,$tipoTramite);
+        if(!$response['ok']){
+            $errMap=$this->mapearMensajeErrorRecaudacionLegalizacion((string)($response['message'] ?? ''),$tipoTramite);
             return $this->respuestaErrorValidacionLegalizacion($errMap['code'],$errMap['message']);
         }
 
-        $json=$response->json();
-        $lista=$this->extraerListaResultadoRecaudacion(is_array($json) ? $json : []);
+        $json=is_array($response['data'] ?? null) ? $response['data'] : [];
+        $lista=$this->extraerListaResultadoRecaudacion($json);
         if(!is_array($lista) || sizeof($lista)==0){
             $tipoTxt=$this->etiquetaTipoTramiteLegalizacion($tipoTramite);
             return $this->respuestaErrorValidacionLegalizacion(
@@ -1900,45 +1872,16 @@ class TramiteLegalizacionController extends Controller
             );
         }
 
-        $baseUrl = rtrim((string) config('services.recaudaciones.url'), '/');
-        $token = (string) config('services.recaudaciones.token');
-        $verifySsl = filter_var(config('services.recaudaciones.verify_ssl', true), FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
-        if ($verifySsl === null) {
-            $verifySsl = true;
-        }
-
-        if($baseUrl==='' || $token===''){
+        $response=app(\App\Services\RecaudacionesService::class)->buscarPorControlYDocumento(122,(int)$controlReintegro,$ci);
+        if(!is_array($response)){
             return $this->respuestaErrorValidacionLegalizacion(
-                'SISTEMA_NO_CONFIGURADO',
-                'El sistema de recaudaciones no esta configurado. Contacte al area de sistemas.'
+                'API_RESPUESTA_INVALIDA',
+                'No se pudo validar el reintegro en recaudaciones. Intente nuevamente.'
             );
         }
 
-        try {
-            $response=Http::withToken($token)
-                ->acceptJson()
-                ->timeout(20)
-                ->withOptions(['verify'=>$verifySsl])
-                ->post($baseUrl,[
-                    'unidad'=>122,
-                    'recibo'=>(int)$controlReintegro,
-                    'documento'=>$ci,
-                ]);
-        } catch (\Throwable $e) {
-            return $this->respuestaErrorValidacionLegalizacion(
-                'API_NO_DISPONIBLE',
-                'No se pudo conectar con recaudaciones para validar el reintegro. Intente nuevamente en unos minutos.'
-            );
-        }
-
-        if(!$response->successful()){
-            $json=$response->json();
-            $msg=(string)($json['error']['message'] ?? '');
-            if(trim($msg)===''){
-                $msg=(string)($json['message'] ?? '');
-            }
-
-            $errMap=$this->mapearMensajeErrorRecaudacionLegalizacion($msg,$tipoTramite);
+        if(!$response['ok']){
+            $errMap=$this->mapearMensajeErrorRecaudacionLegalizacion((string)($response['message'] ?? ''),$tipoTramite);
             if($errMap['code']==='BOLETA_NO_EXISTE'){
                 return $this->respuestaErrorValidacionLegalizacion(
                     'BOLETA_REINTEGRO_NO_EXISTE',
@@ -1949,8 +1892,8 @@ class TramiteLegalizacionController extends Controller
             return $this->respuestaErrorValidacionLegalizacion($errMap['code'],$errMap['message']);
         }
 
-        $json=$response->json();
-        $lista=$this->extraerListaResultadoRecaudacion(is_array($json) ? $json : []);
+        $json=is_array($response['data'] ?? null) ? $response['data'] : [];
+        $lista=$this->extraerListaResultadoRecaudacion($json);
         if(!is_array($lista) || sizeof($lista)==0){
             return $this->respuestaErrorValidacionLegalizacion(
                 'BOLETA_REINTEGRO_NO_EXISTE',

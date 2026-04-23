@@ -1819,20 +1819,7 @@ class TramiteNoAtentadoController extends Controller
     private function consultarControlPrincipalDocumentoRecaudacionesNoAtentado(string $control,string $documento): array
     {
         try{
-            $request=Request::create('/api/recaudaciones/buscar-control-documento', 'POST',[
-                'unidad'=>122,
-                'recibo'=>(int)$control,
-                'documento'=>$documento,
-            ]);
-            $response=app(RecaudacionesController::class)->buscarPorControlYDocumento($request);
-            if(!($response instanceof JsonResponse)){
-                return [
-                    'ok'=>false,
-                    'code'=>'API_RESPUESTA_INVALIDA',
-                    'message'=>'No se pudo validar el control y carnet en recaudaciones. Intente nuevamente.',
-                ];
-            }
-            $json=$response->getData(true);
+            $response=app(\App\Services\RecaudacionesService::class)->buscarPorControlYDocumento(122,(int)$control,$documento);
         }catch(\Throwable $e){
             Log::warning('Error inesperado al consultar recaudaciones por control+documento para pago principal No Atentado.',[
                 'control'=>$control,
@@ -1846,9 +1833,17 @@ class TramiteNoAtentadoController extends Controller
             ];
         }
 
-        if(!is_array($json) || !(bool)($json['ok'] ?? false)){
-            $mensaje=trim((string)($json['message'] ?? data_get($json,'error.message','')));
-            $status=(int)($json['status'] ?? 0);
+        if(!is_array($response)){
+            return [
+                'ok'=>false,
+                'code'=>'API_RESPUESTA_INVALIDA',
+                'message'=>'No se pudo validar el control y carnet en recaudaciones. Intente nuevamente.',
+            ];
+        }
+
+        if(!($response['ok'] ?? false)){
+            $mensaje=trim((string)($response['message'] ?? ''));
+            $status=(int)($response['status'] ?? 0);
             $errorMap=$this->mapearMensajeErrorRecaudacionNoAtentado($mensaje,$status);
 
             if($errorMap['code']==='CONTROL_NO_ENCONTRADO'){
@@ -1863,7 +1858,7 @@ class TramiteNoAtentadoController extends Controller
             ];
         }
 
-        $resultado=$this->extraerResultadoRecaudacionNoAtentado((array)($json['data'] ?? []));
+        $resultado=$this->extraerResultadoRecaudacionNoAtentado((array)($response['data'] ?? []));
 
         return [
             'ok'=>true,
@@ -1874,20 +1869,7 @@ class TramiteNoAtentadoController extends Controller
     private function consultarControlDocumentoRecaudacionesNoAtentado(string $control,string $documento): array
     {
         try{
-            $request=Request::create('/api/recaudaciones/buscar-control-documento', 'POST',[
-                'unidad'=>122,
-                'recibo'=>(int)$control,
-                'documento'=>$documento,
-            ]);
-            $response=app(RecaudacionesController::class)->buscarPorControlYDocumento($request);
-            if(!($response instanceof JsonResponse)){
-                return [
-                    'ok'=>false,
-                    'code'=>'API_RESPUESTA_INVALIDA',
-                    'message'=>'No se pudo validar el control de reintegro en recaudaciones. Intente nuevamente.',
-                ];
-            }
-            $json=$response->getData(true);
+            $response=app(\App\Services\RecaudacionesService::class)->buscarPorControlYDocumento(122,(int)$control,$documento);
         }catch(\Throwable $e){
             Log::warning('Error inesperado al consultar recaudaciones por control+documento para reintegro No Atentado.',[
                 'control'=>$control,
@@ -1901,9 +1883,17 @@ class TramiteNoAtentadoController extends Controller
             ];
         }
 
-        if(!is_array($json) || !(bool)($json['ok'] ?? false)){
-            $mensaje=trim((string)($json['message'] ?? data_get($json,'error.message','')));
-            $status=(int)($json['status'] ?? 0);
+        if(!is_array($response)){
+            return [
+                'ok'=>false,
+                'code'=>'API_RESPUESTA_INVALIDA',
+                'message'=>'No se pudo validar el control de reintegro en recaudaciones. Intente nuevamente.',
+            ];
+        }
+
+        if(!($response['ok'] ?? false)){
+            $mensaje=trim((string)($response['message'] ?? ''));
+            $status=(int)($response['status'] ?? 0);
             $errorMap=$this->mapearMensajeErrorRecaudacionNoAtentado($mensaje,$status);
 
             return [
@@ -1913,7 +1903,7 @@ class TramiteNoAtentadoController extends Controller
             ];
         }
 
-        $resultado=$this->extraerResultadoRecaudacionNoAtentado((array)($json['data'] ?? []));
+        $resultado=$this->extraerResultadoRecaudacionNoAtentado((array)($response['data'] ?? []));
 
         return [
             'ok'=>true,
@@ -1948,19 +1938,7 @@ class TramiteNoAtentadoController extends Controller
     private function consultarControlRecaudacionesNoAtentado(string $control): array
     {
         try{
-            $request=Request::create('/api/recaudaciones/buscar-control', 'POST',[
-                'unidad'=>122,
-                'recibo'=>(int)$control,
-            ]);
-            $response=app(RecaudacionesController::class)->buscarPorControl($request);
-            if(!($response instanceof JsonResponse)){
-                return [
-                    'ok'=>false,
-                    'code'=>'API_RESPUESTA_INVALIDA',
-                    'message'=>'No se pudo validar el control en recaudaciones. Intente nuevamente.',
-                ];
-            }
-            $json=$response->getData(true);
+            $response=app(\App\Services\RecaudacionesService::class)->buscarPorControl(122,(int)$control);
         }catch(\Throwable $e){
             Log::warning('Error inesperado al consultar recaudaciones para No Atentado.',[
                 'control'=>$control,
@@ -1973,9 +1951,17 @@ class TramiteNoAtentadoController extends Controller
             ];
         }
 
-        if(!is_array($json) || !(bool)($json['ok'] ?? false)){
-            $mensaje=trim((string)($json['message'] ?? data_get($json,'error.message','')));
-            $status=(int)($json['status'] ?? 0);
+        if(!is_array($response)){
+            return [
+                'ok'=>false,
+                'code'=>'API_RESPUESTA_INVALIDA',
+                'message'=>'No se pudo validar el control en recaudaciones. Intente nuevamente.',
+            ];
+        }
+
+        if(!(bool)($response['ok'] ?? false)){
+            $mensaje=trim((string)($response['message'] ?? ''));
+            $status=(int)($response['status'] ?? 0);
             $errorMap=$this->mapearMensajeErrorRecaudacionNoAtentado($mensaje,$status);
 
             return [
@@ -1985,7 +1971,7 @@ class TramiteNoAtentadoController extends Controller
             ];
         }
 
-        $resultado=$this->extraerResultadoRecaudacionNoAtentado((array)($json['data'] ?? []));
+        $resultado=$this->extraerResultadoRecaudacionNoAtentado((array)($response['data'] ?? []));
 
         return [
             'ok'=>true,

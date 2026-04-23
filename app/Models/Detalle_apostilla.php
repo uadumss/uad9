@@ -10,7 +10,7 @@ class Detalle_apostilla extends Model
     use HasFactory;
     protected $fillable=['cod_dapo','cod_apos','cod_lis','dapo_numero','dapo_qr','dapo_fecha_ingreso','dapo_fecha_firma'
         ,'dapo_fecha_entrega','dapo_estado','dapo_obs','dapo_hab','dapo_anulado','dapo_numero_documento','dapo_gestion_documento','dapo_buscar_en',
-        'dapo_valorado_preimpreso','dapo_valorado_gestion','dapo_verificacion_sitra'];
+        'dapo_valorado_preimpreso','dapo_valorado_gestion'];
     protected $table='apostilla.detalle_apostilla';
     protected $primaryKey='cod_dapo';
     protected $keyType = 'string';
