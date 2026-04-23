@@ -311,6 +311,8 @@ class Funciones extends Model
             }
         }else{
             if(sizeof($candidatos)==1){
+                $rolUnico=self::resolverRolCandidatoNoAtentado($candidatos[0]);
+                $nombre_convocatoria=self::ajustarConvocatoriaSegunCargoNoAtentado($nombre_convocatoria,$rolUnico);
                 $glosa_unitario=" <span style='font-weight: bold'>".$candidatos[0]->per_apellido." ".$candidatos[0]->per_nombre."</span> con cédula de identidad No. ".$candidatos[0]->per_ci.", ";
                 $sancionado=SancionadosController::verificarSancionado($candidatos[0]->id_per);
                 if($sancionado){
@@ -375,6 +377,99 @@ class Funciones extends Model
 
         $cargo=preg_replace('/\s+/u',' ',$cargo);
         return mb_strtoupper((string)$cargo);
+    }
+
+    private static function resolverRolCandidatoNoAtentado($candidato): string
+    {
+        $flagTitular=self::normalizarTextoAjusteNoAtentado((string)($candidato->noa_titular ?? ''));
+        if(in_array($flagTitular,['t','1','true','si','s','titular'],true)){
+            return 'TITULAR';
+        }
+        if(in_array($flagTitular,['f','0','false','no','n','suplente'],true)){
+            return 'SUPLENTE';
+        }
+
+        $textoCargo=self::normalizarTextoAjusteNoAtentado(
+            (string)($candidato->noa_cargo ?? '').' '.(string)($candidato->carg_nombre ?? '')
+        );
+        if($textoCargo===''){
+            return '';
+        }
+
+        $tieneTitular=strpos($textoCargo,'titular')!==false;
+        $tieneSuplente=strpos($textoCargo,'suplente')!==false;
+
+        if($tieneTitular && !$tieneSuplente){
+            return 'TITULAR';
+        }
+        if($tieneSuplente && !$tieneTitular){
+            return 'SUPLENTE';
+        }
+
+        return '';
+    }
+
+    private static function normalizarTextoAjusteNoAtentado(string $texto): string
+    {
+        $texto=trim($texto);
+        if($texto===''){
+            return '';
+        }
+        $texto=mb_strtolower($texto,'UTF-8');
+        $texto=str_replace(['á','é','í','ó','ú','ñ'],['a','e','i','o','u','n'],$texto);
+        $texto=preg_replace('/\s+/u',' ',$texto) ?? $texto;
+        return trim($texto);
+    }
+
+    private static function ajustarConvocatoriaSegunCargoNoAtentado(string $nombreConvocatoria, string $cargo): string
+    {
+        $texto=trim($nombreConvocatoria);
+        if($texto==='' || ($cargo!=='TITULAR' && $cargo!=='SUPLENTE')){
+            return $nombreConvocatoria;
+        }
+
+        return self::reemplazarCombinacionesRolNoAtentado($texto,$cargo,true);
+    }
+
+    public static function ajustarGlosaNoAtentadoPorRol(string $glosa, $candidato): string
+    {
+        $texto=trim($glosa);
+        if($texto===''){
+            return $glosa;
+        }
+
+        $rol=self::resolverRolCandidatoNoAtentado($candidato);
+        if($rol!=='TITULAR' && $rol!=='SUPLENTE'){
+            return $glosa;
+        }
+
+        return self::reemplazarCombinacionesRolNoAtentado($glosa,$rol,true);
+    }
+
+    private static function reemplazarCombinacionesRolNoAtentado(string $texto, string $rol, bool $minusculas=true): string
+    {
+        $reemplazo=$rol;
+        if($minusculas){
+            $reemplazo=mb_strtolower($reemplazo,'UTF-8');
+        }
+
+        // Patrones frecuentes en convocatorias/glosas con rol mixto titular-suplente.
+        $patrones=[
+            '/\btitular\s*\/\s*suplente\b/iu',
+            '/\btitular\s+o\s+suplente\b/iu',
+            '/\btitular\s+y\/?o\s+suplente\b/iu',
+            '/\btitular\s*,\s*suplente\b/iu',
+            '/\btitular\s+suplente\b/iu',
+            '/\btitular\(a\)\s*\/\s*suplente\(a\)\b/iu',
+            '/\btitular\(a\)\s+o\s+suplente\(a\)\b/iu',
+            '/\btitular\(a\)\s+suplente\(a\)\b/iu',
+        ];
+
+        foreach($patrones as $patron){
+            $texto=preg_replace($patron,$reemplazo,$texto) ?? $texto;
+        }
+
+        return $texto;
     }
 
     public static function glosa_consejo($tramite,$glosa,$docleg,$persona){

@@ -2824,6 +2824,11 @@ class TramiteNoAtentadoController extends Controller
             }else{
                 $modelo_glosa=Glosa::find($tramite_noatentado->dtra_cod_glosa);
             }
+
+            if(sizeof($candidatos)===1 && trim((string)$tramite_noatentado->dtra_glosa)!=='' && $tramite_noatentado->dtra_glosa!=='0'){
+                $tramite_noatentado->dtra_glosa=Funciones::ajustarGlosaNoAtentadoPorRol((string)$tramite_noatentado->dtra_glosa,$candidatos[0]);
+            }
+
             $legalizacion=new TramiteLegalizacionController();
             $qr=$legalizacion->valorQR(date('d'),date('m'),date('Y'));
             $qr_generado='http://www.archivos.umss.edu.bo/verificar_tramite/index.php?q='.$qr;

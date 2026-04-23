@@ -78,7 +78,7 @@
 
 <main>
     <div id="content" class="contenido" style="font-size: 16px">
-        <div id="watermark ">
+        <div id="watermark">
             <img id="imagen" src="../public/img/icon//logoArchivosMarcaAgua.jpg" style="width: 320px; height: 360px"/>
         </div>
         <hr/>
