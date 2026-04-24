@@ -28,6 +28,7 @@ Route::group(['middleware'=>['permission:acceso al sistema - dyt']],function(){
 //===============REPORTES============
     Route::get('reportes',[ReporteController::class,'form_reporte']);
     Route::post('generar reporte',[ReporteController::class,'generar_reporte']);
+    Route::post('exportar inventario tomos excel',[ReporteController::class,'exportar_inventario_excel']);
     Route::get('fe_reporte/{tipoDocumento}',[ReporteController::class,'fe_reporte']);
 
 //===============OBSERVACIONES============
