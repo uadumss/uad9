@@ -23,27 +23,46 @@
                         </div>
                         <hr class="sidebar-divider"/>
                         <div class="table-responsive" id="panel_grafico">
+                            <style>
+                                #dataTable thead th {
+                                    vertical-align: middle;
+                                    font-weight: 600;
+                                    padding: 0.75rem !important;
+                                }
+                                #dataTable tbody td {
+                                    vertical-align: middle;
+                                    padding: 0.5rem 0.75rem !important;
+                                }
+                                #dataTable th:nth-child(1) { width: 8%; }
+                                #dataTable th:nth-child(2) { width: 42%; }
+                                #dataTable th:nth-child(3) { width: 25%; }
+                                #dataTable th:nth-child(4) { width: 25%; }
+                                #dataTable tbody tr td:nth-child(1) { text-align: center; }
+                            </style>
                             <table class="table table-sm table-hover" id="dataTable" width="100%" cellspacing="0">
                                 <thead>
                                 <tr class="bg-gradient-secondary text-white text-center" style="font-size: 0.9em">
-                                    <th>Nº</th>
+                                    <th style="text-align: center;">Nº</th>
                                     <th>Documento</th>
-                                    <th class="text-right">Cantidad</th>
+                                    <th class="text-right">Tomos</th>
+                                    <th class="text-right">Títulos</th>
                                 </tr>
                                 </thead>
                                 <tbody>
-                                <?php $i=1; $total=0;?>
+                                <?php $i=1; $total_tomos=0; $total_titulos=0;?>
                                     @foreach($resultado as $r)
                                     <tr>
-                                        <td>{{$i}}</td>
+                                        <td style="text-align: center;">{{$i}}</td>
                                         <td>{{$tipo[$r->tom_tipo]}}</td>
-                                        <td class="text-right">{{$r->cantidad}}</td>
+                                        <td class="text-right">{{$r->cantidad_tomos}}</td>
+                                        <td class="text-right">{{$r->cantidad_titulos}}</td>
                                     </tr>
-                                        <?php $i++; $total+=$r->cantidad;?>
+                                        <?php $i++; $total_tomos+=$r->cantidad_tomos; $total_titulos+=$r->cantidad_titulos;?>
                                     @endforeach
-                                    <tr class="bg-light">
-                                        <th colspan="2" class="text-center">TOTAL</th>
-                                        <th class="text-right">{{$total}}</th>
+                                    <tr class="bg-light font-weight-bold">
+                                        <td colspan="2" style="text-align: right; padding: 0.75rem !important;">TOTAL</td>
+                                        <td class="text-right" style="padding: 0.75rem !important;">{{$total_tomos}}</td>
+                                        <td class="text-right" style="padding: 0.75rem !important;">{{$total_titulos}}</td>
                                     </tr>
                                 </tbody>
                             </table>
