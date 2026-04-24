@@ -262,9 +262,28 @@
                 success: function (resp) {
                     $('#'+panel).html(resp);
                     cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
-                    setTimeout(function() {
-                        $('#traleg').modal('hide');
-                    }, 500);
+                    var contenedorTemporal = $('<div>').html(resp);
+                    var codTra = $.trim(contenedorTemporal.find('[data-campo="nuevo-cod-tra"]').first().val() || '');
+                    if(codTra !== ''){
+                        var rutaEdicion = "{{url('datos tramite legalizacion')}}" + "/" + codTra;
+                        $.ajax({
+                            url: rutaEdicion,
+                            type: 'GET',
+                            success: function (vistaEdicion) {
+                                $('#'+panel).html(vistaEdicion);
+                                var campoCi = $('#'+panel).find('input[name="ci"]').first();
+                                if(campoCi.length && !campoCi.prop('disabled') && !campoCi.prop('readonly')){
+                                    setTimeout(function(){
+                                        campoCi.trigger('focus');
+                                        campoCi.trigger('select');
+                                    }, 60);
+                                }
+                            },
+                            error: function(){
+                                cargarDatos(rutaEdicion,panel);
+                            }
+                        });
+                    }
                 },
                 error: function (data) {
                     $('#'+panel).html("<span class='text-white font-weight-bold bg-danger rounded p-1'>Ocurrio un error, probablemente no tenga permisos para esta acción</span>");

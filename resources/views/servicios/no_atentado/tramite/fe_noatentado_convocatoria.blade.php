@@ -6,13 +6,14 @@
         <span class="e-header-title">Trámite No Atentado</span>
 
         @if($tramite_noatentado)
+            @php($noaFueGenerado = in_array(strtolower(trim((string)($tramite_noatentado->dtra_generado ?? ''))), ['t','1','true','si','s'], true))
             <div class="e-header-chip">
                 <span class="chip-code">NOA-{{ $tramite_noatentado->dtra_numero_tramite }}</span>
                 <span class="chip-date">
                     <?php if($tramite_noatentado->dtra_fecha_registro != ''){ echo date('d/m/Y', strtotime($tramite_noatentado->dtra_fecha_registro)); } ?>
                 </span>
-                <span class="chip-badge {{ $tramite_noatentado->dtra_generado == '' ? 'badge-edit' : 'badge-done' }}">
-                    {{ $tramite_noatentado->dtra_generado == '' ? 'En edición' : 'Generado' }}
+                <span class="chip-badge {{ !$noaFueGenerado ? 'badge-edit' : 'badge-done' }}">
+                    {{ !$noaFueGenerado ? 'En edición' : 'Generado' }}
                 </span>
             </div>
         @endif
@@ -417,7 +418,7 @@
                                                     <i class="fas fa-file-pdf"></i>
                                                 </a>
                                             @endif
-                                            @if($tramite_noatentado->dtra_generado == '')
+                                            @if(!$noaFueGenerado)
                                                 <a href="#" class="e-icon-action"
                                                    data-toggle="modal" data-target="#Noatentado_agregar"
                                                    title="Editar candidato"

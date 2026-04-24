@@ -411,7 +411,7 @@ class TramiteNoAtentadoController extends Controller
                 return $responderError('No se encontró el trámite a editar.','listar tramite convocatoria/'.$form['cc'],404);
             }
 
-            if((string)($tramite_noatentado->dtra_generado ?? '')!==''){
+            if($this->tramiteNoAtentadoFueGenerado($tramite_noatentado)){
                 return $responderError(
                     'El trámite ya fue generado y no permite edición directa.',
                     'listar tramite convocatoria/'.$form['cc'],
@@ -2659,6 +2659,16 @@ class TramiteNoAtentadoController extends Controller
             ->first();
     }
 
+    private function tramiteNoAtentadoFueGenerado($tramite): bool
+    {
+        if(!$tramite){
+            return false;
+        }
+
+        $estado=mb_strtolower(trim((string)($tramite->dtra_generado ?? '')));
+        return in_array($estado,['t','1','true','si','s'],true);
+    }
+
     //=================== CANDIDATOS
     public function fe_candidato($cod_dtra,$cod_noa){
         if(!Gate::allows('editar tramite - noa')){
@@ -2675,7 +2685,7 @@ class TramiteNoAtentadoController extends Controller
             abort(403,$this->mensajeBloqueoGestionCandidatosNoAtentado());
         }
 
-        if((string)($tramite->dtra_generado ?? '')!==''){
+        if($this->tramiteNoAtentadoFueGenerado($tramite)){
             abort(403,'El trámite ya fue generado y no permite editar candidatos.');
         }
 
@@ -2711,7 +2721,7 @@ class TramiteNoAtentadoController extends Controller
             return redirect()->back();
         }
 
-        if((string)($tramite->dtra_generado ?? '')!==''){
+        if($this->tramiteNoAtentadoFueGenerado($tramite)){
             \Session::flash('errorModal','El trámite ya fue generado y no permite editar candidatos.');
             return redirect('editar tramite convocatoria/'.$tramite->cod_con.'/'.$tramite->cod_dtra);
         }

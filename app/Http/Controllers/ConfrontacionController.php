@@ -117,7 +117,7 @@ class ConfrontacionController extends Controller
         $nuevo=(object) array_merge($d_tramita->toArray(),$form->toArray());
         $nuevo=json_encode($nuevo);
         SessionController::write('C','',$nuevo,'d_tramitas','3',$d_tramita->cod_dtra);
-        return  redirect('listar tramite legalizacion/'.date('Y-m-d',strtotime($tramita->tra_fecha_solicitud)));
+        return  redirect('datos tramite legalizacion/'.$tramita->cod_tra);
     }
     public function generar_numero_busqueda(Request $form){
         $numero=DB::table('tramitas')->where('tra_fecha_solicitud','=',$form['fecha'])->max('tra_numero');
