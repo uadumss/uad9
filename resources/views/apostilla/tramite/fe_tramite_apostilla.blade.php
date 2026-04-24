@@ -502,7 +502,7 @@
 
                         @can('crear trámite - apo')
                             <button type="button" class="e-btn e-btn-primary e-btn-full"
-                                    onclick="enviar('form_tramite_apostilla','{{ $urlGuardarTramiteApostilla }}','panel_apostilla');cargarDatos('{{ $urlTablaTramiteApostilla }}','panel_tabla_tramites');return false;">
+                                    onclick="guardarTramiteApostillaYEnfocar();return false;">
                                 <i class="fas fa-save" style="font-size:11px;"></i> Guardar trámite
                             </button>
                         @endcan
@@ -1131,6 +1131,48 @@ function guardarAgregarApostillaRapida(){
         error:function(xhr){const msg=(xhr.responseJSON&&xhr.responseJSON.message)?xhr.responseJSON.message:'No se pudo registrar el trámite.';estadoRegistroRapido('error',msg);}
     });
 }
+
+function guardarTramiteApostillaYEnfocar(){
+    const form=$('#form_tramite_apostilla');
+    if(!form.length)return false;
+    $.ajax({
+        url:'{{ $urlGuardarTramiteApostilla }}',
+        type:'POST',
+        dataType:'json',
+        headers:{'Accept':'application/json'},
+        data:form.serialize(),
+        success:function(resp){
+            if(resp&&resp.ok&&resp.redirect){
+                $.ajax({
+                    url:resp.redirect,
+                    type:'GET',
+                    success:function(vista){
+                        $('#panel_apostilla').html(vista);
+                        setTimeout(function(){
+                            const campo=$('#panel_apostilla').find('#nro_control_rapido').first();
+                            if(campo.length && !campo.prop('disabled') && !campo.prop('readonly')){
+                                campo.trigger('focus');
+                                campo.trigger('select');
+                            }
+                        },120);
+                    },
+                    error:function(){
+                        cargarDatos(resp.redirect,'panel_apostilla');
+                    }
+                });
+                return;
+            }
+            if(resp&&resp.ok===false){
+                estadoRegistroRapido('error',(resp.message||'No se pudo guardar el trámite.').toString());
+            }
+        },
+        error:function(xhr){
+            const msg=(xhr.responseJSON&&xhr.responseJSON.message)?xhr.responseJSON.message:'No se pudo guardar el trámite.';
+            estadoRegistroRapido('error',msg);
+        }
+    });
+    return false;
+}
 function submitAgregarApostillaRapida(){
     const form=formApostillaRapida();if(!form.length)return false;
     const nroControl=obtenerControlRapidoApostilla();
@@ -1167,6 +1209,16 @@ $(document)
     });
 $(function(){
     const form=formApostillaRapida();
-    if(form.length){estadoRegistroRapido('pending','Pendiente de validacion.');actualizarEstadoSitraRapido(form,'text-muted','SITRA pendiente.');}
+    if(form.length){
+        estadoRegistroRapido('pending','Pendiente de validacion.');
+        actualizarEstadoSitraRapido(form,'text-muted','SITRA pendiente.');
+        const campoControl=form.find('input[name="nro_control"]').first();
+        if(campoControl.length && !campoControl.prop('disabled') && !campoControl.prop('readonly')){
+            setTimeout(function(){
+                campoControl.trigger('focus');
+                campoControl.trigger('select');
+            },90);
+        }
+    }
 });
 </script>

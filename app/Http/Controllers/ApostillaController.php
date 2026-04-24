@@ -265,6 +265,12 @@ class ApostillaController extends Controller
             $tramite_apostilla->cod_apo=$apoderado->cod_apo;
             $tramite_apostilla->save();
         }
+        if($form->ajax() || $form->expectsJson()){
+            return response()->json([
+                'ok'=>true,
+                'redirect'=>url('editar tramite apostilla/'.$tramite_apostilla->cod_apos),
+            ]);
+        }
         return redirect('editar tramite apostilla/'.$tramite_apostilla->cod_apos);
     }
     public function g_apoderado_tramite_apostilla(Request $form){

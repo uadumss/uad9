@@ -1767,6 +1767,21 @@
         form.data('timer-control',timer);
     }
 
+    function abrirAutoNuevoTramiteServicios(){
+        var contenedor=$('#divNueTram');
+        if(!contenedor.length || contenedor.is(':visible'))return;
+        var campoControl=contenedor.find('input[name="control"]').first();
+        var tieneFormulario=contenedor.find('form#form_docleg,form#form_docleg_f').length>0;
+        if(!tieneFormulario || !campoControl.length)return;
+        contenedor.stop(true,true).show(0);
+        setTimeout(function(){
+            if(campoControl.length && !campoControl.prop('disabled') && !campoControl.prop('readonly')){
+                campoControl.trigger('focus');
+                campoControl.trigger('select');
+            }
+        },120);
+    }
+
     $(function(){
         $('form').each(function(){
             var formActual=$(this);
@@ -1796,5 +1811,7 @@
             var ciInicial=obtenerCiPrincipalTramite();
             if(ciInicial!=='')consultarEstadoCuadisPorCi(ciInicial);else limpiarEstadoCuadisEnFormularios();
         }
+
+        abrirAutoNuevoTramiteServicios();
     });
 </script>

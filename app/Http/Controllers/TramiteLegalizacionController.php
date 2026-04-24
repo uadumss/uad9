@@ -238,6 +238,14 @@ class TramiteLegalizacionController extends Controller
                 SessionController::write('C','','persona creada','personas','3',$persona->id_per);
             }
         $tramite->save();
+
+            if($form->ajax() || $form->expectsJson()){
+                return response()->json([
+                    'ok'=>true,
+                    'redirect'=>url('datos tramite legalizacion/'.$form['ctra']),
+                ]);
+            }
+
         return redirect('datos tramite legalizacion/'.$form['ctra']);
     }
     public function eli_traleg(Request $form){

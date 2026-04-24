@@ -248,6 +248,24 @@
         }
 
 
+        function enfocarCampoValoradoServicios(panel){
+            var scope = $('#'+panel);
+            if(!scope.length)return;
+            var campoValorado = scope.find('#form_docleg input[name="control"]').first();
+            if(!campoValorado.length){
+                campoValorado = scope.find('#form_docleg_f input[name="control"]').first();
+            }
+            if(!campoValorado.length){
+                campoValorado = scope.find('input[name="valorado"]').first();
+            }
+            if(campoValorado.length && !campoValorado.prop('disabled') && !campoValorado.prop('readonly')){
+                setTimeout(function(){
+                    campoValorado.trigger('focus');
+                    campoValorado.trigger('select');
+                },80);
+            }
+        }
+
         function generarNumero(tipo,url,panel){
             $('#'+panel).html("<br/><br/><div class='d-flex justify-content-center text-warning'><div class='spinner-border' role='status'> <span class='visually-hidden'></span></div><span class='text-white font-weight-bold'>&nbsp;  Cargando ...</span></div>");
             var link = "{{url('/')}}"+"/"+url;
@@ -297,8 +315,36 @@
                 type: 'POST',
                 data:$('#'+form).serialize(),
                 success: function (resp) {
+                    if(resp && typeof resp === 'object' && resp.ok===true && resp.redirect){
+                        $.ajax({
+                            url: resp.redirect,
+                            type: 'GET',
+                            success: function(vista){
+                                $('#'+panel).html(vista);
+                                cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
+                                if(form==='form_traleg'){
+                                    var areaTramite=$('#'+panel).find('#divNueTram');
+                                    if(areaTramite.length){
+                                        areaTramite.stop(true,true).show(0);
+                                        var campoValorado=areaTramite.find('input[name="control"]').first();
+                                        if(!campoValorado.length){campoValorado=areaTramite.find('input[name="valorado"]:visible').first();}
+                                        if(campoValorado.length && !campoValorado.prop('disabled') && !campoValorado.prop('readonly')){
+                                            setTimeout(function(){campoValorado.trigger('focus');campoValorado.trigger('select');},100);
+                                        }
+                                    }
+                                }
+                            },
+                            error: function(){
+                                $('#'+panel).html(resp.redirect ? '<span class="text-danger">No se pudo abrir el trámite recién creado.</span>' : '');
+                            }
+                        });
+                        return;
+                    }
                     $('#'+panel).html(resp);
                     cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
+                    if(form==='form_traleg'){
+                        enfocarCampoValoradoServicios(panel);
+                    }
                 },
                 error: function (resp) {
 			alert('Error en los datos');
