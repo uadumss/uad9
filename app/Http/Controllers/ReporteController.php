@@ -12,14 +12,14 @@ use Illuminate\Validation\Rule;
 class ReporteController extends Controller
 {
     private array $tiposDocumento = [
-        'db' => ['nombre' => 'DIPLOMA DE BACHILLER', 'abreviado' => 'DB'],
-        'da' => ['nombre' => 'DIPLOMA ACADEMICO', 'abreviado' => 'DA'],
-        'tp' => ['nombre' => 'TITULO PROFESIONAL', 'abreviado' => 'TP'],
-        'ca' => ['nombre' => 'CERTIFICADO ACADEMICO', 'abreviado' => 'CA'],
-        'su' => ['nombre' => 'CERTIFICADO SUPLETORIO', 'abreviado' => 'SU'],
-        'di' => ['nombre' => 'DIPLOMADO', 'abreviado' => 'DI'],
-        'tpos' => ['nombre' => 'TITULO POSGRADO', 'abreviado' => 'POSGRADO'],
-        're' => ['nombre' => 'REVALIDA', 'abreviado' => 'RE'],
+        'db' => ['nombre' => 'DIPLOMA DE BACHILLER', 'abreviado' => 'D.B.'],
+        'da' => ['nombre' => 'DIPLOMA ACADEMICO', 'abreviado' => 'D.A.'],
+        'tp' => ['nombre' => 'TITULOS EN PROVISION NACIONAL', 'abreviado' => 'T.P.N.'],
+        'ca' => ['nombre' => 'CERTIFICADO ACADEMICO', 'abreviado' => 'CERT.ACAD.'],
+        'su' => ['nombre' => 'CERTIFICADO SUPLETORIO', 'abreviado' => 'CERT.SUPL.'],
+        'di' => ['nombre' => 'DIPLOMADO', 'abreviado' => 'DIPLOMADO'],
+        'tpos' => ['nombre' => 'POSGRADO', 'abreviado' => 'POSGRADO'],
+        're' => ['nombre' => 'REVALIDA', 'abreviado' => 'R.E.'],
     ];
 
     public function form_reporte(){
@@ -135,6 +135,8 @@ class ReporteController extends Controller
             'tipos.*' => ['required', Rule::in($tiposValidos)],
             'inicio' => ['required', 'integer', 'min:1928'],
             'fin' => ['required', 'integer', 'min:1928'],
+            'exportar_tomos' => ['nullable', 'in:1'],
+            'exportar_titulos' => ['nullable', 'in:1'],
         ]);
 
         $inicio = (int) $request->inicio;
@@ -146,17 +148,27 @@ class ReporteController extends Controller
         }
 
         $tiposSeleccionados = array_values(array_unique($request->tipos));
-        $datos = $this->obtenerDatosInventarioTomos($tiposSeleccionados, $inicio, $fin);
+        $exportarTomos = $request->has('exportar_tomos');
+        $exportarTitulos = $request->has('exportar_titulos');
+        if (!$exportarTomos && !$exportarTitulos) {
+            $exportarTomos = true;
+            $exportarTitulos = true;
+        }
+
+        $datos = $this->obtenerDatosInventarioTomos($tiposSeleccionados, $inicio, $fin, $exportarTomos, $exportarTitulos);
 
         $nombre = 'Inventario-tomos-'.$inicio.'-'.$fin.'.xlsx';
         return (new ExportInventarioTomos(
-            $datos['filasExcel'],
-            $datos['anchoFila'],
-            $datos['titulo']
+            $datos['filasPrincipal'],
+            $datos['anchoPrincipal'],
+            $datos['filasTotales'],
+            $datos['anchoTotales'],
+            $datos['titulo'],
+            $datos['filaTotalGeneralTotales']
         ))->download($nombre);
     }
 
-    private function obtenerDatosInventarioTomos(array $tiposSeleccionados, int $inicio, int $fin): array
+    private function obtenerDatosInventarioTomos(array $tiposSeleccionados, int $inicio, int $fin, bool $exportarTomos, bool $exportarTitulos): array
     {
         $registros = DB::table('titulos as ti')
             ->join('tomos as t', 'ti.cod_tom', '=', 't.cod_tom')
@@ -180,11 +192,16 @@ class ReporteController extends Controller
             $siglas[] = $this->tiposDocumento[$tipo]['abreviado'];
         }
 
-        $filas = [];
+        $filasPrincipal = [];
         $cabecera = ['NRO', 'GESTION'];
         foreach ($tiposSeleccionados as $tipo) {
-            $cabecera[] = $this->tiposDocumento[$tipo]['abreviado'].' TOMOS';
-            $cabecera[] = $this->tiposDocumento[$tipo]['abreviado'].' TITULOS';
+            $nombreColumna = mb_strtoupper($this->tiposDocumento[$tipo]['nombre'], 'UTF-8');
+            if ($exportarTomos) {
+                $cabecera[] = $nombreColumna.' TOMOS';
+            }
+            if ($exportarTitulos) {
+                $cabecera[] = $nombreColumna.' TITULOS';
+            }
         }
 
         $totalesPorTipo = [];
@@ -197,15 +214,34 @@ class ReporteController extends Controller
         for ($gestion = $inicio; $gestion <= $fin; $gestion++) {
             $fila = [$nro, $gestion];
             foreach ($tiposSeleccionados as $tipo) {
-                $tomos = $indexado[$gestion][$tipo]['tomos'] ?? 0;
-                $titulos = $indexado[$gestion][$tipo]['titulos'] ?? 0;
-                $fila[] = $tomos;
-                $fila[] = $titulos;
+                $tomos = (int) ($indexado[$gestion][$tipo]['tomos'] ?? 0);
+                $titulos = (int) ($indexado[$gestion][$tipo]['titulos'] ?? 0);
+                if ($exportarTomos) {
+                    $fila[] = $tomos;
+                }
+                if ($exportarTitulos) {
+                    $fila[] = $titulos;
+                }
                 $totalesPorTipo[$tipo]['tomos'] += $tomos;
                 $totalesPorTipo[$tipo]['titulos'] += $titulos;
             }
             $detalleAnios[] = $fila;
             $nro++;
+        }
+
+        // Totales para la hoja resumen: se recalculan por tipo en una sola consulta
+        // para evitar sobrecontar tomos al sumar resultados agrupados por gestion.
+        $resumenTotales = DB::table('titulos as ti')
+            ->join('tomos as t', 'ti.cod_tom', '=', 't.cod_tom')
+            ->whereIn('t.tom_tipo', $tiposSeleccionados)
+            ->whereBetween('ti.tit_gestion', [$inicio, $fin])
+            ->groupBy('t.tom_tipo')
+            ->selectRaw('t.tom_tipo, COUNT(DISTINCT t.cod_tom) as tomos, COUNT(ti.cod_tit) as titulos')
+            ->get();
+
+        foreach ($resumenTotales as $item) {
+            $totalesPorTipo[$item->tom_tipo]['tomos'] = (int) $item->tomos;
+            $totalesPorTipo[$item->tom_tipo]['titulos'] = (int) $item->titulos;
         }
 
         $totalGeneralTomos = 0;
@@ -215,59 +251,56 @@ class ReporteController extends Controller
             $totalGeneralTitulos += $totalesPorTipo[$tipo]['titulos'];
         }
 
-        $columnaResumenInicio = count($cabecera) + 1;
-        $anchoFila = $columnaResumenInicio + 3;
+        $anchoPrincipal = count($cabecera);
+        $titulo = 'TOTAL DE INVENTARIO DE TOMOS Y TITULOS ('.implode(' - ', $siglas).')';
 
-        $titulo = 'TOTAL DE INVENTARIO DE TOMOS Y TITULOS ('.implode('.', $siglas).')';
-
-        $filas[] = array_merge([$titulo], array_fill(0, $anchoFila - 1, ''));
-        $filas[] = array_fill(0, $anchoFila, '');
-
-        $cabeceraFila = array_fill(0, $anchoFila, '');
-        foreach ($cabecera as $i => $valor) {
-            $cabeceraFila[$i] = $valor;
+        $filasPrincipal[] = $cabecera;
+        foreach ($detalleAnios as $filaAnio) {
+            $filasPrincipal[] = $filaAnio;
         }
-        $cabeceraFila[$columnaResumenInicio] = 'TOTALES';
-        $filas[] = $cabeceraFila;
 
-        $cabeceraResumen = array_fill(0, $anchoFila, '');
-        $cabeceraResumen[$columnaResumenInicio] = 'TIPO';
-        $cabeceraResumen[$columnaResumenInicio + 1] = 'TOMOS';
-        $cabeceraResumen[$columnaResumenInicio + 2] = 'TITULOS';
-        $filas[] = $cabeceraResumen;
+        $filasTotales = [];
+        $filasTotales[] = ['TOTALES'];
 
-        $resumenTipos = array_values($tiposSeleccionados);
-        $cantidadFilasDetalle = count($detalleAnios);
-        $cantidadFilasResumen = count($resumenTipos) + 1;
-        $filasCuerpo = max($cantidadFilasDetalle, $cantidadFilasResumen);
-
-        for ($i = 0; $i < $filasCuerpo; $i++) {
-            $fila = array_fill(0, $anchoFila, '');
-
-            if ($i < $cantidadFilasDetalle) {
-                foreach ($detalleAnios[$i] as $j => $valor) {
-                    $fila[$j] = $valor;
-                }
-            }
-
-            if ($i < count($resumenTipos)) {
-                $tipo = $resumenTipos[$i];
-                $fila[$columnaResumenInicio] = $this->tiposDocumento[$tipo]['abreviado'];
-                $fila[$columnaResumenInicio + 1] = $totalesPorTipo[$tipo]['tomos'];
-                $fila[$columnaResumenInicio + 2] = $totalesPorTipo[$tipo]['titulos'];
-            } elseif ($i === count($resumenTipos)) {
-                $fila[$columnaResumenInicio] = 'TOTAL';
-                $fila[$columnaResumenInicio + 1] = $totalGeneralTomos;
-                $fila[$columnaResumenInicio + 2] = $totalGeneralTitulos;
-            }
-
-            $filas[] = $fila;
+        $cabeceraTotales = ['TIPO DE DOCUMENTO'];
+        if ($exportarTomos) {
+            $cabeceraTotales[] = 'TOMOS';
         }
+        if ($exportarTitulos) {
+            $cabeceraTotales[] = 'TITULOS';
+        }
+        $filasTotales[] = $cabeceraTotales;
+
+        foreach ($tiposSeleccionados as $tipo) {
+            $filaTotalTipo = [mb_strtoupper($this->tiposDocumento[$tipo]['nombre'], 'UTF-8')];
+            if ($exportarTomos) {
+                $filaTotalTipo[] = (int) $totalesPorTipo[$tipo]['tomos'];
+            }
+            if ($exportarTitulos) {
+                $filaTotalTipo[] = (int) $totalesPorTipo[$tipo]['titulos'];
+            }
+            $filasTotales[] = $filaTotalTipo;
+        }
+
+        $filaTotalGeneral = ['TOTAL'];
+        if ($exportarTomos) {
+            $filaTotalGeneral[] = (int) $totalGeneralTomos;
+        }
+        if ($exportarTitulos) {
+            $filaTotalGeneral[] = (int) $totalGeneralTitulos;
+        }
+        $filasTotales[] = $filaTotalGeneral;
+
+        $anchoTotales = count($cabeceraTotales);
+        $filaTotalGeneralTotales = count($filasTotales);
 
         return [
-            'filasExcel' => $filas,
-            'anchoFila' => $anchoFila,
+            'filasPrincipal' => $filasPrincipal,
+            'anchoPrincipal' => $anchoPrincipal,
+            'filasTotales' => $filasTotales,
+            'anchoTotales' => $anchoTotales,
             'titulo' => $titulo,
+            'filaTotalGeneralTotales' => $filaTotalGeneralTotales,
         ];
     }
 }

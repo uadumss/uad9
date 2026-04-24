@@ -93,6 +93,21 @@
                             <div class="alert alert-success py-2">
                                 Selecciona los documentos y el rango de gestiones para construir el Excel.
                             </div>
+                            <div class="row mb-2">
+                                <div class="col-md-12">
+                                    <label class="font-weight-bold">Exportar</label>
+                                    <div class="border rounded p-2">
+                                        <div class="custom-control custom-checkbox custom-control-inline">
+                                            <input type="checkbox" class="custom-control-input" id="exportar_tomos" name="exportar_tomos" value="1" checked>
+                                            <label class="custom-control-label" for="exportar_tomos">Solo/Con Tomos</label>
+                                        </div>
+                                        <div class="custom-control custom-checkbox custom-control-inline">
+                                            <input type="checkbox" class="custom-control-input" id="exportar_titulos" name="exportar_titulos" value="1" checked>
+                                            <label class="custom-control-label" for="exportar_titulos">Solo/Con Títulos</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="row">
                                 <div class="col-md-12">
                                     <label class="font-weight-bold">Documentos a incluir</label>
@@ -114,7 +129,7 @@
                                     <select class="custom-select custom-select-sm border" name="inicio" required>
                                         <?php $año=date('Y');?>
                                         @for($i=$año;$i>1927;$i--)
-                                            <option value="{{$i}}" {{$i==$año?'selected':''}}>{{$i}}</option>
+                                            <option value="{{$i}}" {{$i==1934?'selected':''}}>{{$i}}</option>
                                         @endfor
                                     </select>
                                 </div>
