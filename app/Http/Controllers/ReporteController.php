@@ -14,7 +14,7 @@ class ReporteController extends Controller
         $carreras=Carrera::all();
         $facultades=Facultad::all();
 
-        $consulta="select t.tom_tipo, count(ti.cod_tit) as cantidad from tomos as t, titulos as ti where t.cod_tom=ti.cod_tom group by t.tom_tipo";
+        $consulta="select t.tom_tipo, count(DISTINCT t.cod_tom) as cantidad_tomos, count(ti.cod_tit) as cantidad_titulos from tomos as t, titulos as ti where t.cod_tom=ti.cod_tom group by t.tom_tipo";
         $resultado=DB::select($consulta);
         return view('diplomas.reporte.reporte',compact('carreras','facultades','resultado'));
 
@@ -60,35 +60,35 @@ class ReporteController extends Controller
         if($tipo!='todos'){
             if($inicio!=''){
                 if($form['fin']!=''){
-                    $consulta="select tom_tipo, tit_gestion  as titulo, count(ti.cod_tit) as cantidad from titulos ti join tomos t on ti.cod_tom=t.cod_tom ";
+                    $consulta="select tom_tipo, tit_gestion as titulo, count(DISTINCT t.cod_tom) as cantidad_tomos, count(ti.cod_tit) as cantidad_titulos from titulos ti join tomos t on ti.cod_tom=t.cod_tom ";
                     $agrupar=" group by tom_tipo,tit_gestion";
                     $gestion=" tit_gestion between ".$inicio." and ".$fin;
 
                 }else{
-                    $consulta="select EXTRACT(MONTH from ti.tit_fecha_emision) as titulo, count(ti.cod_tit) as cantidad from titulos ti join tomos t on ti.cod_tom=t.cod_tom ";
+                    $consulta="select EXTRACT(MONTH from ti.tit_fecha_emision) as titulo, count(DISTINCT t.cod_tom) as cantidad_tomos, count(ti.cod_tit) as cantidad_titulos from titulos ti join tomos t on ti.cod_tom=t.cod_tom ";
                     $agrupar=" group by titulo order by titulo";
                     $gestion=" tit_gestion=".$inicio;
                     $mes=1;
                 }
             }else{
-                $consulta="select tom_tipo,tit_gestion  as titulo, count(ti.cod_tit) as cantidad from titulos ti join tomos t on ti.cod_tom=t.cod_tom ";
+                $consulta="select tom_tipo, tit_gestion as titulo, count(DISTINCT t.cod_tom) as cantidad_tomos, count(ti.cod_tit) as cantidad_titulos from titulos ti join tomos t on ti.cod_tom=t.cod_tom ";
                 $agrupar=" group by tom_tipo, tit_gestion";
             }
         }else{
             if($inicio!=''){
                 if($form['fin']!=''){
-                    $consulta="select tit_gestion  as titulo, count(ti.cod_tit) as cantidad from titulos ti join tomos t on ti.cod_tom=t.cod_tom ";
+                    $consulta="select tit_gestion as titulo, count(DISTINCT t.cod_tom) as cantidad_tomos, count(ti.cod_tit) as cantidad_titulos from titulos ti join tomos t on ti.cod_tom=t.cod_tom ";
                     $agrupar=" group by tit_gestion order by titulo";
                     $gestion=" tit_gestion between ".$inicio." and ".$fin;
 
                 }else{
-                    $consulta="select EXTRACT(MONTH from ti.tit_fecha_emision)  as titulo, count(ti.cod_tit) as cantidad from titulos ti join tomos t on ti.cod_tom=t.cod_tom ";
-                    $agrupar=" group by mes";
+                    $consulta="select EXTRACT(MONTH from ti.tit_fecha_emision) as titulo, count(DISTINCT t.cod_tom) as cantidad_tomos, count(ti.cod_tit) as cantidad_titulos from titulos ti join tomos t on ti.cod_tom=t.cod_tom ";
+                    $agrupar=" group by titulo";
                     $gestion=" tit_gestion=".$inicio;
                     $mes=1;
                 }
             }else{
-                $consulta="select tit_gestion as titulo, count(ti.cod_tit) as cantidad from titulos ti join tomos t on ti.cod_tom=t.cod_tom ";
+                $consulta="select tit_gestion as titulo, count(DISTINCT t.cod_tom) as cantidad_tomos, count(ti.cod_tit) as cantidad_titulos from titulos ti join tomos t on ti.cod_tom=t.cod_tom ";
                 $agrupar=" group by tit_gestion";
             }
         }
