@@ -278,11 +278,10 @@
                 data:form,
                 //data:$('#form_editar').serialize(),
                 success: function (resp) {
-                    $('#'+panel).html(resp);
-                    cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
                     var contenedorTemporal = $('<div>').html(resp);
                     var codTra = $.trim(contenedorTemporal.find('[data-campo="nuevo-cod-tra"]').first().val() || '');
                     if(codTra !== ''){
+                        cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
                         var rutaEdicion = "{{url('datos tramite legalizacion')}}" + "/" + codTra;
                         $.ajax({
                             url: rutaEdicion,
@@ -301,7 +300,10 @@
                                 cargarDatos(rutaEdicion,panel);
                             }
                         });
+                        return;
                     }
+                    $('#'+panel).html(resp);
+                    cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
                 },
                 error: function (data) {
                     $('#'+panel).html("<span class='text-white font-weight-bold bg-danger rounded p-1'>Ocurrio un error, probablemente no tenga permisos para esta acción</span>");

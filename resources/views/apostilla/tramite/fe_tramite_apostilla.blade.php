@@ -143,7 +143,7 @@
 /* ── Main grid ──────────────────────────────────────────── */
 .eapo .e-grid {
     display: grid;
-    grid-template-columns: 248px 1fr;
+    grid-template-columns: 300px 1fr;
     gap: 16px;
     align-items: start;
 }
@@ -438,7 +438,7 @@
                                 <div class="fg fg-2">
                                     <div class="e-field">
                                         <label>CI</label>
-                                        <input class="e-input" type="text" name="ci"
+                                        <input class="e-input" type="text" name="ci" id="ci_apostilla"
                                                onchange="cargarDatosPersonales(this.value)" autocomplete="off">
                                     </div>
                                     <div class="e-field">
@@ -774,7 +774,7 @@
                                                    data-url="{{ url('verificacion sitra apostilla/' . $d->cod_dapo) }}"
                                                    onclick="cargarDatos(this.dataset.url,'panel_docleg');$('#docleg').modal('show');return false;"
                                                    style="text-decoration:none;" title="Coincide en SITRA">
-                                                    <i class="fas fa-check" style="font-size:9px;"></i> OK
+                                                    <i class="fas fa-check-circle" style="font-size:12px;"></i>
                                                 </a>
                                             @elseif(($d->dapo_verificacion_sitra ?? '') === '1' || ($d->dapo_verificacion_sitra ?? '') === '2')
                                                 <a href="#" class="e-pill err"
@@ -782,10 +782,12 @@
                                                    data-url="{{ url('verificacion sitra apostilla/' . $d->cod_dapo) }}"
                                                    onclick="cargarDatos(this.dataset.url,'panel_docleg');$('#docleg').modal('show');return false;"
                                                    style="text-decoration:none;" title="No coincide / no existe">
-                                                    <i class="fas fa-times" style="font-size:9px;"></i> Error
+                                                    <i class="fas fa-times-circle" style="font-size:12px;"></i>
                                                 </a>
                                             @else
-                                                <span class="e-pill idle" style="cursor:default;" title="Sin verificación">— N/A</span>
+                                                <span class="e-pill idle" style="cursor:default;" title="Sin verificación">
+                                                    <i class="fas fa-minus-circle" style="font-size:12px;"></i>
+                                                </span>
                                             @endif
                                         </td>
                                         <td class="center">
@@ -1219,6 +1221,15 @@ $(function(){
                 campoControl.trigger('select');
             },90);
         }
+        return;
+    }
+
+    const campoCi=$('#form_tramite_apostilla').find('input[name="ci"]').first();
+    if(campoCi.length && !campoCi.prop('disabled') && !campoCi.prop('readonly')){
+        setTimeout(function(){
+            campoCi.trigger('focus');
+            campoCi.trigger('select');
+        },90);
     }
 });
 </script>

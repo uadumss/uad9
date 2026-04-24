@@ -134,7 +134,7 @@
 /* ── Main grid ──────────────────────────────────────────── */
 .eleg .e-grid {
     display: grid;
-    grid-template-columns: 260px 1fr;
+    grid-template-columns: 300px 1fr;
     gap: 16px;
     align-items: start;
 }
@@ -762,17 +762,19 @@
                                                        data-target="#docleg" data-toggle="modal"
                                                        onclick="cargarDatos('{{ url('verificacion sitra/'.$d->cod_dtra) }}','panel_docleg')"
                                                        title="Coincide en SITRA/SID" style="text-decoration:none;">
-                                                        <i class="fas fa-check" style="font-size:9px;"></i> OK
+                                                        <i class="fas fa-check-circle" style="font-size:12px;"></i>
                                                     </a>
                                                 @elseif($d->dtra_verificacion_sitra=='1' || $d->dtra_verificacion_sitra=='2')
                                                     <a href="#" class="e-pill err"
                                                        data-target="#docleg" data-toggle="modal"
                                                        onclick="cargarDatos('{{ url('verificacion sitra/'.$d->cod_dtra) }}','panel_docleg')"
                                                        title="No coincide / no existe" style="text-decoration:none;">
-                                                        <i class="fas fa-times" style="font-size:9px;"></i> Error
+                                                        <i class="fas fa-times-circle" style="font-size:12px;"></i>
                                                     </a>
                                                 @else
-                                                    <span class="e-pill idle" title="SITRA pendiente">— N/A</span>
+                                                    <span class="e-pill idle" title="SITRA pendiente">
+                                                        <i class="fas fa-minus-circle" style="font-size:12px;"></i>
+                                                    </span>
                                                 @endif
                                             </td>
                                         @endif
@@ -844,9 +846,9 @@
                                                                onclick="cargarDatos('{{ url('cambiar interno docleg/'.$d->cod_dtra) }}','panel_traleg')"
                                                                title="Cambiar destino de trámite">
                                                                 @if($d->dtra_interno=='t')
-                                                                    <span class="e-badge int" style="font-size:9px;">Int</span>
+                                                                    <i class="fas fa-building" style="color:var(--e-red);font-size:12px;"></i>
                                                                 @else
-                                                                    <span class="e-badge ext" style="font-size:9px;">Ext</span>
+                                                                    <i class="fas fa-globe-americas" style="color:var(--e-blue);font-size:12px;"></i>
                                                                 @endif
                                                             </a>
                                                         @endif
@@ -1333,6 +1335,9 @@
                 if(estado.length) estado.text('No registrado en CUADIS.').removeClass('text-success text-warning').addClass('text-muted');
             }
             sincronizarCamposObligatorios(form);
+            if(esCuadis){
+                abrirAutoNuevoTramiteServicios(true);
+            }
         });
     }
 
@@ -1721,6 +1726,16 @@
         form.find('input[name="control"]').prop('required',!esCuadis);form.find('input[name="gestion"]').prop('required',true);form.find('input[name="numero"]').prop('required',esBusqueda);form.find('input[name="reintegro"]').prop('required',false);form.find('select[name="buscar_en"]').prop('required',esBusqueda);form.find('textarea[name="documentos"]').prop('required',esBusqueda);
         actualizarVisibilidadPagoCuadis(form,esCuadis);actualizarSelectorTipoSegunCuadis(form);
     }
+    function abrirDropdownTipoLegalizacion(formulario){
+        var form=$(formulario);if(!form.length)return;
+        var select=form.find('select[data-campo="tipo-legalizacion"]').first();if(!select.length)return;
+        if(select.prop('disabled')||select.prop('readonly'))return;
+        select.trigger('focus');
+        try{select.trigger('mousedown');}catch(e){}
+        setTimeout(function(){
+            try{select.trigger($.Event('keydown',{key:'ArrowDown',keyCode:40,which:40}));}catch(e){}
+        },30);
+    }
     function actualizarVisibilidadPagoCuadis(formulario,esCuadis){
         var form=$(formulario);if(!form.length)return;
         var filasPrincipal=form.find('[data-campo="fila-pago-principal"]'),filasComplementarias=form.find('[data-campo="fila-pago-complementario"]');
@@ -1767,18 +1782,45 @@
         form.data('timer-control',timer);
     }
 
-    function abrirAutoNuevoTramiteServicios(){
+    function enfocarCampoInicialNuevoTramiteServicios(contenedor,preferirTipo){
+        var scope=$(contenedor);
+        if(!scope.length)return;
+        var formulario=scope.find('form#form_docleg,form#form_docleg_f').first();
+        if(!formulario.length)return;
+        var esCuadis=formulario.find('input[name="cuadis"]').is(':checked');
+        var campoTipo=formulario.find('select[data-campo="tipo-legalizacion"]').first();
+        var campoControl=formulario.find('input[name="control"]').first();
+
+        if((preferirTipo||esCuadis)&&campoTipo.length&&!campoTipo.prop('disabled')&&!campoTipo.prop('readonly')){
+            abrirDropdownTipoLegalizacion(formulario);
+            return;
+        }
+
+        if(campoControl.length && !campoControl.prop('disabled') && !campoControl.prop('readonly')){
+            campoControl.trigger('focus');
+            campoControl.trigger('select');
+            return;
+        }
+
+        if(campoTipo.length&&!campoTipo.prop('disabled')&&!campoTipo.prop('readonly')){
+            campoTipo.trigger('focus');
+        }
+    }
+
+    function abrirAutoNuevoTramiteServicios(preferirTipo){
         var contenedor=$('#divNueTram');
-        if(!contenedor.length || contenedor.is(':visible'))return;
-        var campoControl=contenedor.find('input[name="control"]').first();
+        if(!contenedor.length)return;
         var tieneFormulario=contenedor.find('form#form_docleg,form#form_docleg_f').length>0;
-        if(!tieneFormulario || !campoControl.length)return;
+        if(!tieneFormulario)return;
+        if(contenedor.is(':visible')){
+            setTimeout(function(){
+                enfocarCampoInicialNuevoTramiteServicios(contenedor,!!preferirTipo);
+            },80);
+            return;
+        }
         contenedor.stop(true,true).show(0);
         setTimeout(function(){
-            if(campoControl.length && !campoControl.prop('disabled') && !campoControl.prop('readonly')){
-                campoControl.trigger('focus');
-                campoControl.trigger('select');
-            }
+            enfocarCampoInicialNuevoTramiteServicios(contenedor,!!preferirTipo);
         },120);
     }
 

@@ -6,6 +6,7 @@
         <form method="post" action="{{url('guardar confrontacion')}}">
             @csrf
             <div class="modal-body">
+                <input type="hidden" data-campo="nuevo-cod-tra" value="{{$tramite->cod_tra}}">
                 <div class="alert-primary centrar_bloque p-1 rounded shadow col-md-8">
                     <h6 class="text-dark font-weight-bold text-center">  Número de trámite</h6>
                 </div>
