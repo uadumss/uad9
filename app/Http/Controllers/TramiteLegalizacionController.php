@@ -201,7 +201,17 @@ class TramiteLegalizacionController extends Controller
         if($tramite->cod_apo!=''){
             $apoderado=Apoderado::find($tramite->cod_apo);
         }
-        return view('servicios.tra_legalizacion.fe_traleg',compact('tramite','documentos','lista_tramites','confrontacion','apoderado','tipos_array','ptaang','supletorios','titulos'));
+        $tipoTramite = $tramite->tra_tipo_tramite;
+        $modalTitle = ucfirst($this->etiquetaTipoTramiteLegalizacion($tipoTramite));
+        $modalHeaderClass = match($tipoTramite) {
+            'L' => 'bg-info text-white',        // Legalización (azul claro)
+            'C' => 'bg-warning text-dark',      // Certificación (amarillo)
+            'B' => 'bg-success text-white',     // Búsqueda (verde)
+            'F' => 'bg-danger text-white',      // Confrontación (rojo)
+            'E' => 'bg-secondary text-white',   // Consejo (gris)
+            default => 'bg-primary text-white',
+        };
+        return view('servicios.tra_legalizacion.fe_traleg',compact('tramite','documentos','lista_tramites','confrontacion','apoderado','tipos_array','ptaang','supletorios','titulos','modalTitle','modalHeaderClass'));
     }
     public function g_traleg(Request $form){
         //return $form['ci'];

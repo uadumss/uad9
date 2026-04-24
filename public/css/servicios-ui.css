@@ -833,8 +833,7 @@
     color: inherit !important;
 }
 
-.servicios-ui .table thead th:hover,
-.servicios-ui .table thead tr:hover {
+.servicios-ui .table thead th:hover{
     background-color: inherit !important;
 }
 
