@@ -35,6 +35,8 @@
                 </tr><tr>
                     <th class="text-dark text-right font-italic">Nº Título : </th> <td class="border-bottom border-dark"> &nbsp;&nbsp;{{$titulo[0]->tit_nro_titulo}}</td>
                 </tr><tr>
+                    <th class="text-dark text-right font-italic">Nº de Serie : </th> <td class="border-bottom border-dark"> &nbsp;&nbsp;{{$titulo[0]->tit_nro_titulo}}</td>
+                </tr><tr>
                     <th class="text-dark text-right font-italic">Fecha de emisión : </th> <td class="border-bottom border-dark"> &nbsp;&nbsp;{{date('d/m/Y',strtotime($titulo[0]->tit_fecha_emision))}}</td>
                 </tr><tr>
                     <th class="text-dark text-right font-italic">Nº Tomo : </th> <td class="border-bottom border-dark"> &nbsp;&nbsp;{{$titulo[0]->tom_numero}}</td>

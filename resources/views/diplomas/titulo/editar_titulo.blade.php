@@ -342,8 +342,6 @@
                 } else {
                     if (bloque1) bloque1.style.display = 'none';
                     if (bloque2) bloque2.style.display = 'none';
-                    if (resolucion) resolucion.value = '';
-                    if (fecha) fecha.value = '';
                 }
             }
 

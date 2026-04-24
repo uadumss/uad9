@@ -61,16 +61,21 @@
                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
 
                 <div class="topbar-divider d-none">&nbsp;</div>
-                    <div class="col-md-2 input-group shadow-sm p-1" style="font-size: 0.9em; ">
-                        <span class="text-dark font-weight-bold pt-2" style="font-size: 0.9em;"> Buscar Gestión :&nbsp; &nbsp;</span>
-                        <select class="form-control form-control-sm col-md-4 border border-info"  name="gestion" onchange="$(location).attr('href','{{url("tomo/$tipo")}}'+'/'+this.value);">
-                            <option value="{{$gestion}}">{{$gestion}}</option>
-                            <?php $año=date('Y');?>
-                            @for($i=$año;$i>1927;$i--)
-                                <option value="{{$i}}">{{$i}}</option>
-                            @endfor
-                        </select>
-                    </div>
+                <div class="d-flex align-items-center shadow-sm p-2 mx-2" style="min-width: 10px; font-size: 0.95em;">
+                    <span class="text-dark font-weight-bold mr-2">
+                        Buscar Gestión:
+                    </span>
+                    <select class="form-control border border-info"
+                        name="gestion"
+                        style="min-width: 10px;"
+                        onchange="$(location).attr('href','{{url("tomo/$tipo")}}'+'/'+this.value);">
+                        <option value="{{$gestion}}">{{$gestion}}</option>
+                        <?php $año = date('Y'); ?>
+                        @for($i = $año; $i > 1927; $i--)
+                            <option value="{{$i}}">{{$i}}</option>
+                        @endfor
+                    </select>
+                </div>
                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                 <div class="float-left shadow-sm p-1">
                     <div class="input-group">

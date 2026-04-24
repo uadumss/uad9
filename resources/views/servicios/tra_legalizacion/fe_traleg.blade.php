@@ -1,7 +1,7 @@
     <?php $fecha=date('Y-m-d',strtotime($tramite->tra_fecha_solicitud))?>
     <div class="modal-content border-bottom-primary ui-modal-traleg" xmlns="http://www.w3.org/1999/html">
-        <div class="modal-header bg-primary">
-            <h5 class="modal-title font-weight-bolder text-white" id="exampleModalLabel"><i class="fas fa-book"></i> Legalización </h5>
+        <div class="modal-header {{ $modalHeaderClass }}">
+            <h5 class="modal-title font-weight-bolder text-white" id="exampleModalLabel"><i class="fas fa-book"></i> {{ $modalTitle }} </h5>
             <button class="close text-white" type="button" data-dismiss="modal" aria-label="Close">
                 <span class="text-white" aria-hidden="true">×</span>
             </button>
@@ -15,8 +15,8 @@
                     <span class="font-weight-bold">{!! session('exito') !!}</span>
                 </div>
             @endif
-            <div class="bg-primary centrar_bloque p-1 col-md-7 rounded shadow">
-                <h6 class="text-white text-center mb-0">Formulario para editar legalización</h6>
+            <div class="{{ $modalHeaderClass }} centrar_bloque p-1 col-md-7 rounded shadow">
+                <h6 class="text-white text-center mb-0">Formulario para editar {{ $modalTitle }}</h6>
             </div>
             <hr class="sidebar-divider"/>
             <div class="row ui-form-layout">
