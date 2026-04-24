@@ -168,6 +168,14 @@ class TramiteLegalizacionController extends Controller
             ->where('tit_titulo', '<>', '')   // evita vacío ""
             ->select('tit_titulo','tit_tipo','tit_fecha_emision')
             ->get();
+
+            // Obtener carreras de la persona (vía diplomas académicos uniendo con títulos para el id_per)
+            $carreras_persona = DB::table('diploma_academicos')
+                ->join('carreras', 'diploma_academicos.cod_car', '=', 'carreras.cod_car')
+                ->join('titulos', 'diploma_academicos.cod_tit', '=', 'titulos.cod_tit')
+                ->where('titulos.id_per', $tramite->id_per)
+                ->select('carreras.cod_car', 'car_nombre', 'diploma_academicos.cod_tit', 'tit_nro_titulo', 'tit_gestion')
+                ->get();
             foreach ($supletorios as $s) {
                 if (str_contains($s->tit_ref, 'D.A')) {
                     $s->tipo = 'SU(ACADEMICO)';
@@ -211,7 +219,7 @@ class TramiteLegalizacionController extends Controller
             'E' => 'bg-secondary text-white',   // Consejo (gris)
             default => 'bg-primary text-white',
         };
-        return view('servicios.tra_legalizacion.fe_traleg',compact('tramite','documentos','lista_tramites','confrontacion','apoderado','tipos_array','ptaang','supletorios','titulos','modalTitle','modalHeaderClass'));
+        return view('servicios.tra_legalizacion.fe_traleg',compact('tramite','documentos','lista_tramites','confrontacion','apoderado','tipos_array','ptaang','supletorios','titulos','modalTitle','modalHeaderClass','carreras_persona'));
     }
     public function g_traleg(Request $form){
         //return $form['ci'];

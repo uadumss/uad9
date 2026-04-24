@@ -192,8 +192,28 @@ class Funciones extends Model
             $fechaTituloValor = self::fechaLiteralDesdeValor($titulo->tit_fecha_emision ?? '');
             $glosa = str_replace('{fecha_titulo}', "<span style='font-weight:bold'>".$fechaTituloValor."</span>", $glosa);
         }
-        if (strpos($glosa, '{carrera}') !== false && !empty($unidadAcademica) && !empty($unidadAcademica->car_nombre)) {
-            $glosa = str_replace('{carrera}', "<span style='font-weight:bold'>".$unidadAcademica->car_nombre."</span>", $glosa);
+        if (!empty($unidadAcademica) && !empty($unidadAcademica->cod_car)) {
+            if (strpos($glosa, '{carrera}') !== false && !empty($unidadAcademica->car_nombre)) {
+                $glosa = str_replace('{carrera}', "<span style='font-weight:bold'>".$unidadAcademica->car_nombre."</span>", $glosa);
+            }
+
+            // Obtener el campo de forma segura
+            $campo = null;
+            if ($unidadAcademica instanceof \Illuminate\Database\Eloquent\Model) {
+                $campo = $unidadAcademica->campo;
+            } else {
+                $campo = \App\Models\CarreraCampo::where('cod_car', $unidadAcademica->cod_car)->first();
+            }
+
+            if ($campo) {
+                $glosa = str_replace("{campo_amplio}", "<span style='font-weight:bold'>".$campo->campo_amplio."</span>", $glosa);
+                $glosa = str_replace("{campo_especifico}", "<span style='font-weight:bold'>".$campo->campo_especifico."</span>", $glosa);
+                $glosa = str_replace("{campo_detallado}", "<span style='font-weight:bold'>".$campo->campo_detallado."</span>", $glosa);
+            } else {
+                $glosa = str_replace("{campo_amplio}", "", $glosa);
+                $glosa = str_replace("{campo_especifico}", "", $glosa);
+                $glosa = str_replace("{campo_detallado}", "", $glosa);
+            }
         }
         
         // Resolución de acreditación (aplica siempre)
