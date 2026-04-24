@@ -1471,6 +1471,16 @@
         enviarFormularioTramiteNoAtentado();
     }
 
+    function enfocarCiNoAtentado(){
+        var campo=$('#noa_ci');
+        if(!campo.length)return;
+        if(campo.prop('disabled')||campo.prop('readonly'))return;
+        setTimeout(function(){
+            campo.trigger('focus');
+            campo.trigger('select');
+        },120);
+    }
+
     $(function(){
         escalaCandidatosNoa=obtenerEscalaCandidatosConfigNoatentado();
         escalaCandidatosNoaNormalizada=normalizarEscalaCandidatosNoatentado();
@@ -1479,9 +1489,11 @@
             if($(e.target).closest(selectorIconosPagoNoatentado()+', .popover').length===0)cerrarPopoversPagoNoatentado();
         });
         $('#Noatentado').off('hidden.bs.modal.noaPagoPopover').on('hidden.bs.modal.noaPagoPopover',function(){cerrarPopoversPagoNoatentado();});
+        $('#Noatentado').off('shown.bs.modal.noaFocus').on('shown.bs.modal.noaFocus',function(){enfocarCiNoAtentado();});
         if($('#tabla_candidatos_noa').length>0){
             renderTablaCandidatosNoAtentado();inicializarOpcionesTramiteNoatentado();resetValidacionPagoNoAtentado();
             actualizarFiltroPreimpresoNoAtentado();actualizarContextoControlPagoNoAtentado();actualizarControlCupoCandidatosNoatentado();
+            enfocarCiNoAtentado();
         }
         if($('#control_noa_edit').length>0)actualizarFiltroPreimpresoNoAtentado();
     });
