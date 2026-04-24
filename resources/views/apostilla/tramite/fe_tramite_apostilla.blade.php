@@ -1006,6 +1006,7 @@ function abrirModalSitraFormularioApostilla(trigger){
     const fuente=(form.find('[data-campo="fuente-sitra"]').val()||'sitra').toString();
     let detalle=(($(trigger).attr('data-detalle-sitra')||'').toString()||'').trim();
     if(detalle===''){if(estado==='0')detalle='Coincide en SITRA/SID.';else if(estado==='1')detalle='Existe, pero no coincide.';else if(estado==='2')detalle='No existe en SITRA/SID.';else detalle='SITRA pendiente.';}
+    if(fuente==='sitra_sid'&&detalle.toLowerCase().indexOf('pendiente')!==-1){detalle='No existe en SITRA/SID.';}
     if(fuente==='sid')detalle+=' Fuente: SID.';else if(fuente==='sitra_sid')detalle+=' Fuente: SITRA y SID.';
     const icono=$(trigger);const visible=icono.attr('data-popover-visible')==='1';
     icono.popover('dispose');if(visible){icono.removeAttr('data-popover-visible');return false;}
@@ -1033,8 +1034,13 @@ function validarSitraRapidaApostilla(){
             if((form.find('input[name="numero"]').val()||'').toString().trim()!==numero)return;
             if((form.find('input[name="gestion"]').val()||'').toString().trim()!==gestion)return;
             if(!resp||resp.aplica===false){form.find('[data-campo="estado-sitra"]').val('');form.find('[data-campo="fuente-sitra"]').val('');actualizarEstadoSitraRapido(form,'text-muted',resp&&resp.message?resp.message:'SITRA: no aplica para este tipo.');return;}
-            const estado=(resp.estado||'').toString();
-            form.find('[data-campo="estado-sitra"]').val(estado);form.find('[data-campo="fuente-sitra"]').val((resp.fuente||'sitra').toString());
+            let estado=(resp&&resp.estado!==undefined&&resp.estado!==null)?String(resp.estado).trim():'';
+            const fuente=(resp&&resp.fuente)?String(resp.fuente).toLowerCase():'sitra';
+            const mensaje=(resp&&resp.message)?String(resp.message).toLowerCase():'';
+            if((estado===''||estado==='null'||estado==='undefined')&&fuente==='sitra_sid')estado='2';
+            if((estado===''||estado==='null'||estado==='undefined')&&mensaje.indexOf('no existe')!==-1)estado='2';
+            if((estado===''||estado==='null'||estado==='undefined')&&mensaje.indexOf('no coincide')!==-1)estado='1';
+            form.find('[data-campo="estado-sitra"]').val(estado);form.find('[data-campo="fuente-sitra"]').val(fuente);
             if(estado==='0')actualizarEstadoSitraRapido(form,'text-success','Coincide en SITRA/SID.');
             else if(estado==='1')actualizarEstadoSitraRapido(form,'text-danger','Existe, pero no coincide.');
             else if(estado==='2')actualizarEstadoSitraRapido(form,'text-danger','No existe en SITRA/SID.');

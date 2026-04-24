@@ -1223,10 +1223,7 @@
                                             </a>
                                         </div>
                                     </div>
-                                    <div class="e-add-col" data-campo="fila-pago-complementario">
-                                        <label>Nro. control Reimpresión</label>
-                                        <input class="e-input readonly" name="reimpresion" data-campo="preimpreso-api" readonly>
-                                    </div>
+                                    <input type="hidden" name="reimpresion" data-campo="preimpreso-api" value="">
                                 </div>
                                 @if(!in_array($tramite->tra_tipo_tramite,['E','F']))
                                     <div data-campo="estado-sitra" class="mt-2"></div>
@@ -1418,7 +1415,7 @@
         if(texto==='')return fallback;
         var normal=texto.toLowerCase();
         if(normal.indexOf('verificando')!==-1||normal.indexOf('validando')!==-1)return 'Validando en SITRA/SID...';
-        if(normal.indexOf('pendiente')!==-1)return 'SITRA pendiente.';
+        if(normal==='sitra pendiente.'||normal==='sitra pendiente')return 'SITRA pendiente.';
         if((normal.indexOf('complete')!==-1||normal.indexOf('completar')!==-1)&&normal.indexOf('gestion')!==-1)return 'Complete gestion para validar SITRA.';
         if(normal.indexOf('seleccione')!==-1&&normal.indexOf('tipo')!==-1)return 'Seleccione tipo para validar SITRA.';
         if(normal.indexOf('no aplica')!==-1)return 'No aplica para este tipo.';
@@ -1637,6 +1634,7 @@
         var resp=form.data('sitra-response')||null,estado=(form.data('sitra-estado')||'').toString(),fuente=(form.data('sitra-fuente')||'').toString().toLowerCase();
         var detalle=(($(trigger).attr('data-detalle-sitra')||'').toString()||'').trim();
         if(detalle===''){if(estado==='0')detalle='Coincide en SITRA/SID.';else if(estado==='1')detalle='Existe, pero no coincide.';else if(estado==='2')detalle='No existe en SITRA/SID.';else detalle='SITRA pendiente.';}
+        if(fuente==='sitra_sid'&&detalle.toLowerCase().indexOf('pendiente')!==-1){detalle='No existe en SITRA/SID.';}
         if(resp&&estado==='0'){var extra=[];if(resp.numero)extra.push('Nro: '+resp.numero);if(resp.gestion)extra.push('Gestión: '+resp.gestion);if(resp.tipo)extra.push('Tipo: '+resp.tipo);if(extra.length)detalle+=' '+extra.join(' | ');}
         if(fuente==='sid')detalle+=' Fuente: SID.';else if(fuente==='sitra_sid')detalle+=' Fuente: SITRA y SID.';
         return togglePopoverValidacion(trigger,detalle);
@@ -1659,9 +1657,14 @@
             success:function(resp){
                 if((form.data('sitra-req-seq')||0)!==secuencia)return;
                 if(!resp||resp.aplica===false){limpiarSitraFormulario(form);actualizarEstadoSitra(form,'text-muted',resp&&resp.message?resp.message:'No aplica para este tipo.');return;}
-                var estadoResp=(resp&&resp.estado!==undefined&&resp.estado!==null)?String(resp.estado):'';
-                form.data('sitra-response',resp).data('sitra-estado',estadoResp).data('sitra-fuente',resp.fuente||'sitra');
-                actualizarFuenteSitra(form,resp.fuente||'sitra');
+                var estadoResp=(resp&&resp.estado!==undefined&&resp.estado!==null)?String(resp.estado).trim():'';
+                var fuenteResp=(resp&&resp.fuente)?String(resp.fuente).toLowerCase():'sitra';
+                var mensajeResp=(resp&&resp.message)?String(resp.message).toLowerCase():'';
+                if((estadoResp===''||estadoResp==='null'||estadoResp==='undefined')&&fuenteResp==='sitra_sid')estadoResp='2';
+                if((estadoResp===''||estadoResp==='null'||estadoResp==='undefined')&&mensajeResp.indexOf('no existe')!==-1)estadoResp='2';
+                if((estadoResp===''||estadoResp==='null'||estadoResp==='undefined')&&mensajeResp.indexOf('no coincide')!==-1)estadoResp='1';
+                form.data('sitra-response',resp).data('sitra-estado',estadoResp).data('sitra-fuente',fuenteResp);
+                actualizarFuenteSitra(form,fuenteResp);
                 if(estadoResp==='0')actualizarEstadoSitra(form,'text-success','Coincide en SITRA/SID.');
                 else if(estadoResp==='2')actualizarEstadoSitra(form,'text-danger','No existe en SITRA/SID.');
                 else if(estadoResp==='1')actualizarEstadoSitra(form,'text-danger','Existe, pero no coincide.');
