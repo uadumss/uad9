@@ -1150,6 +1150,7 @@
                                                 </option>
                                             @endforeach
                                         </select>
+                                        <input type="hidden" name="cod_tit" id="cod_tit_seleccionado" value="">
                                     </div>
                                     <div class="e-add-col">
                                         <label>Tipo de trámite</label>
@@ -1811,9 +1812,13 @@
 
         $(document).on('change', '#select_carrera_interesado', function(){
             var opt = $(this).find('option:selected');
+            var val = $(this).val();
             var num = opt.attr('data-num');
             var ges = opt.attr('data-ges');
             var form = $(this).closest('form');
+            
+            form.find('#cod_tit_seleccionado').val(val);
+            
             if(num && ges){
                 form.find('input[name="numero"]').val(num);
                 form.find('input[name="gestion"]').val(ges).trigger('input');

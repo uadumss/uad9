@@ -119,6 +119,7 @@ class TramiteLegalizacionController extends Controller
         $ptaang=array();
         $supletorios = [];
         $titulos = [];
+        $carreras_persona = [];
 
         if($tramite->id_per!='') {
             $ptaang=DB::select("select dt.dtra_ptaang,dt.dtra_numero,dt.dtra_gestion from d_tramitas dt, tramitas t where t.id_per=".$tramite->id_per." and t.cod_tra=dt.cod_tra and (dt.dtra_ptaang='B' or dt.dtra_ptaang='A')");
@@ -170,10 +171,12 @@ class TramiteLegalizacionController extends Controller
             ->get();
 
             // Obtener carreras de la persona (vía diplomas académicos uniendo con títulos para el id_per)
+            // Filtrado por tit_tipo = 'tp' (Título Profesional) según requerimiento
             $carreras_persona = DB::table('diploma_academicos')
                 ->join('carreras', 'diploma_academicos.cod_car', '=', 'carreras.cod_car')
                 ->join('titulos', 'diploma_academicos.cod_tit', '=', 'titulos.cod_tit')
                 ->where('titulos.id_per', $tramite->id_per)
+                ->where('titulos.tit_tipo', 'tp')
                 ->select('carreras.cod_car', 'car_nombre', 'diploma_academicos.cod_tit', 'tit_nro_titulo', 'tit_gestion')
                 ->get();
             foreach ($supletorios as $s) {
@@ -558,7 +561,11 @@ class TramiteLegalizacionController extends Controller
                 $buscar_en=explode('-',$tramita->tre_buscar_en);
             }
             $titulo='';
-            if($buscarEnSitra!='' && $form['numero']!='-'){
+            if($form->has('cod_tit') && $form->input('cod_tit') != ''){
+                $titulo = Titulo::find($form->input('cod_tit'));
+            }
+
+            if(!$titulo && $buscarEnSitra!='' && $form['numero']!='-'){
                 if($buscar_en[0]=='tpos'){
                     $titulo=Titulo::where('tit_nro_titulo','=',$form['numero'])
                         ->where('tit_gestion','=',$form['gestion'])
