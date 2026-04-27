@@ -8,4 +8,9 @@ class Carrera extends Model
 {
     protected $fillable=['cod_fac','car_nombre','car_abreviacion'];
     protected $primaryKey='cod_car';
+
+    public function campo()
+    {
+        return $this->hasOne(CarreraCampo::class, 'cod_car', 'cod_car');
+    }
 }

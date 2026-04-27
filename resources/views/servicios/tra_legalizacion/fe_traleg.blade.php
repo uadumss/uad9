@@ -1140,6 +1140,20 @@
                                         </select>
                                         <input type="hidden" name="tipo" data-campo="tipo-legalizacion-hidden" value="">
                                     </div>
+                                    <div class="e-add-col" data-campo="columna-carrera" style="display:none;">
+                                        <label>Carrera del interesado</label>
+                                        <select class="e-select" id="select_carrera_interesado">
+                                            <option value="">-- Seleccionar carrera --</option>
+                                            @foreach($carreras_persona as $cp)
+                                                <option value="{{ $cp->cod_tit }}" 
+                                                        data-num="{{ $cp->tit_nro_titulo }}" 
+                                                        data-ges="{{ $cp->tit_gestion }}">
+                                                    {{ $cp->car_nombre }} ({{ $cp->tit_nro_titulo }}/{{ $cp->tit_gestion }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <input type="hidden" name="cod_tit" id="cod_tit_seleccionado" value="">
+                                    </div>
                                     <div class="e-add-col">
                                         <label>Tipo de trámite</label>
                                         <div class="e-radio-row" style="padding-top:4px;">
@@ -1840,7 +1854,37 @@
 
         $(document).off('click'+ns+' change'+ns,'form input[name="cuadis"]').on('click'+ns+' change'+ns,'form input[name="cuadis"]',function(e){e.preventDefault();var check=$(this);check.prop('checked',check.attr('data-cuadis-auto')==='1');sincronizarCamposObligatorios(check.closest('form'));return false;});
         $(document).off('blur'+ns+' change'+ns,'#form_traleg input[name="ci"]').on('blur'+ns+' change'+ns,'#form_traleg input[name="ci"]',function(){var valor=($.trim($(this).val())||'');if(valor!=='')consultarEstadoCuadisPorCi(valor);else limpiarEstadoCuadisEnFormularios();});
-        $(document).off('change'+ns,'form select[data-campo="tipo-legalizacion"]').on('change'+ns,'form select[data-campo="tipo-legalizacion"]',function(){var form=$(this).closest('form');sincronizarTipoLegalizacion(form);if(form.find('[data-campo="estado-sitra"]').length)programarValidacionSitra(form);});
+        $(document).off('change'+ns,'form select[data-campo="tipo-legalizacion"]').on('change'+ns,'form select[data-campo="tipo-legalizacion"]',function(){
+            var form=$(this).closest('form');
+            sincronizarTipoLegalizacion(form);
+            
+            // Lógica para mostrar/ocultar selector de carrera (Trámite 60: CONSTANCIA CAMPO CONOCIMIENTO)
+            var codTre = $(this).val();
+            if(codTre == '60'){
+                form.find('[data-campo="columna-carrera"]').show(300);
+            } else {
+                form.find('[data-campo="columna-carrera"]').hide(300);
+                $('#select_carrera_interesado').val('');
+            }
+
+            if(form.find('[data-campo="estado-sitra"]').length) programarValidacionSitra(form);
+        });
+
+        $(document).on('change', '#select_carrera_interesado', function(){
+            var opt = $(this).find('option:selected');
+            var val = $(this).val();
+            var num = opt.attr('data-num');
+            var ges = opt.attr('data-ges');
+            var form = $(this).closest('form');
+            
+            form.find('#cod_tit_seleccionado').val(val);
+            
+            if(num && ges){
+                form.find('input[name="numero"]').val(num);
+                form.find('input[name="gestion"]').val(ges).trigger('input');
+            }
+        });
+
         $(document).off('input'+ns+' change'+ns,'form input[name="numero"], form input[name="gestion"], form select[name="buscar_en"], form input[data-campo="tipo-legalizacion-hidden"]').on('input'+ns+' change'+ns,'form input[name="numero"], form input[name="gestion"], form select[name="buscar_en"], form input[data-campo="tipo-legalizacion-hidden"]',function(){var form=$(this).closest('form');if(form.find('[data-campo="estado-sitra"]').length)programarValidacionSitra(form);});
         $(document).off('click'+ns+' change'+ns,'form input[name="ptaang"]').on('click'+ns+' change'+ns,'form input[name="ptaang"]',function(e){e.preventDefault();var check=$(this);check.prop('checked',check.attr('data-ptag-lock')==='1');return false;});
         $(document).off('click'+ns,selectorIconosValidacion()).on('click'+ns,selectorIconosValidacion(),function(e){e.stopPropagation();});
