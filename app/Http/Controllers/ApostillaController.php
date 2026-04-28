@@ -328,8 +328,10 @@ class ApostillaController extends Controller
         $form->validate([
             'cl'=>'nullable|integer',
             'ca'=>'required',
-            'nro_control'=>'required',
+            'nro_control'=>'required|digits_between:1,20',
             'gestion_valorado'=>'nullable|digits:4',
+            'numero'=>'nullable|digits_between:1,20',
+            'gestion'=>'nullable|digits:4',
         ]);
         $codApos=(string)$form['ca'];
         if(!Str::isUuid($codApos)){

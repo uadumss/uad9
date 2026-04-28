@@ -233,6 +233,11 @@
     transition: background .12s, box-shadow .12s, transform .08s;
 }
 .eapo .e-btn:active { transform: scale(.98); }
+.eapo .e-btn.is-loading {
+    opacity: .75;
+    pointer-events: none;
+}
+.eapo .e-btn.is-loading .fa-spinner { margin-right: 6px; }
 .eapo .e-btn-primary { background: var(--e-blue); color: #fff; border-color: var(--e-blue); }
 .eapo .e-btn-primary:hover { background: var(--e-blue-h); border-color: var(--e-blue-h); }
 .eapo .e-btn-ghost {
@@ -292,6 +297,37 @@
     color: var(--e-s500); text-transform: uppercase; letter-spacing: .5px;
     margin-bottom: 4px;
 }
+.eapo .e-qa-error {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    padding: 2px 6px;
+    font-size: 10px;
+    color: var(--e-red);
+    background: var(--e-red-lt);
+    border: 1px solid #fca5a5;
+    border-radius: var(--e-r);
+    line-height: 1.2;
+}
+.eapo .e-qa-error:empty { display: none; }
+.eapo .e-qa-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    padding: 2px 6px;
+    font-size: 10.5px;
+    color: var(--e-s500);
+    background: var(--e-s50);
+    border: 1px solid var(--e-s200);
+    border-radius: var(--e-r);
+    text-align: center;
+}
+.eapo .e-qa-status:empty { display: none; }
+.eapo .e-qa-status.is-loading { color: var(--e-blue); background: var(--e-blue-lt); border-color: #bfdbfe; }
+.eapo .e-qa-status.is-ok { color: var(--e-green); background: var(--e-green-lt); border-color: #a7f3d0; }
+.eapo .e-qa-status.is-error { color: var(--e-red); background: var(--e-red-lt); border-color: #fca5a5; }
 
 /* ── Closed notice ───────────────────────────────────────── */
 .eapo .e-closed {
@@ -502,9 +538,11 @@
 
                         @can('crear trámite - apo')
                             <button type="button" class="e-btn e-btn-primary e-btn-full"
+                                    data-campo="btn-guardar-apostilla"
                                     onclick="guardarTramiteApostillaYEnfocar();return false;">
                                 <i class="fas fa-save" style="font-size:11px;"></i> Guardar trámite
                             </button>
+                            <div class="e-qa-status" data-campo="estado-guardar-tramite"></div>
                         @endcan
                     </form>
 
@@ -649,7 +687,7 @@
                                     <label>N° control</label>
                                     <div style="display:flex;align-items:center;gap:6px;">
                                         <input type="text" class="e-input" name="nro_control"
-                                               id="nro_control_rapido" autocomplete="off" style="flex:1;min-width:0;">
+                                               id="nro_control_rapido" autocomplete="off" inputmode="numeric" pattern="[0-9]*" style="flex:1;min-width:0;">
                                         <button type="button" class="e-pill idle"
                                                 data-campo="estado-pago-icon"
                                                 title="Ver detalle de validación de pago"
@@ -675,14 +713,16 @@
                                 <div class="e-qa-col">
                                     <div class="e-step-tag"><span class="sn">2</span><span class="sl">Documento</span></div>
                                     <label data-campo="label-documento">N° título / resolución</label>
-                                    <input type="text" class="e-input" name="numero" autocomplete="off" style="width:100%;">
+                                    <input type="text" class="e-input" name="numero" autocomplete="off" inputmode="numeric" pattern="[0-9]*" maxlength="20" style="width:100%;">
+                                    <div class="e-qa-error" data-campo="error-numero"></div>
                                 </div>
 
                                 <div class="e-qa-col">
                                     <div class="e-step-tag" style="opacity:0;pointer-events:none;"><span class="sn">·</span><span class="sl">·</span></div>
                                     <label>Gestión</label>
-                                    <input type="text" class="e-input" name="gestion" pattern="[0-9]{4}"
-                                           autocomplete="off" placeholder="2024" style="width:100%;">
+                                     <input type="text" class="e-input" name="gestion" pattern="[0-9]{4}"
+                                         autocomplete="off" inputmode="numeric" maxlength="4" placeholder="2024" style="width:100%;">
+                                    <div class="e-qa-error" data-campo="error-gestion"></div>
                                 </div>
 
                                 {{-- SITRA pill --}}
@@ -699,10 +739,12 @@
                                 {{-- Botón agregar --}}
                                 <div class="e-qa-col" style="align-self:end;">
                                     <button type="button" class="e-btn e-btn-primary"
+                                            data-campo="btn-agregar-rapido"
                                             onclick="return submitAgregarApostillaRapida();"
                                             style="width:100%;justify-content:center;">
                                         <i class="fas fa-plus" style="font-size:10px;"></i> Agregar
                                     </button>
+                                    <div class="e-qa-status" data-campo="estado-accion-rapida"></div>
                                 </div>
 
                             </div>{{-- /band --}}
@@ -867,6 +909,66 @@ function cargarDatosApoderado(ci){
     },error:function(){$('#'+panel).html("<span class='text-danger'>Ocurrio un error, probablemente no tenga permisos para esta acción</span>");}});
 }
 
+function setBotonCargandoApostillaUi(btn,texto){
+    if(!btn){return;}
+    if(btn.dataset.loading==='1'){return;}
+    btn.dataset.loading='1';
+    btn.dataset.originalHtml=btn.innerHTML;
+    btn.classList.add('is-loading');
+    btn.setAttribute('aria-busy','true');
+    btn.setAttribute('disabled','disabled');
+    btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>'+(texto ? ' '+texto : ' Procesando...');
+}
+function limpiarBotonCargandoApostillaUi(btn){
+    if(!btn || btn.dataset.loading!=='1'){return;}
+    if(btn.dataset.originalHtml){btn.innerHTML=btn.dataset.originalHtml;}
+    btn.classList.remove('is-loading');
+    btn.removeAttribute('aria-busy');
+    btn.removeAttribute('disabled');
+    btn.dataset.loading='0';
+}
+function setErrorRapidoApostilla(campo,mensaje){
+    const form=formApostillaRapida();
+    if(!form.length){return;}
+    const el=form.find('[data-campo="error-'+campo+'"]');
+    if(!el.length){return;}
+    el.text((mensaje||'').toString());
+}
+function limpiarErroresRapidoApostilla(){
+    setErrorRapidoApostilla('numero','');
+    setErrorRapidoApostilla('gestion','');
+}
+function setEstadoAccionRapida(mensaje,estado){
+    const form=formApostillaRapida();
+    if(!form.length){return;}
+    const el=form.find('[data-campo="estado-accion-rapida"]');
+    if(!el.length){return;}
+    el.removeClass('is-loading is-ok is-error');
+    if(estado==='loading'){el.addClass('is-loading');}
+    else if(estado==='ok'){el.addClass('is-ok');}
+    else if(estado==='error'){el.addClass('is-error');}
+    el.html((mensaje||'').toString());
+}
+function setEstadoGuardarTramite(mensaje,estado){
+    const el=$('[data-campo="estado-guardar-tramite"]');
+    if(!el.length){return;}
+    el.removeClass('is-loading is-ok is-error');
+    if(estado==='loading'){el.addClass('is-loading');}
+    else if(estado==='ok'){el.addClass('is-ok');}
+    else if(estado==='error'){el.addClass('is-error');}
+    el.html((mensaje||'').toString());
+}
+function obtenerBotonAgregarRapidoApostilla(){
+    const form=formApostillaRapida();
+    if(!form.length){return null;}
+    return form.find('[data-campo="btn-agregar-rapido"]').first()[0] || null;
+}
+function obtenerBotonGuardarApostillaUi(){
+    return document.querySelector('[data-campo="btn-guardar-apostilla"]');
+}
+
+let apostillaRapidaEnvioEnCurso=false;
+let apostillaGuardarEnCurso=false;
 let apostillaRapidaValidacionOk=false,apostillaRapidaControlValidado='',apostillaRapidaCodLisDetectado='';
 let apostillaRapidaTimer=null,apostillaRapidaValidacionSeq=0,apostillaRapidaRetryTimer=null;
 let apostillaRapidaDetallePago='Pendiente de validacion.',apostillaRapidaSitraSeq=0;
@@ -1070,6 +1172,8 @@ function limpiarEstadoValidacionRapida(){
     setIconoPagoRapido('pending','Pendiente de validacion.');
     form.find('[data-campo="estado-sitra"]').val('');form.find('[data-campo="fuente-sitra"]').val('');
     actualizarEstadoSitraRapido(form,'text-muted','SITRA pendiente.');
+    limpiarErroresRapidoApostilla();
+    setEstadoAccionRapida('','');
 }
 function solicitarValidacionRapidaApostilla(callbackOk,callbackError){
     const form=formApostillaRapida();if(!form.length)return;
@@ -1116,9 +1220,10 @@ function programarValidacionRapidaApostilla(){
     if(apostillaRapidaTimer!==null)clearTimeout(apostillaRapidaTimer);
     apostillaRapidaTimer=setTimeout(function(){solicitarValidacionRapidaApostilla();},400);
 }
-function guardarAgregarApostillaRapida(){
+function guardarAgregarApostillaRapida(onDone){
     const form=formApostillaRapida();if(!form.length)return;
     const codApos=(form.find('input[name="ca"]').val()||'').toString();
+    const finalizar=function(){if(typeof onDone==='function')onDone();};
     $.ajax({
         url:'{{url("guardar agregar tramite apostilla")}}',type:'POST',dataType:'json',headers:{'Accept':'application/json'},data:form.serialize(),
         success:function(resp){
@@ -1126,17 +1231,34 @@ function guardarAgregarApostillaRapida(){
                 cargarDatos('{{url("ajax tabla agregar")}}/'+codApos,'panel_lista_tramites_apostilla');
                 cargarDatos('{{url("listar tramite apostilla tabla/$fechaListadoApostilla")}}','panel_tabla_tramites');
                 form.find('input[name="nro_control"]').val('');form.find('input[name="numero"]').val('');form.find('input[name="gestion"]').val('');
-                limpiarEstadoValidacionRapida();estadoRegistroRapido('ok','Trámite agregado.');form.find('input[name="nro_control"]').trigger('focus');return;
+                limpiarEstadoValidacionRapida();
+                estadoRegistroRapido('pending','Trámite agregado. Ingrese nuevo N° de control.');
+                setEstadoAccionRapida('Listo.','ok');
+                form.find('input[name="nro_control"]').trigger('focus');
+                finalizar();
+                return;
             }
             const msg=(resp&&resp.message)?resp.message:'No se pudo registrar el trámite.';estadoRegistroRapido('error',msg);
+            setEstadoAccionRapida('Error.','error');
+            finalizar();
         },
-        error:function(xhr){const msg=(xhr.responseJSON&&xhr.responseJSON.message)?xhr.responseJSON.message:'No se pudo registrar el trámite.';estadoRegistroRapido('error',msg);}
+        error:function(xhr){
+            const msg=(xhr.responseJSON&&xhr.responseJSON.message)?xhr.responseJSON.message:'No se pudo registrar el trámite.';
+            estadoRegistroRapido('error',msg);
+            setEstadoAccionRapida('Error.','error');
+            finalizar();
+        }
     });
 }
 
 function guardarTramiteApostillaYEnfocar(){
     const form=$('#form_tramite_apostilla');
     if(!form.length)return false;
+    if(apostillaGuardarEnCurso){return false;}
+    const btn=obtenerBotonGuardarApostillaUi();
+    apostillaGuardarEnCurso=true;
+    setBotonCargandoApostillaUi(btn,'Guardando...');
+    setEstadoGuardarTramite('<i class="fas fa-spinner fa-spin"></i> Procesando...','loading');
     $.ajax({
         url:'{{ $urlGuardarTramiteApostilla }}',
         type:'POST',
@@ -1162,15 +1284,24 @@ function guardarTramiteApostillaYEnfocar(){
                         cargarDatos(resp.redirect,'panel_apostilla');
                     }
                 });
+                apostillaGuardarEnCurso=false;
+                limpiarBotonCargandoApostillaUi(btn);
+                setEstadoGuardarTramite('Listo.','ok');
                 return;
             }
             if(resp&&resp.ok===false){
                 estadoRegistroRapido('error',(resp.message||'No se pudo guardar el trámite.').toString());
+                setEstadoGuardarTramite('Error.','error');
             }
+            apostillaGuardarEnCurso=false;
+            limpiarBotonCargandoApostillaUi(btn);
         },
         error:function(xhr){
             const msg=(xhr.responseJSON&&xhr.responseJSON.message)?xhr.responseJSON.message:'No se pudo guardar el trámite.';
             estadoRegistroRapido('error',msg);
+            apostillaGuardarEnCurso=false;
+            limpiarBotonCargandoApostillaUi(btn);
+            setEstadoGuardarTramite('Error.','error');
         }
     });
     return false;
@@ -1179,16 +1310,50 @@ function submitAgregarApostillaRapida(){
     const form=formApostillaRapida();if(!form.length)return false;
     const nroControl=obtenerControlRapidoApostilla();
     if(nroControl===''){estadoRegistroRapido('pending','Ingrese N° de control.');return false;}
+    if(apostillaRapidaEnvioEnCurso){return false;}
+    const btn=obtenerBotonAgregarRapidoApostilla();
+    apostillaRapidaEnvioEnCurso=true;
+    setBotonCargandoApostillaUi(btn,'Agregando...');
+    setEstadoAccionRapida('<i class="fas fa-spinner fa-spin"></i> Procesando...','loading');
+    const finalizarEnvio=function(){
+        apostillaRapidaEnvioEnCurso=false;
+        limpiarBotonCargandoApostillaUi(btn);
+    };
     const listoParaGuardar=apostillaRapidaValidacionOk&&apostillaRapidaControlValidado===nroControl&&apostillaRapidaCodLisDetectado!==''&&(form.find('input[name="cl"]').val()||'').toString().trim()===apostillaRapidaCodLisDetectado&&form.find('[data-campo="validacion-recaudacion-ok"]').val()==='1';
     const intentarGuardar=function(){
         const codLis=(form.find('input[name="cl"]').val()||'').toString().trim();
-        if(codLis===''||codLis!==apostillaRapidaCodLisDetectado){estadoRegistroRapido('error','No se detectó trámite válido.');return;}
+        limpiarErroresRapidoApostilla();
+        if(codLis===''||codLis!==apostillaRapidaCodLisDetectado){
+            estadoRegistroRapido('error','No se detectó trámite válido.');
+            setEstadoAccionRapida('Error.','error');
+            finalizarEnvio();
+            return;
+        }
+        const numeroDocumento=(form.find('input[name="numero"]').val()||'').toString().trim();
+        const gestionDocumento=(form.find('input[name="gestion"]').val()||'').toString().trim();
+        if(numeroDocumento!=='' && !/^\d+$/.test(numeroDocumento)){
+            setErrorRapidoApostilla('numero','El numero debe ser numerico.');
+            setEstadoAccionRapida('Revise los datos.','error');
+            finalizarEnvio();
+            return;
+        }
+        if(gestionDocumento!=='' && !/^\d{4}$/.test(gestionDocumento)){
+            setErrorRapidoApostilla('gestion','La gestion debe tener 4 digitos.');
+            setEstadoAccionRapida('Revise los datos.','error');
+            finalizarEnvio();
+            return;
+        }
         const gestionValorado=(form.find('input[data-campo="gestion-api"]').val()||'').toString().trim();
-        if(gestionValorado===''){estadoRegistroRapido('error','No se obtuvo gestión del pago.');return;}
-        guardarAgregarApostillaRapida();
+        if(gestionValorado===''){
+            estadoRegistroRapido('error','No se obtuvo gestión del pago.');
+            setEstadoAccionRapida('Error.','error');
+            finalizarEnvio();
+            return;
+        }
+        guardarAgregarApostillaRapida(finalizarEnvio);
     };
     if(listoParaGuardar){intentarGuardar();return false;}
-    solicitarValidacionRapidaApostilla(function(){intentarGuardar();});
+    solicitarValidacionRapidaApostilla(function(){intentarGuardar();},function(){finalizarEnvio();});
     return false;
 }
 
@@ -1201,7 +1366,11 @@ $(document)
     });
 $(document)
     .off('input.apoSitraRapida','#form_agregar_tramite_rapido input[name="numero"],#form_agregar_tramite_rapido input[name="gestion"]')
-    .on('input.apoSitraRapida','#form_agregar_tramite_rapido input[name="numero"],#form_agregar_tramite_rapido input[name="gestion"]',function(){validarSitraRapidaApostilla();});
+    .on('input.apoSitraRapida','#form_agregar_tramite_rapido input[name="numero"],#form_agregar_tramite_rapido input[name="gestion"]',function(){
+        if($(this).attr('name')==='numero'){setErrorRapidoApostilla('numero','');}
+        if($(this).attr('name')==='gestion'){setErrorRapidoApostilla('gestion','');}
+        validarSitraRapidaApostilla();
+    });
 $(document)
     .off('click.apoEstadoPagoDetalle')
     .on('click.apoEstadoPagoDetalle',function(e){

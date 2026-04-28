@@ -1,3 +1,36 @@
+<style>
+    .apo-inline-hint {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 4px;
+        padding: 2px 6px;
+        font-size: 11px;
+        border-radius: 3px;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #b91c1c;
+        line-height: 1.2;
+    }
+    .apo-inline-hint:empty { display: none; }
+    .apo-inline-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: 8px;
+        padding: 2px 6px;
+        font-size: 11px;
+        border-radius: 3px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        color: #64748b;
+        line-height: 1.2;
+    }
+    .apo-inline-status.text-info { background: #dbeafe; border-color: #bfdbfe; color: #1d4ed8; }
+    .apo-inline-status.text-success { background: #ecfdf5; border-color: #a7f3d0; color: #047857; }
+    .apo-inline-status.text-danger { background: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
+</style>
+
 <div class="modal-content border-bottom-primary shadow-lg apo-add-tramite-content">
         <div class="modal-header bg-verde-oscuro">
             <h5 class="modal-title font-weight-bolder text-white" id="exampleModalLabel"><i class="fas fa-book"></i> Apostilla </h5>
@@ -99,16 +132,18 @@
                                     <th class="text-dark font-italic">Numero del trámite : </th>
                                     <td class="border-bottom border-dark">
                                         <div class="input-group pt-1">
-                                            <input type="text" class="form-control form-control-sm col-md-3" name="numero"> &nbsp;&nbsp;/&nbsp;&nbsp; Gestión : &nbsp;&nbsp;
-                                            <input type="text" class="form-control form-control-sm col-md-3" pattern="[0-9]{4}" name="gestion">
+                                            <input type="text" class="form-control form-control-sm col-md-3" name="numero" inputmode="numeric" pattern="[0-9]*" maxlength="20"> &nbsp;&nbsp;/&nbsp;&nbsp; Gestión : &nbsp;&nbsp;
+                                            <input type="text" class="form-control form-control-sm col-md-3" pattern="[0-9]{4}" name="gestion" inputmode="numeric" maxlength="4">
                                         </div>
+                                        <div class="apo-inline-hint" data-campo="error-numero"></div>
+                                        <div class="apo-inline-hint" data-campo="error-gestion"></div>
                                     </td>
                                 </tr>
                                 <tr>
                                     <th class="text-dark font-italic">N° Control del pago : </th>
                                     <td class="border-bottom border-dark">
                                         <div class="input-group">
-                                            <input type="text" class="form-control form-control-sm col-sm-6" name="nro_control" id="nro_control_sid">
+                                            <input type="text" class="form-control form-control-sm col-sm-6" name="nro_control" id="nro_control_sid" inputmode="numeric" pattern="[0-9]*" maxlength="20">
                                         </div>
                                     </td>
                                 </tr>
@@ -117,17 +152,19 @@
                                     <th class="text-dark font-italic">Numero del título : </th>
                                     <td class="border-bottom border-dark">
                                         <div class="input-group pt-1">
-                                            <input type="text" class="form-control form-control-sm col-md-3" name="numero" data-campo="numero-sitra"> &nbsp;&nbsp;/&nbsp;&nbsp; Gestión : &nbsp;&nbsp;
-                                            <input type="text" class="form-control form-control-sm col-md-3" pattern="[0-9]{4}" name="gestion" data-campo="gestion-sitra">
+                                            <input type="text" class="form-control form-control-sm col-md-3" name="numero" data-campo="numero-sitra" inputmode="numeric" pattern="[0-9]*" maxlength="20"> &nbsp;&nbsp;/&nbsp;&nbsp; Gestión : &nbsp;&nbsp;
+                                            <input type="text" class="form-control form-control-sm col-md-3" pattern="[0-9]{4}" name="gestion" data-campo="gestion-sitra" inputmode="numeric" maxlength="4">
                                             &nbsp;&nbsp;<span class="btn btn-light btn-circle btn-sm text-muted" data-campo="icono-sitra-estado" title="Verificación SITRA"><i class="fas fa-minus-circle"></i></span>
                                         </div>
+                                        <div class="apo-inline-hint" data-campo="error-numero"></div>
+                                        <div class="apo-inline-hint" data-campo="error-gestion"></div>
                                     </td>
                                 </tr>
                                 <tr>
                                     <th class="text-dark font-italic">N° Control del pago : </th>
                                     <td class="border-bottom border-dark">
                                         <div class="input-group">
-                                            <input type="text" class="form-control form-control-sm col-sm-6" name="nro_control" id="nro_control_other">
+                                            <input type="text" class="form-control form-control-sm col-sm-6" name="nro_control" id="nro_control_other" inputmode="numeric" pattern="[0-9]*" maxlength="20">
                                         </div>
                                     </td>
                                 </tr>
@@ -147,7 +184,8 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary btn-sm" type="button" data-dismiss="modal">Cerrar</button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="return submitAgregarApostilla();">+ Agregar </button>
+            <button type="button" class="btn btn-primary btn-sm" data-campo="btn-agregar-apostilla" onclick="return submitAgregarApostilla();">+ Agregar </button>
+            <span class="apo-inline-status" data-campo="estado-accion-apostilla"></span>
         </div>
     </div>
 
@@ -155,6 +193,59 @@
     let validacionControlOk=false;
     let controlValidadoValor='';
     let timerValidacionControl=null;
+    let envioAgregarApostillaEnCurso=false;
+
+    function obtenerBotonAgregarApostilla(){
+        return document.querySelector('[data-campo="btn-agregar-apostilla"]');
+    }
+    function setErrorAgregarApostilla(campo,mensaje){
+        const el=$('[data-campo="error-'+campo+'"]');
+        if(!el.length){return;}
+        el.text((mensaje||'').toString());
+    }
+    function limpiarErroresAgregarApostilla(){
+        setErrorAgregarApostilla('numero','');
+        setErrorAgregarApostilla('gestion','');
+    }
+    function setEstadoAccionAgregarApostilla(mensaje,estado){
+        const el=$('[data-campo="estado-accion-apostilla"]');
+        if(!el.length){return;}
+        el.removeClass('text-success text-danger text-info');
+        if(estado==='loading'){el.addClass('text-info');}
+        else if(estado==='ok'){el.addClass('text-success');}
+        else if(estado==='error'){el.addClass('text-danger');}
+        el.html((mensaje||'').toString());
+    }
+    function setBotonCargandoApostillaForm(btn,texto){
+        if(!btn){return;}
+        if(btn.dataset.loading==='1'){return;}
+        btn.dataset.loading='1';
+        btn.dataset.originalHtml=btn.innerHTML;
+        btn.classList.add('disabled');
+        btn.setAttribute('aria-busy','true');
+        btn.setAttribute('disabled','disabled');
+        btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>'+(texto ? ' '+texto : ' Procesando...');
+    }
+    function limpiarBotonCargandoApostillaForm(btn){
+        if(!btn || btn.dataset.loading!=='1'){return;}
+        if(btn.dataset.originalHtml){btn.innerHTML=btn.dataset.originalHtml;}
+        btn.classList.remove('disabled');
+        btn.removeAttribute('aria-busy');
+        btn.removeAttribute('disabled');
+        btn.dataset.loading='0';
+    }
+    function resetValidacionPagoApostilla(){
+        validacionControlOk=false;
+        controlValidadoValor='';
+        if(timerValidacionControl!==null){clearTimeout(timerValidacionControl);timerValidacionControl=null;}
+        const form=$('#form_agregar_tramite');
+        form.find('[data-campo="validacion-recaudacion-ok"]').val('0');
+        form.find('input[data-campo="preimpreso-api"]').val('');
+        form.find('input[data-campo="gestion-api"]').val('');
+        $('#validacion-resultado').html('');
+        limpiarErroresAgregarApostilla();
+        setEstadoAccionAgregarApostilla('','');
+    }
 
     function obtenerNroControlApostilla(){
         const sid=document.getElementById('nro_control_sid');
@@ -347,6 +438,7 @@
         const nroControl=obtenerNroControlApostilla();
         const codLis=(form.find('input[data-campo="tipo-apostilla-hidden"]').val() || '').toString().trim();
         const codApos=(form.find('input[name="ca"]').val() || '').toString().trim();
+        limpiarErroresAgregarApostilla();
         if(nroControl===''){
             setResultadoValidacionApostilla('error','Ingrese el N° de control del pago.');
             return false;
@@ -355,13 +447,40 @@
             setResultadoValidacionApostilla('error','Seleccione el tipo de apostilla.');
             return false;
         }
+        const numeroDocumento=(form.find('input[name="numero"]').val() || '').toString().trim();
+        const gestionDocumento=(form.find('input[name="gestion"]').val() || '').toString().trim();
+        if(numeroDocumento!=='' && !/^\d+$/.test(numeroDocumento)){
+            setErrorAgregarApostilla('numero','El numero debe ser numerico.');
+            return false;
+        }
+        if(gestionDocumento!=='' && !/^\d{4}$/.test(gestionDocumento)){
+            setErrorAgregarApostilla('gestion','La gestion debe tener 4 digitos.');
+            return false;
+        }
+        if(envioAgregarApostillaEnCurso){
+            return false;
+        }
+        const btn=obtenerBotonAgregarApostilla();
+        const iniciarEnvio=function(){
+            if(envioAgregarApostillaEnCurso){return false;}
+            envioAgregarApostillaEnCurso=true;
+            setBotonCargandoApostillaForm(btn,'Agregando...');
+            setEstadoAccionAgregarApostilla('<i class="fas fa-spinner fa-spin"></i> Procesando...','loading');
+            return true;
+        };
+        const finalizarEnvio=function(){
+            envioAgregarApostillaEnCurso=false;
+            limpiarBotonCargandoApostillaForm(btn);
+        };
 
         if(validacionControlOk && controlValidadoValor===nroControl && form.find('[data-campo="validacion-recaudacion-ok"]').val()==='1'){
             if((form.find('input[data-campo="gestion-api"]').val() || '').trim()===''){
                 setResultadoValidacionApostilla('error','No se pudo obtener la gestión del pago desde la API.');
                 return false;
             }
-
+            if(!iniciarEnvio()){
+                return false;
+            }
             $.ajax({
                 url:'{{url("guardar agregar tramite apostilla")}}',
                 type:'POST',
@@ -374,6 +493,9 @@
                     if(resp && resp.ok){
                         cargarDatos('{{url("ajax tabla agregar")}}/'+codApos,'panel_lista_tramites_apostilla');
                         cargarDatos('{{url("listar tramite apostilla tabla/".date("Y-m-d",strtotime($tramite_apostilla->apos_fecha_ingreso)))}}','panel_tabla_tramites');
+                        resetValidacionPagoApostilla();
+                        finalizarEnvio();
+                        setEstadoAccionAgregarApostilla('Listo.','ok');
                         $('#tramite_apostilla').modal('hide');
                         return;
                     }
@@ -382,17 +504,23 @@
                         ? resp.message
                         : 'No se pudo registrar el trámite.';
                     setResultadoValidacionApostilla('error',msg,(resp && resp.code) ? resp.code : '');
+                    finalizarEnvio();
+                    setEstadoAccionAgregarApostilla('Error.','error');
                 },
                 error:function(xhr){
                     const msg=(xhr.responseJSON && xhr.responseJSON.message)
                         ? xhr.responseJSON.message
                         : 'No se pudo registrar el trámite. Intente nuevamente.';
                     setResultadoValidacionApostilla('error',msg,(xhr.responseJSON && xhr.responseJSON.code) ? xhr.responseJSON.code : 'API_NO_DISPONIBLE');
+                    finalizarEnvio();
+                    setEstadoAccionAgregarApostilla('Error.','error');
                 }
             });
             return false;
         }
-
+        if(!iniciarEnvio()){
+            return false;
+        }
         setResultadoValidacionApostilla('loading','');
         solicitarValidacionRecaudacion(form,nroControl,codLis,function(respValidacion){
             const anio=extraerAnioDesdeFechaPago(respValidacion.fecha_pago || '');
@@ -406,6 +534,8 @@
 
             if((form.find('input[data-campo="gestion-api"]').val() || '').trim()===''){
                 setResultadoValidacionApostilla('error','No se pudo obtener la gestión del pago desde la API.');
+                finalizarEnvio();
+                setEstadoAccionAgregarApostilla('Error.','error');
                 return;
             }
 
@@ -421,6 +551,9 @@
                     if(resp && resp.ok){
                         cargarDatos('{{url("ajax tabla agregar")}}/'+codApos,'panel_lista_tramites_apostilla');
                         cargarDatos('{{url("listar tramite apostilla tabla/".date("Y-m-d",strtotime($tramite_apostilla->apos_fecha_ingreso)))}}','panel_tabla_tramites');
+                        resetValidacionPagoApostilla();
+                        finalizarEnvio();
+                        setEstadoAccionAgregarApostilla('Listo.','ok');
                         $('#tramite_apostilla').modal('hide');
                         return;
                     }
@@ -429,12 +562,16 @@
                         ? resp.message
                         : 'No se pudo registrar el trámite.';
                     setResultadoValidacionApostilla('error',msg);
+                    finalizarEnvio();
+                    setEstadoAccionAgregarApostilla('Error.','error');
                 },
                 error:function(xhr){
                     const msg=(xhr.responseJSON && xhr.responseJSON.message)
                         ? xhr.responseJSON.message
                         : 'No se pudo registrar el trámite. Intente nuevamente.';
                     setResultadoValidacionApostilla('error',msg);
+                    finalizarEnvio();
+                    setEstadoAccionAgregarApostilla('Error.','error');
                 }
             });
         },function(msg,codigo){
@@ -442,6 +579,8 @@
             controlValidadoValor='';
             form.find('[data-campo="validacion-recaudacion-ok"]').val('0');
             setResultadoValidacionApostilla('error',msg,codigo);
+            finalizarEnvio();
+            setEstadoAccionAgregarApostilla('Error.','error');
         });
         return false;
     }
@@ -478,6 +617,13 @@
         .off('input.apostillaSitra','input[data-campo="numero-sitra"]')
         .on('input.apostillaSitra','input[data-campo="numero-sitra"]',function(){
             validarSitraApostilla();
+        });
+
+    $(document)
+        .off('input.apostillaErrores','input[name="numero"],input[name="gestion"]')
+        .on('input.apostillaErrores','input[name="numero"],input[name="gestion"]',function(){
+            if($(this).attr('name')==='numero'){setErrorAgregarApostilla('numero','');}
+            if($(this).attr('name')==='gestion'){setErrorAgregarApostilla('gestion','');}
         });
 
     // Tipo fijo del trámite en este formulario (comportamiento original).

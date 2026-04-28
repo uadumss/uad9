@@ -55,27 +55,27 @@
                         @can('crear traleg - srv')
                             @if($fecha==(date('Y-m-d')))
                                 <a class="btn btn-outline-info btn-sm text-dark m-1 pt-1 shadow-sm" data-target="#traleg" data-toggle="modal"
-                                    onclick="generarNumero('L','generar numero','panel_traleg');">
+                                    onclick="generarNumero('L','generar numero','panel_traleg', this);">
                                     <i class="fas fa-plus"></i> Legalización
                                 </a>
                                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                                 <a class="btn btn-outline-warning btn-sm text-dark m-1 pt-1 shadow-sm" data-target="#traleg" data-toggle="modal"
-                                    onclick="generarNumero('C','generar numero','panel_traleg');">
+                                    onclick="generarNumero('C','generar numero','panel_traleg', this);">
                                     <i class="fas fa-plus"></i> Certificación
                                 </a>
                                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                                 <a class="btn btn-outline-danger btn-sm text-dark m-1 pt-1 shadow-sm" data-target="#traleg" data-toggle="modal"
-                                    onclick="generarNumero('F','generar numero','panel_traleg');">
+                                    onclick="generarNumero('F','generar numero','panel_traleg', this);">
                                     <i class="fas fa-plus"></i> Confrontación
                                 </a>
                                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                                 <a class="btn btn-outline-success btn-sm text-dark m-1 pt-1 shadow-sm" data-target="#traleg" data-toggle="modal"
-                                    onclick="generarNumero('B','generar numero busqueda/','panel_traleg');">
+                                    onclick="generarNumero('B','generar numero busqueda/','panel_traleg', this);">
                                     <i class="fas fa-plus"></i> Búsqueda
                                 </a>
                                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                                 <a class="btn btn-outline-secondary btn-sm text-dark m-1 pt-1 shadow-sm" data-target="#traleg" data-toggle="modal"
-                                    onclick="generarNumero('E','generar numero/','panel_traleg');">
+                                    onclick="generarNumero('E','generar numero/','panel_traleg', this);">
                                     <i class="fas fa-plus"></i> Consejo
                                 </a>
                                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
@@ -266,7 +266,34 @@
             }
         }
 
-        function generarNumero(tipo,url,panel){
+        function setBotonCargandoServicios(btn,activo,texto){
+            if(!btn){return;}
+            if(activo){
+                if(btn.dataset.loading==='1'){return;}
+                btn.dataset.loading='1';
+                btn.dataset.originalHtml=btn.innerHTML;
+                btn.classList.add('disabled');
+                btn.setAttribute('aria-busy','true');
+                btn.setAttribute('aria-disabled','true');
+                btn.style.pointerEvents='none';
+                btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>'+(texto ? ' '+texto : ' Cargando...');
+                return;
+            }
+            if(btn.dataset.loading!=='1'){return;}
+            if(btn.dataset.originalHtml){btn.innerHTML=btn.dataset.originalHtml;}
+            btn.classList.remove('disabled');
+            btn.removeAttribute('aria-busy');
+            btn.removeAttribute('aria-disabled');
+            btn.style.pointerEvents='';
+            btn.dataset.loading='0';
+        }
+
+        function generarNumero(tipo,url,panel,btn){
+            if(btn && btn.dataset.loading==='1'){
+                return;
+            }
+            setBotonCargandoServicios(btn,true,'Cargando...');
+            var finalizar=function(){setBotonCargandoServicios(btn,false);};
             $('#'+panel).html("<br/><br/><div class='d-flex justify-content-center text-warning'><div class='spinner-border' role='status'> <span class='visually-hidden'></span></div><span class='text-white font-weight-bold'>&nbsp;  Cargando ...</span></div>");
             var link = "{{url('/')}}"+"/"+url;
             var token = "{{csrf_token()}}";
@@ -295,18 +322,22 @@
                                         campoCi.trigger('select');
                                     }, 60);
                                 }
+                                finalizar();
                             },
                             error: function(){
                                 cargarDatos(rutaEdicion,panel);
+                                finalizar();
                             }
                         });
                         return;
                     }
                     $('#'+panel).html(resp);
                     cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
+                    finalizar();
                 },
                 error: function (data) {
                     $('#'+panel).html("<span class='text-white font-weight-bold bg-danger rounded p-1'>Ocurrio un error, probablemente no tenga permisos para esta acción</span>");
+                    finalizar();
                 }
             });
         }
