@@ -1765,12 +1765,29 @@
     }
     function sincronizarTipoLegalizacion(formulario){
         var select=formulario.find('select[data-campo="tipo-legalizacion"]');
-        if(select.length){var opcionSeleccionada=select.find('option:selected'),valorSeleccionado='';if(opcionSeleccionada.length&&!opcionSeleccionada.prop('disabled'))valorSeleccionado=opcionSeleccionada.val()||'';select.val(valorSeleccionado);formulario.find('input[data-campo="tipo-legalizacion-hidden"]').val(valorSeleccionado);}
+        if(select.length){
+            var opcionSeleccionada=select.find('option:selected'),valorSeleccionado='';
+            if(opcionSeleccionada.length&&!opcionSeleccionada.prop('disabled'))valorSeleccionado=opcionSeleccionada.val()||'';
+            select.val(valorSeleccionado);
+            formulario.find('input[data-campo="tipo-legalizacion-hidden"]').val(valorSeleccionado);
+            
+            if(valorSeleccionado == '60'){
+                formulario.find('[data-campo="columna-carrera"]').show(300);
+            } else {
+                formulario.find('[data-campo="columna-carrera"]').hide(300);
+                formulario.find('#select_carrera_interesado').val('');
+                formulario.find('#cod_tit_seleccionado').val('');
+            }
+        }
     }
     function limpiarTipoLegalizacion(formulario){
         var select=formulario.find('select[data-campo="tipo-legalizacion"]');
         if(select.length){restaurarOpcionesTipoLegalizacion(formulario);select.val('').prop('disabled',true);}
         formulario.find('input[data-campo="tipo-legalizacion-hidden"]').val('');
+        
+        formulario.find('[data-campo="columna-carrera"]').hide(300);
+        formulario.find('#select_carrera_interesado').val('');
+        formulario.find('#cod_tit_seleccionado').val('');
     }
     function aplicarPtagSugerido(formulario,resp){
         var check=formulario.find('input[name="ptaang"]'),wrap=formulario.find('[data-campo="ptag-wrap"]');if(!check.length)return;
@@ -1857,15 +1874,6 @@
         $(document).off('change'+ns,'form select[data-campo="tipo-legalizacion"]').on('change'+ns,'form select[data-campo="tipo-legalizacion"]',function(){
             var form=$(this).closest('form');
             sincronizarTipoLegalizacion(form);
-            
-            // Lógica para mostrar/ocultar selector de carrera (Trámite 60: CONSTANCIA CAMPO CONOCIMIENTO)
-            var codTre = $(this).val();
-            if(codTre == '60'){
-                form.find('[data-campo="columna-carrera"]').show(300);
-            } else {
-                form.find('[data-campo="columna-carrera"]').hide(300);
-                $('#select_carrera_interesado').val('');
-            }
 
             if(form.find('[data-campo="estado-sitra"]').length) programarValidacionSitra(form);
         });
