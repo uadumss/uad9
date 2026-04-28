@@ -298,19 +298,26 @@
     margin-bottom: 4px;
 }
 .eapo .e-qa-error {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    margin-top: 4px;
-    padding: 2px 6px;
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    white-space: nowrap;
     font-size: 10px;
     color: var(--e-red);
-    background: var(--e-red-lt);
-    border: 1px solid #fca5a5;
-    border-radius: var(--e-r);
-    line-height: 1.2;
+    line-height: 1.3;
+    pointer-events: none;
 }
 .eapo .e-qa-error:empty { display: none; }
+/* Wrapper relativo para que el error absoluto no desborde el grid */
+.eapo .e-qa-input-wrap {
+    position: relative;
+    /* reserva espacio solo cuando hay error para no desplazar el boton */
+}
+/* Input con error — borde rojo */
+.eapo .e-input.is-invalid {
+    border-color: var(--e-red);
+    box-shadow: 0 0 0 2px rgba(185,28,28,.12);
+}
 .eapo .e-qa-status {
     display: inline-flex;
     align-items: center;
@@ -713,16 +720,20 @@
                                 <div class="e-qa-col">
                                     <div class="e-step-tag"><span class="sn">2</span><span class="sl">Documento</span></div>
                                     <label data-campo="label-documento">N° título / resolución</label>
-                                    <input type="text" class="e-input" name="numero" autocomplete="off" inputmode="numeric" pattern="[0-9]*" maxlength="20" style="width:100%;">
-                                    <div class="e-qa-error" data-campo="error-numero"></div>
+                                    <div class="e-qa-input-wrap">
+                                        <input type="text" class="e-input" name="numero" autocomplete="off" inputmode="numeric" pattern="[0-9]*" maxlength="20" style="width:100%;">
+                                        <div class="e-qa-error" data-campo="error-numero"></div>
+                                    </div>
                                 </div>
 
                                 <div class="e-qa-col">
                                     <div class="e-step-tag" style="opacity:0;pointer-events:none;"><span class="sn">·</span><span class="sl">·</span></div>
                                     <label>Gestión</label>
-                                     <input type="text" class="e-input" name="gestion" pattern="[0-9]{4}"
-                                         autocomplete="off" inputmode="numeric" maxlength="4" placeholder="2024" style="width:100%;">
-                                    <div class="e-qa-error" data-campo="error-gestion"></div>
+                                    <div class="e-qa-input-wrap">
+                                         <input type="text" class="e-input" name="gestion" pattern="[0-9]{4}"
+                                             autocomplete="off" inputmode="numeric" maxlength="4" placeholder="2024" style="width:100%;">
+                                        <div class="e-qa-error" data-campo="error-gestion"></div>
+                                    </div>
                                 </div>
 
                                 {{-- SITRA pill --}}
@@ -744,7 +755,6 @@
                                             style="width:100%;justify-content:center;">
                                         <i class="fas fa-plus" style="font-size:10px;"></i> Agregar
                                     </button>
-                                    <div class="e-qa-status" data-campo="estado-accion-rapida"></div>
                                 </div>
 
                             </div>{{-- /band --}}
@@ -775,7 +785,8 @@
                             <span class="ph-bar red"></span>
                             <span class="ph-title">Trámites seleccionados</span>
                         </div>
-                        <span style="font-size:10px;color:var(--e-s400);font-weight:600;">
+                        <span style="font-size:10px;color:var(--e-s400);font-weight:600;"
+                              data-campo="conteo-tramites">
                             {{ count($detalle_apostilla) }} registro(s)
                         </span>
                     </div>
@@ -933,21 +944,18 @@ function setErrorRapidoApostilla(campo,mensaje){
     const el=form.find('[data-campo="error-'+campo+'"]');
     if(!el.length){return;}
     el.text((mensaje||'').toString());
+    // Marcar / desmarcar el input con borde rojo
+    const input=form.find('input[name="'+campo+'"]');
+    if(input.length){
+        if(mensaje){input.addClass('is-invalid');}else{input.removeClass('is-invalid');}
+    }
 }
 function limpiarErroresRapidoApostilla(){
     setErrorRapidoApostilla('numero','');
     setErrorRapidoApostilla('gestion','');
 }
 function setEstadoAccionRapida(mensaje,estado){
-    const form=formApostillaRapida();
-    if(!form.length){return;}
-    const el=form.find('[data-campo="estado-accion-rapida"]');
-    if(!el.length){return;}
-    el.removeClass('is-loading is-ok is-error');
-    if(estado==='loading'){el.addClass('is-loading');}
-    else if(estado==='ok'){el.addClass('is-ok');}
-    else if(estado==='error'){el.addClass('is-error');}
-    el.html((mensaje||'').toString());
+    // Sin panel secundario — el estado se refleja directamente en el botón y en el pill de pago
 }
 function setEstadoGuardarTramite(mensaje,estado){
     const el=$('[data-campo="estado-guardar-tramite"]');
@@ -1389,6 +1397,25 @@ $(function(){
                 campoControl.trigger('focus');
                 campoControl.trigger('select');
             },90);
+        }
+        // MutationObserver: actualiza contador cada vez que el panel AJAX cambia
+        const panelTabla=document.getElementById('panel_lista_tramites_apostilla');
+        if(panelTabla){
+            const actualizarContador=function(){
+                const contador=document.querySelector('[data-campo="conteo-tramites"]');
+                if(!contador)return;
+                // Contar <tr> del tbody, excluyendo la fila de "sin registros"
+                const filas=panelTabla.querySelectorAll('tbody tr');
+                let n=0;
+                filas.forEach(function(tr){
+                    // La fila de "sin registros" tiene colspan=7
+                    const celdas=tr.querySelectorAll('td[colspan]');
+                    if(celdas.length===0){n++;}
+                });
+                contador.textContent=n+' registro(s)';
+            };
+            const obs=new MutationObserver(actualizarContador);
+            obs.observe(panelTabla,{childList:true,subtree:true});
         }
         return;
     }

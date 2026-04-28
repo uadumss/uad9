@@ -220,31 +220,83 @@
     <!--===========================END ==============================-->
 
     <script>
+        /**
+         * Reemplaza el contenido de un panel con transicion suave (fade 140ms).
+         * Evita el corte visual abrupto al cambiar el contenido del modal.
+         */
+        function _reemplazarPanel(panel, html, callback){
+            var panelEl=$('#'+panel);
+            var inner=panelEl.children('.modal-content,.eleg').first();
+            var doReplace=function(){
+                panelEl.html(html);
+                if(typeof callback==='function') callback();
+            };
+            if(inner.length){
+                inner.stop(true).animate({opacity:0},140,doReplace);
+            } else {
+                doReplace();
+            }
+        }
+
         function enviar1(formulario,ruta,panel){
             $.ajax({
                 type: "POST",
                 url: ruta,
-                data: $("#"+formulario).serialize(), // Adjuntar los campos del formulario enviado.
+                data: $("#"+formulario).serialize(),
                 success: function(resp) {
-                    $('#'+panel).html(resp);
-                    cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
-                },
-                error: function (resp) {
-                    var obj=resp.responseJSON.errors;
-                    var texto='';
-                    $.each(obj, function(key,value) {
-                        texto=texto+value+'<br/>';
+                    _reemplazarPanel(panel, resp, function(){
+                        cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
+                        mostrarToastServiciosLeg('Documento registrado correctamente.','ok');
                     });
-                    if(texto!=''){
-                        $('#error_datos_span').html(texto);
-                    }
+                },
+                error: function(resp) {
+                    var texto='';
+                    try{
+                        var obj=resp.responseJSON;
+                        if(obj && obj.errors){
+                            $.each(obj.errors,function(k,v){texto+=v+'<br/>';});
+                        } else if(obj && obj.message){
+                            texto=obj.message;
+                        }
+                    }catch(e){}
+                    if(!texto) texto='Error al registrar el documento.';
+                    $('#error_datos_span').html(texto);
                     $('#error_datos').show();
-                    setTimeout(function () {
-                        $('#error_datos').hide(500);
-                    }, 4000);
-
+                    setTimeout(function(){$('#error_datos').hide(500);},5000);
                 }
             });
+        }
+
+        /**
+         * Toast flotante independiente del modal. tipo: ok | error
+         */
+        function mostrarToastServiciosLeg(mensaje, tipo){
+            var id='srv-toast-leg';
+            $('#'+id).remove();
+            var cfg=(tipo==='ok')
+                ?{bg:'#ecfdf5',brd:'#047857',col:'#065f46',icon:'fa-check-circle'}
+                :{bg:'#fef2f2',brd:'#b91c1c',col:'#7f1d1d',icon:'fa-exclamation-circle'};
+            var wrap=$('<div>').attr('id',id).css({
+                position:'fixed',bottom:'28px',right:'28px','z-index':99999,
+                display:'flex','align-items':'center',gap:'8px',
+                padding:'10px 16px','border-radius':'8px',
+                background:cfg.bg,'border-left':'4px solid '+cfg.brd,
+                color:cfg.col,'font-size':'12.5px','font-weight':600,
+                'box-shadow':'0 8px 24px rgba(0,0,0,.14)',
+                opacity:0,transition:'opacity .25s'
+            });
+            $('<i>').addClass('fas '+cfg.icon).css('flex-shrink',0).appendTo(wrap);
+            $('<span>').text(mensaje).css('margin-left','4px').appendTo(wrap);
+            $('<button>').html('×').css({
+                'margin-left':'10px',background:'none',border:'none',cursor:'pointer',
+                'font-size':'16px','line-height':1,color:'inherit',opacity:.6
+            }).on('click',function(){wrap.remove();}).appendTo(wrap);
+            $('body').append(wrap);
+            setTimeout(function(){wrap.css('opacity','1');},20);
+            setTimeout(function(){
+                wrap.css('opacity','0');
+                setTimeout(function(){wrap.remove();},300);
+            },3500);
         }
 
 
@@ -314,15 +366,13 @@
                             url: rutaEdicion,
                             type: 'GET',
                             success: function (vistaEdicion) {
-                                $('#'+panel).html(vistaEdicion);
-                                var campoCi = $('#'+panel).find('input[name="ci"]').first();
-                                if(campoCi.length && !campoCi.prop('disabled') && !campoCi.prop('readonly')){
-                                    setTimeout(function(){
-                                        campoCi.trigger('focus');
-                                        campoCi.trigger('select');
-                                    }, 60);
-                                }
-                                finalizar();
+                                _reemplazarPanel(panel, vistaEdicion, function(){
+                                    var campoCi = $('#'+panel).find('input[name="ci"]').first();
+                                    if(campoCi.length && !campoCi.prop('disabled') && !campoCi.prop('readonly')){
+                                        setTimeout(function(){campoCi.trigger('focus');campoCi.trigger('select');},60);
+                                    }
+                                    finalizar();
+                                });
                             },
                             error: function(){
                                 cargarDatos(rutaEdicion,panel);
@@ -331,9 +381,10 @@
                         });
                         return;
                     }
-                    $('#'+panel).html(resp);
-                    cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
-                    finalizar();
+                    _reemplazarPanel(panel, resp, function(){
+                        cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
+                        finalizar();
+                    });
                 },
                 error: function (data) {
                     $('#'+panel).html("<span class='text-white font-weight-bold bg-danger rounded p-1'>Ocurrio un error, probablemente no tenga permisos para esta acción</span>");
@@ -353,19 +404,20 @@
                             url: resp.redirect,
                             type: 'GET',
                             success: function(vista){
-                                $('#'+panel).html(vista);
-                                cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
-                                if(form==='form_traleg'){
-                                    var areaTramite=$('#'+panel).find('#divNueTram');
-                                    if(areaTramite.length){
-                                        areaTramite.stop(true,true).show(0);
-                                        var campoValorado=areaTramite.find('input[name="control"]').first();
-                                        if(!campoValorado.length){campoValorado=areaTramite.find('input[name="valorado"]:visible').first();}
-                                        if(campoValorado.length && !campoValorado.prop('disabled') && !campoValorado.prop('readonly')){
-                                            setTimeout(function(){campoValorado.trigger('focus');campoValorado.trigger('select');},100);
+                                _reemplazarPanel(panel, vista, function(){
+                                    cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
+                                    if(form==='form_traleg'){
+                                        var areaTramite=$('#'+panel).find('#divNueTram');
+                                        if(areaTramite.length){
+                                            areaTramite.stop(true,true).show(0);
+                                            var campoValorado=areaTramite.find('input[name="control"]').first();
+                                            if(!campoValorado.length){campoValorado=areaTramite.find('input[name="valorado"]:visible').first();}
+                                            if(campoValorado.length && !campoValorado.prop('disabled') && !campoValorado.prop('readonly')){
+                                                setTimeout(function(){campoValorado.trigger('focus');campoValorado.trigger('select');},100);
+                                            }
                                         }
                                     }
-                                }
+                                });
                             },
                             error: function(){
                                 $('#'+panel).html(resp.redirect ? '<span class="text-danger">No se pudo abrir el trámite recién creado.</span>' : '');
@@ -373,28 +425,30 @@
                         });
                         return;
                     }
-                    $('#'+panel).html(resp);
-                    cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
-                    if(form==='form_traleg'){
-                        enfocarCampoValoradoServicios(panel);
-                    }
+                    _reemplazarPanel(panel, resp, function(){
+                        cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
+                        if(form==='form_traleg'){
+                            enfocarCampoValoradoServicios(panel);
+                        }
+                    });
                 },
                 error: function (resp) {
-			alert('Error en los datos');
-                    var obj=resp.responseJSON.errors;
                     var texto='';
-                    $.each(obj, function(key,value) {
-                        texto=texto+value+'<br/>';
-                    });
-                    if(texto!=''){
-                        $('#error_datos_span').html(texto);
-                    }
-                        $('#error_datos').show();
-                        setTimeout(function () {
-                            $('#error_datos').hide(500);
-                        }, 4000);
-
-                    }
+                    try{
+                        var obj=resp.responseJSON;
+                        if(obj && obj.errors){
+                            $.each(obj.errors,function(k,v){texto+=v+'<br/>';});
+                        } else if(obj && obj.message){
+                            texto=obj.message;
+                        }
+                    }catch(e){}
+                    if(!texto) texto='Error al guardar los datos.';
+                    $('#error_datos_span').html(texto);
+                    $('#error_datos').show();
+                    setTimeout(function(){
+                        $('#error_datos').hide(500);
+                    },5000);
+                }
             });
         }
         function cargarDatosTabla(ruta,panel){
