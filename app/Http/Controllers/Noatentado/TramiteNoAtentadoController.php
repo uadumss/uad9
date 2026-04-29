@@ -2835,8 +2835,17 @@ class TramiteNoAtentadoController extends Controller
                 $modelo_glosa=Glosa::find($tramite_noatentado->dtra_cod_glosa);
             }
 
+
             if(sizeof($candidatos)===1 && trim((string)$tramite_noatentado->dtra_glosa)!=='' && $tramite_noatentado->dtra_glosa!=='0'){
-                $tramite_noatentado->dtra_glosa=Funciones::ajustarGlosaNoAtentadoPorRol((string)$tramite_noatentado->dtra_glosa,$candidatos[0]);
+                // Pasar nombres RAW del DB — Funciones normaliza internamente solo para comparar
+                $cargosConv=\App\Models\Noatentado\Cargo_convocatoria::where('cod_con','=',$tramite_noatentado->cod_con)
+                    ->pluck('carg_nombre')
+                    ->map(fn($n)=>trim((string)$n))
+                    ->filter(fn($n)=>$n!=='')
+                    ->values()
+                    ->toArray();
+
+                $tramite_noatentado->dtra_glosa=Funciones::ajustarGlosaNoAtentadoPorRol((string)$tramite_noatentado->dtra_glosa,$candidatos[0],$cargosConv);
             }
 
             $legalizacion=new TramiteLegalizacionController();

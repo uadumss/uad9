@@ -19,8 +19,7 @@ use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\PermisosController;
 
 Route::get('/', function () {
-    //return "hola";
-    return view('auth.login');
+    return redirect()->route('login');
 });
 Route::get('/home', function () {
     //return 'hola';

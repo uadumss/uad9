@@ -331,8 +331,13 @@ class Funciones extends Model
             }
         }else{
             if(sizeof($candidatos)==1){
-                $rolUnico=self::resolverRolCandidatoNoAtentado($candidatos[0]);
-                $nombre_convocatoria=self::ajustarConvocatoriaSegunCargoNoAtentado($nombre_convocatoria,$rolUnico);
+                // Obtener los cargos registrados en la convocatoria para este trámite
+                $cargosConvocatoria=self::obtenerCargosConvocatoriaNoAtentado((int)($tramite_noatentado->cod_con ?? 0));
+                $nombre_convocatoria=self::ajustarConvocatoriaPorCargoCandidato(
+                    $nombre_convocatoria,
+                    $candidatos[0],
+                    $cargosConvocatoria
+                );
                 $glosa_unitario=" <span style='font-weight: bold'>".$candidatos[0]->per_apellido." ".$candidatos[0]->per_nombre."</span> con cédula de identidad No. ".$candidatos[0]->per_ci.", ";
                 $sancionado=SancionadosController::verificarSancionado($candidatos[0]->id_per);
                 if($sancionado){
@@ -441,29 +446,243 @@ class Funciones extends Model
         return trim($texto);
     }
 
-    private static function ajustarConvocatoriaSegunCargoNoAtentado(string $nombreConvocatoria, string $cargo): string
+    /**
+     * Obtiene los cargos de una convocatoria como pares [raw => normalizado].
+     * raw   = nombre exacto del DB (con tildes, tal como está).
+     * norm  = uppercase sin tildes, para comparación.
+     * Retorna array de ['raw'=>string, 'norm'=>string].
+     */
+    private static function obtenerCargosConvocatoriaNoAtentado(int $codCon): array
     {
-        $texto=trim($nombreConvocatoria);
-        if($texto==='' || ($cargo!=='TITULAR' && $cargo!=='SUPLENTE')){
+        if ($codCon <= 0) {
+            return [];
+        }
+
+        $filas = DB::table('claustros.cargo_convocatoria')
+            ->where('cod_con', '=', $codCon)
+            ->pluck('carg_nombre');
+
+        $cargos = [];
+        foreach ($filas as $nombre) {
+            $raw  = trim((string)$nombre);
+            $norm = self::normalizarTextoCargoAjusteNoAtentado($raw);
+            if ($norm !== '') {
+                $cargos[] = ['raw' => $raw, 'norm' => $norm];
+            }
+        }
+
+        return $cargos;
+    }
+
+    /**
+     * Normaliza un cargo para comparación: mayúsculas, sin tilde, sin espacios extra.
+     */
+    private static function normalizarTextoCargoAjusteNoAtentado(string $texto): string
+    {
+        $valor = mb_strtoupper(trim($texto), 'UTF-8');
+        $valor = strtr($valor, ['Á'=>'A','É'=>'E','Í'=>'I','Ó'=>'O','Ú'=>'U','Ñ'=>'N']);
+        $valor = preg_replace('/\s+/u', ' ', $valor) ?? $valor;
+        return trim($valor);
+    }
+
+    /**
+     * Resuelve el cargo normalizado del candidato.
+     * Prioridad: carg_nombre (cargo oficial de la convocatoria) → noa_cargo (texto libre).
+     */
+    private static function resolverCargoCandidatoNormalizado($candidato): string
+    {
+        // Primero el cargo oficial registrado en la tabla cargo_convocatoria
+        $raw = trim((string)($candidato->carg_nombre ?? ''));
+        if ($raw === '') {
+            // Fallback: cargo libre ingresado manualmente
+            $raw = trim((string)($candidato->noa_cargo ?? ''));
+        }
+        return self::normalizarTextoCargoAjusteNoAtentado($raw);
+    }
+
+    /**
+     * Ajusta el nombre de la convocatoria (placeholder {nombre_convocatoria})
+     * eliminando los cargos de la lista que NO pertenecen al candidato.
+     *
+     * $cargosConvocatoria = array de ['raw'=>..., 'norm'=>...] (de obtenerCargosConvocatoriaNoAtentado).
+     * Fallback: lógica TITULAR/SUPLENTE si el cargo del candidato no está en la lista.
+     */
+    private static function ajustarConvocatoriaPorCargoCandidato(
+        string $nombreConvocatoria,
+        $candidato,
+        array $cargosConvocatoria
+    ): string {
+        $texto = trim($nombreConvocatoria);
+        if ($texto === '') {
             return $nombreConvocatoria;
         }
 
-        return self::reemplazarCombinacionesRolNoAtentado($texto,$cargo,true);
+        $cargoCandidatoNorm = self::resolverCargoCandidatoNormalizado($candidato);
+
+        if (count($cargosConvocatoria) > 0 && $cargoCandidatoNorm !== '') {
+            // Buscar si el cargo del candidato está en la lista
+            $encontrado = false;
+            foreach ($cargosConvocatoria as $item) {
+                if ($item['norm'] === $cargoCandidatoNorm) {
+                    $encontrado = true;
+                    break;
+                }
+            }
+
+            if ($encontrado) {
+                // Cargo raw del candidato para fallback de palabras únicas
+                $cargoCandidatoRawStr = trim((string)($candidato->carg_nombre ?? ''));
+                if ($cargoCandidatoRawStr === '') {
+                    $cargoCandidatoRawStr = trim((string)($candidato->noa_cargo ?? ''));
+                }
+                // Eliminar del texto todos los cargos de la lista que NO son del candidato
+                foreach ($cargosConvocatoria as $item) {
+                    if ($item['norm'] === $cargoCandidatoNorm) {
+                        continue; // conservar el del candidato
+                    }
+                    $texto = self::eliminarCargoDelTextoNoAtentado($texto, $item['raw'], $cargoCandidatoRawStr);
+                }
+                return $texto;
+            }
+        }
+
+        // Fallback: lógica TITULAR/SUPLENTE
+        $rol = self::resolverRolCandidatoNoAtentado($candidato);
+        if ($rol === 'TITULAR' || $rol === 'SUPLENTE') {
+            return self::reemplazarCombinacionesRolNoAtentado($texto, $rol, true);
+        }
+
+        return $texto;
     }
 
-    public static function ajustarGlosaNoAtentadoPorRol(string $glosa, $candidato): string
+    /**
+     * Limpia separadores colgantes tras eliminar texto.
+     */
+    private static function limpiarSeparadoresNoAtentado(string $texto): string
     {
-        $texto=trim($glosa);
-        if($texto===''){
+        $texto = preg_replace('/,\s*,/u',      ',', $texto) ?? $texto;
+        $texto = preg_replace('/\/\s*\//u',    '/', $texto) ?? $texto;
+        $texto = preg_replace('/^[\s,\/\-]+/u', '', $texto) ?? $texto;
+        $texto = preg_replace('/[\s,\/\-]+$/u', '', $texto) ?? $texto;
+        $texto = preg_replace('/[ \t]{2,}/u',   ' ', $texto) ?? $texto;
+        return trim($texto);
+    }
+
+    /**
+     * Elimina $cargoRaw del $texto en dos intentos:
+     *   1) Frase exacta: \bCARGO\b  (case-insensitive, unicode)
+     *   2) Si falla, elimina solo las PALABRAS Únicas del cargo
+     *      (las que no comparte con $cargoCandidatoRaw).
+     *
+     * Ejemplo:
+     *   cargoRaw = "CONSEJERO SUPLENTE", cargoCandidatoRaw = "CONSEJERO TITULAR"
+     *   Palabras únicas de cargoRaw: ["SUPLENTE"]
+     *   Si el texto solo tiene "suplente" (abreviado), elimina solo "suplente".
+     */
+    private static function eliminarCargoDelTextoNoAtentado(
+        string $texto,
+        string $cargoRaw,
+        string $cargoCandidatoRaw = ''
+    ): string {
+        if ($cargoRaw === '' || $texto === '') {
+            return $texto;
+        }
+
+        // --- Intento 1: frase exacta ---
+        $cargoEscapado = preg_quote($cargoRaw, '/');
+        $resultado = preg_replace('/\b' . $cargoEscapado . '\b/iu', '', $texto);
+
+        if ($resultado !== null && $resultado !== $texto) {
+            return self::limpiarSeparadoresNoAtentado($resultado);
+        }
+
+        // --- Intento 2: palabras únicas del cargo ---
+        // Normalizar cargo candidato para comparar palabras
+        $cargoCandidatoNorm = self::normalizarTextoCargoAjusteNoAtentado($cargoCandidatoRaw);
+        $palabrasCandidato  = $cargoCandidatoNorm !== ''
+            ? (preg_split('/\s+/u', $cargoCandidatoNorm) ?: [])
+            : [];
+
+        // Palabras del cargo a eliminar (raw para el regex, norm para comparar)
+        $palabrasCargoRaw  = preg_split('/\s+/u', trim($cargoRaw)) ?: [];
+        $palabrasCargoNorm = preg_split('/\s+/u', self::normalizarTextoCargoAjusteNoAtentado($cargoRaw)) ?: [];
+
+        $resultado = $texto;
+        foreach ($palabrasCargoNorm as $idx => $wordNorm) {
+            if ($wordNorm === '') {
+                continue;
+            }
+            // Saltar si esta palabra también está en el cargo del candidato
+            if (in_array($wordNorm, $palabrasCandidato, true)) {
+                continue;
+            }
+            // Eliminar la palabra del texto usando la versión raw (respeta tildes)
+            $wordRaw     = $palabrasCargoRaw[$idx] ?? $wordNorm;
+            $wordEsc     = preg_quote($wordRaw, '/');
+            $resultado   = preg_replace('/\b' . $wordEsc . '\b/iu', '', $resultado) ?? $resultado;
+        }
+
+        return self::limpiarSeparadoresNoAtentado($resultado);
+    }
+
+    /**
+     * Llamado desde fe_glosa() en el controller para ajustar la glosa completa
+     * (candidato único). $cargosConvocatoria = array de strings RAW del DB.
+     * Fallback a TITULAR/SUPLENTE si el cargo no está en la lista.
+     */
+    public static function ajustarGlosaNoAtentadoPorRol(string $glosa, $candidato, array $cargosConvocatoria = []): string
+    {
+        $texto = trim($glosa);
+        if ($texto === '') {
             return $glosa;
         }
 
-        $rol=self::resolverRolCandidatoNoAtentado($candidato);
-        if($rol!=='TITULAR' && $rol!=='SUPLENTE'){
+        if (count($cargosConvocatoria) > 0) {
+            $cargoCandidatoNorm = self::resolverCargoCandidatoNormalizado($candidato);
+
+            if ($cargoCandidatoNorm !== '') {
+                // Construir pares raw/norm a partir del array de strings raw que llega del controller
+                $pares = [];
+                foreach ($cargosConvocatoria as $raw) {
+                    $norm = self::normalizarTextoCargoAjusteNoAtentado((string)$raw);
+                    if ($norm !== '') {
+                        $pares[] = ['raw' => (string)$raw, 'norm' => $norm];
+                    }
+                }
+
+                // Verificar si el cargo del candidato está en la lista
+                $encontrado = false;
+                foreach ($pares as $item) {
+                    if ($item['norm'] === $cargoCandidatoNorm) {
+                        $encontrado = true;
+                        break;
+                    }
+                }
+
+                if ($encontrado) {
+                    // Obtener el raw del cargo del candidato para el fallback de palabras únicas
+                    $cargoCandidatoRawStr = trim((string)($candidato->carg_nombre ?? ''));
+                    if ($cargoCandidatoRawStr === '') {
+                        $cargoCandidatoRawStr = trim((string)($candidato->noa_cargo ?? ''));
+                    }
+                    foreach ($pares as $item) {
+                        if ($item['norm'] === $cargoCandidatoNorm) {
+                            continue;
+                        }
+                        $texto = self::eliminarCargoDelTextoNoAtentado($texto, $item['raw'], $cargoCandidatoRawStr);
+                    }
+                    return $texto;
+                }
+            }
+        }
+
+        // Fallback: lógica TITULAR/SUPLENTE
+        $rol = self::resolverRolCandidatoNoAtentado($candidato);
+        if ($rol !== 'TITULAR' && $rol !== 'SUPLENTE') {
             return $glosa;
         }
 
-        return self::reemplazarCombinacionesRolNoAtentado($glosa,$rol,true);
+        return self::reemplazarCombinacionesRolNoAtentado($glosa, $rol, true);
     }
 
     private static function reemplazarCombinacionesRolNoAtentado(string $texto, string $rol, bool $minusculas=true): string
