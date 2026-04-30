@@ -51,6 +51,17 @@
                                 <input class="form-control form-control-sm border-0" placeholder=""
                                        required name="cod_sis" id="cod_sis" value="{{$candidato ? $candidato->per_cod_sis : ''}}" /></td>
                         </tr>
+                        <tr>
+                            <th class="text-right font-italic">Cargo: </th>
+                            <td class="border-bottom border-dark">
+                                <select class="form-control form-control-sm border-0" required name="cod_carg" id="cod_carg">
+                                    <option value="">Seleccione un cargo...</option>
+                                    @foreach($cargos as $cargo)
+                                        <option value="{{$cargo->cod_carg}}" {{$candidato && $candidato->cod_carg == $cargo->cod_carg ? 'selected' : ''}}>{{$cargo->carg_nombre}}</option>
+                                    @endforeach
+                                </select>
+                            </td>
+                        </tr>
                     </table>
                 </form>
             </div>

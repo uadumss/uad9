@@ -184,6 +184,7 @@
                                 <div class="e-qa-field">
                                     <label>CI / Carnet</label>
                                     <input class="e-input" id="noa_ci"
+                                           oninput="this.value = this.value.replace(/[^0-9]/g, '');"
                                            onchange="cargarDatosPersonalesNoa(this.value)"
                                            autocomplete="off" placeholder="Ej: 12345678">
                                 </div>
@@ -197,7 +198,7 @@
                                 </div>
                                 <div class="e-qa-field e-qa-field--sm">
                                     <label>Cod. SIS</label>
-                                    <input class="e-input" id="noa_cod_sis" autocomplete="off">
+                                    <input class="e-input" id="noa_cod_sis" autocomplete="off" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
                                 </div>
                                 <div class="e-qa-field">
                                     <label>Cargo texto</label>
@@ -227,16 +228,12 @@
                             <div class="e-excel-file-wrap">
                                 <input type="file" class="e-file-input" id="excel_candidatos_noa"
                                        accept=".xlsx,.xls"
-                                       onchange="actualizarNombreExcelNoatentado(this)">
-                                <label class="e-file-label" id="label_excel_candidatos_noa" for="excel_candidatos_noa">
-                                    <i class="fas fa-file-excel" style="color:#047857;"></i>
-                                    <span>Seleccionar archivo Excel</span>
+                                       onchange="actualizarNombreExcelNoatentado(this); importarExcelCandidatosNoAtentado();">
+                                <label class="e-btn e-btn-green e-btn-full" id="label_excel_candidatos_noa" for="excel_candidatos_noa" style="margin: 0;">
+                                    <i class="fas fa-file-excel"></i>
+                                    <span>Importar desde Excel</span>
                                 </label>
                             </div>
-                            <button type="button" class="e-btn e-btn-green"
-                                    onclick="importarExcelCandidatosNoAtentado()">
-                                <i class="fas fa-file-import"></i> Importar
-                            </button>
                         </div>
 
                         {{-- Barra de cupo --}}
@@ -276,9 +273,7 @@
 
                         {{-- Footer --}}
                         <div class="e-doc-footer">
-                            <span style="font-size:11px;color:var(--e-s400);">
-                                <strong style="color:var(--e-s700);">{{ $convocatoria->con_nombre }}</strong>
-                            </span>
+                            <div style="flex:1;"></div>
                             <button class="e-btn e-btn-primary" id="btn_guardar_noa"
                                     type="button" onclick="guardarTramiteNoAtentado()">
                                 <i class="fas fa-save"></i> Guardar trámite
@@ -703,18 +698,19 @@
     background: var(--e-s50);
 }
 .enoa .e-qa-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 8px;
-    align-items: end;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-end;
 }
-.enoa .e-qa-field { display: flex; flex-direction: column; }
-.enoa .e-qa-field--sm { min-width: 90px; max-width: 120px; }
-.enoa .e-qa-field--lg { min-width: 160px; }
-.enoa .e-qa-field--btn { min-width: 110px; }
+.enoa .e-qa-field { display: flex; flex-direction: column; flex: 1 1 110px; min-width: 0; }
+.enoa .e-qa-field--sm { flex: 0 1 90px; }
+.enoa .e-qa-field--lg { flex: 2 1 160px; }
+.enoa .e-qa-field--btn { flex: 0 0 110px; }
 .enoa .e-qa-field label {
     font-size: 10px; font-weight: 600; color: var(--e-s500);
     text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
 /* ── Excel band ── */
@@ -856,6 +852,7 @@
             na:          {cls:'idle', icon:'fa-minus-circle',         label:'N/A'},
             not_match:   {cls:'warn', icon:'fa-exclamation-circle',   label:'No coincide'},
             not_found:   {cls:'warn', icon:'fa-exclamation-circle',   label:'No encontrado'},
+            warning:     {cls:'warn', icon:'fa-exclamation-triangle', label:'Atención'},
             error:       {cls:'err',  icon:'fa-times-circle',         label:'Inválido'},
         };
         return m[categoria]||m['error'];
@@ -1083,12 +1080,12 @@
         if(cn==='badge-success')return 'ok';
         if(cn==='badge-danger')return 'error';
         if(cn==='badge-info'){return rn==='validando'?'loading':'info';}
-        if(cn==='badge-warning'){if(rn==='pendiente')return 'pending';if(rn==='no aplica')return 'no_aplica';return 'warning';}
+        if(cn==='badge-warning'){if(rn==='pendiente')return 'pending';if(rn==='no aplica'||rn==='n/a'||rn==='sin contexto')return 'na';return 'warning';}
         return 'pending';
     }
     function categoriaEstadoPagoNoatentado(tipo,resumen,detalle,codigo){
         const codigoNorm=limpiarTextoNoAtentado(codigo).toUpperCase();
-        if(tipo==='loading')return 'loading';if(tipo==='ok')return 'ok';if(tipo==='pending')return 'pending';if(tipo==='no_aplica')return 'na';
+        if(tipo==='loading')return 'loading';if(tipo==='ok')return 'ok';if(tipo==='pending')return 'pending';if(tipo==='na'||tipo==='no_aplica')return 'na';if(tipo==='warning')return 'warning';
         if(codigoNorm==='RATE_LIMIT')return 'rate_limit';if(codigoNorm==='SISTEMA_NO_CONFIGURADO')return 'not_configured';if(codigoNorm==='API_NO_DISPONIBLE')return 'connection';if(codigoNorm==='PAGO_YA_USADO')return 'used';if(codigoNorm==='CONTROL_NO_ENCONTRADO')return 'not_found';
         if(codigoNorm==='CUENTA_NO_CORRESPONDE'||codigoNorm==='CUENTA_SIN_TRAMITE_HABILITADO'||codigoNorm==='CUENTA_NO_IDENTIFICADA')return 'not_match';
         if(codigoNorm.indexOf('REINTEGRO_')===0){const cb=codigoNorm.replace(/^REINTEGRO_/,'');if(cb==='RATE_LIMIT')return 'rate_limit';if(cb==='SISTEMA_NO_CONFIGURADO')return 'not_configured';if(cb==='API_NO_DISPONIBLE'||cb==='API_RESPUESTA_INVALIDA')return 'connection';if(cb==='PAGO_YA_USADO')return 'used';if(cb==='CONTROL_NO_ENCONTRADO')return 'not_found';return 'not_match';}
@@ -1331,15 +1328,27 @@
     }
     function actualizarNombreExcelNoatentado(input){
         const label=$('#label_excel_candidatos_noa');if(!label.length)return;
-        if(input&&input.files&&input.files.length>0)label.find('span').text(input.files[0].name);
-        else label.find('span').text('Seleccionar archivo Excel');
+        if(input&&input.files&&input.files.length>0){
+            label.find('span').text('Importando...');
+            label.find('i').removeClass('fa-file-excel').addClass('fa-spinner fa-spin');
+        }else{
+            label.find('span').text('Importar desde Excel');
+            label.find('i').removeClass('fa-spinner fa-spin').addClass('fa-file-excel');
+        }
     }
     function importarExcelCandidatosNoAtentado(){
         const ctrl=$('#excel_candidatos_noa');if(!ctrl.length||!ctrl[0].files||ctrl[0].files.length===0){mostrarMensajeNoatentado('warning','Seleccione un archivo Excel antes de importar.');return;}
+        const label=$('#label_excel_candidatos_noa');
+        const resetLabel = function() {
+            if(label.length){
+                label.find('span').text('Importar desde Excel');
+                label.find('i').removeClass('fa-spinner fa-spin').addClass('fa-file-excel');
+            }
+        };
         const data=new FormData();data.append('_token','{{csrf_token()}}');data.append('lista',ctrl[0].files[0]);
         $.ajax({url:"{{url('importar candidato excel temporal noatentado/'.$cod_con)}}",type:'POST',processData:false,contentType:false,data:data,
             success:function(resp){
-                if(!resp||!resp.ok){mostrarMensajeNoatentado('error',(resp&&resp.message)?resp.message:'No se pudo importar el archivo.');return;}
+                if(!resp||!resp.ok){mostrarMensajeNoatentado('error',(resp&&resp.message)?resp.message:'No se pudo importar el archivo.');resetLabel();ctrl.val('');return;}
                 const lista=Array.isArray(resp.candidatos)?resp.candidatos:[];let agregados=0;
                 for(let i=0;i<lista.length;i++){
                     const candidato=lista[i]||{},ci=normalizarDocumentoNoAtentado(candidato.ci);if(ci==='')continue;
@@ -1348,7 +1357,7 @@
                     candidatosNoAtentado.push({ci:ci,nombre:limpiarTextoNoAtentado(candidato.nombre).toUpperCase(),apellido:limpiarTextoNoAtentado(candidato.apellido).toUpperCase(),cod_sis:limpiarTextoNoAtentado(candidato.cod_sis),unidad:limpiarTextoNoAtentado(candidato.unidad).toUpperCase(),cargo:(function(){const v=limpiarTextoNoAtentado(candidato.cargo).toUpperCase();return(v==='SELECCIONE'||v==='SELECCIONAR')?'':v;})(),cargo_convocatoria:limpiarTextoNoAtentado(candidato.cargo_convocatoria),cargo_nombre:(function(){const v=limpiarTextoNoAtentado(candidato.cargo_nombre).toUpperCase();return(v==='SELECCIONE'||v==='SELECCIONAR')?'':v;})()});
                     agregados++;
                 }
-                renderTablaCandidatosNoAtentado();ctrl.val('');$('#label_excel_candidatos_noa span').text('Seleccionar archivo Excel');
+                renderTablaCandidatosNoAtentado();ctrl.val('');resetLabel();
                 let mensaje='Importación completada. Candidatos agregados: '+agregados+'.';
                 if(Array.isArray(resp.errores)&&resp.errores.length>0)mensaje+=' Observaciones: '+resp.errores.join(' ');
                 mostrarMensajeNoatentado('success',mensaje);
@@ -1357,6 +1366,7 @@
                 let mensaje='No se pudo importar el archivo.';
                 if(xhr&&xhr.responseJSON){if(xhr.responseJSON.message)mensaje=xhr.responseJSON.message;else if(xhr.responseJSON.errors){const ks=Object.keys(xhr.responseJSON.errors);if(ks.length>0&&xhr.responseJSON.errors[ks[0]].length>0)mensaje=xhr.responseJSON.errors[ks[0]][0];}}
                 mostrarMensajeNoatentado('error',mensaje);
+                resetLabel();ctrl.val('');
             }
         });
     }

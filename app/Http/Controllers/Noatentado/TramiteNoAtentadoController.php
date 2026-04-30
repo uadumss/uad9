@@ -2768,6 +2768,11 @@ class TramiteNoAtentadoController extends Controller
 
         $antiguoNoatentado=json_encode($noatentado);
         $noatentado->id_per=$persona->id_per;
+        if(isset($form['cod_carg']) && (int)$form['cod_carg'] > 0){
+            $noatentado->cod_carg = (int)$form['cod_carg'];
+            // Limpiar texto libre si se seleccionó cargo oficial
+            $noatentado->noa_cargo = null;
+        }
         $noatentado->save();
         SessionController::write('U',$antiguoNoatentado,json_encode($noatentado),'noatentado.noatentado','8',$noatentado->cod_noa);
         return redirect("editar tramite convocatoria/".$tramite->cod_con."/".$tramite->cod_dtra);
@@ -2779,7 +2784,18 @@ class TramiteNoAtentadoController extends Controller
             abort(404,'No se encontró el candidato.');
         }
 
-        abort(403,$this->mensajeBloqueoGestionCandidatosNoAtentado());
+        $tramite=D_tramita::find($candidato->cod_dtra);
+        if($this->tramiteNoAtentadoFueGenerado($tramite)){
+            abort(403,'El trámite ya fue generado y no permite eliminar candidatos.');
+        }
+
+        $candidato=DB::table('noatentado.noatentado')
+            ->join('personas','noatentado.id_per','=','personas.id_per')
+            ->leftJoin('claustros.cargo_convocatoria','noatentado.cod_carg','=','cargo_convocatoria.cod_carg')
+            ->where('cod_noa','=',$cod_noa)
+            ->first();
+
+        return view('servicios.no_atentado.tramite.fe_eli_candidato',compact('candidato'));
     }
     public function eli_candidato(Request $form){
         $form->validate(['cn'=>'required']);
@@ -2790,12 +2806,19 @@ class TramiteNoAtentadoController extends Controller
         }
 
         $tramite=D_tramita::find($candidato->cod_dtra);
-        \Session::flash('errorModal',$this->mensajeBloqueoGestionCandidatosNoAtentado());
-        if($tramite){
-            return redirect("editar tramite convocatoria/".$tramite->cod_con."/".$tramite->cod_dtra);
+        if($this->tramiteNoAtentadoFueGenerado($tramite)){
+            \Session::flash('errorModal','El trámite ya fue generado y no permite eliminar candidatos.');
+            if($tramite){
+                return redirect("editar tramite convocatoria/".$tramite->cod_con."/".$tramite->cod_dtra);
+            }
+            return redirect()->back();
         }
 
-        return redirect()->back();
+        $candidato->delete();
+        SessionController::write('D',json_encode($candidato),'','noatentado.noatentado','8',$candidato->cod_noa);
+        
+        \Session::flash('exito','Candidato eliminado correctamente.');
+        return redirect("editar tramite convocatoria/".$tramite->cod_con."/".$tramite->cod_dtra);
     }
     public function fe_agregar_excel($cod_dtra){
         $tramite_noatentado=$this->obtenerTramiteNoAtentadoPorCodigo((int)$cod_dtra);
@@ -2916,9 +2939,8 @@ class TramiteNoAtentadoController extends Controller
         }
 
         $tramite=Tramite::find($documento_tramite->cod_tre);
-        $noatentado=Noatentado::where('cod_dtra','=',$cod_dtra)->first();
         $eliminar=1;
-        if($noatentado){
+        if($this->tramiteNoAtentadoFueGenerado($documento_tramite)){
             $eliminar=0;
         }
         return view('servicios.no_atentado.tramite.f_eli_tramite',compact('tramite','documento_tramite','eliminar'));
@@ -2935,10 +2957,16 @@ class TramiteNoAtentadoController extends Controller
         }
 
         $cod_con=$tramite->cod_con;
-        $noatentado=Noatentado::where('cod_dtra','=',$form['cd'])->first();
-        if($noatentado){
-            \Session::flash('error','No se puede eliminar el tramite');
+        if($this->tramiteNoAtentadoFueGenerado($tramite)){
+            \Session::flash('error','No se puede eliminar el trámite porque ya fue generado');
         }else{
+            // Eliminar candidatos primero
+            $candidatos = Noatentado::where('cod_dtra', '=', $tramite->cod_dtra)->get();
+            foreach($candidatos as $cand) {
+                $cand->delete();
+                SessionController::write('D',json_encode($cand),'','noatentado.noatentado','8',$cand->cod_noa);
+            }
+            
             $antiguo=json_encode($tramite);
             SessionController::write('D',$antiguo,'','d_tramitas','8',$tramite->cod_dtra);
             $this->eliminarUsosRecaudacionPorTramite((int)$tramite->cod_dtra);
