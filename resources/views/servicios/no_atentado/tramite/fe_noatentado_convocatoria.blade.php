@@ -1,5 +1,12 @@
 <div class="modal-content enoa">
-
+@php
+    $sugerencias_noa = \App\Models\Noatentado\Cargo_convocatoria::select('carg_nombre')
+        ->whereNotNull('carg_nombre')
+        ->where('carg_nombre', '!=', '')
+        ->distinct()
+        ->orderBy('carg_nombre')
+        ->get();
+@endphp
     {{-- HEADER --}}
     <div class="e-header">
         <span class="e-header-icon"><i class="fas fa-file-alt"></i></span>
@@ -98,7 +105,12 @@
                         </div>
                         <div class="e-af e-af--cargo">
                             <label>Cargo texto</label>
-                            <input class="e-input" id="noa_cargo" autocomplete="off">
+                            <datalist id="lista_cargos_bd_noa">
+                                @foreach($sugerencias_noa as $sug)
+                                    <option value="{{ $sug->carg_nombre }}">
+                                @endforeach
+                            </datalist>
+                            <input class="e-input" id="noa_cargo" autocomplete="off" list="lista_cargos_bd_noa">
                         </div>
                         <div class="e-af e-af--conv">
                             <label>Cargo convocatoria</label>
@@ -852,20 +864,20 @@
     padding: 10px 16px 8px; border-bottom: 1px solid var(--e-s100);
 }
 .enoa .e-fc-row {
-    display: flex; align-items: flex-start; gap: 12px;
-    padding: 9px 16px; border-bottom: 1px solid var(--e-s100);
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 12px 16px; border-bottom: 1px solid var(--e-s100);
 }
 .enoa .e-fc-row:last-child { border-bottom: none; }
 .enoa .e-fc-label {
-    flex: 0 0 148px; font-size: 11px; font-weight: 600; color: var(--e-s500);
-    padding-top: 8px; line-height: 1.3;
+    font-size: 11px; font-weight: 600; color: var(--e-s500);
+    line-height: 1.3;
 }
 .enoa .e-fc-val {
-    flex: 1; font-size: 12.5px; color: var(--e-s900); font-weight: 500;
-    padding-top: 6px; line-height: 1.4;
+    font-size: 12.5px; color: var(--e-s900); font-weight: 500;
+    line-height: 1.4; word-break: break-word;
 }
 .enoa .e-fc-val.muted { color: var(--e-s500); font-weight: 400; }
-.enoa .e-fc-control { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.enoa .e-fc-control { display: flex; flex-direction: column; gap: 4px; width: 100%; }
 .enoa .e-lbl-hint {
     display: inline-block; font-size: 9px; font-weight: 400; text-transform: none;
     letter-spacing: 0; background: var(--e-s100); border: 1px solid var(--e-s200);
@@ -937,7 +949,7 @@
 .enoa .e-pill.spin { background: var(--e-blue-lt);  color: var(--e-blue);   border-color: #93c5fd; cursor: default; }
 
 /* ── Edit mode ── */
-.enoa .e-grid-edit { display: grid; grid-template-columns: 300px 1fr; gap: 14px; align-items: start; }
+.enoa .e-grid-edit { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
 .enoa .e-col-edit-left  { display: flex; flex-direction: column; gap: 0; }
 .enoa .e-col-edit-right { min-width: 0; }
 .enoa .e-edit-save-bar  { display: flex; justify-content: flex-end; padding-top: 10px; }

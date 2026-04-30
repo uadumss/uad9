@@ -37,11 +37,24 @@
                                 <td>
                                     <form id="form_cargo">
                                         @csrf
+                                        @php
+                                            $sugerencias_cargo = \App\Models\Noatentado\Cargo_convocatoria::select('carg_nombre')
+                                                ->whereNotNull('carg_nombre')
+                                                ->where('carg_nombre', '!=', '')
+                                                ->distinct()
+                                                ->orderBy('carg_nombre')
+                                                ->get();
+                                        @endphp
+                                        <datalist id="lista_cargos_bd">
+                                            @foreach($sugerencias_cargo as $sug)
+                                                <option value="{{ $sug->carg_nombre }}">
+                                            @endforeach
+                                        </datalist>
                                         @if($cargo)
                                             <input type="hidden" name="ca" value="{{$cargo->cod_carg}}">
-                                            <input type="text" name="nombre" class="form-control form-control-sm" value="{{$cargo->carg_nombre}}">
+                                            <input type="text" name="nombre" class="form-control form-control-sm" value="{{$cargo->carg_nombre}}" autocomplete="off" list="lista_cargos_bd">
                                         @else
-                                            <input type="text" name="nombre" value="" class="form-control form-control-sm">
+                                            <input type="text" name="nombre" value="" class="form-control form-control-sm" autocomplete="off" list="lista_cargos_bd">
                                         @endif
                                         <input type="hidden" name="cc" value="{{$convocatoria->cod_con}}">
                                     </form>
