@@ -13,6 +13,7 @@ use App\Models\Persona;
 use App\Models\Titulo;
 use App\Models\Tramita;
 use App\Models\Tramite;
+use App\Services\SitraService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Auth;
@@ -346,6 +347,50 @@ class TramiteLegalizacionController extends Controller
                 'titulo' => $titulo
             ]);
         return view('servicios.tra_legalizacion.verificacion_sitra', compact('respuesta','persona','docleg','documento','fuente','titulo'));
+    }
+    public function autoCompletarDesdeSitra(Request $request, SitraService $sitra){
+        \Log::info('ENTRO AL CONTROLADOR');
+        \Log::info('ANTES DE SITRA', $request->all());
+
+        // ❌ quitar esto
+        // dd($request->all());
+
+        $request->validate([
+            'ci' => 'required',
+            'nro' => 'required',
+            'serie' => 'required',
+        ]);
+
+        try{
+            $resultado = $sitra->obtenerDatos(
+                $request->ci,
+                $request->nro,
+                $request->serie
+            );
+
+            \Log::info('AUTO SITRA RESULTADO', ['resultado' => $resultado]);
+
+        } catch (\Throwable $e) {
+            \Log::error('Error en AUTO SITRA', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'ok' => false,
+                'error' => 'Error interno en SITRA'
+            ]);
+        }
+
+        if (!$resultado) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'No se encontró el documento'
+            ]);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'titulo' => $resultado['titulo'],
+            'fecha_emision' => $resultado['fecha_emision'],
+        ]);
     }
     public function g_docleg(Request $form){
         $datosTramita=Tramita::find($form['ctra']);
