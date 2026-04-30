@@ -1,6 +1,6 @@
 <div class="modal-content enoa">
 
-    {{-- ════ HEADER ════ --}}
+    {{-- HEADER --}}
     <div class="e-header">
         <span class="e-header-icon"><i class="fas fa-file-alt"></i></span>
         <span class="e-header-title">Trámite No Atentado</span>
@@ -31,7 +31,7 @@
         </button>
     </div>
 
-    {{-- ════ BODY ════ --}}
+    {{-- BODY --}}
     <div class="e-body">
 
         {{-- Alerts --}}
@@ -52,267 +52,305 @@
         <div id="noa_feedback_js" class="mb-2" style="display:none;"></div>
 
         @if(!$tramite_noatentado)
-        {{-- ══ MODO NUEVO ══ --}}
+        {{-- MODO NUEVO --}}
+
+        {{-- Indicador de pasos (compacto) --}}
+        <div class="e-steps-bar">
+            <div class="e-step-dot e-step-dot--active" id="noa_wz_step1_ind">
+                <span class="dot-num">1</span>
+                <span class="dot-lbl">Candidatos</span>
+            </div>
+            <div class="e-step-track"><div class="e-step-track-fill" id="noa_track_fill"></div></div>
+            <div class="e-step-dot" id="noa_wz_step2_ind">
+                <span class="dot-num">2</span>
+                <span class="dot-lbl">Pago</span>
+            </div>
+        </div>
+
         <form id="form_tramite">
             @csrf
 
-            <div class="e-grid-noa">
+            {{-- ══ PASO 1: Candidatos ══ --}}
+            <div id="noa_paso_1" class="e-paso">
 
-                {{-- ─── COLUMNA IZQUIERDA: Pago ─── --}}
-                <div class="e-col-left">
-                    <div class="e-panel">
-                        <div class="e-panel-head">
-                            <span class="ph-bar"></span>
-                            <span class="ph-title">Paso 2 · Datos del trámite y pago</span>
+                {{-- Barra alta rápida --}}
+                <div class="e-add-bar">
+                    <div class="e-add-fields">
+                        <div class="e-af e-af--ci">
+                            <label>CI / Carnet</label>
+                            <input class="e-input" id="noa_ci"
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+                                   onchange="cargarDatosPersonalesNoa(this.value)"
+                                   autocomplete="off" placeholder="12345678">
                         </div>
-                        <div class="e-panel-body">
-
-                            <div class="e-field">
-                                <label>Convocatoria</label>
-                                <div class="e-val">{{ $convocatoria->con_nombre }}</div>
+                        <div class="e-af e-af--grow">
+                            <label>Nombres</label>
+                            <input class="e-input" id="noa_nombre" autocomplete="off">
+                        </div>
+                        <div class="e-af e-af--grow">
+                            <label>Apellidos</label>
+                            <input class="e-input" id="noa_apellido" autocomplete="off">
+                        </div>
+                        <div class="e-af e-af--sis">
+                            <label>Cód. SIS</label>
+                            <input class="e-input" id="noa_cod_sis" autocomplete="off"
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+                        </div>
+                        <div class="e-af e-af--cargo">
+                            <label>Cargo texto</label>
+                            <input class="e-input" id="noa_cargo" autocomplete="off">
+                        </div>
+                        <div class="e-af e-af--conv">
+                            <label>Cargo convocatoria</label>
+                            <select class="e-input e-select" id="noa_cargo_convocatoria">
+                                <option value="">Seleccione</option>
+                                @foreach($cargos as $cargo)
+                                    <option value="{{$cargo->cod_carg}}">{{$cargo->carg_nombre}}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="e-af e-af--actions">
+                            <label>&nbsp;</label>
+                            <div class="e-add-actions">
+                                <button type="button" class="e-btn e-btn-primary"
+                                        onclick="agregarCandidatoNoAtentado()">
+                                    <i class="fas fa-user-plus"></i> Agregar
+                                </button>
+                                <label class="e-btn-excel-sm" for="excel_candidatos_noa" title="Importar desde Excel">
+                                    <i class="fas fa-file-excel"></i>
+                                    <span id="excel_btn_label">Excel</span>
+                                </label>
+                                <input type="file" class="e-file-input" id="excel_candidatos_noa"
+                                       accept=".xlsx,.xls"
+                                       onchange="actualizarNombreExcelNoatentado(this); importarExcelCandidatosNoAtentado();">
                             </div>
+                        </div>
+                    </div>
 
-                            <div class="e-field">
-                                <label>Trámite</label>
-                                <select class="e-input e-select" name="tramite" id="tramite_noa" disabled>
+                    {{-- Cupo bar (inline, solo cuando hay candidatos) --}}
+                    <div id="noa_cupo_candidatos_panel" class="e-cupo-inline" style="display:none;">
+                        <div class="e-cupo-info">
+                            <span id="noa_cupo_resumen" class="e-status-pill idle" style="cursor:default;">Sin candidatos</span>
+                            <small id="noa_cupo_detalle" class="e-cupo-txt"></small>
+                            <small id="noa_cupo_montos" class="e-cupo-txt e-cupo-txt--dim"></small>
+                        </div>
+                        <div class="e-cupo-track">
+                            <div id="noa_cupo_progress" class="e-cupo-fill bg-secondary" style="width:0%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Tabla candidatos --}}
+                <div class="e-tbl-wrap">
+                    <table class="e-tbl" id="tabla_candidatos_noa">
+                        <thead>
+                            <tr>
+                                <th class="td-num">#</th>
+                                <th>Apellidos y nombres</th>
+                                <th>CI</th>
+                                <th>Cód. SIS</th>
+                                <th>Cargo</th>
+                                <th style="width:36px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="fila_vacia_candidatos_noa">
+                                <td colspan="6" class="e-empty-row">
+                                    <i class="fas fa-users"></i>
+                                    <span>Agrega candidatos con el formulario de arriba</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                {{-- Footer paso 1 --}}
+                <div class="e-paso-footer">
+                    <button type="button" class="e-btn e-btn-primary e-btn-next"
+                            onclick="noaIrPaso2()">
+                        Continuar al pago <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+
+            </div>{{-- /paso 1 --}}
+
+            {{-- ══ PASO 2: Datos y pago ══ --}}
+            <div id="noa_paso_2" class="e-paso" style="display:none;">
+
+                {{-- Grid 2 columnas --}}
+                <div class="e-paso2-layout">
+
+                    {{-- Columna izquierda: Info del trámite --}}
+                    <div class="e-card">
+                        <div class="e-card-head">
+                            <div class="e-card-head-icon">
+                                <svg viewBox="0 0 12 12" fill="currentColor" width="10" height="10"><path d="M2 1h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zm1 2v1h6V3H3zm0 2v1h6V5H3zm0 2v1h4V7H3z"/></svg>
+                            </div>
+                            <span class="e-card-head-title">Datos del trámite</span>
+                        </div>
+
+                        <div class="e-info-row">
+                            <div class="e-info-lbl">Convocatoria</div>
+                            <div class="e-info-val muted" style="font-size:11px;line-height:1.6;">{{ $convocatoria->con_nombre }}</div>
+                        </div>
+                        <div class="e-info-row">
+                            <div class="e-info-lbl">Trámite</div>
+                            <div class="e-info-val">
+                                <select class="e-input e-select e-select--sm" style="width:100%;height:30px;border:1px solid var(--e-s300);border-radius:4px;padding:0 8px;font-size:12px;color:var(--e-s400);background:var(--e-s100);" name="tramite" id="tramite_noa" disabled>
                                     <option value="">Seleccione</option>
                                     @foreach($tramites as $t)
                                         <option value="{{$t->cod_tre}}">{{$t->tre_nombre}}</option>
                                     @endforeach
                                 </select>
-                                <small id="ayuda_tramite_noa" class="e-hint">Se define al validar el pago.</small>
+                                <div id="ayuda_tramite_noa" style="font-size:10px;color:var(--e-s400);margin-top:4px;">Se define al validar el pago.</div>
                             </div>
-
-                            <div class="e-field">
-                                <label>Tipo de trámite</label>
+                        </div>
+                        <div class="e-info-row" style="border-bottom:none;">
+                            <div class="e-info-lbl">Tipo</div>
+                            <div class="e-info-val">
                                 <div class="e-radio-row">
-                                    <label class="e-radio-opt">
-                                        <input type="radio" name="tipo_tramite" checked value="t">
-                                        <span>Interno</span>
-                                    </label>
-                                    <label class="e-radio-opt">
-                                        <input type="radio" name="tipo_tramite" value="f">
-                                        <span>Externo</span>
-                                    </label>
+                                    <label class="e-radio-opt"><input type="radio" name="tipo_tramite" checked value="t"><span>Interno</span></label>
+                                    <label class="e-radio-opt"><input type="radio" name="tipo_tramite" value="f"><span>Externo</span></label>
                                 </div>
                             </div>
-
-                            <div class="e-section-divider">
-                                <span>Pago principal</span>
-                            </div>
-
-                            {{-- Nro. Control (ancho completo) --}}
-                            <div class="e-field">
-                                <label>Nro. Control</label>
-                                <div class="e-input-status-row">
-                                    <input class="e-input e-input-control" required
-                                           name="control" id="control_noa"
-                                           placeholder="Ingrese número de control"
-                                           oninput="programarValidacionPagoNoAtentado();">
-                                    <a href="#" class="e-status-pill idle noa-estado-pago-icon"
-                                       data-campo="estado-pago-control-icon"
-                                       data-pago-campo="control"
-                                       title="Ver detalle de validación de pago"
-                                       onclick="abrirDetallePagoNoatentado(this); return false;">
-                                        <i class="fas fa-minus-circle"></i>
-                                        <span>Pendiente</span>
-                                    </a>
-                                </div>
-                            </div>
-
-                            {{-- Preimpreso --}}
-                            <div class="e-field">
-                                <label>Preimpreso <span class="e-badge-hint">multi-candidato</span></label>
-                                <div class="e-input-status-row">
-                                    <input class="e-input e-input-control" style="flex:1;"
-                                           name="preimpreso_pago" id="preimpreso_pago_noa"
-                                           placeholder="Solo con varios candidatos"
-                                           oninput="programarValidacionPagoNoAtentado();" disabled>
-                                    <a href="#" class="e-status-pill idle noa-estado-pago-icon"
-                                       data-campo="estado-pago-preimpreso-icon"
-                                       data-pago-campo="preimpreso"
-                                       title="Ver detalle de validación de pago"
-                                       onclick="abrirDetallePagoNoatentado(this); return false;">
-                                        <i class="fas fa-minus-circle"></i>
-                                        <span>N/A</span>
-                                    </a>
-                                </div>
-                                <small class="e-hint">Requerido con varios candidatos.</small>
-                            </div>
-
-                            <div class="e-section-divider">
-                                <span>Reintegro <em>· opcional</em></span>
-                            </div>
-
-                            <div class="e-field">
-                                <label>Nro. Control Reintegro</label>
-                                <div class="e-input-status-row">
-                                    <input class="e-input e-input-control" style="flex:1;"
-                                           name="reintegro" id="reintegro_noa"
-                                           placeholder="Opcional"
-                                           oninput="programarValidacionPagoNoAtentado();">
-                                    <a href="#" class="e-status-pill idle noa-estado-pago-icon"
-                                       data-campo="estado-pago-reintegro-icon"
-                                       data-pago-campo="reintegro"
-                                       title="Ver detalle de validación de pago"
-                                       onclick="abrirDetallePagoNoatentado(this); return false;">
-                                        <i class="fas fa-minus-circle"></i>
-                                        <span>Opcional</span>
-                                    </a>
-                                </div>
-                                <small class="e-hint">Se valida con N° control + CI del pagador principal.</small>
-                            </div>
-
                         </div>
+
+                        <!-- Resumen candidatos -->
+                        <div style="display:none; margin:0 14px 12px;padding:10px 12px;background:var(--e-s50);border:1px solid var(--e-s200);border-radius:5px;" id="noa_cupo_candidatos_panel_p2">
+                            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--e-s500);margin-bottom:8px;">Candidatos registrados</div>
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                                <span style="font-size:12px;color:var(--e-s700);" id="noa_cupo_detalle_p2">0 candidatos</span>
+                                <span class="e-status-pill idle" id="noa_cupo_resumen_p2"><i class="fas fa-minus-circle" style="font-size:10px;"></i> Sin candidatos</span>
+                            </div>
+                            <div style="height:3px;background:var(--e-s200);border-radius:2px;overflow:hidden;">
+                                <div style="height:100%;width:0%;background:var(--e-green);border-radius:2px;" id="noa_cupo_progress_p2"></div>
+                            </div>
+                            <div style="font-size:10px;color:var(--e-s400);margin-top:4px;" id="noa_cupo_montos_p2"></div>
+                        </div>
+                    </div>
+
+                    {{-- Columna derecha: campos de pago compactos --}}
+                    <div class="e-pay-card">
+                        <div class="e-card-head">
+                            <div class="e-card-head-icon" style="background:var(--e-green);">
+                                <svg viewBox="0 0 12 12" fill="currentColor" width="10" height="10"><path d="M10 2H2a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 4h8v1H2V4zm0 2h4v1H2V6z"/></svg>
+                            </div>
+                            <span class="e-card-head-title">Pago principal</span>
+                        </div>
+
+                        <!-- Nro. Control -->
+                        <div class="e-pay-field">
+                            <div class="e-pay-lbl">Nro. Control</div>
+                            <div class="e-pay-input-row">
+                                <input class="e-pay-input" required
+                                       name="control" id="control_noa"
+                                       placeholder="Ej. 123456789012345"
+                                       maxlength="20"
+                                       oninput="programarValidacionPagoNoAtentado();">
+                                <a href="#" class="e-status-pill idle noa-estado-pago-icon"
+                                   data-campo="estado-pago-control-icon"
+                                   data-pago-campo="control"
+                                   title="Ver detalle de validación de pago"
+                                   onclick="abrirDetallePagoNoatentado(this); return false;">
+                                    <i class="fas fa-minus-circle"></i>
+                                    <span>Pendiente</span>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Preimpreso -->
+                        <div class="e-pay-field">
+                            <div class="e-pay-lbl">
+                                Preimpreso
+                                <span class="e-pay-lbl-badge">multi-candidato</span>
+                            </div>
+                            <div class="e-pay-input-row">
+                                <input class="e-pay-input"
+                                       name="preimpreso_pago" id="preimpreso_pago_noa"
+                                       placeholder="Solo varios candidatos"
+                                       maxlength="20"
+                                       oninput="programarValidacionPagoNoAtentado();" disabled>
+                                <a href="#" class="e-status-pill idle noa-estado-pago-icon"
+                                   data-campo="estado-pago-preimpreso-icon"
+                                   data-pago-campo="preimpreso"
+                                   title="Ver detalle de validación de pago"
+                                   onclick="abrirDetallePagoNoatentado(this); return false;">
+                                    <i class="fas fa-minus-circle"></i>
+                                    <span>N/A</span>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Separador Reintegro -->
+                        <div class="e-sep-opt-row">
+                            <span class="e-sep-opt-txt">Reintegro</span>
+                            <span class="e-sep-opt-em">· opcional</span>
+                        </div>
+
+                        <!-- Nro. Control Reintegro -->
+                        <div class="e-pay-field">
+                            <div class="e-pay-lbl">Nro. Control Reintegro</div>
+                            <div class="e-pay-input-row">
+                                <input class="e-pay-input"
+                                       name="reintegro" id="reintegro_noa"
+                                       placeholder="Opcional"
+                                       maxlength="20"
+                                       oninput="programarValidacionPagoNoAtentado();">
+                                <a href="#" class="e-status-pill idle noa-estado-pago-icon"
+                                   data-campo="estado-pago-reintegro-icon"
+                                   data-pago-campo="reintegro"
+                                   title="Ver detalle de validación de pago"
+                                   onclick="abrirDetallePagoNoatentado(this); return false;">
+                                    <i class="fas fa-minus-circle"></i>
+                                    <span>Opcional</span>
+                                </a>
+                            </div>
+                            <div class="e-pay-hint">Se valida con N° control + CI del pagador principal.</div>
+                        </div>
+
                     </div>
                 </div>
 
-                {{-- ─── COLUMNA DERECHA: Candidatos ─── --}}
-                <div class="e-col-right">
-                    <div class="e-panel" style="display:flex;flex-direction:column;">
-                        <div class="e-panel-head" style="justify-content:space-between;">
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <span class="ph-bar red"></span>
-                                <span class="ph-title">Paso 1 · Candidatos</span>
-                            </div>
-                            <span id="noa_cupo_resumen" class="e-status-pill idle" style="cursor:default;">Pendiente</span>
-                        </div>
-
-                        {{-- Formulario alta rápida --}}
-                        <div class="e-qa-band-noa">
-                            <div class="e-qa-grid">
-                                <div class="e-qa-field">
-                                    <label>CI / Carnet</label>
-                                    <input class="e-input" id="noa_ci"
-                                           oninput="this.value = this.value.replace(/[^0-9]/g, '');"
-                                           onchange="cargarDatosPersonalesNoa(this.value)"
-                                           autocomplete="off" placeholder="Ej: 12345678">
-                                </div>
-                                <div class="e-qa-field">
-                                    <label>Nombres</label>
-                                    <input class="e-input" id="noa_nombre" autocomplete="off">
-                                </div>
-                                <div class="e-qa-field">
-                                    <label>Apellidos</label>
-                                    <input class="e-input" id="noa_apellido" autocomplete="off">
-                                </div>
-                                <div class="e-qa-field e-qa-field--sm">
-                                    <label>Cod. SIS</label>
-                                    <input class="e-input" id="noa_cod_sis" autocomplete="off" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
-                                </div>
-                                <div class="e-qa-field">
-                                    <label>Cargo texto</label>
-                                    <input class="e-input" id="noa_cargo" autocomplete="off">
-                                </div>
-                                <div class="e-qa-field e-qa-field--lg">
-                                    <label>Cargo convocatoria</label>
-                                    <select class="e-input e-select" id="noa_cargo_convocatoria">
-                                        <option value="">Seleccione</option>
-                                        @foreach($cargos as $cargo)
-                                            <option value="{{$cargo->cod_carg}}">{{$cargo->carg_nombre}}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="e-qa-field e-qa-field--btn">
-                                    <label>&nbsp;</label>
-                                    <button type="button" class="e-btn e-btn-primary e-btn-full"
-                                            onclick="agregarCandidatoNoAtentado()">
-                                        <i class="fas fa-user-plus"></i> Agregar
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- Importar Excel --}}
-                        <div class="e-excel-band">
-                            <div class="e-excel-file-wrap">
-                                <input type="file" class="e-file-input" id="excel_candidatos_noa"
-                                       accept=".xlsx,.xls"
-                                       onchange="actualizarNombreExcelNoatentado(this); importarExcelCandidatosNoAtentado();">
-                                <label class="e-btn e-btn-green e-btn-full" id="label_excel_candidatos_noa" for="excel_candidatos_noa" style="margin: 0;">
-                                    <i class="fas fa-file-excel"></i>
-                                    <span>Importar desde Excel</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        {{-- Barra de cupo --}}
-                        <div id="noa_cupo_candidatos_panel" class="e-cupo-bar" style="display:none;">
-                            <div class="e-cupo-info">
-                                <small id="noa_cupo_detalle" class="e-hint" style="display:block;"></small>
-                                <small id="noa_cupo_montos" class="e-hint" style="display:block;opacity:.7;"></small>
-                            </div>
-                            <div class="e-cupo-progress-wrap">
-                                <div id="noa_cupo_progress" class="e-cupo-progress bg-secondary" style="width:0%;"></div>
-                            </div>
-                        </div>
-
-                        {{-- Tabla candidatos --}}
-                        <div class="e-tbl-wrap" style="flex:1;">
-                            <table class="e-tbl" id="tabla_candidatos_noa">
-                                <thead>
-                                    <tr>
-                                        <th class="td-num">#</th>
-                                        <th>Apellidos y nombres</th>
-                                        <th>CI</th>
-                                        <th>Cod. SIS</th>
-                                        <th>Cargo</th>
-                                        <th style="width:36px;"></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr id="fila_vacia_candidatos_noa">
-                                        <td colspan="6" class="center" style="color:var(--e-s400);font-size:12px;padding:22px 0;">
-                                            <i class="fas fa-users" style="font-size:18px;margin-bottom:6px;display:block;opacity:.3;"></i>
-                                            No hay candidatos registrados.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {{-- Footer --}}
-                        <div class="e-doc-footer">
-                            <div style="flex:1;"></div>
-                            <button class="e-btn e-btn-primary" id="btn_guardar_noa"
-                                    type="button" onclick="guardarTramiteNoAtentado()">
-                                <i class="fas fa-save"></i> Guardar trámite
-                            </button>
-                        </div>
-                    </div>
+                {{-- Footer paso 2 --}}
+                <div class="e-paso-footer e-paso-footer--split">
+                    <button type="button" class="e-btn e-btn-ghost"
+                            onclick="noaIrPaso1()">
+                        <i class="fas fa-arrow-left"></i> Candidatos
+                    </button>
+                    <button class="e-btn e-btn-primary" id="btn_guardar_noa"
+                            type="button" onclick="guardarTramiteNoAtentado()">
+                        <i class="fas fa-save"></i> Guardar trámite
+                    </button>
                 </div>
 
-            </div>
+            </div>{{-- /paso 2 --}}
 
             <input type="hidden" name="candidatos_json" id="candidatos_json_noa">
             <input type="hidden" name="cc" value="{{ $convocatoria->cod_con }}">
         </form>
 
         @else
-        {{-- ══ MODO EDICIÓN ══ --}}
-        <div class="e-grid-noa">
+        {{-- MODO EDICIÓN --}}
+        <div class="e-grid-edit">
 
-            <div class="e-col-left">
+            <div class="e-col-edit-left">
                 <form id="form_tramite">
                     @csrf
-                    <div class="e-panel">
-                        <div class="e-panel-head">
-                            <span class="ph-bar"></span>
-                            <span class="ph-title">Paso 1 · Datos del trámite</span>
+                    <div class="e-form-card">
+                        <div class="e-fc-section-title">Datos del trámite</div>
+
+                        <div class="e-fc-row">
+                            <div class="e-fc-label">Convocatoria</div>
+                            <div class="e-fc-val muted">{{ $convocatoria->con_nombre }}</div>
                         </div>
-                        <div class="e-panel-body">
-                            <div class="e-field">
-                                <label>Convocatoria</label>
-                                <div class="e-val muted">{{ $convocatoria->con_nombre }}</div>
-                            </div>
-                            <div class="e-field">
-                                <label>Trámite</label>
-                                <div class="e-val">{{ $tramite_noatentado->tre_nombre }}</div>
-                                <small class="e-hint">Definido por el pago validado.</small>
-                                <input type="hidden" id="tramite_noa_edit" value="{{ $tramite_noatentado->cod_tre }}">
-                            </div>
-                            <div class="e-field">
-                                <label>Tipo de trámite</label>
+                        <div class="e-fc-row">
+                            <div class="e-fc-label">Trámite</div>
+                            <div class="e-fc-val">{{ $tramite_noatentado->tre_nombre }}</div>
+                            <input type="hidden" id="tramite_noa_edit" value="{{ $tramite_noatentado->cod_tre }}">
+                        </div>
+                        <div class="e-fc-row">
+                            <div class="e-fc-label">Tipo</div>
+                            <div class="e-fc-control">
                                 <div class="e-radio-row">
                                     <label class="e-radio-opt">
                                         <input type="radio" name="tipo_tramite"
@@ -326,25 +364,24 @@
                                     </label>
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="e-section-divider"><span>Pago (bloqueado)</span></div>
+                        <div class="e-fc-sep"><span>Pago <span class="e-fc-sep-lock"><i class="fas fa-lock"></i> bloqueado</span></span></div>
 
-                            <div class="e-field">
-                                <label>Nro. Control</label>
-                                <input class="e-input e-input-readonly"
+                        <div class="e-fc-row">
+                            <div class="e-fc-label">Nro. Control</div>
+                            <div class="e-fc-control">
+                                <input class="e-input e-input-readonly e-input--num-edit"
                                        name="control" id="control_noa_edit"
                                        value="{{ $tramite_noatentado->dtra_control }}" readonly>
                             </div>
-                            <div class="e-field">
-                                <label>Nro. Control Reintegro</label>
-                                <input class="e-input e-input-readonly"
+                        </div>
+                        <div class="e-fc-row">
+                            <div class="e-fc-label">Nro. Control Reintegro</div>
+                            <div class="e-fc-control">
+                                <input class="e-input e-input-readonly e-input--num-edit"
                                        name="reintegro" id="reintegro_noa_edit"
                                        value="{{ $tramite_noatentado->dtra_valorado_reintegro }}" readonly>
-                            </div>
-
-                            <div class="e-info-note" style="margin-top:8px;">
-                                <i class="fas fa-lock" style="font-size:10px;flex-shrink:0;"></i>
-                                El pago fue validado y bloqueado al crear el trámite. En edición no se puede modificar.
                             </div>
                         </div>
                     </div>
@@ -353,7 +390,7 @@
                     <input type="hidden" name="cc" value="{{ $tramite_noatentado->cod_con }}">
 
                     @can('editar tramite - noa')
-                        <div style="margin-top:10px;display:flex;justify-content:flex-end;">
+                        <div class="e-edit-save-bar">
                             <button class="e-btn e-btn-primary" id="btn_guardar_noa_edit"
                                     type="button" onclick="guardarEdicionTramiteNoAtentado()">
                                 <i class="fas fa-save"></i> Guardar cambios
@@ -363,22 +400,19 @@
                 </form>
             </div>
 
-            <div class="e-col-right">
+            <div class="e-col-edit-right">
                 <div class="e-panel">
                     <div class="e-panel-head" style="justify-content:space-between;">
                         <div style="display:flex;align-items:center;gap:8px;">
-                            <span class="ph-bar red"></span>
-                            <span class="ph-title">Paso 2 · Edición de candidatos</span>
+                            <span class="e-wz-badge e-wz-badge--2">2</span>
+                            <span class="ph-title">Edición de candidatos</span>
                         </div>
-                        <span style="font-size:11px;color:var(--e-s500);font-weight:600;background:var(--e-s100);padding:3px 10px;border-radius:20px;">
-                            {{ count($noatentados) }} registro(s)
-                        </span>
+                        <span class="e-count-badge">{{ count($noatentados) }} registro(s)</span>
                     </div>
                     <div class="e-closed-note">
-                        <i class="fas fa-info-circle" style="font-size:11px;flex-shrink:0;"></i>
+                        <i class="fas fa-info-circle"></i>
                         Solo se permite actualizar datos de candidatos ya registrados.
                     </div>
-
                     <div class="e-tbl-wrap" id="panel_candidato">
                         <table class="e-tbl" id="lista">
                             <thead>
@@ -437,33 +471,33 @@
     </div>{{-- /body --}}
 </div>{{-- /enoa --}}
 
-{{-- ════════════════════ ESTILOS ════════════════════ --}}
+
+{{-- ESTILOS --}}
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap');
 
-/* ── Tokens ── */
 :root {
-    --e-navy:      #0f2d5e;
-    --e-blue:      #1a56db;
-    --e-blue-h:    #1443b0;
-    --e-blue-lt:   #dbeafe;
-    --e-red:       #b91c1c;
-    --e-red-lt:    #fef2f2;
-    --e-green:     #047857;
-    --e-green-lt:  #ecfdf5;
-    --e-amber:     #b45309;
-    --e-amber-lt:  #fffbeb;
-    --e-s50:       #f8fafc;
-    --e-s100:      #f1f5f9;
-    --e-s200:      #e2e8f0;
-    --e-s300:      #cbd5e1;
-    --e-s400:      #94a3b8;
-    --e-s500:      #64748b;
-    --e-s700:      #334155;
-    --e-s900:      #0f172a;
-    --e-r:         4px;
-    --e-r-md:      6px;
-    --ff:          'IBM Plex Sans', system-ui, sans-serif;
+    --e-navy:    #0f2d5e;
+    --e-blue:    #1a56db;
+    --e-blue-h:  #1443b0;
+    --e-blue-lt: #dbeafe;
+    --e-red:     #b91c1c;
+    --e-red-lt:  #fef2f2;
+    --e-green:   #047857;
+    --e-green-lt:#ecfdf5;
+    --e-amber:   #b45309;
+    --e-amber-lt:#fffbeb;
+    --e-s50:     #f8fafc;
+    --e-s100:    #f1f5f9;
+    --e-s200:    #e2e8f0;
+    --e-s300:    #cbd5e1;
+    --e-s400:    #94a3b8;
+    --e-s500:    #64748b;
+    --e-s700:    #334155;
+    --e-s900:    #0f172a;
+    --e-r:       4px;
+    --e-r-md:    6px;
+    --ff:        'IBM Plex Sans', system-ui, sans-serif;
 }
 
 .enoa * { box-sizing: border-box; font-family: var(--ff); }
@@ -474,7 +508,7 @@
 .enoa i.fas { font-weight: 900; }
 .enoa i.far { font-weight: 400; }
 
-/* ── Modal shell ── */
+/* Modal */
 .enoa.modal-content {
     border: none; border-radius: 8px; overflow: hidden;
     box-shadow: 0 24px 64px rgba(0,0,0,.22), 0 4px 16px rgba(0,0,0,.12);
@@ -482,26 +516,19 @@
 
 /* ── Header ── */
 .enoa .e-header {
-    background: var(--e-navy);
-    padding: 0 16px;
-    height: 52px;
+    background: var(--e-navy); padding: 0 16px; height: 52px;
     display: flex; align-items: center; gap: 10px;
     border-bottom: 2px solid var(--e-blue);
 }
 .enoa .e-header-icon {
-    width: 28px; height: 28px;
-    background: rgba(255,255,255,.1); border-radius: 4px;
+    width: 28px; height: 28px; background: rgba(255,255,255,.1); border-radius: 4px;
     display: flex; align-items: center; justify-content: center;
     font-size: 12px; color: rgba(255,255,255,.8); flex-shrink: 0;
 }
-.enoa .e-header-title {
-    font-size: 13px; font-weight: 600; color: #fff;
-    letter-spacing: .2px; flex: 1; white-space: nowrap;
-}
+.enoa .e-header-title { font-size: 13px; font-weight: 600; color: #fff; letter-spacing: .2px; flex: 1; white-space: nowrap; }
 .enoa .e-header-chip {
     display: flex; align-items: center; gap: 6px;
-    background: rgba(255,255,255,.1);
-    border: 1px solid rgba(255,255,255,.18);
+    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18);
     border-radius: 4px; padding: 4px 10px; flex-shrink: 0;
 }
 .enoa .e-header-chip .chip-code { font-size: 13px; font-weight: 700; color: #fbbf24; letter-spacing: .5px; }
@@ -509,92 +536,357 @@
 .enoa .e-header-chip .chip-badge { font-size: 10px; font-weight: 600; border-radius: 3px; padding: 2px 6px; margin-left: 4px; }
 .enoa .e-header-chip .chip-badge.badge-edit { background: #fbbf24; color: #78350f; }
 .enoa .e-header-chip .chip-badge.badge-done { background: #34d399; color: #064e3b; }
-
 .enoa .e-btn-outline-sm {
-    display: inline-flex; align-items: center; gap: 5px;
-    height: 28px; padding: 0 10px;
+    display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px;
     border-radius: var(--e-r); border: 1px solid rgba(255,255,255,.25);
     font-size: 11px; font-weight: 600; font-family: var(--ff);
-    color: rgba(255,255,255,.8); background: transparent;
-    cursor: pointer; white-space: nowrap; flex-shrink: 0;
-    transition: background .12s;
+    color: rgba(255,255,255,.8); background: transparent; cursor: pointer; white-space: nowrap;
+    flex-shrink: 0; transition: background .12s;
 }
 .enoa .e-btn-outline-sm:hover { background: rgba(255,255,255,.12); color: #fff; }
-
 .enoa .e-close {
-    width: 30px; height: 30px; border-radius: 4px;
-    border: 1px solid rgba(255,255,255,.2); background: transparent;
-    color: rgba(255,255,255,.7); font-size: 13px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: background .12s; flex-shrink: 0;
+    width: 30px; height: 30px; border-radius: 4px; border: 1px solid rgba(255,255,255,.2);
+    background: transparent; color: rgba(255,255,255,.7); font-size: 13px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: background .12s; flex-shrink: 0;
 }
 .enoa .e-close:hover { background: rgba(255,255,255,.12); color: #fff; }
 
 /* ── Body ── */
-.enoa .e-body {
-    background: var(--e-s100);
-    padding: 16px 18px 18px;
-}
+.enoa .e-body { background: var(--e-s100); padding: 14px 16px 16px; }
 
 /* ── Alerts ── */
 .enoa .e-alert {
-    display: flex; align-items: flex-start; gap: 10px;
-    padding: 9px 12px; border-radius: var(--e-r-md);
-    font-size: 12px; font-weight: 500;
-    margin-bottom: 14px; border-left: 3px solid;
+    display: flex; align-items: flex-start; gap: 10px; padding: 9px 12px;
+    border-radius: var(--e-r-md); font-size: 12px; font-weight: 500;
+    margin-bottom: 10px; border-left: 3px solid;
 }
 .enoa .e-alert.success { background: var(--e-green-lt); color: #065f46; border-color: var(--e-green); }
 .enoa .e-alert.danger  { background: var(--e-red-lt);   color: #7f1d1d; border-color: var(--e-red); }
 .enoa .e-alert-dismiss { margin-left: auto; background: none; border: none; cursor: pointer; opacity: .5; font-size: 14px; }
 .enoa .e-alert-dismiss:hover { opacity: 1; }
 
-/* ── Grid principal ── */
-.enoa .e-grid-noa {
-    display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: 14px;
-    align-items: start;
+/* ── Steps bar (compacto) ── */
+.enoa .e-steps-bar {
+    display: flex; align-items: center; gap: 0;
+    margin-bottom: 12px;
 }
-.enoa .e-col-left { display: flex; flex-direction: column; gap: 10px; }
-.enoa .e-col-right { min-width: 0; }
+.enoa .e-step-dot {
+    display: flex; align-items: center; gap: 7px; flex-shrink: 0;
+}
+.enoa .e-step-dot .dot-num {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--e-s300); color: #fff;
+    font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: background .2s;
+}
+.enoa .e-step-dot .dot-lbl {
+    font-size: 12px; font-weight: 500; color: var(--e-s400);
+    transition: color .2s;
+}
+.enoa .e-step-dot--active .dot-num  { background: var(--e-navy); }
+.enoa .e-step-dot--active .dot-lbl  { color: var(--e-navy); font-weight: 600; }
+.enoa .e-step-dot--done .dot-num    { background: var(--e-green); }
+.enoa .e-step-dot--done .dot-lbl    { color: var(--e-green); }
+.enoa .e-step-track {
+    flex: 1; height: 2px; margin: 0 12px;
+    background: var(--e-s200); border-radius: 2px; overflow: hidden;
+}
+.enoa .e-step-track-fill {
+    height: 100%; width: 0%; background: var(--e-green); border-radius: 2px;
+    transition: width .3s ease;
+}
 
-/* ── Panels ── */
-.enoa .e-panel {
-    background: #fff;
-    border: 1px solid var(--e-s200);
-    border-radius: var(--e-r-md);
+/* ── Barra alta rápida ── */
+.enoa .e-add-bar {
+    background: #fff; border: 1px solid var(--e-s200); border-radius: var(--e-r-md);
+    margin-bottom: 10px; overflow: hidden;
 }
-.enoa .e-panel-head {
-    display: flex; align-items: center; gap: 8px;
-    padding: 9px 14px;
-    border-bottom: 1px solid var(--e-s200);
-    background: var(--e-s50);
-    border-radius: var(--e-r-md) var(--e-r-md) 0 0;
+.enoa .e-add-fields {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    padding: 12px 14px 10px; align-items: flex-end;
 }
-.enoa .e-panel-head .ph-bar {
-    width: 3px; height: 13px; border-radius: 2px;
-    background: var(--e-blue); flex-shrink: 0;
-}
-.enoa .e-panel-head .ph-bar.red { background: var(--e-red); }
-.enoa .e-panel-head .ph-title {
-    font-size: 10.5px; font-weight: 600;
-    letter-spacing: .6px; text-transform: uppercase;
-    color: var(--e-s700);
-}
-.enoa .e-panel-body { padding: 12px 14px; }
-
-/* ── Fields ── */
-.enoa .e-field { display: flex; flex-direction: column; padding-bottom: 10px; }
-.enoa .e-field:last-child { padding-bottom: 0; }
-.enoa .e-field label {
+.enoa .e-af { display: flex; flex-direction: column; min-width: 0; }
+.enoa .e-af label {
     font-size: 10px; font-weight: 600; color: var(--e-s500);
-    text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px;
+    text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px;
+    white-space: nowrap;
+}
+.enoa .e-af--ci   { flex: 0 0 108px; }
+.enoa .e-af--grow { flex: 1 1 120px; }
+.enoa .e-af--sis  { flex: 0 0 84px; }
+.enoa .e-af--cargo{ flex: 1 1 120px; }
+.enoa .e-af--conv { flex: 2 1 160px; }
+.enoa .e-af--actions { flex: 0 0 auto; }
+.enoa .e-add-actions { display: flex; gap: 6px; align-items: center; }
+
+/* Botón Excel pequeño */
+.enoa .e-btn-excel-sm {
+    display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 11px;
+    border-radius: var(--e-r); border: 1px solid var(--e-s300);
+    font-size: 11px; font-weight: 500; font-family: var(--ff);
+    color: var(--e-green); background: #fff; cursor: pointer; white-space: nowrap;
+    transition: background .12s, border-color .12s;
+}
+.enoa .e-btn-excel-sm:hover { background: var(--e-green-lt); border-color: var(--e-green); }
+.enoa .e-file-input { display: none; }
+
+/* Cupo inline */
+.enoa .e-cupo-inline {
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 7px 14px 8px; border-top: 1px solid var(--e-s100);
+    background: var(--e-s50);
+}
+.enoa .e-cupo-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.enoa .e-cupo-txt { font-size: 10.5px; color: var(--e-s500); }
+.enoa .e-cupo-txt--dim { color: var(--e-s400); }
+.enoa .e-cupo-track { height: 3px; background: var(--e-s200); border-radius: 2px; overflow: hidden; margin-top: 2px; }
+.enoa .e-cupo-fill { height: 100%; border-radius: 2px; transition: width .3s, background .2s; }
+.enoa .e-cupo-fill.bg-success   { background: var(--e-green); }
+.enoa .e-cupo-fill.bg-danger    { background: var(--e-red); }
+.enoa .e-cupo-fill.bg-warning   { background: #f59e0b; }
+.enoa .e-cupo-fill.bg-secondary { background: var(--e-s300); }
+
+/* retrocompat alias */
+.enoa .e-cupo-progress-wrap { height: 4px; background: var(--e-s200); border-radius: 2px; overflow: hidden; margin-top: 5px; }
+.enoa .e-cupo-progress { height: 100%; border-radius: 2px; transition: width .3s ease, background .2s; }
+.enoa .e-cupo-progress.bg-success   { background: var(--e-green); }
+.enoa .e-cupo-progress.bg-danger    { background: var(--e-red); }
+.enoa .e-cupo-progress.bg-warning   { background: #f59e0b; }
+.enoa .e-cupo-progress.bg-secondary { background: var(--e-s300); }
+
+/* ── Tabla ── */
+.enoa .e-tbl-wrap { overflow-y: auto; max-height: 280px; border-radius: var(--e-r-md); border: 1px solid var(--e-s200); background: #fff; }
+.enoa .e-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.enoa .e-tbl thead tr { background: var(--e-navy); position: sticky; top: 0; z-index: 1; }
+.enoa .e-tbl thead th { padding: 8px 12px; font-size: 10px; font-weight: 600; letter-spacing: .4px; color: rgba(255,255,255,.85); text-align: left; white-space: nowrap; }
+.enoa .e-tbl tbody tr { border-bottom: 1px solid var(--e-s100); }
+.enoa .e-tbl tbody tr:last-child { border-bottom: none; }
+.enoa .e-tbl tbody tr:hover { background: #f5f8ff; }
+.enoa .e-tbl tbody tr.noa-row-sancionado { background: #fef2f2; }
+.enoa .e-tbl tbody tr.noa-row-sancionado:hover { background: #fee2e2; }
+.enoa .e-tbl tbody td { padding: 7px 12px; color: var(--e-s900); vertical-align: middle; }
+.enoa .e-tbl .td-num  { color: var(--e-s400); font-size: 11px; width: 28px; }
+.enoa .e-tbl .td-main { font-weight: 500; }
+.enoa .e-tbl td.center { text-align: center; }
+.enoa .e-empty-row { color: var(--e-s400); font-size: 12px; padding: 32px 0 !important; text-align: center !important; }
+.enoa .e-empty-row i { font-size: 22px; display: block; margin-bottom: 8px; opacity: .2; }
+.enoa #tabla_candidatos_noa tbody tr.noa-candidato-permitido { background-color: #f0fdf4; }
+.enoa #tabla_candidatos_noa tbody tr.noa-candidato-exceso    { background-color: #fef2f2; }
+
+/* ── Footer de paso ── */
+.enoa .e-paso-footer {
+    display: flex; align-items: center; justify-content: flex-end;
+    padding: 12px 0 0; gap: 8px;
+}
+.enoa .e-paso-footer--split { justify-content: space-between; }
+.enoa .e-btn-next { min-width: 160px; justify-content: center; }
+
+/* ══════════════════════════════════════════════
+   PASO 2: GRID DE PAGO (nuevo layout)
+   ══════════════════════════════════════════════ */
+
+/* ══ NUEVO layout paso 2 ══ */
+.enoa .e-paso2-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 4px;
 }
 
-/* ── Inputs ── */
+/* Tarjeta de datos del trámite */
+.enoa .e-card {
+  background: #fff;
+  border: 1px solid var(--e-s200);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.enoa .e-card-head {
+  padding: 9px 14px 8px;
+  border-bottom: 1px solid var(--e-s100);
+  background: var(--e-s50);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.enoa .e-card-head-icon {
+  width: 20px; height: 20px;
+  border-radius: 4px;
+  background: var(--e-navy);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; color: #fff;
+}
+.enoa .e-card-head-title {
+  font-size: 11px; font-weight: 700;
+  color: var(--e-navy);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+/* Filas dentro de la tarjeta de info */
+.enoa .e-info-row {
+  display: flex; align-items: flex-start;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--e-s100);
+  gap: 10px;
+}
+.enoa .e-info-row:last-child { border-bottom: none; }
+.enoa .e-info-lbl {
+  flex: 0 0 90px;
+  font-size: 10.5px; font-weight: 600;
+  color: var(--e-s500);
+  padding-top: 1px;
+  line-height: 1.4;
+}
+.enoa .e-info-val {
+  flex: 1;
+  font-size: 12px; color: var(--e-s900);
+  font-weight: 500; line-height: 1.5;
+}
+.enoa .e-info-val.muted { color: var(--e-s500); font-weight: 400; font-size: 11.5px; }
+
+/* Separador de sección */
+.enoa .e-sep {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 14px 5px;
+  background: var(--e-s50);
+  border-top: 1px solid var(--e-s100);
+  border-bottom: 1px solid var(--e-s100);
+}
+.enoa .e-sep-txt {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .5px;
+  color: var(--e-navy);
+}
+.enoa .e-sep-opt { color: var(--e-s500); }
+.enoa .e-sep-lock {
+  font-size: 9px; font-weight: 500; color: var(--e-s400);
+  text-transform: none; letter-spacing: 0;
+  display: flex; align-items: center; gap: 3px;
+}
+
+/* ══ Tarjeta de pago ══ */
+.enoa .e-pay-card {
+  background: #fff;
+  border: 1px solid var(--e-s200);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* Cada campo de pago */
+.enoa .e-pay-field {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--e-s100);
+}
+.enoa .e-pay-field:last-child { border-bottom: none; }
+
+.enoa .e-pay-lbl {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .4px;
+  color: var(--e-s500);
+  margin-bottom: 6px;
+  display: flex; align-items: center; gap: 6px;
+}
+.enoa .e-pay-lbl-badge {
+  font-size: 9px; font-weight: 500; text-transform: none; letter-spacing: 0;
+  background: var(--e-s100); border: 1px solid var(--e-s200); border-radius: 3px;
+  padding: 1px 5px; color: var(--e-s400);
+}
+
+/* Input + pill en fila compacta */
+.enoa .e-pay-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.enoa .e-pay-input {
+  /* ancho fijo: suficiente para ~15 dígitos, no más */
+  width: 180px;
+  flex-shrink: 0;
+  height: 32px;
+  border: 1px solid var(--e-s300); border-radius: 4px;
+  padding: 0 10px; font-size: 13px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--e-s900); background: #fff; outline: none;
+  letter-spacing: .5px;
+}
+.enoa .e-pay-input:focus { border-color: var(--e-blue); box-shadow: 0 0 0 3px rgba(26,86,219,.1); }
+.enoa .e-pay-input[disabled] { background: var(--e-s100); color: var(--e-s400); cursor: not-allowed; }
+.enoa .e-pay-input.is-found { border-color: #6ee7b7; background: #f0fdf4; }
+.enoa .e-pay-input.is-error  { border-color: #fca5a5; background: #fef2f2; }
+
+.enoa .e-pay-hint { font-size: 10.5px; color: var(--e-s400); margin-top: 5px; }
+
+/* Sección opcional tenue */
+.enoa .e-sep-opt-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 14px 4px;
+  background: var(--e-s50);
+  border-top: 1px solid var(--e-s100);
+  border-bottom: 1px solid var(--e-s100);
+}
+.enoa .e-sep-opt-txt { font-size: 10px; font-weight: 600; color: var(--e-s400); text-transform: uppercase; letter-spacing: .4px; }
+.enoa .e-sep-opt-em  { font-size: 10px; font-weight: 400; color: var(--e-s400); }
+
+/* En modo edición los inputs de control/reintegro también acotados */
+.enoa .e-input--num-edit {
+    max-width: 220px;
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+    font-size: 13px;
+    letter-spacing: .5px;
+}
+
+/* ══════════════════════════════════════════════
+   FIN PASO 2
+   ══════════════════════════════════════════════ */
+
+/* ── Form card (modo edición) ── */
+.enoa .e-form-card {
+    background: #fff; border: 1px solid var(--e-s200); border-radius: var(--e-r-md);
+    overflow: hidden; margin-bottom: 12px;
+}
+.enoa .e-fc-section-title {
+    font-size: 11px; font-weight: 700; color: var(--e-s500);
+    text-transform: uppercase; letter-spacing: .5px;
+    padding: 10px 16px 8px; border-bottom: 1px solid var(--e-s100);
+}
+.enoa .e-fc-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 9px 16px; border-bottom: 1px solid var(--e-s100);
+}
+.enoa .e-fc-row:last-child { border-bottom: none; }
+.enoa .e-fc-label {
+    flex: 0 0 148px; font-size: 11px; font-weight: 600; color: var(--e-s500);
+    padding-top: 8px; line-height: 1.3;
+}
+.enoa .e-fc-val {
+    flex: 1; font-size: 12.5px; color: var(--e-s900); font-weight: 500;
+    padding-top: 6px; line-height: 1.4;
+}
+.enoa .e-fc-val.muted { color: var(--e-s500); font-weight: 400; }
+.enoa .e-fc-control { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.enoa .e-lbl-hint {
+    display: inline-block; font-size: 9px; font-weight: 400; text-transform: none;
+    letter-spacing: 0; background: var(--e-s100); border: 1px solid var(--e-s200);
+    border-radius: 3px; padding: 1px 5px; margin-top: 2px; color: var(--e-s400);
+}
+.enoa .e-fc-sep {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 16px 4px; background: var(--e-s50);
+    border-top: 1px solid var(--e-s100); border-bottom: 1px solid var(--e-s100);
+}
+.enoa .e-fc-sep span {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--e-navy); white-space: nowrap;
+}
+.enoa .e-fc-sep--opt span { color: var(--e-s500); }
+.enoa .e-fc-sep--opt em { font-style: normal; font-weight: 400; text-transform: none; letter-spacing: 0; }
+.enoa .e-fc-sep-lock { font-size: 9px; font-weight: 500; color: var(--e-s400); text-transform: none; letter-spacing: 0; margin-left: 6px; }
+
+/* ── Inputs base ── */
 .enoa .e-input {
-    height: 34px;
-    border: 1px solid var(--e-s300); border-radius: var(--e-r);
+    height: 34px; border: 1px solid var(--e-s300); border-radius: var(--e-r);
     padding: 0 10px; font-size: 13px; font-family: var(--ff);
     color: var(--e-s900); background: #fff; outline: none; width: 100%;
     transition: border-color .12s, box-shadow .12s;
@@ -602,87 +894,40 @@
 .enoa .e-input:focus { border-color: var(--e-blue); box-shadow: 0 0 0 3px rgba(26,86,219,.1); }
 .enoa .e-input[disabled] { background: var(--e-s100); color: var(--e-s400); cursor: not-allowed; }
 .enoa .e-input-control { flex: 1; min-width: 0; }
-.enoa .e-input-readonly {
-    background: var(--e-s100); color: var(--e-s500);
-    border-color: var(--e-s200); cursor: default;
-}
+.enoa .e-input-readonly { background: var(--e-s100); color: var(--e-s500); border-color: var(--e-s200); cursor: default; }
 .enoa .e-select { appearance: auto; cursor: pointer; }
-
-.enoa .e-val {
-    font-size: 12.5px; color: var(--e-s900); font-weight: 500;
-    padding: 5px 0; border-bottom: 1px solid var(--e-s100);
-    min-height: 28px; display: flex; align-items: center; line-height: 1.4;
-}
-.enoa .e-val.muted { color: var(--e-s500); font-weight: 400; }
-
-.enoa .e-hint { font-size: 10.5px; color: var(--e-s400); margin-top: 3px; display: block; }
-.enoa .e-badge-hint {
-    font-size: 9px; color: var(--e-s400); font-weight: 400;
-    text-transform: none; letter-spacing: 0;
-    background: var(--e-s100); border: 1px solid var(--e-s200);
-    border-radius: 3px; padding: 1px 5px; margin-left: 4px;
-}
-
-/* ── Input + status pill en fila ── */
-.enoa .e-input-status-row {
-    display: flex; align-items: center; gap: 8px;
-}
+.enoa .e-hint { font-size: 10.5px; color: var(--e-s400); display: block; }
+.enoa .e-input-status-row { display: flex; align-items: center; gap: 8px; }
 .enoa .e-input-status-row .e-input { flex: 1; min-width: 0; }
 
-/* ── Section divider ── */
-.enoa .e-section-divider {
-    display: flex; align-items: center; gap: 8px;
-    margin: 12px 0 10px;
-}
-.enoa .e-section-divider::before,
-.enoa .e-section-divider::after {
-    content: ''; flex: 1; height: 1px; background: var(--e-s200);
-}
-.enoa .e-section-divider::before { flex: 0 0 0; }
-.enoa .e-section-divider span {
-    font-size: 10px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .6px; color: var(--e-blue); white-space: nowrap;
-}
-.enoa .e-section-divider span em { font-style: normal; color: var(--e-s400); font-weight: 400; }
-
 /* ── Radio ── */
-.enoa .e-radio-row { display: flex; gap: 16px; align-items: center; padding-top: 2px; }
+.enoa .e-radio-row { display: flex; gap: 16px; align-items: center; padding-top: 4px; }
 .enoa .e-radio-opt { display: flex; align-items: center; gap: 6px; cursor: pointer; }
 .enoa .e-radio-opt input[type="radio"] { accent-color: var(--e-blue); width: 13px; height: 13px; cursor: pointer; }
 .enoa .e-radio-opt span { font-size: 12px; color: var(--e-s700); }
 
 /* ── Buttons ── */
 .enoa .e-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    height: 34px; padding: 0 14px;
+    display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 16px;
     border-radius: var(--e-r); border: 1px solid transparent;
-    font-size: 12px; font-weight: 600; font-family: var(--ff);
-    cursor: pointer; white-space: nowrap;
+    font-size: 12px; font-weight: 600; font-family: var(--ff); cursor: pointer; white-space: nowrap;
     transition: background .12s, transform .08s;
 }
 .enoa .e-btn:active { transform: scale(.98); }
 .enoa .e-btn-primary { background: var(--e-blue); color: #fff; border-color: var(--e-blue); }
 .enoa .e-btn-primary:hover { background: var(--e-blue-h); border-color: var(--e-blue-h); }
-.enoa .e-btn-green { background: var(--e-green); color: #fff; border-color: var(--e-green); }
-.enoa .e-btn-green:hover { background: #065f46; }
-.enoa .e-btn-full { width: 100%; justify-content: center; }
+.enoa .e-btn-ghost { background: transparent; color: var(--e-s500); border-color: var(--e-s300); }
+.enoa .e-btn-ghost:hover { background: var(--e-s100); color: var(--e-s700); }
 
-/* ── Status pills (pago) ── */
-.enoa .e-status-pill {
-    display: inline-flex; align-items: center; gap: 5px;
-    height: 26px; padding: 0 9px;
-    border-radius: 13px; font-size: 10.5px; font-weight: 600;
-    border: 1px solid; cursor: pointer;
-    transition: opacity .12s; white-space: nowrap; text-decoration: none;
-    flex-shrink: 0;
-}
+/* ── Status pills ── */
+.enoa .e-status-pill { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border-radius: 13px; font-size: 10.5px; font-weight: 600; border: 1px solid; cursor: pointer; transition: opacity .12s; white-space: nowrap; text-decoration: none; flex-shrink: 0; }
 .enoa .e-status-pill:hover { opacity: .8; }
 .enoa .e-status-pill.ok   { background: var(--e-green-lt); color: var(--e-green);  border-color: #a7f3d0; }
 .enoa .e-status-pill.err  { background: var(--e-red-lt);   color: var(--e-red);    border-color: #fca5a5; }
 .enoa .e-status-pill.warn { background: var(--e-amber-lt); color: var(--e-amber);  border-color: #fcd34d; }
 .enoa .e-status-pill.idle { background: var(--e-s100);     color: var(--e-s400);   border-color: var(--e-s200); cursor: default; }
 .enoa .e-status-pill.spin { background: var(--e-blue-lt);  color: var(--e-blue);   border-color: #93c5fd; cursor: default; }
-/* Retrocompat con clase "e-pill" usada en JS */
+/* retrocompat e-pill */
 .enoa .e-pill { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border-radius: 13px; font-size: 10.5px; font-weight: 600; border: 1px solid; cursor: pointer; transition: opacity .12s; white-space: nowrap; text-decoration: none; flex-shrink: 0; }
 .enoa .e-pill:hover { opacity: .8; }
 .enoa .e-pill.ok   { background: var(--e-green-lt); color: var(--e-green);  border-color: #a7f3d0; }
@@ -691,120 +936,32 @@
 .enoa .e-pill.idle { background: var(--e-s100);     color: var(--e-s400);   border-color: var(--e-s200); cursor: default; }
 .enoa .e-pill.spin { background: var(--e-blue-lt);  color: var(--e-blue);   border-color: #93c5fd; cursor: default; }
 
-/* ── Banda rápida candidatos ── */
-.enoa .e-qa-band-noa {
-    padding: 12px 14px;
-    border-bottom: 1px solid var(--e-s200);
-    background: var(--e-s50);
-}
-.enoa .e-qa-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: flex-end;
-}
-.enoa .e-qa-field { display: flex; flex-direction: column; flex: 1 1 110px; min-width: 0; }
-.enoa .e-qa-field--sm { flex: 0 1 90px; }
-.enoa .e-qa-field--lg { flex: 2 1 160px; }
-.enoa .e-qa-field--btn { flex: 0 0 110px; }
-.enoa .e-qa-field label {
-    font-size: 10px; font-weight: 600; color: var(--e-s500);
-    text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+/* ── Edit mode ── */
+.enoa .e-grid-edit { display: grid; grid-template-columns: 300px 1fr; gap: 14px; align-items: start; }
+.enoa .e-col-edit-left  { display: flex; flex-direction: column; gap: 0; }
+.enoa .e-col-edit-right { min-width: 0; }
+.enoa .e-edit-save-bar  { display: flex; justify-content: flex-end; padding-top: 10px; }
+.enoa .e-count-badge {
+    font-size: 11px; color: var(--e-s500); font-weight: 600;
+    background: var(--e-s100); padding: 3px 10px; border-radius: 20px;
 }
 
-/* ── Excel band ── */
-.enoa .e-excel-band {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 14px; border-bottom: 1px solid var(--e-s200);
-    background: #fff;
-}
-.enoa .e-excel-file-wrap { flex: 1; min-width: 0; }
-.enoa .e-file-input { display: none; }
-.enoa .e-file-label {
-    display: inline-flex; align-items: center; gap: 6px;
-    height: 30px; padding: 0 10px;
-    border: 1px dashed var(--e-s300); border-radius: var(--e-r);
-    font-size: 11.5px; color: var(--e-s500); cursor: pointer;
-    background: #fff; width: 100%;
-    transition: border-color .12s, background .12s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.enoa .e-file-label:hover { border-color: var(--e-green); background: var(--e-green-lt); color: var(--e-green); }
-
-/* ── Cupo bar ── */
-.enoa .e-cupo-bar {
-    padding: 8px 14px; background: var(--e-s50);
-    border-bottom: 1px solid var(--e-s200);
-}
-.enoa .e-cupo-progress-wrap {
-    height: 4px; background: var(--e-s200); border-radius: 2px;
-    overflow: hidden; margin-top: 5px;
-}
-.enoa .e-cupo-progress { height: 100%; border-radius: 2px; transition: width .3s ease, background .2s; }
-.enoa .e-cupo-progress.bg-success { background: var(--e-green); }
-.enoa .e-cupo-progress.bg-danger  { background: var(--e-red); }
-.enoa .e-cupo-progress.bg-warning { background: #f59e0b; }
-.enoa .e-cupo-progress.bg-secondary { background: var(--e-s300); }
-
-/* ── Tables ── */
-.enoa .e-tbl-wrap { overflow-y: auto; max-height: 280px; }
-.enoa .e-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
-.enoa .e-tbl thead tr { background: var(--e-navy); position: sticky; top: 0; z-index: 1; }
-.enoa .e-tbl thead th {
-    padding: 8px 12px; font-size: 10px; font-weight: 600;
-    letter-spacing: .4px; color: rgba(255,255,255,.85);
-    text-align: left; white-space: nowrap;
-}
-.enoa .e-tbl tbody tr { border-bottom: 1px solid var(--e-s100); }
-.enoa .e-tbl tbody tr:last-child { border-bottom: none; }
-.enoa .e-tbl tbody tr:hover { background: #f5f8ff; }
-.enoa .e-tbl tbody tr.noa-row-sancionado { background: #fef2f2; }
-.enoa .e-tbl tbody tr.noa-row-sancionado:hover { background: #fee2e2; }
-.enoa .e-tbl tbody td { padding: 7px 12px; color: var(--e-s900); vertical-align: middle; }
-.enoa .e-tbl .td-num { color: var(--e-s400); font-size: 11px; width: 28px; }
-.enoa .e-tbl .td-main { font-weight: 500; }
-.enoa .e-tbl td.center { text-align: center; }
-
-/* Semáforo */
-.enoa #tabla_candidatos_noa tbody tr.noa-candidato-permitido { background-color: #f0fdf4; }
-.enoa #tabla_candidatos_noa tbody tr.noa-candidato-exceso    { background-color: #fef2f2; }
+/* Panel (retrocompat para modo edición right) */
+.enoa .e-panel { background: #fff; border: 1px solid var(--e-s200); border-radius: var(--e-r-md); overflow: hidden; }
+.enoa .e-panel-head { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--e-s200); background: var(--e-s50); }
+.enoa .e-panel-head .ph-title { font-size: 12px; font-weight: 600; color: var(--e-s700); letter-spacing: .2px; }
+.enoa .e-wz-badge { width: 20px; height: 20px; border-radius: 50%; background: var(--e-navy); color: #fff; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.enoa .e-wz-badge--2 { background: var(--e-blue); }
+.enoa .e-closed-note { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--e-s100); border-bottom: 1px solid var(--e-s200); font-size: 11.5px; color: var(--e-s500); }
 
 /* ── Icon actions ── */
-.enoa .e-icon-action {
-    width: 26px; height: 26px; border-radius: var(--e-r);
-    border: 1px solid var(--e-s200); background: #fff;
-    display: inline-flex; align-items: center; justify-content: center;
-    color: var(--e-s400); font-size: 11px; cursor: pointer;
-    text-decoration: none; transition: all .12s; margin: 1px;
-}
+.enoa .e-icon-action { width: 26px; height: 26px; border-radius: var(--e-r); border: 1px solid var(--e-s200); background: #fff; display: inline-flex; align-items: center; justify-content: center; color: var(--e-s400); font-size: 11px; cursor: pointer; text-decoration: none; transition: all .12s; margin: 1px; }
 .enoa .e-icon-action:hover { background: var(--e-red-lt); border-color: #fca5a5; color: var(--e-red); }
 .enoa .e-icon-action.text-danger { color: var(--e-red); }
 
-/* ── Footer ── */
-.enoa .e-doc-footer {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 14px; border-top: 1px solid var(--e-s200);
-    background: var(--e-s50);
-    border-radius: 0 0 var(--e-r-md) var(--e-r-md); gap: 10px;
-}
-
-/* ── Notes ── */
-.enoa .e-info-note {
-    display: flex; align-items: flex-start; gap: 7px;
-    background: var(--e-s100); border-radius: var(--e-r);
-    padding: 8px 10px; font-size: 11px; color: var(--e-s500);
-    border: 1px solid var(--e-s200);
-}
-.enoa .e-closed-note {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 14px; background: var(--e-s100);
-    border-bottom: 1px solid var(--e-s200);
-    font-size: 11.5px; color: var(--e-s500);
-}
-
 /* ── Animations ── */
 .enoa .noa-estado-pago-icon { transition: transform .18s ease, opacity .18s ease; }
-.enoa .noa-anim-pop   { animation: noaIconPop  .28s ease-out; }
+.enoa .noa-anim-pop   { animation: noaIconPop   .28s ease-out; }
 .enoa .noa-anim-alert { animation: noaIconAlert .32s ease-out; }
 @keyframes noaIconPop   { 0%{transform:scale(.82)}55%{transform:scale(1.16)}100%{transform:scale(1)} }
 @keyframes noaIconAlert { 0%{transform:translateX(0)}25%{transform:translateX(-2px)}50%{transform:translateX(2px)}75%{transform:translateX(-1px)}100%{transform:translateX(0)} }
@@ -814,7 +971,41 @@
 }
 </style>
 
-{{-- ════════════════════ DATA + JS (sin cambios funcionales) ════════════════════ --}}
+
+<script>
+/* ── Navegación wizard NOA ── */
+function noaIrPaso2() {
+    if (typeof candidatosNoAtentado !== 'undefined' && candidatosNoAtentado.length === 0) {
+        mostrarMensajeNoatentado('warning', 'Debe agregar al menos un candidato antes de continuar.');
+        return;
+    }
+    document.getElementById('noa_paso_1').style.display = 'none';
+    document.getElementById('noa_paso_2').style.display = '';
+    var s1 = document.getElementById('noa_wz_step1_ind');
+    var s2 = document.getElementById('noa_wz_step2_ind');
+    var fill = document.getElementById('noa_track_fill');
+    if (s1) { s1.classList.remove('e-step-dot--active'); s1.classList.add('e-step-dot--done'); }
+    if (s2) { s2.classList.add('e-step-dot--active'); }
+    if (fill) { fill.style.width = '100%'; }
+    var body = document.querySelector('.enoa .e-body');
+    if (body) body.scrollTop = 0;
+}
+function noaIrPaso1() {
+    document.getElementById('noa_paso_2').style.display = 'none';
+    document.getElementById('noa_paso_1').style.display = '';
+    var s1 = document.getElementById('noa_wz_step1_ind');
+    var s2 = document.getElementById('noa_wz_step2_ind');
+    var fill = document.getElementById('noa_track_fill');
+    if (s1) { s1.classList.add('e-step-dot--active'); s1.classList.remove('e-step-dot--done'); }
+    if (s2) { s2.classList.remove('e-step-dot--active'); }
+    if (fill) { fill.style.width = '0%'; }
+    var body = document.querySelector('.enoa .e-body');
+    if (body) body.scrollTop = 0;
+}
+</script>
+
+
+{{-- ════════════════════ DATA + JS ════════════════════ --}}
 <script type="application/json" id="noa_escala_candidatos_json">{!! json_encode($escalaCandidatosNoa ?? [], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) !!}</script>
 
 <script>
@@ -839,7 +1030,6 @@
     var validacionPagoNoaEnCurso=false;
     var guardandoTramiteNoaEnCurso=false;
 
-    /* ─── Helpers de pill ─── */
     function _pillCfgNoa(categoria){
         const m={
             ok:          {cls:'ok',   icon:'fa-check-circle',        label:'Validado'},
@@ -929,34 +1119,34 @@
         filas.each(function(){const fila=$(this),indice=parseInt(fila.attr('data-candidato-index'),10);if(!isFinite(indice))return;if(indice<limite)fila.addClass('noa-candidato-permitido');else fila.addClass('noa-candidato-exceso');});
     }
     function actualizarControlCupoCandidatosNoatentado(){
-        const panel=$('#noa_cupo_candidatos_panel');
-        const badge=$('#noa_cupo_resumen');
-        const detalle=$('#noa_cupo_detalle');
-        const montos=$('#noa_cupo_montos');
-        const progress=$('#noa_cupo_progress');
+        const panel=$('#noa_cupo_candidatos_panel, #noa_cupo_candidatos_panel_p2');
+        const badge=$('#noa_cupo_resumen, #noa_cupo_resumen_p2');
+        const detalle=$('#noa_cupo_detalle, #noa_cupo_detalle_p2');
+        const montos=$('#noa_cupo_montos, #noa_cupo_montos_p2');
+        const progress=$('#noa_cupo_progress, #noa_cupo_progress_p2');
         const cantidad=candidatosNoAtentado.length;
-        badge.attr('class','e-pill idle').html('<i class="fas fa-minus-circle" style="font-size:10px;"></i> Pendiente');
+        badge.attr('class','e-status-pill idle').html('<i class="fas fa-minus-circle" style="font-size:10px;"></i> Sin candidatos');
         if(panel.length)panel.hide();
         if(cantidad===0){aplicarSemaforoFilasCandidatosNoatentado(0,false);return;}
         if(panel.length)panel.show();
-        if(montos.length)montos.text('Monto: Bs '+formatoMontoNoatentado(montoPrincipalValidadoNoa)+' + reintegro Bs '+formatoMontoNoatentado(montoReintegroValidadoNoa)+' = total Bs '+formatoMontoNoatentado(montoTotalValidadoNoa));
+        if(montos.length)montos.text('Bs '+formatoMontoNoatentado(montoPrincipalValidadoNoa)+' + reintegro Bs '+formatoMontoNoatentado(montoReintegroValidadoNoa)+' = Bs '+formatoMontoNoatentado(montoTotalValidadoNoa));
         const cupo=resolverCupoCandidatosPorMontoNoatentado(montoTotalValidadoNoa);
         if(!cupo.ok){
-            badge.attr('class','e-pill warn').html('<i class="fas fa-clock" style="font-size:10px;"></i> '+cupo.resumen);
+            badge.attr('class','e-status-pill warn').html('<i class="fas fa-clock" style="font-size:10px;"></i> '+cupo.resumen);
             if(detalle.length)detalle.text(cupo.detalle||'Valide el pago.');
-            if(progress.length)progress.attr('class','e-cupo-progress bg-warning').css('width','0%');
+            if(progress.length)progress.attr('class','e-cupo-fill bg-warning').css('width','0%');
             aplicarSemaforoFilasCandidatosNoatentado(0,false);return;
         }
         const permitidos=Math.max(0,parseInt(cupo.maxPermitidos,10)||0);
         const porcentaje=permitidos>0?Math.min(100,Math.round((cantidad/permitidos)*100)):0;
         if(cantidad<=permitidos){
-            badge.attr('class','e-pill ok').html('<i class="fas fa-check-circle" style="font-size:10px;"></i> '+cantidad+' / '+permitidos);
-            if(detalle.length)detalle.text('Dentro del límite. '+(cupo.detalle||''));
-            if(progress.length)progress.attr('class','e-cupo-progress bg-success').css('width',String(porcentaje)+'%');
+            badge.attr('class','e-status-pill ok').html('<i class="fas fa-check-circle" style="font-size:10px;"></i> '+cantidad+' / '+permitidos);
+            if(detalle.length)detalle.text(cupo.detalle||'');
+            if(progress.length)progress.attr('class','e-cupo-fill bg-success').css('width',String(porcentaje)+'%');
         }else{
-            badge.attr('class','e-pill err').html('<i class="fas fa-times-circle" style="font-size:10px;"></i> '+cantidad+' / '+permitidos+' Excede');
+            badge.attr('class','e-status-pill err').html('<i class="fas fa-times-circle" style="font-size:10px;"></i> '+cantidad+' / '+permitidos+' Excede');
             if(detalle.length)detalle.text('Lista excede el límite. '+(cupo.detalle||''));
-            if(progress.length)progress.attr('class','e-cupo-progress bg-danger').css('width','100%');
+            if(progress.length)progress.attr('class','e-cupo-fill bg-danger').css('width','100%');
         }
         aplicarSemaforoFilasCandidatosNoatentado(permitidos,true);
     }
@@ -1284,7 +1474,7 @@
         const tabla=$('#tabla_candidatos_noa tbody');if(tabla.length===0)return;
         tabla.html('');
         if(candidatosNoAtentado.length===0){
-            tabla.append('<tr id="fila_vacia_candidatos_noa"><td colspan="6" class="center" style="color:var(--e-s400);font-size:12px;padding:22px 0;"><i class="fas fa-users" style="font-size:18px;margin-bottom:6px;display:block;opacity:.3;"></i>No hay candidatos registrados.</td></tr>');
+            tabla.append('<tr id="fila_vacia_candidatos_noa"><td colspan="6" class="e-empty-row"><i class="fas fa-users"></i><span>Agrega candidatos con el formulario de arriba</span></td></tr>');
         }else{
             for(let i=0;i<candidatosNoAtentado.length;i++){
                 const c=candidatosNoAtentado[i],cargo=c.cargo!==''?c.cargo:c.cargo_nombre;
@@ -1327,23 +1517,23 @@
         }});
     }
     function actualizarNombreExcelNoatentado(input){
-        const label=$('#label_excel_candidatos_noa');if(!label.length)return;
+        const label=$('#label_excel_candidatos_noa,label[for="excel_candidatos_noa"]');
+        const btnLabel=$('#excel_btn_label');
+        if(!label.length)return;
         if(input&&input.files&&input.files.length>0){
-            label.find('span').text('Importando...');
+            if(btnLabel.length)btnLabel.text('Importando…');
             label.find('i').removeClass('fa-file-excel').addClass('fa-spinner fa-spin');
         }else{
-            label.find('span').text('Importar desde Excel');
+            if(btnLabel.length)btnLabel.text('Excel');
             label.find('i').removeClass('fa-spinner fa-spin').addClass('fa-file-excel');
         }
     }
     function importarExcelCandidatosNoAtentado(){
         const ctrl=$('#excel_candidatos_noa');if(!ctrl.length||!ctrl[0].files||ctrl[0].files.length===0){mostrarMensajeNoatentado('warning','Seleccione un archivo Excel antes de importar.');return;}
-        const label=$('#label_excel_candidatos_noa');
-        const resetLabel = function() {
-            if(label.length){
-                label.find('span').text('Importar desde Excel');
-                label.find('i').removeClass('fa-spinner fa-spin').addClass('fa-file-excel');
-            }
+        const resetLabel=function(){
+            const btnLabel=$('#excel_btn_label');
+            if(btnLabel.length)btnLabel.text('Excel');
+            $('label[for="excel_candidatos_noa"] i').removeClass('fa-spinner fa-spin').addClass('fa-file-excel');
         };
         const data=new FormData();data.append('_token','{{csrf_token()}}');data.append('lista',ctrl[0].files[0]);
         $.ajax({url:"{{url('importar candidato excel temporal noatentado/'.$cod_con)}}",type:'POST',processData:false,contentType:false,data:data,
@@ -1485,10 +1675,7 @@
         var campo=$('#noa_ci');
         if(!campo.length)return;
         if(campo.prop('disabled')||campo.prop('readonly'))return;
-        setTimeout(function(){
-            campo.trigger('focus');
-            campo.trigger('select');
-        },120);
+        setTimeout(function(){ campo.trigger('focus'); campo.trigger('select'); },120);
     }
 
     $(function(){
