@@ -1044,6 +1044,7 @@
                         @endif
                     </div>
 
+                    @if($puedeAgregarDoc)
                     <div id="divNueTram" style="display:none;">
                         <div class="e-add-body">
                             <div id="error_datos" style="display:none;" class="e-alert danger" style="margin-bottom:10px;">
@@ -1257,6 +1258,7 @@
 
                         </div>{{-- /add-body --}}
                     </div>
+                    @endif
                 </div>
                 @endif
 
@@ -1890,6 +1892,40 @@
             if(num && ges){
                 form.find('input[name="numero"]').val(num);
                 form.find('input[name="gestion"]').val(ges).trigger('input');
+            }
+        });
+
+        // Validacion de limite de documentos a seleccionar
+        $(document).off('change'+ns, '#form_docleg_f input[type="checkbox"]').on('change'+ns, '#form_docleg_f input[type="checkbox"]', function(){
+            var form = $(this).closest('form');
+            var hiddenTipo = form.find('input[data-campo="tipo-legalizacion-hidden"]').val();
+            var select = form.find('select[data-campo="tipo-legalizacion"]');
+            var optText = select.find('option:selected').text();
+            if(!optText || optText.trim() === ''){
+                optText = select.find('option[value="'+hiddenTipo+'"]').text();
+            }
+            var textoTipo = (optText || '').toUpperCase();
+            
+            var maxPermitidos = 1;
+            var match = textoTipo.match(/(\d+)\s*EJEMPLAR/);
+            if (match) {
+                maxPermitidos = parseInt(match[1], 10);
+            } else if (textoTipo.indexOf('VARIOS') !== -1) {
+                maxPermitidos = 99; // Si solo dice varios sin limite de copias
+            }
+            
+            var checkboxesChequeados = form.find('input[type="checkbox"]:checked');
+            if (checkboxesChequeados.length > maxPermitidos) {
+                $(this).prop('checked', false);
+                var errorDiv = form.closest('.e-add-body').find('#error_datos');
+                var errorSpan = form.closest('.e-add-body').find('#error_datos_span');
+                if (errorDiv.length) {
+                    errorSpan.text('El tipo de legalización permite seleccionar un máximo de ' + maxPermitidos + ' documento(s).');
+                    errorDiv.show();
+                    setTimeout(function(){ errorDiv.fadeOut(); }, 4000);
+                } else {
+                    alert('Solo puede seleccionar un máximo de ' + maxPermitidos + ' documento(s).');
+                }
             }
         });
 

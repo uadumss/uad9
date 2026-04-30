@@ -1140,6 +1140,19 @@ function noaIrPaso1() {
         badge.attr('class','e-status-pill idle').html('<i class="fas fa-minus-circle" style="font-size:10px;"></i> Sin candidatos');
         if(panel.length)panel.hide();
         if(cantidad===0){aplicarSemaforoFilasCandidatosNoatentado(0,false);return;}
+        const tramiteSeleccionado = limpiarTextoNoAtentado($('#tramite_noa').val());
+        const esPlancha = esTramitePlanchaNoatentado(tramiteSeleccionado);
+        let montoEsDePlancha = false;
+        const escala = escalaCandidatosNoaNormalizada;
+        for(let i=0; i<escala.length; i++){
+            if(Math.abs(montoTotalValidadoNoa - escala[i].monto_total) < 0.01){
+                montoEsDePlancha = true; break;
+            }
+        }
+        if(!esPlancha && !montoEsDePlancha){
+            aplicarSemaforoFilasCandidatosNoatentado(1, true);
+            return;
+        }
         if(panel.length)panel.show();
         if(montos.length)montos.text('Bs '+formatoMontoNoatentado(montoPrincipalValidadoNoa)+' + reintegro Bs '+formatoMontoNoatentado(montoReintegroValidadoNoa)+' = Bs '+formatoMontoNoatentado(montoTotalValidadoNoa));
         const cupo=resolverCupoCandidatosPorMontoNoatentado(montoTotalValidadoNoa);
