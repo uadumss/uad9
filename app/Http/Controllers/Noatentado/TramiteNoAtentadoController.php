@@ -2976,7 +2976,7 @@ class TramiteNoAtentadoController extends Controller
             
             $antiguo=json_encode($tramite);
             SessionController::write('D',$antiguo,'','d_tramitas','8',$tramite->cod_dtra);
-            $this->eliminarUsosRecaudacionPorTramite((int)$tramite->cod_dtra);
+            // $this->eliminarUsosRecaudacionPorTramite((int)$tramite->cod_dtra); // Se comenta para no liberar el control
             $tramite->delete();
             \Session::flash('exito','Se ha eliminado con exito el trámite');
         }
