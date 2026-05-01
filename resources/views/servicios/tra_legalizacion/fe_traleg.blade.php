@@ -1641,14 +1641,18 @@
         var detalleLower=resumen.toLowerCase(),estadoSitra='pending';
         if(clase==='text-success')estadoSitra='ok';else if(clase==='text-danger')estadoSitra='error';else if(detalleLower.indexOf('verificando')!==-1||detalleLower.indexOf('validando')!==-1)estadoSitra='loading';
         var cfg=_pillConfigLeg(estadoSitra==='ok'?'ok':estadoSitra==='error'?'error':estadoSitra==='loading'?'loading':'pending');
-        icono.attr('class','e-pill '+cfg.cls).html('<i class="fas '+cfg.icon+'" style="font-size:10px;"></i> <span>SITRA</span>');
-        icono.attr('title','Ver detalle de validación SITRA').attr('aria-label',resumen).attr('data-detalle-sitra',detalle).removeAttr('data-popover-visible').popover('hide');
+        
+        var fuente = String(formulario.data('sitra-fuente')||'sitra').toLowerCase();
+        var textoBadge = 'SITRA';
+        if(fuente === 'sid') textoBadge = 'SID';
+        
+        icono.attr('class','e-pill '+cfg.cls).html('<i class="fas '+cfg.icon+'" style="font-size:10px;"></i> <span>' + textoBadge + '</span>');
+        icono.attr('title','Ver detalle de validación ' + textoBadge).attr('aria-label',resumen).attr('data-detalle-sitra',detalle).removeAttr('data-popover-visible').popover('hide');
     }
     function limpiarSitraFormulario(form){form.removeData('sitra-response').removeData('sitra-estado').removeData('sitra-fuente');form.find('[data-campo="sitra-fuente"]').text('');}
     function actualizarFuenteSitra(form,fuente){
         var etiqueta=form.find('[data-campo="sitra-fuente"]');if(!etiqueta.length)return;
-        var fn=String(fuente||'').toLowerCase();
-        etiqueta.text(fn==='sid'?'SID':fn==='sitra_sid'?'SITRA y SID':'');
+        etiqueta.text(''); // Limpiamos la etiqueta externa para evitar confusión, ya que el icono ahora muestra la fuente.
     }
     function abrirModalSitraFormulario(trigger){
         var form=$(trigger).closest('form');
@@ -1666,6 +1670,7 @@
         if(!form.find('[data-campo="estado-sitra"]').length)return;
         var numero=(form.find('input[name="numero"]').val()||'').trim(),gestion=(form.find('input[name="gestion"]').val()||'').trim();
         var codTipo=(form.find('input[data-campo="tipo-legalizacion-hidden"]').val()||'').trim(),buscarEn=(form.find('select[name="buscar_en"]').val()||'').trim();
+        var supletorioFlag = form.find('input[name="supletorio"]').is(':checked') ? '1' : '0';
         var secuencia=((form.data('sitra-req-seq')||0)+1);form.data('sitra-req-seq',secuencia);
         form.find('[data-campo="fuente-sitra"]').val('');
         if(numero===''||numero==='-'){limpiarSitraFormulario(form);actualizarEstadoSitra(form,'text-muted','SITRA pendiente.');return;}
@@ -1674,7 +1679,7 @@
         actualizarEstadoSitra(form,'text-muted','Validando en SITRA/SID...');
         $.ajax({
             url:"{{url('validar sitra legalizacion/'.$tramite->cod_tra)}}",type:'POST',
-            data:{_token:form.find('input[name="_token"]').val(),numero:numero,gestion:gestion,tipo:codTipo,buscar_en:buscarEn},
+            data:{_token:form.find('input[name="_token"]').val(),numero:numero,gestion:gestion,tipo:codTipo,buscar_en:buscarEn,supletorio:supletorioFlag},
             success:function(resp){
                 if((form.data('sitra-req-seq')||0)!==secuencia)return;
                 if(!resp||resp.aplica===false){limpiarSitraFormulario(form);actualizarEstadoSitra(form,'text-muted',resp&&resp.message?resp.message:'No aplica para este tipo.');return;}
@@ -1929,7 +1934,7 @@
             }
         });
 
-        $(document).off('input'+ns+' change'+ns,'form input[name="numero"], form input[name="gestion"], form select[name="buscar_en"], form input[data-campo="tipo-legalizacion-hidden"]').on('input'+ns+' change'+ns,'form input[name="numero"], form input[name="gestion"], form select[name="buscar_en"], form input[data-campo="tipo-legalizacion-hidden"]',function(){var form=$(this).closest('form');if(form.find('[data-campo="estado-sitra"]').length)programarValidacionSitra(form);});
+        $(document).off('input'+ns+' change'+ns,'form input[name="numero"], form input[name="gestion"], form select[name="buscar_en"], form input[data-campo="tipo-legalizacion-hidden"], form input[name="supletorio"]').on('input'+ns+' change'+ns,'form input[name="numero"], form input[name="gestion"], form select[name="buscar_en"], form input[data-campo="tipo-legalizacion-hidden"], form input[name="supletorio"]',function(){var form=$(this).closest('form');if(form.find('[data-campo="estado-sitra"]').length)programarValidacionSitra(form);});
         $(document).off('click'+ns+' change'+ns,'form input[name="ptaang"]').on('click'+ns+' change'+ns,'form input[name="ptaang"]',function(e){e.preventDefault();var check=$(this);check.prop('checked',check.attr('data-ptag-lock')==='1');return false;});
         $(document).off('click'+ns,selectorIconosValidacion()).on('click'+ns,selectorIconosValidacion(),function(e){e.stopPropagation();});
         $(document).off('click'+ns).on('click'+ns,function(e){if($(e.target).closest('.popover').length||$(e.target).closest(selectorIconosValidacion()).length)return;cerrarPopoversValidacion();});

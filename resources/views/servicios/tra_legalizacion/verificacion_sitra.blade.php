@@ -24,19 +24,21 @@
             <span class="text-dark font-italic" style="font-size: 0.8em">
                 <span class="font-weight-bold">Nombre :</span> <span>{{$persona->per_apellido." ".$persona->per_nombre}}</span> |
                 <span class="font-weight-bold">Nro. Título :</span> <span>{{$docleg->dtra_numero}}</span> |
-                <span class="font-weight-bold">Tipo Documento :</span> <span>{{\App\Models\Funciones::nombre_titulo($docleg->dtra_buscar_en)}}</span>
+                <span class="font-weight-bold">Tipo Documento :</span> <span>{{\App\Models\Funciones::nombre_titulo($buscarEnSitra ?? $docleg->dtra_buscar_en)}}</span>
             </span>
             <br/>
+            @if(trim((string)$docleg->dtra_verificacion_sitra) !== '')
             <span class="text-info font-italic" style="font-size: 0.85em">
                 Fuente:
                 @if(($fuente ?? 'sitra')==='sid')
-                    SID
-                @elseif(($fuente ?? 'sitra')==='sitra_sid')
-                    SITRA y SID
+                    <strong>SID Local (UAD9/SID)</strong>
+                @elseif(($fuente ?? 'sitra')==='ninguno')
+                    <strong class="text-danger">No se encontró registro</strong>
                 @else
-                    SITRA
+                    <strong>SITRA (UMSS)</strong>
                 @endif
             </span>
+            @endif
             <br/>
             <br/>
                 <div class="row">

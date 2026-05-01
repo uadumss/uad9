@@ -35,16 +35,18 @@
             <span>{{ $apostilla->lis_nombre ?? '-' }}</span>
         </span>
         <br/>
+        @if($estado !== '')
         <span class="text-info font-italic" style="font-size: 0.85em">
             Fuente:
             @if(($fuente ?? 'sitra')==='sid')
-                SID
-            @elseif(($fuente ?? 'sitra')==='sitra_sid')
-                SITRA y SID
+                <strong>SID Local (UAD9/SID)</strong>
+            @elseif(($fuente ?? 'sitra')==='ninguno')
+                <strong class="text-danger">No se encontró registro</strong>
             @else
-                SITRA
+                <strong>SITRA (UMSS)</strong>
             @endif
         </span>
+        @endif
         <br/><br/>
 
         <div class="row">
