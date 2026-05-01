@@ -122,8 +122,16 @@ class ConvocatoriaController extends Controller
                 'con_hab'=>'t',
                 'con_periodo_inicial'=>$form['inicial'],
                 'con_periodo_final'=>$form['final'],
-
             ]);
+
+            if ($form->hasFile('pdf_conv')) {
+                $ruta = 'alma/noate/' . $convocatoria->con_gestion;
+                $nombreArch = "C-" . Funciones::alfanumerico(4) . '-' . $convocatoria->con_gestion . '.pdf';
+                Storage::putFileAs($ruta . '/', $form->file('pdf_conv'), $nombreArch);
+                $convocatoria->con_pdf = $nombreArch;
+                $convocatoria->save();
+            }
+
             $nuevo=json_encode($convocatoria);
             SessionController::write('C','',$nuevo,'claustros.convocatoria','8',$convocatoria->cod_con);
             \Session::flash('exitoModal','La convocatoria se guardó correctamente');
