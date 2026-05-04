@@ -1179,8 +1179,8 @@ function abrirModalSitraFormularioApostilla(trigger){
     const fuente=(form.find('[data-campo="fuente-sitra"]').val()||'sitra').toString();
     let detalle=(($(trigger).attr('data-detalle-sitra')||'').toString()||'').trim();
     if(detalle===''){if(estado==='0')detalle='Coincide en SITRA/SID.';else if(estado==='1')detalle='Existe, pero no coincide.';else if(estado==='2')detalle='No existe en SITRA/SID.';else detalle='SITRA pendiente.';}
-    if(fuente==='ninguno'&&detalle.toLowerCase().indexOf('pendiente')!==-1){detalle='No existe en SITRA/SID.';}
-    if(fuente==='sid')detalle+=' Fuente: SID.';else if(fuente==='ninguno')detalle+=' Fuente: Ninguna.';
+    if((fuente==='ninguno' || fuente==='sitra_sid') && detalle.toLowerCase().indexOf('pendiente')!==-1){detalle='No existe en SITRA/SID.';}
+    if(fuente==='sid')detalle+=' Fuente: SID.';else if(fuente==='sitra_sid')detalle+=' Fuente: SITRA y SID.';else if(fuente==='ninguno')detalle+=' Fuente: Ninguna.';
     const icono=$(trigger);const visible=icono.attr('data-popover-visible')==='1';
     icono.popover('dispose');if(visible){icono.removeAttr('data-popover-visible');return false;}
     $('[data-campo="estado-pago-icon"],[data-campo="estado-sitra-icon"]').not(icono).popover('hide').removeAttr('data-popover-visible');

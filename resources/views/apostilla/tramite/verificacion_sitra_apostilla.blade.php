@@ -40,7 +40,7 @@
             Fuente:
             @if(($fuente ?? 'sitra')==='sid')
                 <strong>SID Local (UAD9/SID)</strong>
-            @elseif(($fuente ?? 'sitra')==='ninguno')
+            @elseif(in_array(($fuente ?? 'sitra'), ['ninguno','sitra_sid'], true))
                 <strong class="text-danger">No se encontró registro</strong>
             @else
                 <strong>SITRA (UMSS)</strong>

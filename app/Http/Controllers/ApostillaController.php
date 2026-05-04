@@ -547,6 +547,7 @@ class ApostillaController extends Controller
             'aplica'=>true,
             'estado'=>$resultadoSitra['estado'],
             'fuente'=>$resultadoSitra['fuente'],
+            'message'=>$resultadoSitra['message'] ?? '',
             'nombre'=>$resultadoSitra['respuesta']->nombre ?? '',
             'titulo'=>$resultadoSitra['respuesta']->titulo ?? '',
             'tipo'=>$resultadoSitra['respuesta']->tipo ?? '',
@@ -596,7 +597,10 @@ class ApostillaController extends Controller
         }
 
         if($nombreSitra==='' && $tipoSitraNormalizado==='' && $numeroSitra===''){
-            $respaldoUad9=app(SitraService::class)->buscarRespaldoInterno($idPer,$numero,$buscarEn,$gestion);
+            $respaldoUad9=null;
+            if($gestion!==''){
+                $respaldoUad9=app(SitraService::class)->buscarRespaldoInterno($idPer,$numero,$buscarEn,$gestion);
+            }
             if($respaldoUad9){
                 return [
                     'estado'=>'0',
@@ -608,19 +612,21 @@ class ApostillaController extends Controller
                         'gestion'=>(string)($respaldoUad9->tit_gestion ?? $gestion),
                         'tipo'=>$documento,
                     ],
+                    'message'=>'Validado con respaldo SID'.($sitraDisponible ? '' : ' (SITRA no disponible)').'.',
                 ];
             }
 
             return [
                 'estado'=>'2',
-                'fuente'=>'ninguno',
+                'fuente'=>'sitra_sid',
                 'respuesta'=>(object)[],
+                'message'=>$sitraDisponible ? '' : 'SITRA no disponible.',
             ];
         }
 
         return [
             'estado'=>'1',
-            'fuente'=>$sitraDisponible ? 'sitra' : 'ninguno',
+            'fuente'=>'sitra',
             'respuesta'=>$respuesta,
         ];
     }
