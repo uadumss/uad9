@@ -631,8 +631,15 @@
                                         <div class="fg fg-2">
                                             <div class="e-field fg-span2">
                                                 <label>CI apoderado</label>
-                                                <input class="e-input" type="text" name="ci_apoderado"
-                                                       onchange="cargarDatosApoderado(this.value)" autocomplete="off">
+                                                <input class="e-input" type="text" name="ci_apoderado" id="ci_apoderado_apostilla"
+                                                       oninput="cargarDatosApoderado(this.value); verificarBoleta();" autocomplete="off">
+                                            </div>
+                                            <div class="e-field fg-span2">
+                                                <label>N° control boleta</label>
+                                                <input class="e-input" type="text" name="control_boleta" id="control_boleta_apostilla"
+                                                       oninput="verificarBoleta()" autocomplete="off" placeholder="Ingrese número de control">
+                                                <div style="margin-top:6px;"><span id="estado_pago_apoderado" class="badge badge-secondary">Sin validar</span></div>
+                                                <input type="hidden" name="control_boleta_valido" id="control_boleta_valido" value="0">
                                             </div>
                                             <div class="e-field">
                                                 <label>Nombres</label>
@@ -1151,7 +1158,7 @@ function compactarMensajeSitraUxApostilla(mensaje,respaldo){
     if(texto.length>110)return fallback!==''?fallback:texto.substring(0,107)+'...';
     return texto;
 }
-function actualizarEstadoSitraRapido(formulario,clase,mensaje){
+function actualizarEstadoSitraRapido(formulario,clase,mensaje,detalleExtra){
     const el=formulario.find('[data-campo="estado-sitra-icon"]')[0];if(!el)return;
     const resumen=compactarMensajeSitraUxApostilla(mensaje,'SITRA pendiente.');
     const estadoInput=formulario.find('[data-campo="estado-sitra"]');
@@ -1165,10 +1172,15 @@ function actualizarEstadoSitraRapido(formulario,clase,mensaje){
     var textoBadge = 'SITRA';
     if(fuente === 'sid') textoBadge = 'SID';
 
+    var detalle=resumen;
+    if(detalleExtra){
+        detalle=(resumen+' '+detalleExtra).trim();
+    }
+
     el.className='e-pill '+cfg.cls;
     el.setAttribute('title','Ver detalle de validación ' + textoBadge);
     el.setAttribute('aria-label',resumen);
-    el.setAttribute('data-detalle-sitra',resumen);
+    el.setAttribute('data-detalle-sitra',detalle);
     el.innerHTML='<i class="fas '+cfg.icon+'" style="font-size:10px;"></i> <span>' + textoBadge + '</span>';
 
     $(el).removeAttr('data-popover-visible').popover('hide');
@@ -1214,7 +1226,16 @@ function validarSitraRapidaApostilla(){
             if((estado===''||estado==='null'||estado==='undefined')&&mensaje.indexOf('no existe')!==-1)estado='2';
             if((estado===''||estado==='null'||estado==='undefined')&&mensaje.indexOf('no coincide')!==-1)estado='1';
             form.find('[data-campo="estado-sitra"]').val(estado);form.find('[data-campo="fuente-sitra"]').val(fuente);
-            if(estado==='0')actualizarEstadoSitraRapido(form,'text-success','Coincide en SITRA/SID.');
+            let detalleExtra='';
+            if(estado==='0'){
+                const extra=[];
+                if(resp && resp.numero) extra.push('Nro: '+resp.numero);
+                if(resp && resp.gestion) extra.push('Gestión: '+resp.gestion);
+                if(resp && resp.tipo) extra.push('Tipo: '+resp.tipo);
+                if(extra.length){detalleExtra=extra.join(' | ');} 
+            }
+
+            if(estado==='0')actualizarEstadoSitraRapido(form,'text-success','Coincide en SITRA/SID.',detalleExtra);
             else if(estado==='1')actualizarEstadoSitraRapido(form,'text-danger','Existe, pero no coincide.');
             else if(estado==='2')actualizarEstadoSitraRapido(form,'text-danger','No existe en SITRA/SID.');
             else actualizarEstadoSitraRapido(form,'text-muted','SITRA pendiente.');

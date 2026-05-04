@@ -311,18 +311,32 @@ class PersonaController extends Controller
             return (string)$item['ci'];
         },$registrosLista);
 
-        $personas=Persona::where(function($q) use ($ciLista){
+        $ciNumericos=array_values(array_unique(array_filter(array_map(function(string $ci){
+            return preg_replace('/[^0-9]/','',$ci);
+        },$ciLista), static function(string $ci): bool {
+            return $ci!=='';
+        })));
+
+        $personas=Persona::where(function($q) use ($ciLista,$ciNumericos){
                 $q->whereIn('per_ci',$ciLista)
                     ->orWhereIn(
                         DB::raw("REGEXP_REPLACE(UPPER(COALESCE(per_ci,'')),'[^A-Z0-9]','','g')"),
                         $ciLista
                     );
+
+                if(!empty($ciNumericos)){
+                    $q->orWhereIn(
+                        DB::raw("REGEXP_REPLACE(COALESCE(per_ci,''),'[^0-9]','','g')"),
+                        $ciNumericos
+                    );
+                }
             })
             ->select('id_per','per_ci','per_apellido','per_nombre')
             ->orderBy('id_per')
             ->get();
 
         $personasPorCi=[];
+        $personasPorCiNumerico=[];
         foreach($personas as $persona){
             $ciPersonaNormalizado=$this->normalizarCiCuadis((string)$persona->per_ci);
             if($ciPersonaNormalizado===''){
@@ -330,7 +344,16 @@ class PersonaController extends Controller
             }
 
             if(!isset($personasPorCi[$ciPersonaNormalizado])){
-                $personasPorCi[$ciPersonaNormalizado]=$persona;
+                $personasPorCi[$ciPersonaNormalizado]=[];
+            }
+            $personasPorCi[$ciPersonaNormalizado][]=$persona;
+
+            $ciPersonaNumerico=preg_replace('/[^0-9]/','', $ciPersonaNormalizado);
+            if($ciPersonaNumerico!==''){
+                if(!isset($personasPorCiNumerico[$ciPersonaNumerico])){
+                    $personasPorCiNumerico[$ciPersonaNumerico]=[];
+                }
+                $personasPorCiNumerico[$ciPersonaNumerico][]=$persona;
             }
         }
 
@@ -344,7 +367,17 @@ class PersonaController extends Controller
         try{
             foreach($registrosLista as $registroLista){
                 $ci=(string)$registroLista['ci'];
-                if(isset($personasPorCi[$ci])){
+                $personasCoinciden=$personasPorCi[$ci] ?? [];
+
+                if(empty($personasCoinciden)){
+                    $ciNumerico=preg_replace('/[^0-9]/','', $ci);
+                    if($ciNumerico!=='' && isset($personasPorCiNumerico[$ciNumerico])){
+                        $personasCoinciden=$personasPorCiNumerico[$ciNumerico];
+                    }
+                }
+
+                if(!empty($personasCoinciden)){
+                    $personasPorCi[$ci]=$personasCoinciden;
                     $totalPersonasExistentes++;
                     continue;
                 }
@@ -355,36 +388,46 @@ class PersonaController extends Controller
                     'per_nombre'=>$registroLista['nombre'],
                     'per_sistema'=>3,
                 ]);
-                $personasPorCi[$ci]=$personaNueva;
+                $personasPorCi[$ci]=[$personaNueva];
+                $ciNumericoNuevo=preg_replace('/[^0-9]/','', $ci);
+                if($ciNumericoNuevo!==''){
+                    if(!isset($personasPorCiNumerico[$ciNumericoNuevo])){
+                        $personasPorCiNumerico[$ciNumericoNuevo]=[];
+                    }
+                    $personasPorCiNumerico[$ciNumericoNuevo][]=$personaNueva;
+                }
                 $totalPersonasNuevas++;
             }
 
             foreach($registrosLista as $registroLista){
                 $ci=(string)$registroLista['ci'];
-                $persona=$personasPorCi[$ci];
-                $registro=PersonaCuadis::where('id_per','=',(int)$persona->id_per)->first();
-                $esNuevo=!$registro;
-                if($esNuevo){
-                    $registro=new PersonaCuadis();
-                    $registro->id_per=(int)$persona->id_per;
+                $personasLista=$personasPorCi[$ci] ?? [];
+
+                foreach($personasLista as $persona){
+                    $registro=PersonaCuadis::where('id_per','=',(int)$persona->id_per)->first();
+                    $esNuevo=!$registro;
+                    if($esNuevo){
+                        $registro=new PersonaCuadis();
+                        $registro->id_per=(int)$persona->id_per;
+                    }
+
+                    $registro->pcu_hab=$habilitado;
+                    $registro->pcu_respaldo=$resolucion;
+                    $registro->pcu_observacion=null;
+                    $registro->save();
+
+                    if($esNuevo){
+                        $totalCreados++;
+                    }else{
+                        $totalActualizados++;
+                    }
+
+                    $procesados[]=[
+                        'ci'=>(string)$persona->per_ci,
+                        'nombre'=>trim((string)$persona->per_apellido.' '.(string)$persona->per_nombre),
+                        'accion'=>$esNuevo ? 'REGISTRADO' : 'ACTUALIZADO',
+                    ];
                 }
-
-                $registro->pcu_hab=$habilitado;
-                $registro->pcu_respaldo=$resolucion;
-                $registro->pcu_observacion=null;
-                $registro->save();
-
-                if($esNuevo){
-                    $totalCreados++;
-                }else{
-                    $totalActualizados++;
-                }
-
-                $procesados[]=[
-                    'ci'=>(string)$persona->per_ci,
-                    'nombre'=>trim((string)$persona->per_apellido.' '.(string)$persona->per_nombre),
-                    'accion'=>$esNuevo ? 'REGISTRADO' : 'ACTUALIZADO',
-                ];
             }
 
             DB::commit();
@@ -455,7 +498,7 @@ class PersonaController extends Controller
             ]);
         }
 
-        $persona=Persona::where('per_ci','=',$ci)->first();
+        $persona=$this->buscarPersonaPorCiNormalizado($ci);
         if(!$persona){
             return response()->json([
                 'ok'=>true,
@@ -677,7 +720,21 @@ class PersonaController extends Controller
             return $persona;
         }
 
-        return Persona::whereRaw("REGEXP_REPLACE(UPPER(COALESCE(per_ci,'')),'[^A-Z0-9]','','g') = ?",[$ci])
+        $persona=Persona::whereRaw("REGEXP_REPLACE(UPPER(COALESCE(per_ci,'')),'[^A-Z0-9]','','g') = ?",[$ci])
+            ->select('id_per','per_ci')
+            ->orderBy('id_per')
+            ->first();
+
+        if($persona){
+            return $persona;
+        }
+
+        $ciNumerico=preg_replace('/[^0-9]/','',$ci);
+        if($ciNumerico===''){
+            return null;
+        }
+
+        return Persona::whereRaw("REGEXP_REPLACE(COALESCE(per_ci,''),'[^0-9]','','g') = ?",[$ciNumerico])
             ->select('id_per','per_ci')
             ->orderBy('id_per')
             ->first();

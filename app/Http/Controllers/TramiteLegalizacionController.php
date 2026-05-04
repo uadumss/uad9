@@ -114,6 +114,7 @@ class TramiteLegalizacionController extends Controller
                     ->where('cod_tra','=',$cod_tra)
                     ->select('per_apellido','per_nombre','per_ci','tramitas.*','per_pasaporte')
                     ->first();
+        $cuadisPersona=false;
         $tipos_titulos='';
         $lista_tramites=array();
         $tipos_array = "";
@@ -123,6 +124,7 @@ class TramiteLegalizacionController extends Controller
         $carreras_persona = [];
 
         if($tramite->id_per!='') {
+            $cuadisPersona=$this->esPersonaRegistradaCuadis((string)($tramite->per_ci ?? ''),(int)$tramite->id_per);
             $ptaang=DB::select("select dt.dtra_ptaang,dt.dtra_numero,dt.dtra_gestion from d_tramitas dt, tramitas t where t.id_per=".$tramite->id_per." and t.cod_tra=dt.cod_tra and (dt.dtra_ptaang='B' or dt.dtra_ptaang='A')");
             $tipos_titulos = DB::select('select distinct(tit_tipo) from titulos where id_per=' . $tramite->id_per);
             $tipos_array = "(";
@@ -223,7 +225,7 @@ class TramiteLegalizacionController extends Controller
             'E' => 'bg-secondary text-white',   // Consejo (gris)
             default => 'bg-primary text-white',
         };
-        return view('servicios.tra_legalizacion.fe_traleg',compact('tramite','documentos','lista_tramites','confrontacion','apoderado','tipos_array','ptaang','supletorios','titulos','modalTitle','modalHeaderClass','carreras_persona'));
+        return view('servicios.tra_legalizacion.fe_traleg',compact('tramite','documentos','lista_tramites','confrontacion','apoderado','tipos_array','ptaang','supletorios','titulos','modalTitle','modalHeaderClass','carreras_persona','cuadisPersona'));
     }
     public function g_traleg(Request $form){
         //return $form['ci'];

@@ -531,6 +531,10 @@
                         </div>
                     </div>
                     <div class="e-panel-body">
+                        <form id="form_traleg" style="display:none;">
+                            <input type="hidden" name="ci" value="{{ $tramite->per_ci }}">
+                            <input type="hidden" name="ip" value="{{ $tramite->id_per }}">
+                        </form>
                         <div class="fg fg-2">
                             <div class="e-field">
                                 <label>CI</label>
@@ -972,8 +976,11 @@
                                     <div class="e-add-col" style="align-items:flex-start;padding-top:2px;">
                                         <label>CUADIS</label>
                                         <span class="e-indicator">
-                                            <span class="badge off" data-campo="cuadis-indicador">NO</span>
-                                            <input type="checkbox" name="cuadis" class="d-none" tabindex="-1" aria-hidden="true"/>
+                                            <span class="badge {{ !empty($cuadisPersona) ? 'on badge-success' : 'off badge-secondary' }}" data-campo="cuadis-indicador">
+                                                {{ !empty($cuadisPersona) ? 'SI' : 'NO' }}
+                                            </span>
+                                            <input type="checkbox" name="cuadis" class="d-none" tabindex="-1" aria-hidden="true"
+                                                   {{ !empty($cuadisPersona) ? 'checked data-cuadis-auto=1' : '' }}/>
                                         </span>
                                         <small class="d-none" data-campo="cuadis-estado"></small>
                                     </div>
@@ -1181,8 +1188,12 @@
                                             </span>
                                             @endif
                                             <span class="e-indicator">
-                                                CUADIS: <span class="badge off" data-campo="cuadis-indicador">NO</span>
-                                                <input type="checkbox" name="cuadis" class="d-none" tabindex="-1" aria-hidden="true"/>
+                                                CUADIS:
+                                                <span class="badge {{ !empty($cuadisPersona) ? 'on badge-success' : 'off badge-secondary' }}" data-campo="cuadis-indicador">
+                                                    {{ !empty($cuadisPersona) ? 'SI' : 'NO' }}
+                                                </span>
+                                                <input type="checkbox" name="cuadis" class="d-none" tabindex="-1" aria-hidden="true"
+                                                       {{ !empty($cuadisPersona) ? 'checked data-cuadis-auto=1' : '' }}/>
                                             </span>
                                             <small class="d-none" data-campo="cuadis-estado"></small>
                                         </div>
@@ -1395,6 +1406,10 @@
             type:'GET', dataType:'json',
             success:function(resp){
                 var esCuadis=!!(resp&&resp.ok&&resp.cuadis===true);
+                if(!esCuadis){
+                    var ciFallback=obtenerCiPrincipalTramite();
+                    if(ciFallback!==''){consultarEstadoCuadisPorCi(ciFallback);return;}
+                }
                 aplicarEstadoCuadisEnFormularios(esCuadis, esCuadis?(resp.respaldo||'').toString().trim():'');
             },
             error:function(){

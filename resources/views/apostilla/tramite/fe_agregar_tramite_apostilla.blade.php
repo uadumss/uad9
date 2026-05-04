@@ -635,11 +635,16 @@
         iconoElement.removeClass('text-success text-warning text-danger text-info text-muted').addClass(clase);
         iconoElement.find('i').attr('class','fas '+icono);
         iconoElement.attr('title','Ver detalle SITRA').attr('aria-label',resumen).attr('data-detalle-sitra',detalle);
-        iconoElement.removeAttr('data-popover-visible').popover('hide');
+        if(typeof iconoElement.popover==='function'){
+            iconoElement.removeAttr('data-popover-visible').popover('hide');
+        }else{
+            iconoElement.removeAttr('data-popover-visible');
+        }
     }
 
     function togglePopoverSitraApostilla(trigger,detalle){
         var icono=$(trigger);if(!icono.length)return false;
+        if(typeof icono.popover!=='function'){return false;}
         var visible=icono.attr('data-popover-visible')==='1';
         if(visible){icono.popover('hide').removeAttr('data-popover-visible');return false;}
         $('[data-campo="icono-sitra-estado"]').not(icono).popover('hide').removeAttr('data-popover-visible');
@@ -690,6 +695,19 @@
                 else if(fuente==='sitra_sid')fuenteDetalle='Fuente: SITRA y SID.';
                 else if(fuente==='ninguno')fuenteDetalle='Fuente: Ninguna.';
 
+                let extraDetalle='';
+                if(estado==='0'){
+                    const extra=[];
+                    if(resp && resp.numero) extra.push('Nro: '+resp.numero);
+                    if(resp && resp.gestion) extra.push('Gestión: '+resp.gestion);
+                    if(resp && resp.tipo) extra.push('Tipo: '+resp.tipo);
+                    if(resp && resp.titulo) extra.push('Título: '+resp.titulo);
+                    if(extra.length){extraDetalle=extra.join(' | ');} 
+                }
+                if(fuenteDetalle!==''){
+                    extraDetalle = extraDetalle!=='' ? (extraDetalle+' '+fuenteDetalle) : fuenteDetalle;
+                }
+
                 if((estado===''||estado==='null'||estado==='undefined')&&fuente==='sitra_sid')estado='2';
                 if((estado===''||estado==='null'||estado==='undefined')&&mensaje.toLowerCase().indexOf('no existe')!==-1)estado='2';
                 if((estado===''||estado==='null'||estado==='undefined')&&mensaje.toLowerCase().indexOf('no coincide')!==-1)estado='1';
@@ -700,10 +718,10 @@
                     else if(estado==='2')mensaje='No existe en SITRA/SID.';
                     else mensaje='SITRA pendiente.';
                 }
-                if(estado==='0')actualizarEstadoSitraApostilla('text-success','fa-check-circle',mensaje,fuenteDetalle);
-                else if(estado==='1')actualizarEstadoSitraApostilla('text-danger','fa-times-circle',mensaje,fuenteDetalle);
-                else if(estado==='2')actualizarEstadoSitraApostilla('text-danger','fa-times-circle',mensaje,fuenteDetalle);
-                else actualizarEstadoSitraApostilla('text-muted','fa-minus-circle',mensaje,fuenteDetalle);
+                if(estado==='0')actualizarEstadoSitraApostilla('text-success','fa-check-circle',mensaje,extraDetalle);
+                else if(estado==='1')actualizarEstadoSitraApostilla('text-danger','fa-times-circle',mensaje,extraDetalle);
+                else if(estado==='2')actualizarEstadoSitraApostilla('text-danger','fa-times-circle',mensaje,extraDetalle);
+                else actualizarEstadoSitraApostilla('text-muted','fa-minus-circle',mensaje,extraDetalle);
             },
             error:function(xhr){
                 if(requestSeq!==apostillaSitraSeq){return;}
@@ -736,7 +754,11 @@
         .off('click.apostillaSitraCerrar')
         .on('click.apostillaSitraCerrar',function(e){
             if($(e.target).closest('[data-campo="icono-sitra-estado"],.popover').length===0){
-                $('[data-campo="icono-sitra-estado"]').popover('hide').removeAttr('data-popover-visible');
+                if(typeof $.fn.popover==='function'){
+                    $('[data-campo="icono-sitra-estado"]').popover('hide').removeAttr('data-popover-visible');
+                }else{
+                    $('[data-campo="icono-sitra-estado"]').removeAttr('data-popover-visible');
+                }
             }
         });
 
