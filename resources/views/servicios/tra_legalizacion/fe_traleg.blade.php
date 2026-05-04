@@ -657,8 +657,15 @@
                                 <div class="fg fg-2">
                                     <div class="e-field fg-span2">
                                         <label>CI apoderado</label>
-                                        <input class="e-input" name="ci" value="{{ $apo_ci }}"
-                                               onchange="cargarDatosApoderado(this.value)" autocomplete="off">
+                                        <input class="e-input" name="ci" id="ci_apoderado_edi" value="{{ $apo_ci }}"
+                                               oninput="cargarDatosApoderado(this.value); verificarBoletaApoderadoEdi();" autocomplete="off">
+                                    </div>
+                                    <div class="e-field fg-span2">
+                                        <label>N° control boleta</label>
+                                        <input class="e-input" name="control_boleta" id="control_boleta_apoderado_edi"
+                                               oninput="verificarBoletaApoderadoEdi()" autocomplete="off" placeholder="Ingrese número de control">
+                                        <div style="margin-top:6px;"><span id="estado_pago_apoderado_edi" class="badge badge-secondary">Sin validar</span></div>
+                                        <input type="hidden" name="control_boleta_valido" id="control_boleta_valido_edi" value="0">
                                     </div>
                                     <div class="e-field">
                                         <label>Apellidos</label>
@@ -1302,8 +1309,6 @@
     }
 
     function obtenerCiPrincipalTramite(){
-        var ciServidor=($.trim({!! json_encode((string)($tramite->per_ci ?? '')) !!}) || '');
-        if(ciServidor!=='') return ciServidor;
         return ($.trim($('#form_traleg input[name="ci"]').first().val()) || '');
     }
 
@@ -1408,6 +1413,45 @@
             success:function(resp){
                 if(resp=="No"){$('#apellido_apoderado').val('');$('#nombre_apoderado').val('');}
                 else{var res=JSON.parse(resp);$('#apellido_apoderado').val(res['apo_apellido']);$('#nombre_apoderado').val(res['apo_nombre']);}
+            }
+        });
+    }
+
+    function verificarBoletaApoderadoEdi(){
+        var control=($('#control_boleta_apoderado_edi').val()||'').toString().trim();
+        var ci=($('#ci_apoderado_edi').val()||'').toString().trim();
+        if(control==='')return;
+        if(ci===''){
+            $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-warning').text('Complete CI');
+            $('#control_boleta_valido_edi').val('0');
+            return;
+        }
+        var link="{{ url('verificar_boleta') }}"+"/"+encodeURIComponent(control)+'?documento='+encodeURIComponent(ci);
+        $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-info').text('Validando...');
+        $('#control_boleta_valido_edi').val('0');
+        $.ajax({
+            url:link,
+            type:'GET',
+            success:function(resp){
+                if(resp=="No"){
+                    $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-danger').text('No encontrado');
+                    $('#control_boleta_valido_edi').val('0');
+                    return;
+                }
+                try{
+                    var res=JSON.parse(resp);
+                    if(res['apellido_apoderado']!==undefined)$('#apellido_apoderado').val(res['apellido_apoderado']);
+                    if(res['nombre_apoderado']!==undefined)$('#nombre_apoderado').val(res['nombre_apoderado']);
+                    $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-success').text('Pago validado');
+                    $('#control_boleta_valido_edi').val('1');
+                }catch(e){
+                    $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
+                    $('#control_boleta_valido_edi').val('0');
+                }
+            },
+            error:function(){
+                $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-warning').text('Error API');
+                $('#control_boleta_valido_edi').val('0');
             }
         });
     }
@@ -1956,7 +2000,7 @@
         $(document).off('keydown'+ns).on('keydown'+ns,function(e){if(e.key==='Escape'||e.keyCode===27)cerrarPopoversValidacion();});
         $(document).off('hidden.bs.modal'+ns,'.modal').on('hidden.bs.modal'+ns,'.modal',function(){cerrarPopoversValidacion();});
 
-        var idPerPrincipal=parseInt({!! json_encode((int)($tramite->id_per ?? 0)) !!},10)||0;
+        var idPerPrincipal=parseInt(($.trim($('#form_traleg input[name="ip"]').first().val()) || '0'),10)||0;
         if(!consultarEstadoCuadisPorPersona(idPerPrincipal)){
             var ciInicial=obtenerCiPrincipalTramite();
             if(ciInicial!=='')consultarEstadoCuadisPorCi(ciInicial);else limpiarEstadoCuadisEnFormularios();

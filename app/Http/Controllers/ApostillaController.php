@@ -1412,6 +1412,12 @@ class ApostillaController extends Controller
             ];
         }
 
+        // Default fallback error
+        return [
+            'code' => 'API_RECAUDACIONES_ERROR',
+            'message' => 'No se pudo validar el control en recaudaciones. Intente nuevamente.',
+        ];
+    }
 
     private function buscarTramiteApostillaPorCuenta(string $codigoCuenta, string $nombreCuenta = ''): ?Lista_doc_apostilla
     {

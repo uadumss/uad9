@@ -116,10 +116,21 @@
 
                                     <table class="table-hover col-md-12">
                                         <tr>
+                                            <th class="text-right font-italic">N° control boleta : </th>
+                                            <td class="border-bottom border-dark">
+                                                    <input class="form-control form-control-sm border-0" placeholder="Ingrese número de control"
+                                                              name="control_boleta" id="control_boleta_apoderado"
+                                                              oninput="verificarBoletaApoderado()" />
+                                                <div style="margin-top:6px;"><span id="estado_pago_apoderado_modal" class="badge badge-secondary">Sin validar</span></div>
+                                                <input type="hidden" id="control_boleta_valido_modal" name="control_boleta_valido_modal" value="0">
+                                            </td>
+                                        </tr>
+                                        <tr>
                                             <th class="text-right font-italic">CI : </th>
                                             <td class="border-bottom border-dark">
-                                                <input class="form-control form-control-sm border-0" placeholder=""
-                                                       name="ci" value="{{$ci}}"/></td>
+                                                    <input class="form-control form-control-sm border-0" placeholder=""
+                                                              name="ci" id="ci_apoderado_form" value="{{$ci}}"
+                                                              oninput="verificarBoletaApoderado()"/></td>
                                         </tr>
                                         <tr>
                                             <th class="text-right font-italic">Apellidos : </th>
@@ -169,5 +180,51 @@
         <button class="btn btn-secondary btn-sm" type="button" data-dismiss="modal">Cerrar</button>
     </div>
 </div>
+
+    <script>
+        function verificarBoletaApoderado(){
+            var control = ($('#control_boleta_apoderado').val()||'').toString().trim();
+            var ci = ($('#ci_apoderado_form').val()||'').toString().trim();
+            if(control==='') return;
+            if(ci===''){
+                $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-warning').text('Complete CI');
+                $('#control_boleta_valido_modal').val('0');
+                return;
+            }
+            var link = "{{ url('verificar_boleta') }}" + "/" + encodeURIComponent(control.toString().trim()) + '?documento=' + encodeURIComponent(ci);
+            // UI: marcar como validando
+            $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-info').text('Validando...');
+            $('#control_boleta_valido_modal').val('0');
+            $.ajax({
+                url: link,
+                type: 'GET',
+                success: function(resp){
+                    if(resp=="No"){
+                        $('#apellido').val('');
+                        $('#nombre').val('');
+                        $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-danger').text('No encontrado');
+                        $('#control_boleta_valido_modal').val('0');
+                    }else{
+                        try{
+                            var res = JSON.parse(resp);
+                            if(res['apellido_apoderado']!==undefined) $('#apellido').val(res['apellido_apoderado']);
+                            if(res['nombre_apoderado']!==undefined) $('#nombre').val(res['nombre_apoderado']);
+                            $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-success').text('Pago validado');
+                            $('#control_boleta_valido_modal').val('1');
+                        }catch(e){
+                            $('#apellido').val('');$('#nombre').val('');
+                            $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
+                            $('#control_boleta_valido_modal').val('0');
+                        }
+                    }
+                },
+                error: function(){
+                    $('#apellido').val('');$('#nombre').val('');
+                    $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-warning').text('Error API');
+                    $('#control_boleta_valido_modal').val('0');
+                }
+            });
+        }
+    </script>
 
 

@@ -481,8 +481,8 @@
                                 <div class="fg fg-2">
                                     <div class="e-field">
                                         <label>CI</label>
-                                        <input class="e-input" type="text" name="ci" id="ci_apostilla"
-                                               onchange="cargarDatosPersonales(this.value)" autocomplete="off">
+                                                 <input class="e-input" type="text" name="ci" id="ci_apostilla"
+                                                     onchange="cargarDatosPersonales(this.value); verificarBoleta($('#control_boleta_apostilla').val() || '');" autocomplete="off">
                                     </div>
                                     <div class="e-field">
                                         <label>Celular</label>
@@ -511,9 +511,17 @@
                                 <div class="fg fg-2">
                                     <div class="e-field fg-span2">
                                         <label>CI apoderado</label>
-                                        <input class="e-input" type="text" name="ci_apoderado"
-                                               onchange="cargarDatosApoderado(this.value)" autocomplete="off">
+                                             <input class="e-input" type="text" name="ci_apoderado" id="ci_apoderado_apostilla"
+                                                 oninput="cargarDatosApoderado(this.value); verificarBoleta();" autocomplete="off">
                                     </div>
+                                    <div class="e-field fg-span2">
+                                        <label>N° control boleta</label>
+                                            <input class="e-input" type="text" name="control_boleta" id="control_boleta_apostilla"
+                                                     oninput="verificarBoleta()" autocomplete="off" placeholder="Ingrese número de control">
+                                        <div style="margin-top:6px;"><span id="estado_pago_apoderado" class="badge badge-secondary">Sin validar</span></div>
+                                        <input type="hidden" name="control_boleta_valido" id="control_boleta_valido" value="0">
+                                    </div>
+
                                     <div class="e-field">
                                         <label>Nombres</label>
                                         <input class="e-input" type="text" name="nombre_apoderado"
@@ -918,6 +926,52 @@ function cargarDatosApoderado(ci){
         if(resp=="No"){$('#apellido_apoderado').val('');$('#nombre_apoderado').val('');}
         else{var res=JSON.parse(resp);$('#apellido_apoderado').val(res['apo_apellido']);$('#nombre_apoderado').val(res['apo_nombre']);}
     },error:function(){$('#'+panel).html("<span class='text-danger'>Ocurrio un error, probablemente no tenga permisos para esta acción</span>");}});
+}
+
+function verificarBoleta(){
+    var control = ($('#control_boleta_apostilla').val()||'').toString().trim();
+    var ci = ($('#ci_apoderado_apostilla').val()||'').toString().trim();
+    if(control===''){
+        return;
+    }
+    if(ci===''){
+        $('#estado_pago_apoderado').removeClass().addClass('badge badge-warning').text('Complete CI');
+        $('#control_boleta_valido').val('0');
+        return;
+    }
+    var link = "{{ url('verificar_boleta') }}" + "/" + encodeURIComponent(control) + '?documento=' + encodeURIComponent(ci);
+    // UI: marcar como validando
+    $('#estado_pago_apoderado').removeClass().addClass('badge badge-info').text('Validando...');
+    $('#control_boleta_valido').val('0');
+    $.ajax({
+        url: link,
+        type: 'GET',
+        success: function(resp){
+            if(resp=="No"){
+                $('#apellido_apoderado').val('');
+                $('#nombre_apoderado').val('');
+                $('#estado_pago_apoderado').removeClass().addClass('badge badge-danger').text('No encontrado');
+                $('#control_boleta_valido').val('0');
+            }else{
+                try{
+                    var res = JSON.parse(resp);
+                    if(res['apellido_apoderado']!==undefined) $('#apellido_apoderado').val(res['apellido_apoderado']);
+                    if(res['nombre_apoderado']!==undefined) $('#nombre_apoderado').val(res['nombre_apoderado']);
+                    $('#estado_pago_apoderado').removeClass().addClass('badge badge-success').text('Pago validado');
+                    $('#control_boleta_valido').val('1');
+                }catch(e){
+                    $('#apellido_apoderado').val('');$('#nombre_apoderado').val('');
+                    $('#estado_pago_apoderado').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
+                    $('#control_boleta_valido').val('0');
+                }
+            }
+        },
+        error: function(){
+            $('#apellido_apoderado').val('');$('#nombre_apoderado').val('');
+            $('#estado_pago_apoderado').removeClass().addClass('badge badge-warning').text('Error API');
+            $('#control_boleta_valido').val('0');
+        }
+    });
 }
 
 function setBotonCargandoApostillaUi(btn,texto){

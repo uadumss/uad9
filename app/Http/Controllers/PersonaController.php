@@ -40,6 +40,63 @@ class PersonaController extends Controller
         }
         return ($dato);
     }
+
+    public function verificar_boleta($control){
+        $documento = trim((string) request()->query('documento',''));
+        try{
+            $controlInt = (int) preg_replace('/[^0-9]/','',(string)$control);
+            if($documento !== ''){
+                $response = app(\App\Services\RecaudacionesService::class)->buscarPorControlYDocumento(122, $controlInt, $documento);
+            }else{
+                $response = app(\App\Services\RecaudacionesService::class)->buscarPorControl(122, $controlInt);
+            }
+        }catch(\Throwable $e){
+            return 'No';
+        }
+
+        if(!is_array($response) || !($response['ok'] ?? false)){
+            return 'No';
+        }
+
+        $data = $response['data'] ?? [];
+        $nombre = $this->buscarCampoRec($data, ['nombre','nombres','payer_nombre','payer.name','pagador_nombre','pagador.name','nombre_pago','nombre_pagador']);
+        $apellido = $this->buscarCampoRec($data, ['apellido','apellidos','payer_apellido','payer.lastName','pagador_apellido','pagador.lastName','apellido_pagador']);
+
+        if($nombre === null && $apellido === null){
+            return 'No';
+        }
+
+        return json_encode([
+            'nombre_apoderado' => $nombre ?? '',
+            'apellido_apoderado' => $apellido ?? '',
+        ]);
+    }
+
+    private function buscarCampoRec(mixed $node, array $keys): ?string
+    {
+        if($node === null) return null;
+
+        if(is_array($node)){
+            foreach($node as $k => $v){
+                $kNorm = is_string($k) ? strtolower(trim($k)) : '';
+                foreach($keys as $candidate){
+                    if($kNorm === strtolower(trim($candidate))){
+                        if(is_string($v) || is_numeric($v)) return trim((string)$v);
+                    }
+                }
+                $found = $this->buscarCampoRec($v, $keys);
+                if($found !== null && $found !== '') return $found;
+            }
+            return null;
+        }
+
+        if(is_object($node)){
+            $arr = (array)$node;
+            return $this->buscarCampoRec($arr, $keys);
+        }
+
+        return null;
+    }
     // FUNCION TEMPORAL PARA CORREGIR Ñ
     public function corregir(){
 

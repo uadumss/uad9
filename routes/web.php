@@ -74,5 +74,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('datos_per/{ci}',[PersonaController::class,'datos_per']);
     Route::get('datos_apo/{ci}',[PersonaController::class,'datos_apo']);
+    Route::get('verificar_boleta/{control}',[PersonaController::class,'verificar_boleta']);
 });
 
