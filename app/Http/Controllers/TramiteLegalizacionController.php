@@ -1721,7 +1721,7 @@ class TramiteLegalizacionController extends Controller
         }
 
         if(!$response['ok']){
-            $errMap=$this->mapearMensajeErrorRecaudacionLegalizacion((string)($response['message'] ?? ''),$tipoTramite);
+            $errMap=app(\App\Services\RecaudacionesService::class)->mapearMensajeErrorComun((string)($response['message'] ?? ''),(int)($response['status'] ?? 0));
             return $this->respuestaErrorValidacionLegalizacion($errMap['code'],$errMap['message']);
         }
 
@@ -1930,8 +1930,8 @@ class TramiteLegalizacionController extends Controller
         }
 
         if(!$response['ok']){
-            $errMap=$this->mapearMensajeErrorRecaudacionLegalizacion((string)($response['message'] ?? ''),$tipoTramite);
-            if($errMap['code']==='BOLETA_NO_EXISTE'){
+            $errMap=app(\App\Services\RecaudacionesService::class)->mapearMensajeErrorComun((string)($response['message'] ?? ''),(int)($response['status'] ?? 0));
+            if($errMap['code']==='CONTROL_NO_ENCONTRADO'){
                 return $this->respuestaErrorValidacionLegalizacion(
                     'BOLETA_REINTEGRO_NO_EXISTE',
                     'No se encontró información de la boleta de reintegro para ese CI y número de control.'
@@ -2208,74 +2208,6 @@ class TramiteLegalizacionController extends Controller
             'code'=>$code,
             'message'=>$message,
         ],$extra);
-    }
-
-    private function mapearMensajeErrorRecaudacionLegalizacion(string $mensajeApi, string $tipoTramite=''): array
-    {
-        $mensajeApi=trim($mensajeApi);
-        $msgNorm=mb_strtolower($mensajeApi);
-        $ctx=$tipoTramite!=='' ? ' (trámite: '.$this->etiquetaTipoTramiteLegalizacion($tipoTramite).')' : '';
-
-        if(
-            strpos($msgNorm,'configuracion')!==false ||
-            strpos($msgNorm,'configuración')!==false ||
-            strpos($msgNorm,'services/.env')!==false ||
-            strpos($msgNorm,'sistema no configurado')!==false
-        ){
-            return [
-                'code'=>'SISTEMA_NO_CONFIGURADO',
-                'message'=>'El sistema de recaudaciones no esta configurado. Contacte al area de sistemas.',
-            ];
-        }
-
-        if(
-            strpos($msgNorm,'comunicacion')!==false ||
-            strpos($msgNorm,'comunicación')!==false ||
-            strpos($msgNorm,'error en la comunicacion con la api de recaudaciones')!==false ||
-            strpos($msgNorm,'la api de recaudaciones respondio con error')!==false ||
-            strpos($msgNorm,'error inesperado en recaudaciones')!==false ||
-            strpos($msgNorm,'timeout')!==false
-        ){
-            return [
-                'code'=>'API_NO_DISPONIBLE',
-                'message'=>'No se pudo conectar con recaudaciones. Intente nuevamente en unos minutos.',
-            ];
-        }
-
-        if(
-            $mensajeApi==='' ||
-            strpos($msgNorm,'not found')!==false ||
-            strpos($msgNorm,'no se encuentra')!==false ||
-            strpos($msgNorm,'no encontrado')!==false ||
-            strpos($msgNorm,'recibo')!==false ||
-            strpos($msgNorm,'control')!==false ||
-            strpos($msgNorm,'valido')!==false ||
-            strpos($msgNorm,'válido')!==false
-        ){
-            return [
-                'code'=>'BOLETA_NO_EXISTE',
-                'message'=>'Recaudaciones no devolvió datos para este número de control y CI, o el comprobante no es válido.'.$ctx.' Verifique el número de control, que el CI sea el del pago y que el valorado corresponda al tipo de trámite.',
-            ];
-        }
-
-        if(strpos($msgNorm,'documento')!==false || strpos($msgNorm,'ci')!==false || strpos($msgNorm,'identidad')!==false){
-            return [
-                'code'=>'BOLETA_NO_PERTENECE_PERSONA',
-                'message'=>'La boleta no pertenece a la persona del trámite (documento/CI distinto al registrado en el pago).'.$ctx,
-            ];
-        }
-
-        if(strpos($msgNorm,'cuenta')!==false || strpos($msgNorm,'tramite')!==false || strpos($msgNorm,'trámite')!==false){
-            return [
-                'code'=>'BOLETA_NO_CORRESPONDE_TRAMITE',
-                'message'=>'La boleta no corresponde al tipo de trámite actual.'.$ctx.' Revise que el pago sea del concepto correcto (p. ej. certificación vs legalización).',
-            ];
-        }
-
-        return [
-            'code'=>'BOLETA_NO_VALIDA',
-            'message'=>'No se pudo validar el pago en recaudaciones: '.($mensajeApi!=='' ? $mensajeApi : 'respuesta no reconocida.').$ctx,
-        ];
     }
 
     private function registrarUsoRecaudacion(array $validacion, int $codTra, int $codDtra, string &$error): bool

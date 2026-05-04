@@ -1287,9 +1287,10 @@ class ApostillaController extends Controller
         try{
             $response=app(\App\Services\RecaudacionesService::class)->buscarPorControlYDocumento(122,$recibo,$documento);
         }catch(\Throwable $e){
+            $errMap=app(\App\Services\RecaudacionesService::class)->mapearMensajeErrorComun($e->getMessage(),0);
             return $this->respuestaErrorValidacionApostilla(
-                'API_NO_DISPONIBLE',
-                'No se pudo conectar con recaudaciones. Intente nuevamente en unos minutos.'
+                $errMap['code'],
+                $errMap['message']
             );
         }
 
@@ -1303,7 +1304,7 @@ class ApostillaController extends Controller
         if(!($response['ok'] ?? false)){
             $msg=(string)($response['message'] ?? '');
             $status=(int)($response['status'] ?? 0);
-            $errMap=$this->mapearMensajeErrorRecaudacionApostilla($msg,$status);
+            $errMap=app(\App\Services\RecaudacionesService::class)->mapearMensajeErrorComun($msg,$status);
             return $this->respuestaErrorValidacionApostilla($errMap['code'],$errMap['message']);
         }
 
@@ -1411,11 +1412,6 @@ class ApostillaController extends Controller
             ];
         }
 
-        return [
-            'code'=>'BOLETA_NO_VALIDA',
-            'message'=>'Boleta no valida. Verifique los datos e intente nuevamente.',
-        ];
-    }
 
     private function buscarTramiteApostillaPorCuenta(string $codigoCuenta, string $nombreCuenta = ''): ?Lista_doc_apostilla
     {

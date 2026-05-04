@@ -1566,6 +1566,7 @@
         var reintegro=($.trim(formulario.find('input[name="reintegro"]').val())||'');
         var valoradoBusqueda=($.trim(formulario.find('input[name="valorado_bus"]').val())||'');
         limpiarReintentoValidacionControl(formulario);
+        formulario.data('connection-retry-count',0);
         var secuencia=((formulario.data('validacion-control-seq')||0)+1);
         formulario.data('validacion-control-seq',secuencia);
         var okInput=formulario.find('[data-campo="validacion-recaudacion-ok"]');
@@ -1595,6 +1596,7 @@
             success:function(resp){
                 if((formulario.data('validacion-control-seq')||0)!==secuencia)return;
                 if(($.trim(formulario.find('input[name="control"]').val())||'')!==control)return;
+                formulario.data('connection-retry-count',0);
                 if(!resp.ok){
                     var textoRate='';
                     if(resp&&resp.message)textoRate=String(resp.message);
@@ -1610,6 +1612,19 @@
             error:function(xhr){
                 if((formulario.data('validacion-control-seq')||0)!==secuencia)return;
                 var mensajeError=(xhr.responseJSON&&xhr.responseJSON.message)?xhr.responseJSON.message:'';
+                var esConexion=(xhr.status===0||xhr.status===502||xhr.status===503||xhr.status===504)||mensajeError.toLowerCase().indexOf('sin conexión')!==-1||mensajeError.toLowerCase().indexOf('api_no_disponible')!==-1;
+                var connectionRetries=(formulario.data('connection-retry-count')||0);
+                
+                if(esConexion&&connectionRetries<3){
+                    formulario.data('connection-retry-count',connectionRetries+1);
+                    var estadoReintento={control:construirEstadoPago('control','Control principal','warn',false,'Sin conexión','Reintentando ('+( connectionRetries+1)+'/3)...'),reintegro:estadoBase.reintegro,busqueda:estadoBase.busqueda};
+                    aplicarEstadoPagosFormulario(formulario,estadoReintento);
+                    limpiarReintentoValidacionControl(formulario);
+                    var retryTimer=setTimeout(function(){validarControlRecaudaciones(inputControl);},3000);
+                    formulario.data('retry-control-timer',retryTimer);
+                    return;
+                }
+                
                 if(mensajeEsRateLimit(mensajeError,xhr.status)){aplicarEstadoPagosFormulario(formulario,construirEstadoRateLimit(estadoBase));limpiarTipoLegalizacion(formulario);limpiarPtagSugerido(formulario);formulario.find('input[data-campo="preimpreso-api"]').val('');formulario.removeData('control-validado-ok').removeData('control-validado-valor').removeData('reintegro-validado-valor').removeData('busqueda-validado-valor');limpiarSitraFormulario(formulario);actualizarEstadoSitra(formulario,'text-muted','SITRA pendiente.');programarReintentoValidacionControl(formulario,inputControl,control,reintegro,valoradoBusqueda);return;}
                 var respError=xhr.responseJSON||null;okInput.val('0');limpiarTipoLegalizacion(formulario);aplicarPtagSugerido(formulario,respError);formulario.find('input[data-campo="preimpreso-api"]').val('');limpiarSitraFormulario(formulario);actualizarEstadoSitra(formulario,'text-muted','SITRA pendiente.');formulario.removeData('control-validado-ok').removeData('control-validado-valor').removeData('reintegro-validado-valor').removeData('busqueda-validado-valor');
                 aplicarEstadoPagosFormulario(formulario,(respError&&respError.estado_pagos)?respError.estado_pagos:estadoBase);

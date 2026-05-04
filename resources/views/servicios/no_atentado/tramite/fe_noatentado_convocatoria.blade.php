@@ -1041,6 +1041,10 @@ function noaIrPaso1() {
     var xhrValidacionPagoNoa=null;
     var validacionPagoNoaEnCurso=false;
     var guardandoTramiteNoaEnCurso=false;
+    var retryTimeoutNoa=null;
+    var retryCountNoa=0;
+    var maxRetriesNoa=3;
+    var retryDelayNoa=3000; // 3 segundos entre reintentos
 
     function _pillCfgNoa(categoria){
         const m={
@@ -1611,6 +1615,8 @@ function noaIrPaso1() {
         return{resumen:'Pago no válido',clase:'badge-danger',detalle:mensaje,codigo:codigo};
     }
     function validarPagoNoAtentado(){
+        if(retryTimeoutNoa)clearTimeout(retryTimeoutNoa);
+        retryCountNoa=0;
         const control=limpiarTextoNoAtentado($('#control_noa').val());
         const tramite=limpiarTextoNoAtentado($('#tramite_noa').val());
         const preimpreso=limpiarTextoNoAtentado($('#preimpreso_pago_noa').val());
@@ -1666,11 +1672,29 @@ function noaIrPaso1() {
             },
             error:function(xhr){
                 if(secuenciaValidacionPagoNoa!==secuencia)return;if(xhr&&xhr.statusText==='abort')return;if(limpiarTextoNoAtentado($('#control_noa').val())!==control)return;
-                validacionPagoNoaEnCurso=false;pagoNoAtentadoValidado=false;controlValidadoNoAtentado='';reintegroValidadoNoAtentado='';tramiteValidadoNoAtentado='';detalleValidacionPagoNoAtentado=null;detalleExtendidoPagoNoa='';
-                reiniciarMontosValidadosNoatentado();renderDetallePagoNoatentado(null);limpiarSeleccionTramiteNoatentado('Se define al validar el pago.');
+                
                 let mensaje='No se pudo validar el pago.';
                 if(xhr&&xhr.responseJSON){if(xhr.responseJSON.message)mensaje=xhr.responseJSON.message;else if(xhr.responseJSON.errors){const ks=Object.keys(xhr.responseJSON.errors);if(ks.length>0&&xhr.responseJSON.errors[ks[0]].length>0)mensaje=xhr.responseJSON.errors[ks[0]][0];}}
                 const estadoError=resolverEstadoErrorPagoNoatentado(xhr&&xhr.responseJSON?xhr.responseJSON:{message:mensaje},xhr&&xhr.status?xhr.status:0);
+                
+                // Detectar error de conexión y reintentar automáticamente
+                const esErrorConexion=(estadoError.codigo==='API_NO_DISPONIBLE');
+                if(esErrorConexion && retryCountNoa<maxRetriesNoa){
+                    retryCountNoa++;
+                    const msgReintento='Sin conexión. Reintentando ('+retryCountNoa+'/'+maxRetriesNoa+')...';
+                    actualizarEstadoPagoNoAtentado('Reintentando','badge-warning',msgReintento);
+                    if(retryTimeoutNoa)clearTimeout(retryTimeoutNoa);
+                    retryTimeoutNoa=setTimeout(function(){
+                        if(secuenciaValidacionPagoNoa===secuencia){
+                            validarPagoNoAtentado();
+                        }
+                    },retryDelayNoa);
+                    return;
+                }
+                
+                // Si no se reconecta después de reintentos, mostrar error final
+                validacionPagoNoaEnCurso=false;pagoNoAtentadoValidado=false;controlValidadoNoAtentado='';reintegroValidadoNoAtentado='';tramiteValidadoNoAtentado='';detalleValidacionPagoNoAtentado=null;detalleExtendidoPagoNoa='';
+                reiniciarMontosValidadosNoatentado();renderDetallePagoNoatentado(null);limpiarSeleccionTramiteNoatentado('Se define al validar el pago.');
                 actualizarEstadoPagoNoAtentado(estadoError.resumen,estadoError.clase,estadoError.detalle,estadoError.codigo);refrescarEstadoCamposPagoNoatentado();
             },
             complete:function(){validacionPagoNoaEnCurso=false;if(secuenciaValidacionPagoNoa===secuencia)xhrValidacionPagoNoa=null;actualizarContextoControlPagoNoAtentado();}

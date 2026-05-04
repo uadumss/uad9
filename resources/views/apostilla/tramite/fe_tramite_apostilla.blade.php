@@ -980,6 +980,7 @@ let apostillaGuardarEnCurso=false;
 let apostillaRapidaValidacionOk=false,apostillaRapidaControlValidado='',apostillaRapidaCodLisDetectado='';
 let apostillaRapidaTimer=null,apostillaRapidaValidacionSeq=0,apostillaRapidaRetryTimer=null;
 let apostillaRapidaDetallePago='Pendiente de validacion.',apostillaRapidaSitraSeq=0;
+let apostillaConnectionRetryCount=0,apostillaConnectionMaxRetries=3,apostillaConnectionRetryDelay=3000;
 
 function compactarMensajeUxPagoApostilla(mensaje,respaldo){
     const texto=(mensaje||'').toString().trim(),fallback=(respaldo||'').toString().trim();
@@ -1191,6 +1192,7 @@ function limpiarEstadoValidacionRapida(){
 }
 function solicitarValidacionRapidaApostilla(callbackOk,callbackError){
     const form=formApostillaRapida();if(!form.length)return;
+    apostillaConnectionRetryCount=0;
     const nroControl=obtenerControlRapidoApostilla();const requestSeq=++apostillaRapidaValidacionSeq;
     if(nroControl===''){limpiarReintentoRapidoApostilla();limpiarEstadoValidacionRapida();estadoRegistroRapido('pending','Ingrese N° de control.');if(typeof callbackError==='function')callbackError('Ingrese N° de control.');return;}
     estadoRegistroRapido('loading','');
@@ -1199,6 +1201,7 @@ function solicitarValidacionRapidaApostilla(callbackOk,callbackError){
         data:{_token:form.find('input[name="_token"]').val(),nro_control:parseInt(nroControl,10)||0,ca:(form.find('input[name="ca"]').val()||'').toString().trim()},
         success:function(resp){
             if(requestSeq!==apostillaRapidaValidacionSeq)return;if(obtenerControlRapidoApostilla()!==nroControl)return;
+            apostillaConnectionRetryCount=0;
             if(!(resp&&resp.ok)){
                 const msg=(resp&&resp.message)?resp.message:'No se pudo validar el pago.';
                 limpiarEstadoValidacionRapida();
@@ -1223,7 +1226,15 @@ function solicitarValidacionRapidaApostilla(callbackOk,callbackError){
             const msg=(xhr.responseJSON&&xhr.responseJSON.message)?xhr.responseJSON.message:'Sin conexión. Intente nuevamente.';
             limpiarEstadoValidacionRapida();
             const esRate=(xhr.status===429)||detectarCategoriaPagoUxApostilla('error',msg)==='rate_limit';
+            const esConexion=(xhr.status===0||xhr.status===502||xhr.status===503||xhr.status===504)||msg.toLowerCase().indexOf('sin conexión')!==-1||msg.toLowerCase().indexOf('api_no_disponible')!==-1;
+            
             if(esRate){estadoRegistroRapido('error','Demasiadas solicitudes. Reintentando en 15 segundos.');limpiarReintentoRapidoApostilla();apostillaRapidaRetryTimer=setTimeout(function(){if(obtenerControlRapidoApostilla()!==nroControl)return;solicitarValidacionRapidaApostilla();},15000);}
+            else if(esConexion&&apostillaConnectionRetryCount<apostillaConnectionMaxRetries){
+                apostillaConnectionRetryCount++;
+                estadoRegistroRapido('error','Sin conexión. Reintentando ('+apostillaConnectionRetryCount+'/'+apostillaConnectionMaxRetries+')...');
+                limpiarReintentoRapidoApostilla();
+                apostillaRapidaRetryTimer=setTimeout(function(){if(obtenerControlRapidoApostilla()!==nroControl)return;solicitarValidacionRapidaApostilla();},apostillaConnectionRetryDelay);
+            }
             else{limpiarReintentoRapidoApostilla();estadoRegistroRapido('error',msg);}
             if(typeof callbackError==='function')callbackError(msg);
         }
