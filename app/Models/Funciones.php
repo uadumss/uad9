@@ -233,7 +233,6 @@ class Funciones extends Model
                 if ($numero_res !== '') {
                     $glosa= str_replace("{resolucion_numero}", $numero_res, $glosa);
                     $glosa= str_replace("{numero_resolucion}", $numero_res, $glosa);
-                    $glosa= str_replace("{--0036/2024--}", $numero_res, $glosa);
                 }
 
                 $fechaResolucion = $acreditacion->resolucion_fecha_emision
@@ -245,7 +244,6 @@ class Funciones extends Model
                         $fecha_res_literal = date('j', $fecha_res_ts).' de '.self::mes((int)date('n', $fecha_res_ts)).' de '.date('Y', $fecha_res_ts);
                         $glosa= str_replace("{resolucion_fecha}", $fecha_res_literal, $glosa);
                         $glosa= str_replace("{fecha_resolucion}", $fecha_res_literal, $glosa);
-                        $glosa= str_replace("{--5 de octubre de 2023--}", $fecha_res_literal, $glosa);
                     }
                 }
             }
