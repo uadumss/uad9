@@ -1854,10 +1854,14 @@
             
             if(valorSeleccionado == '60'){
                 formulario.find('[data-campo="columna-carrera"]').show(300);
+                formulario.find('input[name="numero"]').prop('readonly', true).addClass('readonly');
+                formulario.find('input[name="gestion"]').prop('readonly', true).addClass('readonly');
             } else {
                 formulario.find('[data-campo="columna-carrera"]').hide(300);
                 formulario.find('#select_carrera_interesado').val('');
                 formulario.find('#cod_tit_seleccionado').val('');
+                formulario.find('input[name="numero"]').prop('readonly', false).removeClass('readonly');
+                formulario.find('input[name="gestion"]').prop('readonly', false).removeClass('readonly');
             }
         }
     }
@@ -1869,6 +1873,8 @@
         formulario.find('[data-campo="columna-carrera"]').hide(300);
         formulario.find('#select_carrera_interesado').val('');
         formulario.find('#cod_tit_seleccionado').val('');
+        formulario.find('input[name="numero"]').prop('readonly', false).removeClass('readonly');
+        formulario.find('input[name="gestion"]').prop('readonly', false).removeClass('readonly');
     }
     function aplicarPtagSugerido(formulario,resp){
         var check=formulario.find('input[name="ptaang"]'),wrap=formulario.find('[data-campo="ptag-wrap"]');if(!check.length)return;
