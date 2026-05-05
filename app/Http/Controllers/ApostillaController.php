@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Services\SitraService;
 use Maatwebsite\Excel\Facades\Excel;
 
 
@@ -520,11 +521,11 @@ class ApostillaController extends Controller
         if(!empty($data['cl'])){
             $tipoApostilla=Lista_doc_apostilla::find((int)$data['cl']);
             if($tipoApostilla){
-                $buscarEn=$this->normalizarBuscarEnSitraApostilla((string)($tipoApostilla->lis_tipo ?? ''));
+                $buscarEn=app(SitraService::class)->normalizarBuscarEn((string)($tipoApostilla->lis_tipo ?? ''));
             }
         }
 
-        if(!$this->debeValidarSitraConBuscarEnApostilla($buscarEn)){
+        if(!app(SitraService::class)->debeValidar($buscarEn)){
             return response()->json([
                 'ok'=>true,
                 'aplica'=>false,
@@ -546,6 +547,7 @@ class ApostillaController extends Controller
             'aplica'=>true,
             'estado'=>$resultadoSitra['estado'],
             'fuente'=>$resultadoSitra['fuente'],
+            'message'=>$resultadoSitra['message'] ?? '',
             'nombre'=>$resultadoSitra['respuesta']->nombre ?? '',
             'titulo'=>$resultadoSitra['respuesta']->titulo ?? '',
             'tipo'=>$resultadoSitra['respuesta']->tipo ?? '',
@@ -554,21 +556,13 @@ class ApostillaController extends Controller
         ]);
     }
 
-    private function verificarSitraApostilla(string $ci, string $numero, string $buscarEn): object
-    {
-        $documento=Funciones::DocumentoSitra($buscarEn);
-        $ruta='http://sitra.umss.net/consulta/api/ci/'.$ci.'/numero/'.$numero.'/tipo/'.$documento;
-        $data=json_decode(file_get_contents($ruta));
-        return is_object($data) ? $data : (object)[];
-    }
-
     private function resolverEstadoSitraApostilla(int $idPer, string $ci, string $nombreCompleto, string $numero, string $gestion, string $buscarEn): array
     {
-        $buscarEn=$this->normalizarBuscarEnSitraApostilla($buscarEn);
+        $buscarEn=app(SitraService::class)->normalizarBuscarEn($buscarEn);
         $numero=trim($numero);
         $gestion=trim($gestion);
 
-        if(!$this->debeValidarSitraConBuscarEnApostilla($buscarEn) || $numero==='' || $numero==='-'){
+        if(!app(SitraService::class)->debeValidar($buscarEn) || $numero==='' || $numero==='-'){
             return [
                 'estado'=>'',
                 'fuente'=>'sitra',
@@ -578,7 +572,7 @@ class ApostillaController extends Controller
 
         $sitraDisponible=true;
         try {
-            $respuesta=$this->verificarSitraApostilla($ci,$numero,$buscarEn);
+            $respuesta=app(SitraService::class)->consultarSitra($ci,$numero,$buscarEn);
         } catch (\Throwable $e) {
             $sitraDisponible=false;
             $respuesta=(object)[];
@@ -594,7 +588,7 @@ class ApostillaController extends Controller
         $nombreLocal=trim((string)$nombreCompleto);
         $tipoLocal=strtolower($documento);
 
-        if($this->nombresCompatiblesApostilla($nombreLocal,$nombreSitra) && $tipoLocal===$tipoSitraNormalizado && trim($numero)===$numeroSitra){
+        if(app(SitraService::class)->nombresCompatibles($nombreLocal,$nombreSitra) && $tipoLocal===$tipoSitraNormalizado && trim($numero)===$numeroSitra){
             return [
                 'estado'=>'0',
                 'fuente'=>'sitra',
@@ -603,7 +597,10 @@ class ApostillaController extends Controller
         }
 
         if($nombreSitra==='' && $tipoSitraNormalizado==='' && $numeroSitra===''){
-            $respaldoUad9=$this->buscarRespaldoInternoSitraApostilla($idPer,$numero,$buscarEn,$gestion);
+            $respaldoUad9=null;
+            if($gestion!==''){
+                $respaldoUad9=app(SitraService::class)->buscarRespaldoInterno($idPer,$numero,$buscarEn,$gestion);
+            }
             if($respaldoUad9){
                 return [
                     'estado'=>'0',
@@ -615,6 +612,7 @@ class ApostillaController extends Controller
                         'gestion'=>(string)($respaldoUad9->tit_gestion ?? $gestion),
                         'tipo'=>$documento,
                     ],
+                    'message'=>'Validado con respaldo SID'.($sitraDisponible ? '' : ' (SITRA no disponible)').'.',
                 ];
             }
 
@@ -622,77 +620,15 @@ class ApostillaController extends Controller
                 'estado'=>'2',
                 'fuente'=>'sitra_sid',
                 'respuesta'=>(object)[],
+                'message'=>$sitraDisponible ? '' : 'SITRA no disponible.',
             ];
         }
 
         return [
             'estado'=>'1',
-            'fuente'=>$sitraDisponible ? 'sitra' : 'sitra_sid',
+            'fuente'=>'sitra',
             'respuesta'=>$respuesta,
         ];
-    }
-
-    private function normalizarBuscarEnSitraApostilla(string $buscarEn): string
-    {
-        $buscarEn=trim($buscarEn);
-        if($buscarEn===''){
-            return '';
-        }
-        $buscarEn=explode('-', $buscarEn)[0] ?? '';
-        return strtolower(trim($buscarEn));
-    }
-
-    private function debeValidarSitraConBuscarEnApostilla(string $buscarEn): bool
-    {
-        return trim((string)Funciones::DocumentoSitra($buscarEn))!=='';
-    }
-
-    private function normalizarTextoApostilla(string $texto): string
-    {
-        $texto=mb_strtolower(trim($texto),'UTF-8');
-        $texto=preg_replace('/\s+/u',' ',$texto) ?? $texto;
-        $texto=str_replace(['á','é','í','ó','ú','ñ'],['a','e','i','o','u','n'],$texto);
-        return $texto;
-    }
-
-    private function nombresCompatiblesApostilla(string $nombreLocal, string $nombreSitra): bool
-    {
-        $local=$this->normalizarTextoApostilla($nombreLocal);
-        $sitra=$this->normalizarTextoApostilla($nombreSitra);
-
-        if($local==='' || $sitra===''){
-            return false;
-        }
-
-        if($local===$sitra){
-            return true;
-        }
-
-        return strpos($local,$sitra)!==false || strpos($sitra,$local)!==false;
-    }
-
-    private function buscarRespaldoInternoSitraApostilla(int $idPer, string $numero, string $buscarEn, string $gestion=''): ?Titulo
-    {
-        if($idPer<=0 || trim($numero)==='' || trim($buscarEn)===''){
-            return null;
-        }
-
-        $query=Titulo::where('id_per','=',$idPer)
-            ->whereRaw('CAST(tit_nro_titulo AS INTEGER) = ?', [(int)$numero]);
-
-        if(trim($gestion)!==''){
-            $query->where('tit_gestion','=',trim($gestion));
-        }
-
-        if($buscarEn==='da'){
-            $query->whereIn('tit_tipo',['da','ca']);
-        }elseif($buscarEn==='tpos'){
-            $query->whereIn('tit_tipo',['tpos','di']);
-        }else{
-            $query->where('tit_tipo','=',$buscarEn);
-        }
-
-        return $query->first();
     }
 
     private function responderAgregarTramiteApostilla(Request $request, bool $ok, string $message, string $codApos)
@@ -1357,9 +1293,10 @@ class ApostillaController extends Controller
         try{
             $response=app(\App\Services\RecaudacionesService::class)->buscarPorControlYDocumento(122,$recibo,$documento);
         }catch(\Throwable $e){
+            $errMap=app(\App\Services\RecaudacionesService::class)->mapearMensajeErrorComun($e->getMessage(),0);
             return $this->respuestaErrorValidacionApostilla(
-                'API_NO_DISPONIBLE',
-                'No se pudo conectar con recaudaciones. Intente nuevamente en unos minutos.'
+                $errMap['code'],
+                $errMap['message']
             );
         }
 
@@ -1373,7 +1310,7 @@ class ApostillaController extends Controller
         if(!($response['ok'] ?? false)){
             $msg=(string)($response['message'] ?? '');
             $status=(int)($response['status'] ?? 0);
-            $errMap=$this->mapearMensajeErrorRecaudacionApostilla($msg,$status);
+            $errMap=app(\App\Services\RecaudacionesService::class)->mapearMensajeErrorComun($msg,$status);
             return $this->respuestaErrorValidacionApostilla($errMap['code'],$errMap['message']);
         }
 
@@ -1481,9 +1418,10 @@ class ApostillaController extends Controller
             ];
         }
 
+        // Default fallback error
         return [
-            'code'=>'BOLETA_NO_VALIDA',
-            'message'=>'Boleta no valida. Verifique los datos e intente nuevamente.',
+            'code' => 'API_RECAUDACIONES_ERROR',
+            'message' => 'No se pudo validar el control en recaudaciones. Intente nuevamente.',
         ];
     }
 

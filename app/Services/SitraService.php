@@ -2,125 +2,187 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
+use App\Models\Funciones;
+use App\Models\Titulo;
+use App\Models\Tramite;
+use Illuminate\Support\Facades\DB;
 
 class SitraService
 {
-    public function obtenerDatos($ci, $nroTitulo, $serieInput)
+    /**
+     * Consulta a la API externa del SITRA
+     */
+    public function consultarSitra(string $ci, string $numero, string $tipo)
     {
-        \Log::info('ENTRO AL SERVICE');
-        $serieNumerica = preg_replace('/[^0-9]/', '', $serieInput);
-        $nroTitulo = ltrim($nroTitulo, '0');
-        \Log::info('SITRA INPUT', [
-            'ci' => $ci,
-            'nroTitulo' => $nroTitulo,
-            'serieInput' => $serieInput,
-            'serieNumerica' => $serieNumerica,
-        ]);
-        $response = Http::withHeaders([
-            'Accept' => '*/*',
-            'Origin' => 'http://sitra.umss.net',
-            'Referer' => 'http://sitra.umss.net/',
-            'User-Agent' => env('SITRA_USER_AGENT', 'Mozilla/5.0'),
-            'X-Requested-With' => 'XMLHttpRequest',
-            'Cookie' => env('SITRA_COOKIE'),
-        ])->asForm()->post(
-            'http://sitra.umss.net/principal_dev.php/tramites/index',
-            [
-                'query'  => '',
-                'query1' => $ci,
-                'query2' => '',
-                'query3' => $nroTitulo,
-                'query4' => $serieNumerica,
-                'query5' => '',
-            ]
-        );
-        \Log::info('HTML SITRA', [
-            'body' => substr($response->body(), 0, 2000)
-        ]);
-        if (!$response->successful()) {
+        $documento = Funciones::DocumentoSitra($tipo);
+        $ruta = "http://sitra.umss.net/consulta/api/ci/" . $ci . "/numero/" . $numero . "/tipo/" . $documento;
+        
+        try {
+            $data = json_decode(file_get_contents($ruta));
+            return $data;
+        } catch (\Throwable $e) {
+            return (object)[];
+        }
+    }
+
+    /**
+     * Verifica si los nombres coinciden entre SITRA y la base local
+     */
+    public function nombresCompatibles(string $nombreLocal, string $nombreSitra): bool
+    {
+        $local = $this->normalizarTexto($nombreLocal);
+        $sitra = $this->normalizarTexto($nombreSitra);
+
+        if ($local === '' || $sitra === '') {
+            return false;
+        }
+
+        if ($local === $sitra) {
+            return true;
+        }
+
+        return strpos($local, $sitra) !== false || strpos($sitra, $local) !== false;
+    }
+
+    /**
+     * Normaliza el parámetro 'buscar_en' para el SITRA
+     */
+    public function normalizarBuscarEn(string $buscarEn): string
+    {
+        $buscarEn = trim($buscarEn);
+        if ($buscarEn === '') {
+            return '';
+        }
+
+        $buscarEn = explode('-', $buscarEn)[0] ?? '';
+        return strtolower(trim($buscarEn));
+    }
+
+    /**
+     * Obtiene el código de búsqueda para SITRA a partir de un trámite y un formulario
+     */
+    public function obtenerBuscarEn(Tramite $tramita, string $buscarEnFormulario = ''): string
+    {
+        $buscarEn = $this->normalizarBuscarEn($buscarEnFormulario);
+        if ($buscarEn !== '') {
+            return $buscarEn;
+        }
+
+        return $this->normalizarBuscarEn((string)($tramita->tre_buscar_en ?? ''));
+    }
+
+    /**
+     * Determina si el tipo de documento debe validarse en SITRA
+     */
+    public function debeValidar(string $buscarEn): bool
+    {
+        return trim((string)Funciones::DocumentoSitra($buscarEn)) !== '';
+    }
+
+    /**
+     * Busca el título/respaldo en la base local (UAD9/SID)
+     */
+    public function buscarRespaldoInterno(int $idPer, string $numero, string $buscarEn, string $gestion = ''): ?Titulo
+    {
+        if ($idPer <= 0 || trim($numero) === '' || trim($buscarEn) === '') {
             return null;
         }
 
-        $rows = $this->parseRows($response->body());
-        \Log::info('SITRA ROWS', $rows);
-        return collect($rows)->first(function ($row) use ($nroTitulo, $serieNumerica) {
-            return
-                $row['nro_titulo'] == $nroTitulo &&
-                $row['serie'] == $serieNumerica;
-        });
-    }
+        $query = Titulo::where('id_per', '=', $idPer)
+            ->whereRaw('CAST(tit_nro_titulo AS INTEGER) = ?', [(int)$numero]);
 
-    private function parseRows($html)
-    {
-        libxml_use_internal_errors(true);
-
-        $dom = new \DOMDocument();
-        $html = mb_convert_encoding($html, 'HTML-ENTITIES', 'ISO-8859-1, UTF-8');
-        $dom->loadHTML($html);
-
-        $xpath = new \DOMXPath($dom);
-        $trs = $xpath->query("//table[contains(@class,'jobs')]//tbody/tr");
-
-        $data = [];
-
-        foreach ($trs as $tr) {
-            $tds = $xpath->query('./td', $tr);
-
-            if ($tds->length < 6) continue;
-
-            $nroTramite = trim($tds->item(0)->textContent);
-
-
-            if ($nroTramite === '' || $nroTramite === 'Nro Tramite') continue;
-
-            $personaText = preg_replace('/\s+/u', ' ', trim($tds->item(1)->textContent));
-
-            $ci = null;
-            $nombre = null;
-
-            if (preg_match('/^(\d+)\s+(.+)$/u', $personaText, $m)) {
-                $ci = trim($m[1]);
-                $nombre = trim($m[2]);
-            }
-
-            $titulo = trim(preg_replace('/\s+/u', ' ', $tds->item(4)->textContent));
-
-            $docHtml = $this->innerHtml($tds->item(5));
-            $parts = preg_split('/<br\s*\/?>/i', $docHtml);
-
-            $docLinea = trim(strip_tags($parts[0] ?? ''));
-            $fecha = trim(strip_tags($parts[1] ?? ''));
-
-            $nroTitulo = null;
-            $serie = null;
-
-            if ($docLinea && str_contains($docLinea, '-')) {
-                [$nro, $ser] = explode('-', $docLinea);
-                $nroTitulo = ltrim(trim($nro), '0');
-                $serie = trim($ser);
-            }
-
-            $data[] = [
-                'ci' => $ci,
-                'nombre' => $nombre,
-                'titulo' => $titulo ?: null,
-                'nro_titulo' => $nroTitulo,
-                'serie' => $serie,
-                'fecha_emision' => $fecha ?: null,
-            ];
+        if (trim($gestion) !== '') {
+            $query->where('tit_gestion', '=', trim($gestion));
         }
 
-        return $data;
-    }
-
-    private function innerHtml($node)
-    {
-        $html = '';
-        foreach ($node->childNodes as $child) {
-            $html .= $node->ownerDocument->saveHTML($child);
+        if ($buscarEn === 'da') {
+            $query->whereIn('tit_tipo', ['da', 'ca']);
+        } elseif ($buscarEn === 'tpos') {
+            $query->whereIn('tit_tipo', ['tpos', 'di']);
+        } else {
+            $query->where('tit_tipo', '=', $buscarEn);
         }
-        return $html;
+
+        \Log::info('DEBUG QUERY TITULO (SitraService)', [
+            'id_per' => $idPer,
+            'numero' => $numero,
+            'gestion' => $gestion,
+            'buscar_en' => $buscarEn
+        ]);
+
+        return $query->first();
     }
 
+    /**
+     * Resuelve el título buscando con y sin gestión
+     */
+    public function resolverTitulo(int $idPer, string $numero, string $buscarEn, string $gestion = ''): ?Titulo
+    {
+        $buscarEn = trim($buscarEn);
+        if ($idPer <= 0 || trim($numero) === '' || $buscarEn === '') {
+            return null;
+        }
+
+        $buscarBase = explode('-', $buscarEn)[0];
+        $titulo = $this->buscarRespaldoInterno($idPer, $numero, $buscarBase, $gestion);
+        if ($titulo) {
+            return $titulo;
+        }
+
+        return $this->buscarRespaldoInterno($idPer, $numero, $buscarBase, '');
+    }
+
+    /**
+     * Resuelve el título buscando a través de diferentes IDs de persona (si comparten CI)
+     */
+    public function resolverTituloPorPersonaYBuscarEn(int $idPer, string $buscarEn): ?Titulo
+    {
+        if ($idPer <= 0) {
+            return null;
+        }
+
+        $buscarBase = strtolower(trim(explode('-', $buscarEn)[0] ?? ''));
+        $idsPersona = [$idPer];
+        $ciPersona = trim((string)DB::table('personas')->where('id_per', '=', $idPer)->value('per_ci'));
+        
+        if ($ciPersona !== '') {
+            $idsCi = DB::table('personas')->where('per_ci', '=', $ciPersona)->pluck('id_per')->all();
+            if (!empty($idsCi)) {
+                $idsPersona = $idsCi;
+            }
+        }
+
+        $query = Titulo::whereIn('id_per', $idsPersona)
+            ->whereNotNull('tit_fecha_emision');
+
+        if ($buscarBase === 'da') {
+            $query->whereIn('tit_tipo', ['da', 'ca']);
+        } elseif ($buscarBase === 'tpos') {
+            $query->whereIn('tit_tipo', ['tpos', 'di']);
+        } else {
+            if ($buscarBase !== '') {
+                $query->where('tit_tipo', '=', $buscarBase);
+            }
+        }
+
+        return $query->orderByDesc('cod_tit')->first();
+    }
+
+    private function normalizarTexto(string $texto): string
+    {
+        $texto = trim($texto);
+        if ($texto === '') {
+            return '';
+        }
+
+        $texto = strtoupper($texto);
+        $texto = preg_replace('/[ÁÀÂÄ]/u', 'A', $texto);
+        $texto = preg_replace('/[ÉÈÊË]/u', 'E', $texto);
+        $texto = preg_replace('/[ÍÌÎÏ]/u', 'I', $texto);
+        $texto = preg_replace('/[ÓÒÔÖ]/u', 'O', $texto);
+        $texto = preg_replace('/[ÚÙÛÜ]/u', 'U', $texto);
+        $texto = str_replace(['Ñ', 'Ç'], ['N', 'C'], $texto);
+        
+        return preg_replace('/[^A-Z0-9\s]/', '', $texto) ?? '';
+    }
 }

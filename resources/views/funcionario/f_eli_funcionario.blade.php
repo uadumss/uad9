@@ -1,53 +1,71 @@
 <div class="modal-dialog modal-lg" role="document" id="panel_docleg">
-    <div class="modal-content border-bottom-danger shadow-lg">
-        <div class="modal-header bg-danger">
-            <h5 class="modal-title text-white" id="exampleModalLabel"> <img src="{{url('img/icon/eliminar.png')}}">&nbsp;&nbsp;Eliminar funcionario</h5>
-            <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+    <div class="modal-content border-0 shadow-lg overflow-hidden">
+        <div class="modal-header text-white" style="background: linear-gradient(135deg, #8a1538 0%, #c1121f 48%, #e5383b 100%);">
+            <div>
+                <h5 class="modal-title font-weight-bolder mb-0" id="exampleModalLabel">
+                    <img src="{{url('img/icon/eliminar.png')}}" class="mr-1"> Eliminar funcionario
+                </h5>
+                <small class="text-white-50">Acción irreversible sobre el registro</small>
+            </div>
+            <button class="close text-white opacity-100" type="button" data-dismiss="modal" aria-label="Close">
                 <span aria-hidden="true">×</span>
             </button>
         </div>
 
-        <div class="modal-body">
+        <div class="modal-body p-0" style="background: linear-gradient(180deg, #fff7f7 0%, #fff1f2 100%);">
             <form action="{{url('eli_funcionario')}}" method="post" id="form_eli_fun">
                 @csrf
-                <span class="font-italic">Esta seguro de eliminar al funcionario : </span><br/><br/>
-                <div class="row">
-                    <div class="font-weight-bold alert-danger shadow text-center centrar_bloque col-md-9 p-2" >
-                        <div>
-                            @if($eliminar==1)
-                                <table class="col-md-12">
-                                    <tr>
-                                        <th class="text-right font-italic text-dark">Nombre :</th>
-                                        <td class="border-bottom border-dark text-left">
-                                            {{$funcionario->fun_nombre}}
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th class="text-right font-italic text-dark">CI:</th>
-                                        <td class="border-bottom border-dark text-left">
-                                            {{$funcionario->fun_ci}}
-                                        </td>
-                                    </tr>
-                                <input type="hidden" name="cf" value="{{$funcionario->cod_fun}}"/>
-                                </table>
-                            @else
-                                <span>
-                                    No se puede eliminar al funcionario debido a que tiene documentos asociados
-                                </span>
-                            @endif
-                        </div>
+                <div class="p-3 p-md-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                        <div class="text-danger font-weight-bold text-uppercase" style="letter-spacing: .04em; font-size: .78rem;">Confirmación de eliminación</div>
+                        <span class="badge px-3 py-2" style="background: #fee2e2; color: #b91c1c;">Acción sensible</span>
                     </div>
-                    <div class="pt-2 col-md-2 text-danger font-weight-bolder text-left"><h1><i class="fas fa-question-circle"></i></h1></div>
+
+                    @if($eliminar==1)
+                        <div class="rounded-lg shadow-sm border border-danger bg-white p-3 p-md-4 mb-3" id="panel_docleg_data">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <div>
+                                    <div class="text-danger font-weight-bolder">¿Está seguro de eliminar este funcionario?</div>
+                                    <small class="text-muted">Revise los datos antes de continuar.</small>
+                                </div>
+                                <div class="text-danger font-weight-bolder" style="font-size: 2.4rem; line-height: 1;">?</div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0">
+                                    <tr>
+                                        <th class="text-right text-secondary border-0" style="width: 35%;">Nombre</th>
+                                        <td class="border-bottom border-danger text-dark font-weight-bold">{{$funcionario->fun_nombre}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-right text-secondary border-0">CI</th>
+                                        <td class="border-bottom border-danger text-dark font-weight-bold">{{$funcionario->fun_ci}}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <input type="hidden" name="cf" value="{{$funcionario->cod_fun}}"/>
+                        </div>
+
+                        <div class="alert alert-danger border-0 shadow-sm mb-0" style="border-left: 4px solid #dc3545;">
+                            <strong>Importante:</strong> esta acción quedará registrada en el sistema.
+                        </div>
+                    @else
+                        <div class="alert alert-danger border-0 shadow-sm d-flex align-items-start mb-0" style="border-left: 4px solid #dc3545;">
+                            <div class="font-weight-bolder mr-3" style="font-size: 1.7rem; line-height: 1;">!</div>
+                            <div>
+                                <div class="font-weight-bolder">No se puede eliminar al funcionario</div>
+                                <div>Debido a que tiene documentos asociados.</div>
+                            </div>
+                        </div>
+                    @endif
                 </div>
-                <br/>
-                <div class="text-danger font-italic font-weight-bold border border-danger rounded col-md-8" style="font-size: 0.7em">* Esta acción se quedará registrado en el sistema</div>
             </form>
         </div>
 
-        <div class="modal-footer">
-            <button class="btn btn-secondary btn-sm" type="button" data-dismiss="modal">Cancelar</button>
+        <div class="modal-footer border-0" style="background: #fff7f7;">
+            <button class="btn btn-light border px-4" type="button" data-dismiss="modal">Cancelar</button>
             @if($eliminar==1)
-                <button class="btn btn-danger btn-sm" type="button" data-dismiss="modal" onclick="$('#form_eli_fun').submit()">Eliminar</button>
+                <button class="btn btn-danger px-4 shadow-sm" type="button" data-dismiss="modal" onclick="$('#form_eli_fun').submit()" style="background: linear-gradient(135deg, #c1121f 0%, #e5383b 100%); border: none;">Eliminar</button>
             @endif
         </div>
 

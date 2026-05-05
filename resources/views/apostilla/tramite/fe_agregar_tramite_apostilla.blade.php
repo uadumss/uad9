@@ -194,6 +194,8 @@
     let controlValidadoValor='';
     let timerValidacionControl=null;
     let envioAgregarApostillaEnCurso=false;
+    let apostillaSitraSeq=0;
+    let timerValidacionSitra=null;
 
     function obtenerBotonAgregarApostilla(){
         return document.querySelector('[data-campo="btn-agregar-apostilla"]');
@@ -255,6 +257,31 @@
 
     function normalizarTextoApostilla(valor){
         return (valor || '').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    }
+
+    function limpiarTextoSitraApostilla(texto){return (texto||'').toString().replace(/\s+/g,' ').trim();}
+    function limitarTextoSitraApostilla(texto,maximo){var txt=limpiarTextoSitraApostilla(texto),max=(typeof maximo==='number'&&maximo>10)?maximo:260;return txt.length<=max?txt:txt.substring(0,max-3)+'...';}
+    function normalizarClaveSitraApostilla(texto){return limpiarTextoSitraApostilla(texto).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+    function compactarMensajeSitraApostilla(mensaje,respaldo){
+        var texto=(mensaje||'').toString().trim(),fallback=(respaldo||'').toString().trim();
+        if(texto==='')return fallback;
+        var normal=normalizarClaveSitraApostilla(texto);
+        if(normal.indexOf('verificando')!==-1||normal.indexOf('validando')!==-1)return 'Validando en SITRA/SID...';
+        if(normal==='sitra pendiente.'||normal==='sitra pendiente')return 'SITRA pendiente.';
+        if((normal.indexOf('complete')!==-1||normal.indexOf('completar')!==-1)&&normal.indexOf('gestion')!==-1)return 'Complete gestion para validar SITRA.';
+        if(normal.indexOf('seleccione')!==-1&&normal.indexOf('tipo')!==-1)return 'Seleccione tipo para validar SITRA.';
+        if(normal.indexOf('no aplica')!==-1)return 'No aplica para este tipo.';
+        if(normal.indexOf('no disponible')!==-1||normal.indexOf('no se pudo conectar')!==-1)return 'SITRA/SID no disponible.';
+        if(normal.indexOf('no existe')!==-1||normal.indexOf('no se encontro')!==-1||normal.indexOf('no se encontró')!==-1)return 'No existe en SITRA/SID.';
+        if(normal.indexOf('no coincide')!==-1)return 'Existe, pero no coincide.';
+        if(normal.indexOf('coincide')!==-1)return 'Coincide en SITRA/SID.';
+        if(texto.length>140)return fallback!==''?fallback:texto.substring(0,137)+'...';
+        return texto;
+    }
+    function construirDetalleSitraApostilla(resumenCorto,mensajeOriginal){
+        var resumen=limpiarTextoSitraApostilla(resumenCorto||'SITRA pendiente.'),original=limpiarTextoSitraApostilla(mensajeOriginal||'');
+        if(original===''||original.toLowerCase()===resumen.toLowerCase())return resumen;
+        return limitarTextoSitraApostilla(resumen+' Detalle: '+original,280);
     }
 
     function categoriaResultadoValidacionApostilla(tipo,mensaje,codigo){
@@ -597,26 +624,142 @@
             programarValidacionControlApostilla();
         });
 
-    function validarSitraApostilla(){
-        const numeroDocumento=$('input[data-campo="numero-sitra"]').val().trim();
+    function actualizarEstadoSitraApostilla(clase,icono,mensaje,detalleExtra){
         const iconoElement=$('span[data-campo="icono-sitra-estado"]');
-        
-        if(numeroDocumento===''){
-            iconoElement.removeClass('text-success text-warning text-danger').addClass('text-muted');
-            iconoElement.find('i').attr('class','fas fa-minus-circle');
-            iconoElement.attr('title','Verificación SITRA');
-            return;
+        if(!iconoElement.length){return;}
+        var resumen=compactarMensajeSitraApostilla(mensaje,'SITRA pendiente.');
+        var detalle=construirDetalleSitraApostilla(resumen,mensaje);
+        if(detalleExtra){
+            detalle=(detalle+' '+detalleExtra).trim();
         }
+        iconoElement.removeClass('text-success text-warning text-danger text-info text-muted').addClass(clase);
+        iconoElement.find('i').attr('class','fas '+icono);
+        iconoElement.attr('title','Ver detalle SITRA').attr('aria-label',resumen).attr('data-detalle-sitra',detalle);
+        if(typeof iconoElement.popover==='function'){
+            iconoElement.removeAttr('data-popover-visible').popover('hide');
+        }else{
+            iconoElement.removeAttr('data-popover-visible');
+        }
+    }
 
-        iconoElement.removeClass('text-success text-warning text-danger').addClass('text-info');
-        iconoElement.find('i').attr('class','fas fa-spinner fa-spin');
-        iconoElement.attr('title','Validando SITRA...');
+    function togglePopoverSitraApostilla(trigger,detalle){
+        var icono=$(trigger);if(!icono.length)return false;
+        if(typeof icono.popover!=='function'){return false;}
+        var visible=icono.attr('data-popover-visible')==='1';
+        if(visible){icono.popover('hide').removeAttr('data-popover-visible');return false;}
+        $('[data-campo="icono-sitra-estado"]').not(icono).popover('hide').removeAttr('data-popover-visible');
+        icono.popover('dispose').popover({container:'body',trigger:'manual',placement:'top',content:(detalle||'Sin detalle disponible').toString(),html:false}).popover('show');
+        icono.attr('data-popover-visible','1');
+        return false;
+    }
+
+    function validarSitraApostilla(){
+        const form=$('#form_agregar_tramite');
+        const numeroInput=form.find('input[data-campo="numero-sitra"]');
+        const gestionInput=form.find('input[data-campo="gestion-sitra"]');
+        if(!numeroInput.length){return;}
+
+        const numero=(numeroInput.val()||'').toString().trim();
+        const gestion=(gestionInput.val()||'').toString().trim();
+        const codLis=(form.find('input[data-campo="tipo-apostilla-hidden"]').val()||'').toString().trim();
+
+        if(numero===''||numero==='-'){actualizarEstadoSitraApostilla('text-muted','fa-minus-circle','SITRA pendiente.');return;}
+        if(gestion===''){actualizarEstadoSitraApostilla('text-muted','fa-minus-circle','Complete gestion para validar SITRA.');return;}
+        if(codLis===''){actualizarEstadoSitraApostilla('text-muted','fa-minus-circle','Seleccione tipo para validar SITRA.');return;}
+
+        const requestSeq=++apostillaSitraSeq;
+        actualizarEstadoSitraApostilla('text-info','fa-spinner fa-spin','Validando SITRA/SID...');
+
+        $.ajax({
+            url:'{{url("validar sitra apostilla/".$cod_apos)}}',
+            type:'POST',
+            dataType:'json',
+            data:{
+                _token:form.find('input[name="_token"]').val(),
+                numero:numero,
+                gestion:gestion,
+                cl:parseInt(codLis,10)||0
+            },
+            success:function(resp){
+                if(requestSeq!==apostillaSitraSeq){return;}
+                if(!resp||resp.aplica===false){
+                    actualizarEstadoSitraApostilla('text-muted','fa-minus-circle',(resp&&resp.message)?resp.message:'No aplica para este tipo.');
+                    return;
+                }
+
+                let estado=(resp&&resp.estado!==undefined&&resp.estado!==null)?String(resp.estado).trim():'';
+                const fuente=(resp&&resp.fuente)?String(resp.fuente).toLowerCase():'sitra';
+                let mensaje=(resp&&resp.message)?String(resp.message):'';
+                let fuenteDetalle='';
+                if(fuente==='sid')fuenteDetalle='Fuente: SID.';
+                else if(fuente==='sitra_sid')fuenteDetalle='Fuente: SITRA y SID.';
+                else if(fuente==='ninguno')fuenteDetalle='Fuente: Ninguna.';
+
+                let extraDetalle='';
+                if(estado==='0'){
+                    const extra=[];
+                    if(resp && resp.numero) extra.push('Nro: '+resp.numero);
+                    if(resp && resp.gestion) extra.push('Gestión: '+resp.gestion);
+                    if(resp && resp.tipo) extra.push('Tipo: '+resp.tipo);
+                    if(resp && resp.titulo) extra.push('Título: '+resp.titulo);
+                    if(extra.length){extraDetalle=extra.join(' | ');} 
+                }
+                if(fuenteDetalle!==''){
+                    extraDetalle = extraDetalle!=='' ? (extraDetalle+' '+fuenteDetalle) : fuenteDetalle;
+                }
+
+                if((estado===''||estado==='null'||estado==='undefined')&&fuente==='sitra_sid')estado='2';
+                if((estado===''||estado==='null'||estado==='undefined')&&mensaje.toLowerCase().indexOf('no existe')!==-1)estado='2';
+                if((estado===''||estado==='null'||estado==='undefined')&&mensaje.toLowerCase().indexOf('no coincide')!==-1)estado='1';
+
+                if(mensaje===''){
+                    if(estado==='0')mensaje='Coincide en SITRA/SID.';
+                    else if(estado==='1')mensaje='Existe, pero no coincide.';
+                    else if(estado==='2')mensaje='No existe en SITRA/SID.';
+                    else mensaje='SITRA pendiente.';
+                }
+                if(estado==='0')actualizarEstadoSitraApostilla('text-success','fa-check-circle',mensaje,extraDetalle);
+                else if(estado==='1')actualizarEstadoSitraApostilla('text-danger','fa-times-circle',mensaje,extraDetalle);
+                else if(estado==='2')actualizarEstadoSitraApostilla('text-danger','fa-times-circle',mensaje,extraDetalle);
+                else actualizarEstadoSitraApostilla('text-muted','fa-minus-circle',mensaje,extraDetalle);
+            },
+            error:function(xhr){
+                if(requestSeq!==apostillaSitraSeq){return;}
+                const msg=(xhr.responseJSON&&xhr.responseJSON.message)?xhr.responseJSON.message:'SITRA/SID no disponible.';
+                actualizarEstadoSitraApostilla('text-danger','fa-times-circle',msg);
+            }
+        });
+    }
+
+    function programarValidacionSitraApostilla(){
+        if(timerValidacionSitra!==null){clearTimeout(timerValidacionSitra);}
+        timerValidacionSitra=setTimeout(function(){validarSitraApostilla();},350);
     }
 
     $(document)
-        .off('input.apostillaSitra','input[data-campo="numero-sitra"]')
-        .on('input.apostillaSitra','input[data-campo="numero-sitra"]',function(){
-            validarSitraApostilla();
+        .off('input.apostillaSitra','input[data-campo="numero-sitra"],input[data-campo="gestion-sitra"]')
+        .on('input.apostillaSitra','input[data-campo="numero-sitra"],input[data-campo="gestion-sitra"]',function(){
+            programarValidacionSitraApostilla();
+        });
+
+    $(document)
+        .off('click.apostillaSitraDetalle','[data-campo="icono-sitra-estado"]')
+        .on('click.apostillaSitraDetalle','[data-campo="icono-sitra-estado"]',function(e){
+            e.preventDefault();
+            var detalle=($(this).attr('data-detalle-sitra')||'').toString();
+            return togglePopoverSitraApostilla(this,detalle);
+        });
+
+    $(document)
+        .off('click.apostillaSitraCerrar')
+        .on('click.apostillaSitraCerrar',function(e){
+            if($(e.target).closest('[data-campo="icono-sitra-estado"],.popover').length===0){
+                if(typeof $.fn.popover==='function'){
+                    $('[data-campo="icono-sitra-estado"]').popover('hide').removeAttr('data-popover-visible');
+                }else{
+                    $('[data-campo="icono-sitra-estado"]').removeAttr('data-popover-visible');
+                }
+            }
         });
 
     $(document)

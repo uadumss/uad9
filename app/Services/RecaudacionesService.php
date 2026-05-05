@@ -101,11 +101,17 @@ class RecaudacionesService
         ];
     }
 
-    private function mapearMensajeError(string $mensajeApi, int $status = 0): array
+    /**
+     * Método centralizado para mapear errores de recaudaciones.
+     * Detecta y clasifica mensajes de error para normalizar respuestas.
+     * Uso: Todos los controllers deben usar este método en lugar de implementar su propia lógica.
+     */
+    public function mapearMensajeErrorComun(string $mensajeApi, int $status = 0): array
     {
         $mensajeApi = trim($mensajeApi);
         $msgNorm = mb_strtolower($mensajeApi);
 
+        // RATE LIMIT - Demasiadas solicitudes
         if ($status === 429 || strpos($msgNorm, 'too many') !== false || strpos($msgNorm, 'demasiadas solicitudes') !== false || strpos($msgNorm, 'rate limit') !== false) {
             return [
                 'code' => 'RATE_LIMIT',
@@ -113,45 +119,24 @@ class RecaudacionesService
             ];
         }
 
+        // SIN CONEXIÓN / TIMEOUT - Detectar PRIMERO antes de otros errores
         if (
-            strpos($msgNorm, 'configur') !== false ||
-            strpos($msgNorm, 'services/.env') !== false ||
-            strpos($msgNorm, 'no esta configurado') !== false ||
-            strpos($msgNorm, 'no está configurado') !== false
-        ) {
-            return [
-                'code' => 'SISTEMA_NO_CONFIGURADO',
-                'message' => 'El sistema de recaudaciones no esta configurado. Contacte al area de sistemas.',
-            ];
-        }
-
-        if (
-            $status === 404 ||
-            strpos($msgNorm, 'not found') !== false ||
-            strpos($msgNorm, 'no se encuentra') !== false ||
-            strpos($msgNorm, 'no encontrado') !== false ||
-            strpos($msgNorm, 'control') !== false ||
-            strpos($msgNorm, 'recibo') !== false
-        ) {
-            return [
-                'code' => 'CONTROL_NO_ENCONTRADO',
-                'message' => 'No se encontró información del número de control en recaudaciones.',
-            ];
-        }
-
-        if ($status > 0 && $status < 500) {
-            return [
-                'code' => 'API_RECAUDACIONES_ERROR',
-                'message' => 'No se pudo validar el control en recaudaciones. Verifique los datos e intente nuevamente.',
-            ];
-        }
-
-        if (
-            strpos($msgNorm, 'comunicacion') !== false ||
-            strpos($msgNorm, 'comunicación') !== false ||
-            strpos($msgNorm, 'timeout') !== false ||
+            $status === 0 ||
+            $status === 502 ||
+            $status === 503 ||
+            $status === 504 ||
+            strpos($msgNorm, 'error de comunicación') !== false ||
+            strpos($msgNorm, 'error inesperado en recaudaciones') !== false ||
+            strpos($msgNorm, 'error en la comunicacion con la api') !== false ||
             strpos($msgNorm, 'sin conexion') !== false ||
-            strpos($msgNorm, 'sin conexión') !== false
+            strpos($msgNorm, 'sin conexión') !== false ||
+            strpos($msgNorm, 'timeout') !== false ||
+            strpos($msgNorm, 'unable to resolve') !== false ||
+            strpos($msgNorm, 'connection refused') !== false ||
+            strpos($msgNorm, 'connection reset') !== false ||
+            strpos($msgNorm, 'connection timed out') !== false ||
+            strpos($msgNorm, 'no se pudo conectar') !== false ||
+            strpos($msgNorm, 'no se pudo establecer') !== false
         ) {
             return [
                 'code' => 'API_NO_DISPONIBLE',
@@ -159,9 +144,55 @@ class RecaudacionesService
             ];
         }
 
+        // CONFIGURACIÓN NO DISPONIBLE
+        if (
+            strpos($msgNorm, 'configuracion') !== false ||
+            strpos($msgNorm, 'configuración') !== false ||
+            strpos($msgNorm, 'services/.env') !== false ||
+            strpos($msgNorm, 'no esta configurado') !== false ||
+            strpos($msgNorm, 'no está configurado') !== false ||
+            strpos($msgNorm, 'sistema no configurado') !== false
+        ) {
+            return [
+                'code' => 'SISTEMA_NO_CONFIGURADO',
+                'message' => 'El sistema de recaudaciones no esta configurado. Contacte al area de sistemas.',
+            ];
+        }
+
+        // CONTROL NO ENCONTRADO
+        if (
+            $status === 404 ||
+            strpos($msgNorm, 'not found') !== false ||
+            strpos($msgNorm, 'no se encuentra') !== false ||
+            strpos($msgNorm, 'no encontrado') !== false ||
+            strpos($msgNorm, 'control') !== false ||
+            strpos($msgNorm, 'recibo') !== false ||
+            strpos($msgNorm, 'valido') !== false ||
+            strpos($msgNorm, 'válido') !== false
+        ) {
+            return [
+                'code' => 'CONTROL_NO_ENCONTRADO',
+                'message' => 'No se encontró información del número de control en recaudaciones.',
+            ];
+        }
+
+        // ERROR DE SOLICITUD HTTP (400-499)
+        if ($status > 0 && $status < 500 && $status !== 404) {
+            return [
+                'code' => 'API_RECAUDACIONES_ERROR',
+                'message' => 'No se pudo validar el control en recaudaciones. Verifique los datos e intente nuevamente.',
+            ];
+        }
+
+        // ERROR GENÉRICO (por defecto)
         return [
             'code' => 'API_RECAUDACIONES_ERROR',
             'message' => 'No se pudo validar el control en recaudaciones. Intente nuevamente.',
         ];
+    }
+
+    private function mapearMensajeError(string $mensajeApi, int $status = 0): array
+    {
+        return $this->mapearMensajeErrorComun($mensajeApi, $status);
     }
 }

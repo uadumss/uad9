@@ -1,4 +1,4 @@
-@extends('marco.pagina')
+﻿@extends('marco.pagina')
 
 @section('contenido')
 <style>
@@ -227,49 +227,60 @@
 <!-- MODAL NUEVA UNIVERSIDAD -->
 <div class="modal fade" id="modalNuevaUniversidad" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-primary">
-                <h5 class="modal-title text-white" id="modalLabel"><i class="fas fa-plus"></i> Nueva Universidad</h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+        <div class="modal-content border-0 shadow-lg overflow-hidden">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #184e77 0%, #1e6091 45%, #2a6f97 100%);">
+                <div>
+                    <h5 class="modal-title font-weight-bolder mb-0" id="modalLabel"><i class="fas fa-plus mr-1"></i> Nueva Universidad</h5>
+                    <small class="text-white-50">Registro de institución académica</small>
+                </div>
+                <button type="button" class="close text-white opacity-100" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <form action="{{url('crear universidad')}}" method="POST">
                 @csrf
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="nombre">Nombre:</label>
-                        <input type="text" class="form-control @error('nombre') is-invalid @enderror" id="nombre" name="nombre" value="{{ old('nombre') }}" required style="text-transform: uppercase;">
-                        <small id="nombreError" class="text-danger d-none"></small>
-                        @error('nombre')
-                            <span class="invalid-feedback d-block">{{ $message }}</span>
-                        @enderror
-                    </div>
-                    <div class="form-group">
-                        <label for="sigla">Sigla:</label>
-                        <input type="text" class="form-control @error('sigla') is-invalid @enderror" id="sigla" name="sigla" value="{{ old('sigla') }}" required style="text-transform: uppercase;">
-                        <small id="siglaError" class="text-danger d-none"></small>
-                        @error('sigla')
-                            <span class="invalid-feedback d-block">{{ $message }}</span>
-                        @enderror
-                    </div>
-                    <div class="form-group">
-                        <label for="tipo">Tipo:</label>
-                        <select class="custom-select @error('tipo') is-invalid @enderror" id="tipo" name="tipo" required>
-                            <option value="">Seleccionar tipo...</option>
-                            <option value="Pública">Pública</option>
-                            <option value="Privada">Privada</option>
-                            <option value="Extranjera">Extranjera</option>
-                            <option value="Otro">Otro (CEUB, Institutos, Ministerio de Educación, etc)</option>
-                        </select>
-                        @error('tipo')
-                            <span class="invalid-feedback d-block">{{ $message }}</span>
-                        @enderror
+                <div class="modal-body p-0" style="background: linear-gradient(180deg, #f8fbff 0%, #eef5fb 100%);">
+                    <div class="p-3 p-md-4">
+                        <div class="border rounded-lg shadow-sm bg-white p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                                <div class="text-primary font-weight-bold text-uppercase" style="letter-spacing: .04em; font-size: .78rem;">Datos de la universidad</div>
+                                <span class="badge px-3 py-2" style="background: #dbeafe; color: #1d4ed8;">Nuevo registro</span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="nombre" class="text-secondary font-italic">Nombre:</label>
+                                <input type="text" class="form-control @error('nombre') is-invalid @enderror shadow-sm" id="nombre" name="nombre" value="{{ old('nombre') }}" required style="text-transform: uppercase; border: 1px solid #c7d7ea; border-radius: .8rem; background: #fff;">
+                                <small id="nombreError" class="text-danger d-none"></small>
+                                @error('nombre')
+                                    <span class="invalid-feedback d-block">{{ $message }}</span>
+                                @enderror
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="sigla" class="text-secondary font-italic">Sigla:</label>
+                                <input type="text" class="form-control @error('sigla') is-invalid @enderror shadow-sm" id="sigla" name="sigla" value="{{ old('sigla') }}" required style="text-transform: uppercase; border: 1px solid #c7d7ea; border-radius: .8rem; background: #fff;">
+                                <small id="siglaError" class="text-danger d-none"></small>
+                                @error('sigla')
+                                    <span class="invalid-feedback d-block">{{ $message }}</span>
+                                @enderror
+                            </div>
+                            <div class="form-group mb-0">
+                                <label for="tipo" class="text-secondary font-italic">Tipo:</label>
+                                <select class="custom-select @error('tipo') is-invalid @enderror shadow-sm" id="tipo" name="tipo" required style="border: 1px solid #c7d7ea; border-radius: .8rem; background: #fff;">
+                                    <option value="">Seleccionar tipo...</option>
+                                    <option value="Pública">Pública</option>
+                                    <option value="Privada">Privada</option>
+                                    <option value="Extranjera">Extranjera</option>
+                                    <option value="Otro">Otro (CEUB, Institutos, Ministerio de Educación, etc)</option>
+                                </select>
+                                @error('tipo')
+                                    <span class="invalid-feedback d-block">{{ $message }}</span>
+                                @enderror
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" id="btnGuardarUniversidad" disabled>Guardar</button>
+                <div class="modal-footer border-0" style="background: #f8fbff;">
+                    <button type="button" class="btn btn-light border px-4" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4 shadow-sm" id="btnGuardarUniversidad" disabled style="background: linear-gradient(135deg, #1d4e89 0%, #2c7da0 100%); border: none;">Guardar</button>
                 </div>
             </form>
         </div>
@@ -279,49 +290,60 @@
 <!-- MODAL EDITAR UNIVERSIDAD -->
 <div class="modal fade" id="modalEditarUniversidad" tabindex="-1" role="dialog" aria-labelledby="modalLabel2" aria-hidden="true">
     <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-info">
-                <h5 class="modal-title text-white" id="modalLabel2"><i class="fas fa-edit"></i> Editar Universidad</h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+        <div class="modal-content border-0 shadow-lg overflow-hidden">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #0f4c5c 0%, #1d6f8a 48%, #3aa6b9 100%);">
+                <div>
+                    <h5 class="modal-title font-weight-bolder mb-0" id="modalLabel2"><i class="fas fa-edit mr-1"></i> Editar Universidad</h5>
+                    <small class="text-white-50">Actualización de datos institucionales</small>
+                </div>
+                <button type="button" class="close text-white opacity-100" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <form id="formEditar" method="POST">
                 @csrf
                 @method('PUT')
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="nombreEdit">Nombre:</label>
-                        <input type="text" class="form-control @error('nombre') is-invalid @enderror" id="nombreEdit" name="nombre" value="{{ old('nombre') }}" required style="text-transform: uppercase;">
-                        <small id="nombreEditError" class="text-danger d-none"></small>
-                        @error('nombre')
-                            <span class="invalid-feedback d-block">{{ $message }}</span>
-                        @enderror
-                    </div>
-                    <div class="form-group">
-                        <label for="siglaEdit">Sigla:</label>
-                        <input type="text" class="form-control @error('sigla') is-invalid @enderror" id="siglaEdit" name="sigla" value="{{ old('sigla') }}" required style="text-transform: uppercase;">
-                        <small id="siglaEditError" class="text-danger d-none"></small>
-                        @error('sigla')
-                            <span class="invalid-feedback d-block">{{ $message }}</span>
-                        @enderror
-                    </div>
-                    <div class="form-group">
-                        <label for="tipoEdit">Tipo:</label>
-                        <select class="custom-select @error('tipo') is-invalid @enderror" id="tipoEdit" name="tipo" required>
-                            <option value="Pública">Pública</option>
-                            <option value="Privada">Privada</option>
-                            <option value="Extranjera">Extranjera</option>
-                            <option value="Otro">Otro (CEUB, Institutos, Ministerio de Educación, etc)</option>
-                        </select>
-                        @error('tipo')
-                            <span class="invalid-feedback d-block">{{ $message }}</span>
-                        @enderror
+                <div class="modal-body p-0" style="background: linear-gradient(180deg, #f7fbfc 0%, #eef7fa 100%);">
+                    <div class="p-3 p-md-4">
+                        <div class="border rounded-lg shadow-sm bg-white p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                                <div class="text-info font-weight-bold text-uppercase" style="letter-spacing: .04em; font-size: .78rem;">Datos de la universidad</div>
+                                <span class="badge px-3 py-2" style="background: #dbeafe; color: #1d4ed8;">Edición</span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="nombreEdit" class="text-secondary font-italic">Nombre:</label>
+                                <input type="text" class="form-control @error('nombre') is-invalid @enderror shadow-sm" id="nombreEdit" name="nombre" value="{{ old('nombre') }}" required style="text-transform: uppercase; border: 1px solid #c7d7ea; border-radius: .8rem; background: #fff;">
+                                <small id="nombreEditError" class="text-danger d-none"></small>
+                                @error('nombre')
+                                    <span class="invalid-feedback d-block">{{ $message }}</span>
+                                @enderror
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="siglaEdit" class="text-secondary font-italic">Sigla:</label>
+                                <input type="text" class="form-control @error('sigla') is-invalid @enderror shadow-sm" id="siglaEdit" name="sigla" value="{{ old('sigla') }}" required style="text-transform: uppercase; border: 1px solid #c7d7ea; border-radius: .8rem; background: #fff;">
+                                <small id="siglaEditError" class="text-danger d-none"></small>
+                                @error('sigla')
+                                    <span class="invalid-feedback d-block">{{ $message }}</span>
+                                @enderror
+                            </div>
+                            <div class="form-group mb-0">
+                                <label for="tipoEdit" class="text-secondary font-italic">Tipo:</label>
+                                <select class="custom-select @error('tipo') is-invalid @enderror shadow-sm" id="tipoEdit" name="tipo" required style="border: 1px solid #c7d7ea; border-radius: .8rem; background: #fff;">
+                                    <option value="Pública">Pública</option>
+                                    <option value="Privada">Privada</option>
+                                    <option value="Extranjera">Extranjera</option>
+                                    <option value="Otro">Otro (CEUB, Institutos, Ministerio de Educación, etc)</option>
+                                </select>
+                                @error('tipo')
+                                    <span class="invalid-feedback d-block">{{ $message }}</span>
+                                @enderror
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-info" id="btnActualizarUniversidad" disabled>Actualizar</button>
+                <div class="modal-footer border-0" style="background: #f7fbfc;">
+                    <button type="button" class="btn btn-light border px-4" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-info px-4 shadow-sm" id="btnActualizarUniversidad" disabled style="background: linear-gradient(135deg, #0f4c5c 0%, #1d6f8a 100%); border: none;">Actualizar</button>
                 </div>
             </form>
         </div>
@@ -331,19 +353,30 @@
 <!-- MODAL CONFIRMAR ELIMINACIÓN -->
 <div class="modal fade" id="modalConfirmarEliminar" tabindex="-1" role="dialog" aria-labelledby="modalLabelEliminar" aria-hidden="true">
     <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-danger">
-                <h5 class="modal-title text-white" id="modalLabelEliminar"><i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación</h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+        <div class="modal-content border-0 shadow-lg overflow-hidden">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #8a1538 0%, #c1121f 48%, #e5383b 100%);">
+                <div>
+                    <h5 class="modal-title font-weight-bolder mb-0" id="modalLabelEliminar"><i class="fas fa-exclamation-triangle mr-1"></i> Confirmar Eliminación</h5>
+                    <small class="text-white-50">Acción irreversible sobre el registro</small>
+                </div>
+                <button type="button" class="close text-white opacity-100" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <div class="modal-body">
-                <p class="mb-0">¿Estás seguro de que deseas eliminar esta universidad? <strong>Esta acción no se puede deshacer.</strong></p>
+            <div class="modal-body p-0" style="background: linear-gradient(180deg, #fff7f7 0%, #fff1f2 100%);">
+                <div class="p-3 p-md-4">
+                    <div class="alert alert-danger border-0 shadow-sm mb-0 d-flex align-items-start" style="border-left: 4px solid #dc3545;">
+                        <div class="font-weight-bolder mr-3" style="font-size: 1.7rem; line-height: 1;">!</div>
+                        <div>
+                            <div class="font-weight-bolder">¿Estás seguro de que deseas eliminar esta universidad?</div>
+                            <div>Esta acción no se puede deshacer.</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger" onclick="confirmarEliminacionModal()">Eliminar</button>
+            <div class="modal-footer border-0" style="background: #fff7f7;">
+                <button type="button" class="btn btn-light border px-4" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger px-4 shadow-sm" onclick="confirmarEliminacionModal()" style="background: linear-gradient(135deg, #c1121f 0%, #e5383b 100%); border: none;">Eliminar</button>
             </div>
         </div>
     </div>
@@ -641,4 +674,3 @@ function confirmarEliminacionModal() {
 
 </script>
 @endsection
-

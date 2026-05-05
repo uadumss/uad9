@@ -1833,10 +1833,11 @@ class TramiteNoAtentadoController extends Controller
                 'documento'=>$documento,
                 'error'=>$e->getMessage(),
             ]);
+            $errorMap=app(\App\Services\RecaudacionesService::class)->mapearMensajeErrorComun($e->getMessage(),0);
             return [
                 'ok'=>false,
-                'code'=>'API_NO_DISPONIBLE',
-                'message'=>'No se pudo conectar con recaudaciones. Intente nuevamente.',
+                'code'=>$errorMap['code'],
+                'message'=>$errorMap['message'],
             ];
         }
 
@@ -1851,7 +1852,7 @@ class TramiteNoAtentadoController extends Controller
         if(!($response['ok'] ?? false)){
             $mensaje=trim((string)($response['message'] ?? ''));
             $status=(int)($response['status'] ?? 0);
-            $errorMap=$this->mapearMensajeErrorRecaudacionNoAtentado($mensaje,$status);
+            $errorMap=app(\App\Services\RecaudacionesService::class)->mapearMensajeErrorComun($mensaje,$status);
 
             if($errorMap['code']==='CONTROL_NO_ENCONTRADO'){
                 $errorMap['code']='CONTROL_DOCUMENTO_NO_ENCONTRADO';
@@ -1883,10 +1884,11 @@ class TramiteNoAtentadoController extends Controller
                 'documento'=>$documento,
                 'error'=>$e->getMessage(),
             ]);
+            $errorMap=app(\App\Services\RecaudacionesService::class)->mapearMensajeErrorComun($e->getMessage(),0);
             return [
                 'ok'=>false,
-                'code'=>'API_NO_DISPONIBLE',
-                'message'=>'No se pudo conectar con recaudaciones. Intente nuevamente.',
+                'code'=>$errorMap['code'],
+                'message'=>$errorMap['message'],
             ];
         }
 
@@ -1901,7 +1903,7 @@ class TramiteNoAtentadoController extends Controller
         if(!($response['ok'] ?? false)){
             $mensaje=trim((string)($response['message'] ?? ''));
             $status=(int)($response['status'] ?? 0);
-            $errorMap=$this->mapearMensajeErrorRecaudacionNoAtentado($mensaje,$status);
+            $errorMap=app(\App\Services\RecaudacionesService::class)->mapearMensajeErrorComun($mensaje,$status);
 
             return [
                 'ok'=>false,
@@ -1951,10 +1953,12 @@ class TramiteNoAtentadoController extends Controller
                 'control'=>$control,
                 'error'=>$e->getMessage(),
             ]);
+            // Usar mapeo centralizado para convertir excepción en error normalizado
+            $errorMap=app(\App\Services\RecaudacionesService::class)->mapearMensajeErrorComun($e->getMessage(),0);
             return [
                 'ok'=>false,
-                'code'=>'API_NO_DISPONIBLE',
-                'message'=>'No se pudo conectar con recaudaciones. Intente nuevamente.',
+                'code'=>$errorMap['code'],
+                'message'=>$errorMap['message'],
             ];
         }
 
@@ -1969,7 +1973,8 @@ class TramiteNoAtentadoController extends Controller
         if(!(bool)($response['ok'] ?? false)){
             $mensaje=trim((string)($response['message'] ?? ''));
             $status=(int)($response['status'] ?? 0);
-            $errorMap=$this->mapearMensajeErrorRecaudacionNoAtentado($mensaje,$status);
+            // Usar mapeo centralizado en lugar de reimplementar
+            $errorMap=app(\App\Services\RecaudacionesService::class)->mapearMensajeErrorComun($mensaje,$status);
 
             return [
                 'ok'=>false,
@@ -2044,11 +2049,6 @@ class TramiteNoAtentadoController extends Controller
             ];
         }
 
-        return [
-            'code'=>'API_RECAUDACIONES_ERROR',
-            'message'=>'No se pudo validar el control en recaudaciones. Intente nuevamente.',
-        ];
-    }
 
     private function extraerResultadoRecaudacionNoAtentado(array $json): array
     {

@@ -481,8 +481,8 @@
                                 <div class="fg fg-2">
                                     <div class="e-field">
                                         <label>CI</label>
-                                        <input class="e-input" type="text" name="ci" id="ci_apostilla"
-                                               onchange="cargarDatosPersonales(this.value)" autocomplete="off">
+                                                 <input class="e-input" type="text" name="ci" id="ci_apostilla"
+                                                     onchange="cargarDatosPersonales(this.value); verificarBoleta($('#control_boleta_apostilla').val() || '');" autocomplete="off">
                                     </div>
                                     <div class="e-field">
                                         <label>Celular</label>
@@ -511,9 +511,17 @@
                                 <div class="fg fg-2">
                                     <div class="e-field fg-span2">
                                         <label>CI apoderado</label>
-                                        <input class="e-input" type="text" name="ci_apoderado"
-                                               onchange="cargarDatosApoderado(this.value)" autocomplete="off">
+                                             <input class="e-input" type="text" name="ci_apoderado" id="ci_apoderado_apostilla"
+                                                 oninput="cargarDatosApoderado(this.value); verificarBoleta();" autocomplete="off">
                                     </div>
+                                    <div class="e-field fg-span2">
+                                        <label>N° control boleta</label>
+                                            <input class="e-input" type="text" name="control_boleta" id="control_boleta_apostilla"
+                                                     oninput="verificarBoleta()" autocomplete="off" placeholder="Ingrese número de control">
+                                        <div style="margin-top:6px;"><span id="estado_pago_apoderado" class="badge badge-secondary">Sin validar</span></div>
+                                        <input type="hidden" name="control_boleta_valido" id="control_boleta_valido" value="0">
+                                    </div>
+
                                     <div class="e-field">
                                         <label>Nombres</label>
                                         <input class="e-input" type="text" name="nombre_apoderado"
@@ -623,8 +631,15 @@
                                         <div class="fg fg-2">
                                             <div class="e-field fg-span2">
                                                 <label>CI apoderado</label>
-                                                <input class="e-input" type="text" name="ci_apoderado"
-                                                       onchange="cargarDatosApoderado(this.value)" autocomplete="off">
+                                                <input class="e-input" type="text" name="ci_apoderado" id="ci_apoderado_apostilla"
+                                                       oninput="cargarDatosApoderado(this.value); verificarBoleta();" autocomplete="off">
+                                            </div>
+                                            <div class="e-field fg-span2">
+                                                <label>N° control boleta</label>
+                                                <input class="e-input" type="text" name="control_boleta" id="control_boleta_apostilla"
+                                                       oninput="verificarBoleta()" autocomplete="off" placeholder="Ingrese número de control">
+                                                <div style="margin-top:6px;"><span id="estado_pago_apoderado" class="badge badge-secondary">Sin validar</span></div>
+                                                <input type="hidden" name="control_boleta_valido" id="control_boleta_valido" value="0">
                                             </div>
                                             <div class="e-field">
                                                 <label>Nombres</label>
@@ -920,6 +935,52 @@ function cargarDatosApoderado(ci){
     },error:function(){$('#'+panel).html("<span class='text-danger'>Ocurrio un error, probablemente no tenga permisos para esta acción</span>");}});
 }
 
+function verificarBoleta(){
+    var control = ($('#control_boleta_apostilla').val()||'').toString().trim();
+    var ci = ($('#ci_apoderado_apostilla').val()||'').toString().trim();
+    if(control===''){
+        return;
+    }
+    if(ci===''){
+        $('#estado_pago_apoderado').removeClass().addClass('badge badge-warning').text('Complete CI');
+        $('#control_boleta_valido').val('0');
+        return;
+    }
+    var link = "{{ url('verificar_boleta') }}" + "/" + encodeURIComponent(control) + '?documento=' + encodeURIComponent(ci);
+    // UI: marcar como validando
+    $('#estado_pago_apoderado').removeClass().addClass('badge badge-info').text('Validando...');
+    $('#control_boleta_valido').val('0');
+    $.ajax({
+        url: link,
+        type: 'GET',
+        success: function(resp){
+            if(resp=="No"){
+                $('#apellido_apoderado').val('');
+                $('#nombre_apoderado').val('');
+                $('#estado_pago_apoderado').removeClass().addClass('badge badge-danger').text('No encontrado');
+                $('#control_boleta_valido').val('0');
+            }else{
+                try{
+                    var res = JSON.parse(resp);
+                    if(res['apellido_apoderado']!==undefined) $('#apellido_apoderado').val(res['apellido_apoderado']);
+                    if(res['nombre_apoderado']!==undefined) $('#nombre_apoderado').val(res['nombre_apoderado']);
+                    $('#estado_pago_apoderado').removeClass().addClass('badge badge-success').text('Pago validado');
+                    $('#control_boleta_valido').val('1');
+                }catch(e){
+                    $('#apellido_apoderado').val('');$('#nombre_apoderado').val('');
+                    $('#estado_pago_apoderado').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
+                    $('#control_boleta_valido').val('0');
+                }
+            }
+        },
+        error: function(){
+            $('#apellido_apoderado').val('');$('#nombre_apoderado').val('');
+            $('#estado_pago_apoderado').removeClass().addClass('badge badge-warning').text('Error API');
+            $('#control_boleta_valido').val('0');
+        }
+    });
+}
+
 function setBotonCargandoApostillaUi(btn,texto){
     if(!btn){return;}
     if(btn.dataset.loading==='1'){return;}
@@ -980,6 +1041,7 @@ let apostillaGuardarEnCurso=false;
 let apostillaRapidaValidacionOk=false,apostillaRapidaControlValidado='',apostillaRapidaCodLisDetectado='';
 let apostillaRapidaTimer=null,apostillaRapidaValidacionSeq=0,apostillaRapidaRetryTimer=null;
 let apostillaRapidaDetallePago='Pendiente de validacion.',apostillaRapidaSitraSeq=0;
+let apostillaConnectionRetryCount=0,apostillaConnectionMaxRetries=3,apostillaConnectionRetryDelay=3000;
 
 function compactarMensajeUxPagoApostilla(mensaje,respaldo){
     const texto=(mensaje||'').toString().trim(),fallback=(respaldo||'').toString().trim();
@@ -1031,11 +1093,7 @@ function _aplicarPill(el,cfg,title){
     el.innerHTML='<i class="fas '+cfg.icon+'" style="font-size:10px;"></i> <span data-label-pago>'+cfg.label+'</span>';
 }
 function _aplicarPillSitra(el,cfg,resumen){
-    el.className='e-pill '+cfg.cls;
-    el.setAttribute('title',resumen||cfg.label);
-    el.setAttribute('aria-label',resumen||cfg.label);
-    el.setAttribute('data-detalle-sitra',resumen||cfg.label);
-    el.innerHTML='<i class="fas '+cfg.icon+'" style="font-size:10px;"></i> <span>SITRA</span>';
+    // Este método ya no se usará directamente, se maneja en actualizarEstadoSitraRapido para soporte de badge dinámico
 }
 
 function resumenCategoriaPagoUxApostilla(categoria,fallback){
@@ -1100,7 +1158,7 @@ function compactarMensajeSitraUxApostilla(mensaje,respaldo){
     if(texto.length>110)return fallback!==''?fallback:texto.substring(0,107)+'...';
     return texto;
 }
-function actualizarEstadoSitraRapido(formulario,clase,mensaje){
+function actualizarEstadoSitraRapido(formulario,clase,mensaje,detalleExtra){
     const el=formulario.find('[data-campo="estado-sitra-icon"]')[0];if(!el)return;
     const resumen=compactarMensajeSitraUxApostilla(mensaje,'SITRA pendiente.');
     const estadoInput=formulario.find('[data-campo="estado-sitra"]');
@@ -1109,7 +1167,22 @@ function actualizarEstadoSitraRapido(formulario,clase,mensaje){
     else if(clase==='text-danger'){cfg=_pillConfig('error');if(estadoInput.val()==='')estadoInput.val('1');}
     else if(clase==='text-info'){cfg=_pillConfig('loading');}
     else{cfg=_pillConfig('pending');if(['SITRA: no aplica para este tipo.','SITRA pendiente.','Complete gestión para validar SITRA.','Seleccione trámite para validar SITRA.'].indexOf(mensaje)!==-1)estadoInput.val('');}
-    _aplicarPillSitra(el,cfg,resumen);
+    
+    var fuente = String(formulario.find('[data-campo="fuente-sitra"]').val()||'sitra').toLowerCase();
+    var textoBadge = 'SITRA';
+    if(fuente === 'sid') textoBadge = 'SID';
+
+    var detalle=resumen;
+    if(detalleExtra){
+        detalle=(resumen+' '+detalleExtra).trim();
+    }
+
+    el.className='e-pill '+cfg.cls;
+    el.setAttribute('title','Ver detalle de validación ' + textoBadge);
+    el.setAttribute('aria-label',resumen);
+    el.setAttribute('data-detalle-sitra',detalle);
+    el.innerHTML='<i class="fas '+cfg.icon+'" style="font-size:10px;"></i> <span>' + textoBadge + '</span>';
+
     $(el).removeAttr('data-popover-visible').popover('hide');
 }
 function abrirModalSitraFormularioApostilla(trigger){
@@ -1118,8 +1191,8 @@ function abrirModalSitraFormularioApostilla(trigger){
     const fuente=(form.find('[data-campo="fuente-sitra"]').val()||'sitra').toString();
     let detalle=(($(trigger).attr('data-detalle-sitra')||'').toString()||'').trim();
     if(detalle===''){if(estado==='0')detalle='Coincide en SITRA/SID.';else if(estado==='1')detalle='Existe, pero no coincide.';else if(estado==='2')detalle='No existe en SITRA/SID.';else detalle='SITRA pendiente.';}
-    if(fuente==='sitra_sid'&&detalle.toLowerCase().indexOf('pendiente')!==-1){detalle='No existe en SITRA/SID.';}
-    if(fuente==='sid')detalle+=' Fuente: SID.';else if(fuente==='sitra_sid')detalle+=' Fuente: SITRA y SID.';
+    if((fuente==='ninguno' || fuente==='sitra_sid') && detalle.toLowerCase().indexOf('pendiente')!==-1){detalle='No existe en SITRA/SID.';}
+    if(fuente==='sid')detalle+=' Fuente: SID.';else if(fuente==='sitra_sid')detalle+=' Fuente: SITRA y SID.';else if(fuente==='ninguno')detalle+=' Fuente: Ninguna.';
     const icono=$(trigger);const visible=icono.attr('data-popover-visible')==='1';
     icono.popover('dispose');if(visible){icono.removeAttr('data-popover-visible');return false;}
     $('[data-campo="estado-pago-icon"],[data-campo="estado-sitra-icon"]').not(icono).popover('hide').removeAttr('data-popover-visible');
@@ -1153,7 +1226,16 @@ function validarSitraRapidaApostilla(){
             if((estado===''||estado==='null'||estado==='undefined')&&mensaje.indexOf('no existe')!==-1)estado='2';
             if((estado===''||estado==='null'||estado==='undefined')&&mensaje.indexOf('no coincide')!==-1)estado='1';
             form.find('[data-campo="estado-sitra"]').val(estado);form.find('[data-campo="fuente-sitra"]').val(fuente);
-            if(estado==='0')actualizarEstadoSitraRapido(form,'text-success','Coincide en SITRA/SID.');
+            let detalleExtra='';
+            if(estado==='0'){
+                const extra=[];
+                if(resp && resp.numero) extra.push('Nro: '+resp.numero);
+                if(resp && resp.gestion) extra.push('Gestión: '+resp.gestion);
+                if(resp && resp.tipo) extra.push('Tipo: '+resp.tipo);
+                if(extra.length){detalleExtra=extra.join(' | ');} 
+            }
+
+            if(estado==='0')actualizarEstadoSitraRapido(form,'text-success','Coincide en SITRA/SID.',detalleExtra);
             else if(estado==='1')actualizarEstadoSitraRapido(form,'text-danger','Existe, pero no coincide.');
             else if(estado==='2')actualizarEstadoSitraRapido(form,'text-danger','No existe en SITRA/SID.');
             else actualizarEstadoSitraRapido(form,'text-muted','SITRA pendiente.');
@@ -1161,7 +1243,7 @@ function validarSitraRapidaApostilla(){
         error:function(xhr){
             if(requestSeq!==apostillaRapidaSitraSeq)return;
             const msg=(xhr.responseJSON&&xhr.responseJSON.message)?xhr.responseJSON.message:'SITRA/SID no disponible.';
-            form.find('[data-campo="estado-sitra"]').val('2');form.find('[data-campo="fuente-sitra"]').val('sitra_sid');
+            form.find('[data-campo="estado-sitra"]').val('2');form.find('[data-campo="fuente-sitra"]').val('ninguno');
             actualizarEstadoSitraRapido(form,'text-danger',msg);
         }
     });
@@ -1185,6 +1267,7 @@ function limpiarEstadoValidacionRapida(){
 }
 function solicitarValidacionRapidaApostilla(callbackOk,callbackError){
     const form=formApostillaRapida();if(!form.length)return;
+    apostillaConnectionRetryCount=0;
     const nroControl=obtenerControlRapidoApostilla();const requestSeq=++apostillaRapidaValidacionSeq;
     if(nroControl===''){limpiarReintentoRapidoApostilla();limpiarEstadoValidacionRapida();estadoRegistroRapido('pending','Ingrese N° de control.');if(typeof callbackError==='function')callbackError('Ingrese N° de control.');return;}
     estadoRegistroRapido('loading','');
@@ -1193,6 +1276,7 @@ function solicitarValidacionRapidaApostilla(callbackOk,callbackError){
         data:{_token:form.find('input[name="_token"]').val(),nro_control:parseInt(nroControl,10)||0,ca:(form.find('input[name="ca"]').val()||'').toString().trim()},
         success:function(resp){
             if(requestSeq!==apostillaRapidaValidacionSeq)return;if(obtenerControlRapidoApostilla()!==nroControl)return;
+            apostillaConnectionRetryCount=0;
             if(!(resp&&resp.ok)){
                 const msg=(resp&&resp.message)?resp.message:'No se pudo validar el pago.';
                 limpiarEstadoValidacionRapida();
@@ -1217,7 +1301,15 @@ function solicitarValidacionRapidaApostilla(callbackOk,callbackError){
             const msg=(xhr.responseJSON&&xhr.responseJSON.message)?xhr.responseJSON.message:'Sin conexión. Intente nuevamente.';
             limpiarEstadoValidacionRapida();
             const esRate=(xhr.status===429)||detectarCategoriaPagoUxApostilla('error',msg)==='rate_limit';
+            const esConexion=(xhr.status===0||xhr.status===502||xhr.status===503||xhr.status===504)||msg.toLowerCase().indexOf('sin conexión')!==-1||msg.toLowerCase().indexOf('api_no_disponible')!==-1;
+            
             if(esRate){estadoRegistroRapido('error','Demasiadas solicitudes. Reintentando en 15 segundos.');limpiarReintentoRapidoApostilla();apostillaRapidaRetryTimer=setTimeout(function(){if(obtenerControlRapidoApostilla()!==nroControl)return;solicitarValidacionRapidaApostilla();},15000);}
+            else if(esConexion&&apostillaConnectionRetryCount<apostillaConnectionMaxRetries){
+                apostillaConnectionRetryCount++;
+                estadoRegistroRapido('error','Sin conexión. Reintentando ('+apostillaConnectionRetryCount+'/'+apostillaConnectionMaxRetries+')...');
+                limpiarReintentoRapidoApostilla();
+                apostillaRapidaRetryTimer=setTimeout(function(){if(obtenerControlRapidoApostilla()!==nroControl)return;solicitarValidacionRapidaApostilla();},apostillaConnectionRetryDelay);
+            }
             else{limpiarReintentoRapidoApostilla();estadoRegistroRapido('error',msg);}
             if(typeof callbackError==='function')callbackError(msg);
         }

@@ -531,6 +531,10 @@
                         </div>
                     </div>
                     <div class="e-panel-body">
+                        <form id="form_traleg" style="display:none;">
+                            <input type="hidden" name="ci" value="{{ $tramite->per_ci }}">
+                            <input type="hidden" name="ip" value="{{ $tramite->id_per }}">
+                        </form>
                         <div class="fg fg-2">
                             <div class="e-field">
                                 <label>CI</label>
@@ -657,8 +661,15 @@
                                 <div class="fg fg-2">
                                     <div class="e-field fg-span2">
                                         <label>CI apoderado</label>
-                                        <input class="e-input" name="ci" value="{{ $apo_ci }}"
-                                               onchange="cargarDatosApoderado(this.value)" autocomplete="off">
+                                        <input class="e-input" name="ci" id="ci_apoderado_edi" value="{{ $apo_ci }}"
+                                               oninput="cargarDatosApoderado(this.value); verificarBoletaApoderadoEdi();" autocomplete="off">
+                                    </div>
+                                    <div class="e-field fg-span2">
+                                        <label>N° control boleta</label>
+                                        <input class="e-input" name="control_boleta" id="control_boleta_apoderado_edi"
+                                               oninput="verificarBoletaApoderadoEdi()" autocomplete="off" placeholder="Ingrese número de control">
+                                        <div style="margin-top:6px;"><span id="estado_pago_apoderado_edi" class="badge badge-secondary">Sin validar</span></div>
+                                        <input type="hidden" name="control_boleta_valido" id="control_boleta_valido_edi" value="0">
                                     </div>
                                     <div class="e-field">
                                         <label>Apellidos</label>
@@ -965,8 +976,11 @@
                                     <div class="e-add-col" style="align-items:flex-start;padding-top:2px;">
                                         <label>CUADIS</label>
                                         <span class="e-indicator">
-                                            <span class="badge off" data-campo="cuadis-indicador">NO</span>
-                                            <input type="checkbox" name="cuadis" class="d-none" tabindex="-1" aria-hidden="true"/>
+                                            <span class="badge {{ !empty($cuadisPersona) ? 'on badge-success' : 'off badge-secondary' }}" data-campo="cuadis-indicador">
+                                                {{ !empty($cuadisPersona) ? 'SI' : 'NO' }}
+                                            </span>
+                                            <input type="checkbox" name="cuadis" class="d-none" tabindex="-1" aria-hidden="true"
+                                                   {{ !empty($cuadisPersona) ? 'checked data-cuadis-auto=1' : '' }}/>
                                         </span>
                                         <small class="d-none" data-campo="cuadis-estado"></small>
                                     </div>
@@ -1174,8 +1188,12 @@
                                             </span>
                                             @endif
                                             <span class="e-indicator">
-                                                CUADIS: <span class="badge off" data-campo="cuadis-indicador">NO</span>
-                                                <input type="checkbox" name="cuadis" class="d-none" tabindex="-1" aria-hidden="true"/>
+                                                CUADIS:
+                                                <span class="badge {{ !empty($cuadisPersona) ? 'on badge-success' : 'off badge-secondary' }}" data-campo="cuadis-indicador">
+                                                    {{ !empty($cuadisPersona) ? 'SI' : 'NO' }}
+                                                </span>
+                                                <input type="checkbox" name="cuadis" class="d-none" tabindex="-1" aria-hidden="true"
+                                                       {{ !empty($cuadisPersona) ? 'checked data-cuadis-auto=1' : '' }}/>
                                             </span>
                                             <small class="d-none" data-campo="cuadis-estado"></small>
                                         </div>
@@ -1302,8 +1320,6 @@
     }
 
     function obtenerCiPrincipalTramite(){
-        var ciServidor=($.trim({!! json_encode((string)($tramite->per_ci ?? '')) !!}) || '');
-        if(ciServidor!=='') return ciServidor;
         return ($.trim($('#form_traleg input[name="ci"]').first().val()) || '');
     }
 
@@ -1390,6 +1406,10 @@
             type:'GET', dataType:'json',
             success:function(resp){
                 var esCuadis=!!(resp&&resp.ok&&resp.cuadis===true);
+                if(!esCuadis){
+                    var ciFallback=obtenerCiPrincipalTramite();
+                    if(ciFallback!==''){consultarEstadoCuadisPorCi(ciFallback);return;}
+                }
                 aplicarEstadoCuadisEnFormularios(esCuadis, esCuadis?(resp.respaldo||'').toString().trim():'');
             },
             error:function(){
@@ -1408,6 +1428,45 @@
             success:function(resp){
                 if(resp=="No"){$('#apellido_apoderado').val('');$('#nombre_apoderado').val('');}
                 else{var res=JSON.parse(resp);$('#apellido_apoderado').val(res['apo_apellido']);$('#nombre_apoderado').val(res['apo_nombre']);}
+            }
+        });
+    }
+
+    function verificarBoletaApoderadoEdi(){
+        var control=($('#control_boleta_apoderado_edi').val()||'').toString().trim();
+        var ci=($('#ci_apoderado_edi').val()||'').toString().trim();
+        if(control==='')return;
+        if(ci===''){
+            $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-warning').text('Complete CI');
+            $('#control_boleta_valido_edi').val('0');
+            return;
+        }
+        var link="{{ url('verificar_boleta') }}"+"/"+encodeURIComponent(control)+'?documento='+encodeURIComponent(ci);
+        $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-info').text('Validando...');
+        $('#control_boleta_valido_edi').val('0');
+        $.ajax({
+            url:link,
+            type:'GET',
+            success:function(resp){
+                if(resp=="No"){
+                    $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-danger').text('No encontrado');
+                    $('#control_boleta_valido_edi').val('0');
+                    return;
+                }
+                try{
+                    var res=JSON.parse(resp);
+                    if(res['apellido_apoderado']!==undefined)$('#apellido_apoderado').val(res['apellido_apoderado']);
+                    if(res['nombre_apoderado']!==undefined)$('#nombre_apoderado').val(res['nombre_apoderado']);
+                    $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-success').text('Pago validado');
+                    $('#control_boleta_valido_edi').val('1');
+                }catch(e){
+                    $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
+                    $('#control_boleta_valido_edi').val('0');
+                }
+            },
+            error:function(){
+                $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-warning').text('Error API');
+                $('#control_boleta_valido_edi').val('0');
             }
         });
     }
@@ -1566,6 +1625,7 @@
         var reintegro=($.trim(formulario.find('input[name="reintegro"]').val())||'');
         var valoradoBusqueda=($.trim(formulario.find('input[name="valorado_bus"]').val())||'');
         limpiarReintentoValidacionControl(formulario);
+        formulario.data('connection-retry-count',0);
         var secuencia=((formulario.data('validacion-control-seq')||0)+1);
         formulario.data('validacion-control-seq',secuencia);
         var okInput=formulario.find('[data-campo="validacion-recaudacion-ok"]');
@@ -1595,6 +1655,7 @@
             success:function(resp){
                 if((formulario.data('validacion-control-seq')||0)!==secuencia)return;
                 if(($.trim(formulario.find('input[name="control"]').val())||'')!==control)return;
+                formulario.data('connection-retry-count',0);
                 if(!resp.ok){
                     var textoRate='';
                     if(resp&&resp.message)textoRate=String(resp.message);
@@ -1610,6 +1671,19 @@
             error:function(xhr){
                 if((formulario.data('validacion-control-seq')||0)!==secuencia)return;
                 var mensajeError=(xhr.responseJSON&&xhr.responseJSON.message)?xhr.responseJSON.message:'';
+                var esConexion=(xhr.status===0||xhr.status===502||xhr.status===503||xhr.status===504)||mensajeError.toLowerCase().indexOf('sin conexión')!==-1||mensajeError.toLowerCase().indexOf('api_no_disponible')!==-1;
+                var connectionRetries=(formulario.data('connection-retry-count')||0);
+                
+                if(esConexion&&connectionRetries<3){
+                    formulario.data('connection-retry-count',connectionRetries+1);
+                    var estadoReintento={control:construirEstadoPago('control','Control principal','warn',false,'Sin conexión','Reintentando ('+( connectionRetries+1)+'/3)...'),reintegro:estadoBase.reintegro,busqueda:estadoBase.busqueda};
+                    aplicarEstadoPagosFormulario(formulario,estadoReintento);
+                    limpiarReintentoValidacionControl(formulario);
+                    var retryTimer=setTimeout(function(){validarControlRecaudaciones(inputControl);},3000);
+                    formulario.data('retry-control-timer',retryTimer);
+                    return;
+                }
+                
                 if(mensajeEsRateLimit(mensajeError,xhr.status)){aplicarEstadoPagosFormulario(formulario,construirEstadoRateLimit(estadoBase));limpiarTipoLegalizacion(formulario);limpiarPtagSugerido(formulario);formulario.find('input[data-campo="preimpreso-api"]').val('');formulario.removeData('control-validado-ok').removeData('control-validado-valor').removeData('reintegro-validado-valor').removeData('busqueda-validado-valor');limpiarSitraFormulario(formulario);actualizarEstadoSitra(formulario,'text-muted','SITRA pendiente.');programarReintentoValidacionControl(formulario,inputControl,control,reintegro,valoradoBusqueda);return;}
                 var respError=xhr.responseJSON||null;okInput.val('0');limpiarTipoLegalizacion(formulario);aplicarPtagSugerido(formulario,respError);formulario.find('input[data-campo="preimpreso-api"]').val('');limpiarSitraFormulario(formulario);actualizarEstadoSitra(formulario,'text-muted','SITRA pendiente.');formulario.removeData('control-validado-ok').removeData('control-validado-valor').removeData('reintegro-validado-valor').removeData('busqueda-validado-valor');
                 aplicarEstadoPagosFormulario(formulario,(respError&&respError.estado_pagos)?respError.estado_pagos:estadoBase);
@@ -1641,14 +1715,18 @@
         var detalleLower=resumen.toLowerCase(),estadoSitra='pending';
         if(clase==='text-success')estadoSitra='ok';else if(clase==='text-danger')estadoSitra='error';else if(detalleLower.indexOf('verificando')!==-1||detalleLower.indexOf('validando')!==-1)estadoSitra='loading';
         var cfg=_pillConfigLeg(estadoSitra==='ok'?'ok':estadoSitra==='error'?'error':estadoSitra==='loading'?'loading':'pending');
-        icono.attr('class','e-pill '+cfg.cls).html('<i class="fas '+cfg.icon+'" style="font-size:10px;"></i> <span>SITRA</span>');
-        icono.attr('title','Ver detalle de validación SITRA').attr('aria-label',resumen).attr('data-detalle-sitra',detalle).removeAttr('data-popover-visible').popover('hide');
+        
+        var fuente = String(formulario.data('sitra-fuente')||'sitra').toLowerCase();
+        var textoBadge = 'SITRA';
+        if(fuente === 'sid') textoBadge = 'SID';
+        
+        icono.attr('class','e-pill '+cfg.cls).html('<i class="fas '+cfg.icon+'" style="font-size:10px;"></i> <span>' + textoBadge + '</span>');
+        icono.attr('title','Ver detalle de validación ' + textoBadge).attr('aria-label',resumen).attr('data-detalle-sitra',detalle).removeAttr('data-popover-visible').popover('hide');
     }
     function limpiarSitraFormulario(form){form.removeData('sitra-response').removeData('sitra-estado').removeData('sitra-fuente');form.find('[data-campo="sitra-fuente"]').text('');}
     function actualizarFuenteSitra(form,fuente){
         var etiqueta=form.find('[data-campo="sitra-fuente"]');if(!etiqueta.length)return;
-        var fn=String(fuente||'').toLowerCase();
-        etiqueta.text(fn==='sid'?'SID':fn==='sitra_sid'?'SITRA y SID':'');
+        etiqueta.text(''); // Limpiamos la etiqueta externa para evitar confusión, ya que el icono ahora muestra la fuente.
     }
     function abrirModalSitraFormulario(trigger){
         var form=$(trigger).closest('form');
@@ -1666,7 +1744,7 @@
         if(!form.find('[data-campo="estado-sitra"]').length)return;
         var numero=(form.find('input[name="numero"]').val()||'').trim(),gestion=(form.find('input[name="gestion"]').val()||'').trim();
         var codTipo=(form.find('input[data-campo="tipo-legalizacion-hidden"]').val()||'').trim(),buscarEn=(form.find('select[name="buscar_en"]').val()||'').trim();
-        var supletorio=form.find('input[name="supletorio"]').is(':checked');
+        var supletorioFlag = form.find('input[name="supletorio"]').is(':checked') ? '1' : '0';
         var secuencia=((form.data('sitra-req-seq')||0)+1);form.data('sitra-req-seq',secuencia);
         form.find('[data-campo="fuente-sitra"]').val('');
         if(numero===''||numero==='-'){limpiarSitraFormulario(form);actualizarEstadoSitra(form,'text-muted','SITRA pendiente.');return;}
@@ -1675,7 +1753,7 @@
         actualizarEstadoSitra(form,'text-muted','Validando en SITRA/SID...');
         $.ajax({
             url:"{{url('validar sitra legalizacion/'.$tramite->cod_tra)}}",type:'POST',
-            data:{_token:form.find('input[name="_token"]').val(),numero:numero,gestion:gestion,tipo:codTipo,buscar_en:buscarEn,supletorio:supletorio?'1':'0'},
+            data:{_token:form.find('input[name="_token"]').val(),numero:numero,gestion:gestion,tipo:codTipo,buscar_en:buscarEn,supletorio:supletorioFlag},
             success:function(resp){
                 if((form.data('sitra-req-seq')||0)!==secuencia)return;
                 if(!resp||resp.aplica===false){limpiarSitraFormulario(form);actualizarEstadoSitra(form,'text-muted',resp&&resp.message?resp.message:'No aplica para este tipo.');return;}
@@ -1930,14 +2008,14 @@
             }
         });
 
-        $(document).off('input'+ns+' change'+ns,'form input[name="numero"], form input[name="gestion"], form select[name="buscar_en"], form input[data-campo="tipo-legalizacion-hidden"]').on('input'+ns+' change'+ns,'form input[name="numero"], form input[name="gestion"], form select[name="buscar_en"], form input[data-campo="tipo-legalizacion-hidden"]',function(){var form=$(this).closest('form');if(form.find('[data-campo="estado-sitra"]').length)programarValidacionSitra(form);});
+        $(document).off('input'+ns+' change'+ns,'form input[name="numero"], form input[name="gestion"], form select[name="buscar_en"], form input[data-campo="tipo-legalizacion-hidden"], form input[name="supletorio"]').on('input'+ns+' change'+ns,'form input[name="numero"], form input[name="gestion"], form select[name="buscar_en"], form input[data-campo="tipo-legalizacion-hidden"], form input[name="supletorio"]',function(){var form=$(this).closest('form');if(form.find('[data-campo="estado-sitra"]').length)programarValidacionSitra(form);});
         $(document).off('click'+ns+' change'+ns,'form input[name="ptaang"]').on('click'+ns+' change'+ns,'form input[name="ptaang"]',function(e){e.preventDefault();var check=$(this);check.prop('checked',check.attr('data-ptag-lock')==='1');return false;});
         $(document).off('click'+ns,selectorIconosValidacion()).on('click'+ns,selectorIconosValidacion(),function(e){e.stopPropagation();});
         $(document).off('click'+ns).on('click'+ns,function(e){if($(e.target).closest('.popover').length||$(e.target).closest(selectorIconosValidacion()).length)return;cerrarPopoversValidacion();});
         $(document).off('keydown'+ns).on('keydown'+ns,function(e){if(e.key==='Escape'||e.keyCode===27)cerrarPopoversValidacion();});
         $(document).off('hidden.bs.modal'+ns,'.modal').on('hidden.bs.modal'+ns,'.modal',function(){cerrarPopoversValidacion();});
 
-        var idPerPrincipal=parseInt({!! json_encode((int)($tramite->id_per ?? 0)) !!},10)||0;
+        var idPerPrincipal=parseInt(($.trim($('#form_traleg input[name="ip"]').first().val()) || '0'),10)||0;
         if(!consultarEstadoCuadisPorPersona(idPerPrincipal)){
             var ciInicial=obtenerCiPrincipalTramite();
             if(ciInicial!=='')consultarEstadoCuadisPorCi(ciInicial);else limpiarEstadoCuadisEnFormularios();

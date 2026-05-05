@@ -124,7 +124,16 @@
                                          <th class="text-right font-italic">CI : </th>
                                          <td class="border-bottom border-dark">
                                              <input class="form-control form-control-sm border-0" placeholder=""
-                                                    id="ci" name="ci" value="{{$ci}}" onchange="cargarDatosApoderado(this.value)"/></td>
+                                                    id="ci_entrega_apoderado" name="ci" value="{{$ci}}" oninput="cargarDatosApoderado(this.value); verificarBoletaApoderadoEntrega();"/></td>
+                                     </tr>
+                                     <tr>
+                                         <th class="text-right font-italic">N° control boleta : </th>
+                                         <td class="border-bottom border-dark">
+                                             <input class="form-control form-control-sm border-0" placeholder="Ingrese número de control"
+                                                    id="control_boleta_entrega" name="control_boleta" oninput="verificarBoletaApoderadoEntrega()"/>
+                                             <div style="margin-top:6px;"><span id="estado_pago_apoderado_entrega" class="badge badge-secondary">Sin validar</span></div>
+                                             <input type="hidden" id="control_boleta_valido_entrega" name="control_boleta_valido" value="0">
+                                         </td>
                                      </tr>
                                      <tr>
                                          <th class="text-right font-italic">Apellidos : </th>
@@ -276,6 +285,45 @@
             },
             error: function () {
                 $('#'+panel).html("<span class='text-danger'>Ocurrio un error, probablemente no tenga permisos para esta acción</span>");
+            }
+        });
+    }
+
+    function verificarBoletaApoderadoEntrega(){
+        var control=($('#control_boleta_entrega').val()||'').toString().trim();
+        var ci=($('#ci_entrega_apoderado').val()||'').toString().trim();
+        if(control==='')return;
+        if(ci===''){
+            $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-warning').text('Complete CI');
+            $('#control_boleta_valido_entrega').val('0');
+            return;
+        }
+        var link="{{ url('verificar_boleta') }}"+"/"+encodeURIComponent(control)+'?documento='+encodeURIComponent(ci);
+        $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-info').text('Validando...');
+        $('#control_boleta_valido_entrega').val('0');
+        $.ajax({
+            url:link,
+            type:'GET',
+            success:function(resp){
+                if(resp=="No"){
+                    $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-danger').text('No encontrado');
+                    $('#control_boleta_valido_entrega').val('0');
+                    return;
+                }
+                try{
+                    var res=JSON.parse(resp);
+                    if(res['apellido_apoderado']!==undefined)$('#apellido_apoderado').val(res['apellido_apoderado']);
+                    if(res['nombre_apoderado']!==undefined)$('#nombre_apoderado').val(res['nombre_apoderado']);
+                    $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-success').text('Pago validado');
+                    $('#control_boleta_valido_entrega').val('1');
+                }catch(e){
+                    $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
+                    $('#control_boleta_valido_entrega').val('0');
+                }
+            },
+            error:function(){
+                $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-warning').text('Error API');
+                $('#control_boleta_valido_entrega').val('0');
             }
         });
     }

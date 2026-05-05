@@ -233,7 +233,6 @@ class Funciones extends Model
                 if ($numero_res !== '') {
                     $glosa= str_replace("{resolucion_numero}", $numero_res, $glosa);
                     $glosa= str_replace("{numero_resolucion}", $numero_res, $glosa);
-                    $glosa= str_replace("{--0036/2024--}", $numero_res, $glosa);
                 }
 
                 $fechaResolucion = $acreditacion->resolucion_fecha_emision
@@ -245,7 +244,6 @@ class Funciones extends Model
                         $fecha_res_literal = date('j', $fecha_res_ts).' de '.self::mes((int)date('n', $fecha_res_ts)).' de '.date('Y', $fecha_res_ts);
                         $glosa= str_replace("{resolucion_fecha}", $fecha_res_literal, $glosa);
                         $glosa= str_replace("{fecha_resolucion}", $fecha_res_literal, $glosa);
-                        $glosa= str_replace("{--5 de octubre de 2023--}", $fecha_res_literal, $glosa);
                     }
                 }
             }
@@ -364,6 +362,12 @@ class Funciones extends Model
         $glosa= str_replace("{titulo}", $titulo, $glosa);
         $glosa= str_replace("{nombre_convocatoria}", $nombre_convocatoria, $glosa);
         $glosa= str_replace("{fecha_tramite}", $fecha_tramite, $glosa);
+        
+        // Soporte para placeholder {cargo} en glosa unitaria
+        if(sizeof($candidatos) == 1){
+            $cargoUnico = self::resolverCargoCandidatoGlosaNoAtentado($candidatos[0]);
+            $glosa = str_replace("{cargo}", $cargoUnico, $glosa);
+        }
         if(sizeof($candidatos)==0){
             $glosa="0";
         }
@@ -562,6 +566,8 @@ class Funciones extends Model
     {
         $texto = preg_replace('/,\s*,/u',      ',', $texto) ?? $texto;
         $texto = preg_replace('/\/\s*\//u',    '/', $texto) ?? $texto;
+        $texto = preg_replace('/[ \t]+,\s+/u',  ', ', $texto) ?? $texto;
+        $texto = preg_replace('/,\s*de la Carrera/iu', ', de la Carrera', $texto) ?? $texto;
         $texto = preg_replace('/^[\s,\/\-]+/u', '', $texto) ?? $texto;
         $texto = preg_replace('/[\s,\/\-]+$/u', '', $texto) ?? $texto;
         $texto = preg_replace('/[ \t]{2,}/u',   ' ', $texto) ?? $texto;
@@ -589,23 +595,33 @@ class Funciones extends Model
         }
 
         // --- Intento 1: frase exacta ---
+        // Se usa límite 1 para evitar borrar menciones accidentales en otras partes del texto (ej. nombre de carrera)
         $cargoEscapado = preg_quote($cargoRaw, '/');
-        $resultado = preg_replace('/\b' . $cargoEscapado . '\b/iu', '', $texto);
+        $resultado = preg_replace('/\b' . $cargoEscapado . '\b/iu', '', $texto, 1);
 
         if ($resultado !== null && $resultado !== $texto) {
             return self::limpiarSeparadoresNoAtentado($resultado);
         }
 
         // --- Intento 2: palabras únicas del cargo ---
+        // Solo se aplica si el cargo es corto (rol) o contiene palabras clave de rol.
+        // Para nombres de asignaturas largos, el "word-by-word" es demasiado agresivo y borra partes de la carrera.
+        $palabrasCargoRaw  = preg_split('/\s+/u', trim($cargoRaw)) ?: [];
+        $palabrasCargoNorm = preg_split('/\s+/u', self::normalizarTextoCargoAjusteNoAtentado($cargoRaw)) ?: [];
+        $numPalabras = count($palabrasCargoNorm);
+
+        $esRol = preg_match('/\b(titular|suplente|consejero|delegado|estudiantil|docente)\b/iu', $cargoRaw);
+        
+        // Si no es un rol conocido y es un nombre largo, abortamos el Intento 2 para proteger la integridad del texto.
+        if (!$esRol && $numPalabras > 2) {
+            return $texto;
+        }
+
         // Normalizar cargo candidato para comparar palabras
         $cargoCandidatoNorm = self::normalizarTextoCargoAjusteNoAtentado($cargoCandidatoRaw);
         $palabrasCandidato  = $cargoCandidatoNorm !== ''
             ? (preg_split('/\s+/u', $cargoCandidatoNorm) ?: [])
             : [];
-
-        // Palabras del cargo a eliminar (raw para el regex, norm para comparar)
-        $palabrasCargoRaw  = preg_split('/\s+/u', trim($cargoRaw)) ?: [];
-        $palabrasCargoNorm = preg_split('/\s+/u', self::normalizarTextoCargoAjusteNoAtentado($cargoRaw)) ?: [];
 
         $resultado = $texto;
         foreach ($palabrasCargoNorm as $idx => $wordNorm) {
@@ -616,10 +632,17 @@ class Funciones extends Model
             if (in_array($wordNorm, $palabrasCandidato, true)) {
                 continue;
             }
+            // Saltar palabras muy cortas o conectores comunes para evitar borrar "y", "de", "la", "I", "II" 
+            // que podrían ser parte de la estructura de la frase o nombre de carrera.
+            if (mb_strlen($wordNorm) <= 3 && $numPalabras > 1) {
+                continue;
+            }
+
             // Eliminar la palabra del texto usando la versión raw (respeta tildes)
             $wordRaw     = $palabrasCargoRaw[$idx] ?? $wordNorm;
             $wordEsc     = preg_quote($wordRaw, '/');
-            $resultado   = preg_replace('/\b' . $wordEsc . '\b/iu', '', $resultado) ?? $resultado;
+            // Aquí también limitamos a 1 para mayor seguridad
+            $resultado   = preg_replace('/\b' . $wordEsc . '\b/iu', '', $resultado, 1) ?? $resultado;
         }
 
         return self::limpiarSeparadoresNoAtentado($resultado);
