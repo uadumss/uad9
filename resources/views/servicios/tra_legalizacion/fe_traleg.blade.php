@@ -1215,7 +1215,7 @@
                                                 <span class="td-sub" data-campo="sitra-fuente" style="margin-left:4px;"></span>
                                             @endif
                                             <span style="font-size:12px;font-weight:600;color:var(--e-s700);margin-left:8px;">
-                                                Supletorio: <input type="checkbox" name="supletorio" style="accent-color:var(--e-blue);vertical-align:middle;">
+                                                Supletorio: <input type="checkbox" name="supletorio" style="accent-color:var(--e-blue);vertical-align:middle;" onchange="validarSitraEnFormulario(this.closest('form'))">
                                             </span>
                                         </div>
                                     </div>

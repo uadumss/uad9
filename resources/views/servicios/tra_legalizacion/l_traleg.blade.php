@@ -55,27 +55,27 @@
                         @can('crear traleg - srv')
                             @if($fecha==(date('Y-m-d')))
                                 <a class="btn btn-outline-info btn-sm text-dark m-1 pt-1 shadow-sm" data-target="#traleg" data-toggle="modal"
-                                    onclick="generarNumero('L','generar numero','panel_traleg', this);">
+                                    onclick="generarNumero('L','generar numero','panel_traleg');">
                                     <i class="fas fa-plus"></i> Legalización
                                 </a>
                                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                                 <a class="btn btn-outline-warning btn-sm text-dark m-1 pt-1 shadow-sm" data-target="#traleg" data-toggle="modal"
-                                    onclick="generarNumero('C','generar numero','panel_traleg', this);">
+                                    onclick="generarNumero('C','generar numero','panel_traleg');">
                                     <i class="fas fa-plus"></i> Certificación
                                 </a>
                                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                                 <a class="btn btn-outline-danger btn-sm text-dark m-1 pt-1 shadow-sm" data-target="#traleg" data-toggle="modal"
-                                    onclick="generarNumero('F','generar numero','panel_traleg', this);">
+                                    onclick="generarNumero('F','generar numero','panel_traleg');">
                                     <i class="fas fa-plus"></i> Confrontación
                                 </a>
                                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                                 <a class="btn btn-outline-success btn-sm text-dark m-1 pt-1 shadow-sm" data-target="#traleg" data-toggle="modal"
-                                    onclick="generarNumero('B','generar numero busqueda/','panel_traleg', this);">
+                                    onclick="generarNumero('B','generar numero busqueda/','panel_traleg');">
                                     <i class="fas fa-plus"></i> Búsqueda
                                 </a>
                                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                                 <a class="btn btn-outline-secondary btn-sm text-dark m-1 pt-1 shadow-sm" data-target="#traleg" data-toggle="modal"
-                                    onclick="generarNumero('E','generar numero/','panel_traleg', this);">
+                                    onclick="generarNumero('E','generar numero/','panel_traleg');">
                                     <i class="fas fa-plus"></i> Consejo
                                 </a>
                                 <span style="font-size: 1.5em" class="text-gray-500">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
@@ -220,132 +220,34 @@
     <!--===========================END ==============================-->
 
     <script>
-        /**
-         * Reemplaza el contenido de un panel con transicion suave (fade 140ms).
-         * Evita el corte visual abrupto al cambiar el contenido del modal.
-         */
-        function _reemplazarPanel(panel, html, callback){
-            var panelEl=$('#'+panel);
-            var inner=panelEl.children('.modal-content,.eleg').first();
-            var doReplace=function(){
-                panelEl.html(html);
-                if(typeof callback==='function') callback();
-            };
-            if(inner.length){
-                inner.stop(true).animate({opacity:0},140,doReplace);
-            } else {
-                doReplace();
-            }
-        }
-
         function enviar1(formulario,ruta,panel){
             $.ajax({
                 type: "POST",
                 url: ruta,
-                data: $("#"+formulario).serialize(),
+                data: $("#"+formulario).serialize(), // Adjuntar los campos del formulario enviado.
                 success: function(resp) {
-                    _reemplazarPanel(panel, resp, function(){
-                        cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
-                        mostrarToastServiciosLeg('Documento registrado correctamente.','ok');
-                    });
+                    $('#'+panel).html(resp);
+                    cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
                 },
-                error: function(resp) {
+                error: function (resp) {
+                    var obj=resp.responseJSON.errors;
                     var texto='';
-                    try{
-                        var obj=resp.responseJSON;
-                        if(obj && obj.errors){
-                            $.each(obj.errors,function(k,v){texto+=v+'<br/>';});
-                        } else if(obj && obj.message){
-                            texto=obj.message;
-                        }
-                    }catch(e){}
-                    if(!texto) texto='Error al registrar el documento.';
-                    $('#error_datos_span').html(texto);
+                    $.each(obj, function(key,value) {
+                        texto=texto+value+'<br/>';
+                    });
+                    if(texto!=''){
+                        $('#error_datos_span').html(texto);
+                    }
                     $('#error_datos').show();
-                    setTimeout(function(){$('#error_datos').hide(500);},5000);
+                    setTimeout(function () {
+                        $('#error_datos').hide(500);
+                    }, 4000);
+
                 }
             });
         }
 
-        /**
-         * Toast flotante independiente del modal. tipo: ok | error
-         */
-        function mostrarToastServiciosLeg(mensaje, tipo){
-            var id='srv-toast-leg';
-            $('#'+id).remove();
-            var cfg=(tipo==='ok')
-                ?{bg:'#ecfdf5',brd:'#047857',col:'#065f46',icon:'fa-check-circle'}
-                :{bg:'#fef2f2',brd:'#b91c1c',col:'#7f1d1d',icon:'fa-exclamation-circle'};
-            var wrap=$('<div>').attr('id',id).css({
-                position:'fixed',bottom:'28px',right:'28px','z-index':99999,
-                display:'flex','align-items':'center',gap:'8px',
-                padding:'10px 16px','border-radius':'8px',
-                background:cfg.bg,'border-left':'4px solid '+cfg.brd,
-                color:cfg.col,'font-size':'12.5px','font-weight':600,
-                'box-shadow':'0 8px 24px rgba(0,0,0,.14)',
-                opacity:0,transition:'opacity .25s'
-            });
-            $('<i>').addClass('fas '+cfg.icon).css('flex-shrink',0).appendTo(wrap);
-            $('<span>').text(mensaje).css('margin-left','4px').appendTo(wrap);
-            $('<button>').html('×').css({
-                'margin-left':'10px',background:'none',border:'none',cursor:'pointer',
-                'font-size':'16px','line-height':1,color:'inherit',opacity:.6
-            }).on('click',function(){wrap.remove();}).appendTo(wrap);
-            $('body').append(wrap);
-            setTimeout(function(){wrap.css('opacity','1');},20);
-            setTimeout(function(){
-                wrap.css('opacity','0');
-                setTimeout(function(){wrap.remove();},300);
-            },3500);
-        }
-
-
-        function enfocarCampoValoradoServicios(panel){
-            var scope = $('#'+panel);
-            if(!scope.length)return;
-            var campoValorado = scope.find('#form_docleg input[name="control"]').first();
-            if(!campoValorado.length){
-                campoValorado = scope.find('#form_docleg_f input[name="control"]').first();
-            }
-            if(!campoValorado.length){
-                campoValorado = scope.find('input[name="valorado"]').first();
-            }
-            if(campoValorado.length && !campoValorado.prop('disabled') && !campoValorado.prop('readonly')){
-                setTimeout(function(){
-                    campoValorado.trigger('focus');
-                    campoValorado.trigger('select');
-                },80);
-            }
-        }
-
-        function setBotonCargandoServicios(btn,activo,texto){
-            if(!btn){return;}
-            if(activo){
-                if(btn.dataset.loading==='1'){return;}
-                btn.dataset.loading='1';
-                btn.dataset.originalHtml=btn.innerHTML;
-                btn.classList.add('disabled');
-                btn.setAttribute('aria-busy','true');
-                btn.setAttribute('aria-disabled','true');
-                btn.style.pointerEvents='none';
-                btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>'+(texto ? ' '+texto : ' Cargando...');
-                return;
-            }
-            if(btn.dataset.loading!=='1'){return;}
-            if(btn.dataset.originalHtml){btn.innerHTML=btn.dataset.originalHtml;}
-            btn.classList.remove('disabled');
-            btn.removeAttribute('aria-busy');
-            btn.removeAttribute('aria-disabled');
-            btn.style.pointerEvents='';
-            btn.dataset.loading='0';
-        }
-
-        function generarNumero(tipo,url,panel,btn){
-            if(btn && btn.dataset.loading==='1'){
-                return;
-            }
-            setBotonCargandoServicios(btn,true,'Cargando...');
-            var finalizar=function(){setBotonCargandoServicios(btn,false);};
+        function generarNumero(tipo,url,panel){
             $('#'+panel).html("<br/><br/><div class='d-flex justify-content-center text-warning'><div class='spinner-border' role='status'> <span class='visually-hidden'></span></div><span class='text-white font-weight-bold'>&nbsp;  Cargando ...</span></div>");
             var link = "{{url('/')}}"+"/"+url;
             var token = "{{csrf_token()}}";
@@ -357,38 +259,14 @@
                 data:form,
                 //data:$('#form_editar').serialize(),
                 success: function (resp) {
-                    var contenedorTemporal = $('<div>').html(resp);
-                    var codTra = $.trim(contenedorTemporal.find('[data-campo="nuevo-cod-tra"]').first().val() || '');
-                    if(codTra !== ''){
-                        cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
-                        var rutaEdicion = "{{url('datos tramite legalizacion')}}" + "/" + codTra;
-                        $.ajax({
-                            url: rutaEdicion,
-                            type: 'GET',
-                            success: function (vistaEdicion) {
-                                _reemplazarPanel(panel, vistaEdicion, function(){
-                                    var campoCi = $('#'+panel).find('input[name="ci"]').first();
-                                    if(campoCi.length && !campoCi.prop('disabled') && !campoCi.prop('readonly')){
-                                        setTimeout(function(){campoCi.trigger('focus');campoCi.trigger('select');},60);
-                                    }
-                                    finalizar();
-                                });
-                            },
-                            error: function(){
-                                cargarDatos(rutaEdicion,panel);
-                                finalizar();
-                            }
-                        });
-                        return;
-                    }
-                    _reemplazarPanel(panel, resp, function(){
-                        cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
-                        finalizar();
-                    });
+                    $('#'+panel).html(resp);
+                    cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
+                    setTimeout(function() {
+                        $('#traleg').modal('hide');
+                    }, 500);
                 },
                 error: function (data) {
                     $('#'+panel).html("<span class='text-white font-weight-bold bg-danger rounded p-1'>Ocurrio un error, probablemente no tenga permisos para esta acción</span>");
-                    finalizar();
                 }
             });
         }
@@ -399,56 +277,25 @@
                 type: 'POST',
                 data:$('#'+form).serialize(),
                 success: function (resp) {
-                    if(resp && typeof resp === 'object' && resp.ok===true && resp.redirect){
-                        $.ajax({
-                            url: resp.redirect,
-                            type: 'GET',
-                            success: function(vista){
-                                _reemplazarPanel(panel, vista, function(){
-                                    cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
-                                    if(form==='form_traleg'){
-                                        var areaTramite=$('#'+panel).find('#divNueTram');
-                                        if(areaTramite.length){
-                                            areaTramite.stop(true,true).show(0);
-                                            var campoValorado=areaTramite.find('input[name="control"]').first();
-                                            if(!campoValorado.length){campoValorado=areaTramite.find('input[name="valorado"]:visible').first();}
-                                            if(campoValorado.length && !campoValorado.prop('disabled') && !campoValorado.prop('readonly')){
-                                                setTimeout(function(){campoValorado.trigger('focus');campoValorado.trigger('select');},100);
-                                            }
-                                        }
-                                    }
-                                });
-                            },
-                            error: function(){
-                                $('#'+panel).html(resp.redirect ? '<span class="text-danger">No se pudo abrir el trámite recién creado.</span>' : '');
-                            }
-                        });
-                        return;
-                    }
-                    _reemplazarPanel(panel, resp, function(){
-                        cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
-                        if(form==='form_traleg'){
-                            enfocarCampoValoradoServicios(panel);
-                        }
-                    });
+                    $('#'+panel).html(resp);
+                    cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
                 },
                 error: function (resp) {
+			alert('Error en los datos');
+                    var obj=resp.responseJSON.errors;
                     var texto='';
-                    try{
-                        var obj=resp.responseJSON;
-                        if(obj && obj.errors){
-                            $.each(obj.errors,function(k,v){texto+=v+'<br/>';});
-                        } else if(obj && obj.message){
-                            texto=obj.message;
-                        }
-                    }catch(e){}
-                    if(!texto) texto='Error al guardar los datos.';
-                    $('#error_datos_span').html(texto);
-                    $('#error_datos').show();
-                    setTimeout(function(){
-                        $('#error_datos').hide(500);
-                    },5000);
-                }
+                    $.each(obj, function(key,value) {
+                        texto=texto+value+'<br/>';
+                    });
+                    if(texto!=''){
+                        $('#error_datos_span').html(texto);
+                    }
+                        $('#error_datos').show();
+                        setTimeout(function () {
+                            $('#error_datos').hide(500);
+                        }, 4000);
+
+                    }
             });
         }
         function cargarDatosTabla(ruta,panel){

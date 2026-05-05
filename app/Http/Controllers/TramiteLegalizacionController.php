@@ -13,6 +13,7 @@ use App\Models\Persona;
 use App\Models\Titulo;
 use App\Models\Tramita;
 use App\Models\Tramite;
+use App\Services\SitraService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Auth;
@@ -21,7 +22,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Services\SitraService;
 
 class TramiteLegalizacionController extends Controller
 {
@@ -344,6 +344,50 @@ class TramiteLegalizacionController extends Controller
 
         return view('servicios.tra_legalizacion.verificacion_sitra', compact('respuesta','persona','docleg','documento','fuente','titulo', 'buscarEnSitra'));
     }
+    public function autoCompletarDesdeSitra(Request $request, SitraService $sitra){
+        \Log::info('ENTRO AL CONTROLADOR');
+        \Log::info('ANTES DE SITRA', $request->all());
+
+        // ❌ quitar esto
+        // dd($request->all());
+
+        $request->validate([
+            'ci' => 'required',
+            'nro' => 'required',
+            'serie' => 'required',
+        ]);
+
+        try{
+            $resultado = $sitra->obtenerDatos(
+                $request->ci,
+                $request->nro,
+                $request->serie
+            );
+
+            \Log::info('AUTO SITRA RESULTADO', ['resultado' => $resultado]);
+
+        } catch (\Throwable $e) {
+            \Log::error('Error en AUTO SITRA', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'ok' => false,
+                'error' => 'Error interno en SITRA'
+            ]);
+        }
+
+        if (!$resultado) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'No se encontró el documento'
+            ]);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'titulo' => $resultado['titulo'],
+            'fecha_emision' => $resultado['fecha_emision'],
+        ]);
+    }
     public function g_docleg(Request $form){
         $datosTramita=Tramita::find($form['ctra']);
         if($datosTramita && $datosTramita->tra_tipo_tramite=='F' && !isset($form['cdtra'])){
@@ -495,6 +539,27 @@ class TramiteLegalizacionController extends Controller
             $respuesta="";
             $verificar_sitra=app(SitraService::class)->debeValidar($a) ? '2' : '';
             $numeroDoc=$form['numero'];
+            
+            // Detectar si es supletorio
+            $esSupletorio=$form->boolean('supletorio', false);
+            
+            // SUPLETORIO: Forzar tipo a "SU" en SITRA
+            if($esSupletorio){
+                \Log::info('⚠ SUPLETORIO en g_docleg: cambiando tipo a SU', [
+                    'buscar_en_original' => $buscarEnSitra,
+                    'buscar_en_nuevo' => 'su',
+                ]);
+                $buscarEnSitra='su';
+                $a=$buscarEnSitra;
+            }
+            
+            \Log::info('=== g_docleg VALIDAR SITRA ===', [
+                'numeroDoc' => $form['numero'],
+                'gestion' => $form['gestion'] ?? null,
+                'buscarEnSitra' => $buscarEnSitra,
+                'esSupletorio' => $esSupletorio,
+                'tra_tipo_tramite' => $datosTramita->tra_tipo_tramite,
+            ]);
 
             if(!in_array($datosTramita->tra_tipo_tramite,['E','F'],true) && app(SitraService::class)->debeValidar($a)){
                 try {
@@ -507,6 +572,12 @@ class TramiteLegalizacionController extends Controller
                 }
                 $nombre=$persona->per_apellido." ".$persona->per_nombre;
                 $documento=Funciones::DocumentoSitra($buscarEnSitra);
+                
+                \Log::info('Respuesta SITRA en g_docleg', [
+                    'nombre_api' => trim((string)($respuesta->nombre ?? '')),
+                    'tipo_api' => trim((string)($respuesta->tipo ?? '')),
+                    'numero_api' => trim((string)($respuesta->numero ?? '')),
+                ]);
 
                 /*
                  * Verificar en sitra dtra_verificacion_sitra
@@ -518,13 +589,17 @@ class TramiteLegalizacionController extends Controller
                     $nombreSitra = trim((string)($respuesta->nombre ?? ''));
                     $tipoSitra = strtolower(trim((string)($respuesta->tipo ?? '')));
                     $numeroSitra = trim((string)($respuesta->numero ?? ''));
+                    $tituloSitra = trim((string)($respuesta->titulo ?? ''));
                     $nombreLocal = trim((string)$nombre);
                     $tipoLocal = strtolower(trim((string)$documento));
                     $numeroLocal = trim((string)$numeroDoc);
 
                     $nombresCoinciden=app(SitraService::class)->nombresCompatibles($nombreLocal,$nombreSitra);
                     if($nombresCoinciden && $tipoLocal==$tipoSitra && $numeroLocal==$numeroSitra){
-                        $verificar_sitra='0';
+                        // Validación exitosa: coinciden nombre, tipo y número
+                        // El campo título en SITRA no es confiable, no se valida
+                        $verificar_sitra='0'; // Válido
+                        \Log::info('✓ VALIDACIÓN EXITOSA en g_docleg', ['verificar_sitra' => $verificar_sitra]);
                     }else{
                         if($nombreSitra=="" && $tipoSitra=="" && $numeroSitra==""){
                             $respaldoUad9=app(SitraService::class)->buscarRespaldoInterno(
@@ -533,9 +608,30 @@ class TramiteLegalizacionController extends Controller
                                 (string)$buscarEnSitra,
                                 trim((string)($form['gestion'] ?? ''))
                             );
-                            $verificar_sitra=$respaldoUad9 ? '0' : '2';
+                            if($respaldoUad9){
+                                // Para supletorios, aceptar respaldo interno aunque título esté vacío
+                                if($esSupletorio || !empty($respaldoUad9->tit_titulo)){
+                                    $verificar_sitra='0';
+                                    \Log::info('✓ Respaldo UAD9 encontrado en g_docleg', ['verificar_sitra' => $verificar_sitra, 'esSupletorio' => $esSupletorio]);
+                                }else{
+                                    $verificar_sitra='2';
+                                    \Log::info('✗ Respaldo encontrado pero sin título en g_docleg', ['verificar_sitra' => $verificar_sitra]);
+                                }
+                            }else{
+                                $verificar_sitra='2';
+                                \Log::info('✗ No encontrado en SITRA ni respaldo UAD9 en g_docleg', ['verificar_sitra' => $verificar_sitra]);
+                            }
                         }else{
                             $verificar_sitra='1';
+                            \Log::error('✗ Datos NO coinciden en SITRA en g_docleg', [
+                                'nombreLocal' => $nombreLocal,
+                                'nombreSitra' => $nombreSitra,
+                                'tipoLocal' => $tipoLocal,
+                                'tipoSitra' => $tipoSitra,
+                                'numeroLocal' => $numeroLocal,
+                                'numeroSitra' => $numeroSitra,
+                                'verificar_sitra' => $verificar_sitra,
+                            ]);
                         }
                     }
                 }else{
@@ -1638,11 +1734,17 @@ class TramiteLegalizacionController extends Controller
         }
 
         $sitraDisponible=true;
+        \Log::info('ANTES DE LLAMAR SITRA', [
+            'ci_persona' => (string)$persona->per_ci,
+            'numero_doc' => $numero,
+            'buscar_en' => $buscarEn,
+        ]);
         try {
             $respuesta=app(SitraService::class)->consultarSitra((string)$persona->per_ci,$numero,$buscarEn);
         } catch (\Throwable $e) {
             $sitraDisponible=false;
             $respuesta=(object)[];
+            \Log::error('Error al llamar SITRA', ['error' => $e->getMessage()]);
         }
         if(!is_object($respuesta)){
             $respuesta=(object)[];
@@ -1659,11 +1761,26 @@ class TramiteLegalizacionController extends Controller
         $nombreLocal=trim((string)$nombre);
         $tipoLocal=strtolower(trim((string)$documento));
         $numeroLocal=trim((string)$numero);
+        
+        \Log::info('Respuesta SITRA obtenida', [
+            'nombreLocal' => $nombreLocal,
+            'nombreSitra' => $nombreSitra,
+            'tipoLocal' => $tipoLocal,
+            'tipoSitra' => $tipoSitra,
+            'tipoSitraNormalizado' => $tipoSitraNormalizado,
+            'numeroLocal' => $numeroLocal,
+            'numeroSitra' => $numeroSitra,
+            'tituloSitra' => $tituloSitra,
+            'sitraDisponible' => $sitraDisponible,
+        ]);
 
         $estado='1';
         $nombresCoinciden=app(SitraService::class)->nombresCompatibles($nombreLocal,$nombreSitra);
         if($nombresCoinciden && $tipoLocal===$tipoSitraNormalizado && $numeroLocal===$numeroSitra){
+            // Validación exitosa: coinciden nombre, tipo y número
+            // El campo título en SITRA no es confiable, no se valida
             $estado='0';
+            \Log::info('✓ VALIDACIÓN EXITOSA: nombre, tipo y número coinciden', ['estado' => $estado]);
         }elseif($nombreSitra==='' && $tipoSitraNormalizado==='' && $numeroSitra===''){
             $respaldoUad9=null;
             if($gestion!==''){
@@ -1690,6 +1807,14 @@ class TramiteLegalizacionController extends Controller
         if($estado==='2'){
             $fuenteRespuesta='sitra_sid';
         }
+
+        \Log::info('=== RESULTADO FINAL SITRA ===', [
+            'estado' => $estado,
+            'fuente' => $fuenteRespuesta,
+            'nombreSitra' => $nombreSitra,
+            'tipoSitra' => $tipoSitra,
+            'numeroSitra' => $numeroSitra,
+        ]);
 
         return response()->json([
             'ok'=>true,

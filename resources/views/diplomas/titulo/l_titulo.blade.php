@@ -294,7 +294,20 @@
                                                     <th class="text-right font-italic">Nº título:</th>
                                                     <td class="border-bottom border-dark">
                                                         <div class="input-group">
-                                                            <input type="text" class="form-control form-control-sm border-0" pattern="[0-9]{1,5}" required name="nro" />
+                                                            <input type="text" class="form-control form-control-sm border-0" pattern="[0-9]{1,5}" required name="nro_titulo" id="nro_titulo" onchange="buscarSitra()"/>
+                                                            @if($tipo=='re')
+                                                                <span class="text-danger font-weight-bold pt-1" style="font-size: 0.8em">Reconocimiento</span>&nbsp;&nbsp;
+                                                                <input type="checkbox" name="reconocimiento" class="" />
+                                                            @endif
+                                                        </div>
+
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="text-right font-italic">Nº serie:</th>
+                                                    <td class="border-bottom border-dark">
+                                                        <div class="input-group">
+                                                            <input type="text" class="form-control form-control-sm border-0" pattern="[A-Z]-[0-9]{1,10}" required name="nro_serie" id="nro_serie" onchange="buscarSitra()"/>
                                                             @if($tipo=='re')
                                                                 <span class="text-danger font-weight-bold pt-1" style="font-size: 0.8em">Reconocimiento</span>&nbsp;&nbsp;
                                                                 <input type="checkbox" name="reconocimiento" class="" />
@@ -306,7 +319,7 @@
                                                 <tr>
                                                     <th class="text-right font-italic">Fecha:</th>
                                                     <td class="border-bottom border-dark">
-                                                        <input type="date" class="form-control form-control-sm border-0" required name="fecha" />
+                                                        <input type="date" class="form-control form-control-sm border-0" required id="fecha_emision" name="fecha_emision" />
                                                     </td>
                                                 </tr>
                                                 <tr>
@@ -369,7 +382,7 @@
                                                 <tr>
                                                     <th class="text-right font-italic">Título:</th>
                                                     <td class="border-bottom border-dark">
-                                                        <textarea rows="2" class="form-control-sm form-control border-0" name="titulo"></textarea>
+                                                        <textarea rows="2" class="form-control-sm form-control border-0" id="titulo" name="titulo"></textarea>
                                                     </td>
                                                 </tr>
                                                 <?php }?>
@@ -377,14 +390,14 @@
                                                 <tr>
                                                     <th class="text-right font-italic">Referencia A:</th>
                                                     <td class="border-bottom border-dark">
-                                                        <textarea rows="2" class="form-control-sm form-control border-0" name="ref"></textarea>
+                                                        <textarea rows="2" class="form-control-sm form-control border-0" id="ref" name="ref"></textarea>
                                                     </td>
                                                 </tr>
                                                 <?php }?>
                                                 <tr>
                                                     <th class="text-right font-italic">Observación :</th>
                                                     <td class="border-bottom border-dark">
-                                                        <textarea rows="2" class="form-control-sm form-control border-0" name="obs"></textarea>
+                                                        <textarea rows="2" class="form-control-sm form-control border-0" id="obs" name="obs"></textarea>
                                                     </td>
                                                 </tr>
                                             </table>
@@ -401,7 +414,7 @@
                                                 <th class="text-right font-italic">Nº CI:</th>
                                                 <td class="border-bottom border-dark">
                                                     <div class="input-group">
-                                                        <input type="text" class="form-control form-control-sm border-0" name="ci" onchange="cargarDatosPersonales(this.value)" />
+                                                        <input type="text" class="form-control form-control-sm border-0" id="ci" name="ci" onchange="cargarDatosPersonales(this.value); buscarSitra()" />
 
                                                         <span class="text-danger font-weight-bold" style="font-size: 0.9em">Exp. </span>&nbsp;&nbsp;
                                                         <select name="expedido" class="custom-select-sm custom-select col-md-4" id="expedido">
@@ -767,139 +780,192 @@
         </div>
     </div>
     <!-- =============================== ====================-->
-    <script>
-        function enviarTitulo(){
-            var link = "{{url('g_titulo/')}}";
-            var token = "{{csrf_token()}}";
-            var form = new FormData($('#form_editar').get(0));
-            $.ajaxSetup({ headers: {'X-CSRF-TOKEN': token}});
-            $.ajax({
-                url: link,
-                type: 'POST',
-                contentType: false,
-                processData: false,
-                data:form,
-                //data:$('#form_editar').serialize(),
-                success: function (resp) {
-                    $('#panel_editar').html(resp);
-                    $('#editarTitulo').modal('hide');
-                    var fila=$('#fila').val();
-                    var tipo="{{$tipo}}";
-                    @if($tipo=='re')
-                        if($('#form_editar #reconocimiento').prop('checked')==true){
-                            $('#ape'+fila).html($('#form_editar #e_ape').val()+" , "+$('#form_editar #e_nom').val()+
-                                "<br/><span class=\"border border-danger text-danger p-1 rounded font-italic font-weight-bolder lead\" style=\"font-size: 0.7em;\" >Reconocimiento.</span>");
-                        }else{
+     @section('scripts')
+        <script>
+            function enviarTitulo(){
+                var link = "{{url('g_titulo/')}}";
+                var token = "{{csrf_token()}}";
+                var form = new FormData($('#form_editar').get(0));
+                $.ajaxSetup({ headers: {'X-CSRF-TOKEN': token}});
+                $.ajax({
+                    url: link,
+                    type: 'POST',
+                    contentType: false,
+                    processData: false,
+                    data:form,
+                    //data:$('#form_editar').serialize(),
+                    success: function (resp) {
+                        $('#panel_editar').html(resp);
+                        $('#editarTitulo').modal('hide');
+                        var fila=$('#fila').val();
+                        var tipo="{{$tipo}}";
+                        @if($tipo=='re')
+                            if($('#form_editar #reconocimiento').prop('checked')==true){
+                                $('#ape'+fila).html($('#form_editar #e_ape').val()+" , "+$('#form_editar #e_nom').val()+
+                                    "<br/><span class=\"border border-danger text-danger p-1 rounded font-italic font-weight-bolder lead\" style=\"font-size: 0.7em;\" >Reconocimiento.</span>");
+                            }else{
+                                $('#ape'+fila).html($('#form_editar #e_ape').val()+" , "+$('#form_editar #e_nom').val());
+                            }
+                        @else
                             $('#ape'+fila).html($('#form_editar #e_ape').val()+" , "+$('#form_editar #e_nom').val());
+                        @endif
+                        $('#nro'+fila).html($('#form_editar #e_nro').val());
+                        var fecha=$('#form_editar #e_fec').val().split('-');
+                        $('#fec'+fila).html(fecha[2]+'/'+fecha[1]+'/'+fecha[0]);
+                        $('#fol'+fila).html($('#form_editar #e_fol').val());
+
+                        if(tipo=='ca' || tipo=='da' || tipo=='tp' || tipo=='tpa'){
+                            $('#carr'+fila).html($('#form_editar #e_car option:selected').text());
+                            $('#fac'+fila).html($('#form_editar #e_fac').val());
+                            $('#mod'+fila).html($('#form_editar #e_mod option:selected').text());
                         }
-                    @else
-                        $('#ape'+fila).html($('#form_editar #e_ape').val()+" , "+$('#form_editar #e_nom').val());
-                    @endif
-                    $('#nro'+fila).html($('#form_editar #e_nro').val());
-                    var fecha=$('#form_editar #e_fec').val().split('-');
-                    $('#fec'+fila).html(fecha[2]+'/'+fecha[1]+'/'+fecha[0]);
-                    $('#fol'+fila).html($('#form_editar #e_fol').val());
-
-                    if(tipo=='ca' || tipo=='da' || tipo=='tp' || tipo=='tpa'){
-                        $('#carr'+fila).html($('#form_editar #e_car option:selected').text());
-                        $('#fac'+fila).html($('#form_editar #e_fac').val());
-                        $('#mod'+fila).html($('#form_editar #e_mod option:selected').text());
+                        if($('#form_editar #pdf_val').val()=='1'){
+                            $('#doc'+fila).html("<img src='{{url('img/icon/tit.gif')}}' width='30' height='30'/>");
+                        }
+                        if($('#form_editar #pdf_val_ant').val()=='1'){
+                            $('#ant'+fila).html("<img src='{{url('img/icon/antecedente.gif')}}' width='30' height='30'/>");
+                        }
+                        if(tipo=='di' || tipo=='tpos'){
+                            $('#men'+fila).html($('#form_editar #e_tit').val());
+                        }
+                    },
+                    error: function (data) {
+                        $('#panel_error_archivo').show();
                     }
-                    if($('#form_editar #pdf_val').val()=='1'){
-                        $('#doc'+fila).html("<img src='{{url('img/icon/tit.gif')}}' width='30' height='30'/>");
-                    }
-                    if($('#form_editar #pdf_val_ant').val()=='1'){
-                        $('#ant'+fila).html("<img src='{{url('img/icon/antecedente.gif')}}' width='30' height='30'/>");
-                    }
-                    if(tipo=='di' || tipo=='tpos'){
-                        $('#men'+fila).html($('#form_editar #e_tit').val());
-                    }
-                },
-                error: function (data) {
-                    $('#panel_error_archivo').show();
-                }
-            });
-        }
-        function verRevalida(){
-            if($("#revalida").val()=='t'){
-                $("#revalida").val('f');
-                $("#btn_revalida").removeAttr('class');
-                $("#btn_revalida").addClass('btn btn-primary');
-                $("#btn_revalida").html('Reválida');
-            }else{
-                $("#revalida").val('t');
-                $("#btn_revalida").removeAttr('class');
-                $("#btn_revalida").addClass('btn btn-danger');
-                $("#btn_revalida").html('Cancelar');
+                });
             }
-        }
-        function obtenerTitulo(id){
-            var link="{{url('f_eli_titulo/')}}"+"/"+id;
-            $('#panel_e_titulo').html("<br/><br/><div class='d-flex justify-content-center text-danger'><div class='spinner-border' role='status'> <span class='visually-hidden'></span></div></div>");
-            $.ajax({
-                url: link,
-                type: 'GET',
-                data:'',
-                success: function (resp) {
-                    $('#panel_e_titulo').html(resp);
-                },
-                error: function (resp) {
-                    $('#panel_e_titulo').html("Ocurrio un error, probablemente no tenga permisos para esta acción");
+            function verRevalida(){
+                if($("#revalida").val()=='t'){
+                    $("#revalida").val('f');
+                    $("#btn_revalida").removeAttr('class');
+                    $("#btn_revalida").addClass('btn btn-primary');
+                    $("#btn_revalida").html('Reválida');
+                }else{
+                    $("#revalida").val('t');
+                    $("#btn_revalida").removeAttr('class');
+                    $("#btn_revalida").addClass('btn btn-danger');
+                    $("#btn_revalida").html('Cancelar');
                 }
-            });
-        }
-        function cargarDatosPersonales(ci){
-            var link="{{url('datos_per/')}}"+"/"+ci;
-            $.ajax({
-                url: link,
-                type: 'GET',
-                success: function (resp) {
-                    if(resp=="No"){
-                        $('#apellido').val('');
-                        $('#nombre').val('');
-                        $('#expedido').val('');
-                    }else{
-                        var res=JSON.parse(resp);
-                        $('#apellido').val(res['per_apellido']);
-                        $('#nombre').val(res['per_nombre']);
-                        $('#expedido').val(res['per_ci_exp']);
-                        $('#sexo').val(res['per_sexo']);
-                    }
-                },
-                error: function () {
-                    alert('No se puede ejecutar la petición');
-                }
-            });
-        }
-        function verDatos(url,panel,fila){
-            $('#'+panel).html("<br/><br/><div class='d-flex justify-content-center text-danger'><div class='spinner-border' role='status'> <span class='visually-hidden'></span></div></div>");
-            $.ajax({
-                url:url,
-                type:'GET',
-                data:'',
-                success:function (resp) {
-                    $('#'+panel).html(resp);
-                    $('#fila_obs').val(fila);
-                },
-                error:function () {
-                    alert('No se puede ejecutar la petición');
-                }
-            });
-        }
-        function toggleNotaMarginalNuevo() {
-            var mostrar = $('#nota_marginal_nuevo').prop('checked');
-            
-            if (mostrar) {
-                $('#bloque_nota_marginal_nuevo, #bloque_fecha_nota_nuevo').show();
-            } else {
-                $('#bloque_nota_marginal_nuevo, #bloque_fecha_nota_nuevo').hide();
-                $('#resolucion_nuevo, #fecha_resolucion_nuevo').val('');
             }
-        }
+            function obtenerTitulo(id){
+                var link="{{url('f_eli_titulo/')}}"+"/"+id;
+                $('#panel_e_titulo').html("<br/><br/><div class='d-flex justify-content-center text-danger'><div class='spinner-border' role='status'> <span class='visually-hidden'></span></div></div>");
+                $.ajax({
+                    url: link,
+                    type: 'GET',
+                    data:'',
+                    success: function (resp) {
+                        $('#panel_e_titulo').html(resp);
+                    },
+                    error: function (resp) {
+                        $('#panel_e_titulo').html("Ocurrio un error, probablemente no tenga permisos para esta acción");
+                    }
+                });
+            }
+            function cargarDatosPersonales(ci){
+                var link="{{url('datos_per/')}}"+"/"+ci;
+                $.ajax({
+                    url: link,
+                    type: 'GET',
+                    success: function (resp) {
+                        if(resp=="No"){
+                            $('#apellido').val('');
+                            $('#nombre').val('');
+                            $('#expedido').val('');
+                        }else{
+                            var res=JSON.parse(resp);
+                            $('#apellido').val(res['per_apellido']);
+                            $('#nombre').val(res['per_nombre']);
+                            $('#expedido').val(res['per_ci_exp']);
+                            $('#sexo').val(res['per_sexo']);
+                        }
+                    },
+                    error: function () {
+                        alert('No se puede ejecutar la petición');
+                    }
+                });
+            }
+            function verDatos(url,panel,fila){
+                $('#'+panel).html("<br/><br/><div class='d-flex justify-content-center text-danger'><div class='spinner-border' role='status'> <span class='visually-hidden'></span></div></div>");
+                $.ajax({
+                    url:url,
+                    type:'GET',
+                    data:'',
+                    success:function (resp) {
+                        $('#'+panel).html(resp);
+                        $('#fila_obs').val(fila);
+                    },
+                    error:function () {
+                        alert('No se puede ejecutar la petición');
+                    }
+                });
+            }
+            function toggleNotaMarginalNuevo() {
+                var mostrar = $('#nota_marginal_nuevo').prop('checked');
+                
+                if (mostrar) {
+                    $('#bloque_nota_marginal_nuevo, #bloque_fecha_nota_nuevo').show();
+                } else {
+                    $('#bloque_nota_marginal_nuevo, #bloque_fecha_nota_nuevo').hide();
+                    $('#resolucion_nuevo, #fecha_resolucion_nuevo').val('');
+                }
+            }
 
-        $(document).on('change', '.modal.show input[name="nota_marginal"]', function() {  // cambiado
-            toggleNotaMarginalNuevo();
-        });
-            
-    </script>
+            $(document).on('change', '.modal.show input[name="nota_marginal"]', function() {  // cambiado
+                toggleNotaMarginalNuevo();
+            });
+            function formatearFecha(fecha) {
+                let [d, m, y] = fecha.split('/');
+                y = '20' + y; // asumiendo 20xx
+                return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+            }
+
+            let timeout = null;
+
+            function buscarSitra() {
+                let ci = document.getElementById('ci').value;
+                let nro = document.getElementById('nro_titulo').value;
+                let serie = document.getElementById('nro_serie').value;
+                console.log({ ci, nro, serie }); // 👈 AQUÍ
+
+                if (!ci || !nro || !serie) return;
+
+                clearTimeout(timeout);
+
+                timeout = setTimeout(() => {
+                    fetch('/sitra/autocompletar', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({ ci, nro, serie })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        console.log('RESPUESTA:', data); // 👈 clave para debug
+
+                        if (!data.ok) return;
+
+                        document.getElementById('titulo').value = data.titulo || '';
+                        document.getElementById('fecha_emision').value = formatearFecha(data.fecha_emision);
+                        autoseleccionarCarrera(data.titulo);
+                    })
+                    .catch(err => console.error(err));
+
+                }, 500);
+            }
+
+            function normalizar(texto) {
+                return texto
+                    .toUpperCase()
+                    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // quitar tildes
+                    .replace(/LICENCIATURA EN|LIC\. EN|INGENIERIA EN|ING\./g, "")
+                    .replace(/[^A-Z0-9 ]/g, "")
+                    .replace(/\s+/g, " ")
+                    .trim();
+            }
+
+        </script>
+    @endsection
 @endsection

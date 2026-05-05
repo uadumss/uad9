@@ -18,7 +18,7 @@
             <div class="card shadow">
                 <div class="card-body">
                     <div class="bg-primary centrar_bloque p-1 col-md-5 rounded shadow">
-                        <h6 class="text-white text-center">Formulario para nuevo título</h6>
+                        <h6 class="text-white text-center">Formulario para editar título</h6>
                     </div>
                     <hr class="sidebar-divider"/>
                     <div class="row">
