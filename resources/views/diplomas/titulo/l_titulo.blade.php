@@ -915,45 +915,57 @@
                 toggleNotaMarginalNuevo();
             });
             function formatearFecha(fecha) {
-                    let [d, m, y] = fecha.split('/');
-                    y = '20' + y; // asumiendo 20xx
-                    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
-                }
+                let [d, m, y] = fecha.split('/');
+                y = '20' + y; // asumiendo 20xx
+                return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+            }
 
             let timeout = null;
 
             function buscarSitra() {
-                    let ci = document.getElementById('ci').value;
-                    let nro = document.getElementById('nro_titulo').value;
-                    let serie = document.getElementById('nro_serie').value;
-                    console.log({ ci, nro, serie }); // 👈 AQUÍ
+                let ci = document.getElementById('ci').value;
+                let nro = document.getElementById('nro_titulo').value;
+                let serie = document.getElementById('nro_serie').value;
+                console.log({ ci, nro, serie }); // 👈 AQUÍ
 
-                    if (!ci || !nro || !serie) return;
+                if (!ci || !nro || !serie) return;
 
-                    clearTimeout(timeout);
+                clearTimeout(timeout);
 
-                    timeout = setTimeout(() => {
-                        fetch('/sitra/autocompletar', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                            },
-                            body: JSON.stringify({ ci, nro, serie })
-                        })
-                        .then(res => res.json())
-                        .then(data => {
-                            console.log('RESPUESTA:', data); // 👈 clave para debug
+                timeout = setTimeout(() => {
+                    fetch('/sitra/autocompletar', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({ ci, nro, serie })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        console.log('RESPUESTA:', data); // 👈 clave para debug
 
-                            if (!data.ok) return;
+                        if (!data.ok) return;
 
-                            document.getElementById('titulo').value = data.titulo || '';
-                            document.getElementById('fecha_emision').value = formatearFecha(data.fecha_emision);
-                        })
-                        .catch(err => console.error(err));
+                        document.getElementById('titulo').value = data.titulo || '';
+                        document.getElementById('fecha_emision').value = formatearFecha(data.fecha_emision);
+                        autoseleccionarCarrera(data.titulo);
+                    })
+                    .catch(err => console.error(err));
 
-                    }, 500);
-                }
+                }, 500);
+            }
+
+            function normalizar(texto) {
+                return texto
+                    .toUpperCase()
+                    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // quitar tildes
+                    .replace(/LICENCIATURA EN|LIC\. EN|INGENIERIA EN|ING\./g, "")
+                    .replace(/[^A-Z0-9 ]/g, "")
+                    .replace(/\s+/g, " ")
+                    .trim();
+            }
+
         </script>
     @endsection
 @endsection

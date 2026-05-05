@@ -123,5 +123,4 @@ class SitraService
         return $html;
     }
 
-    
 }

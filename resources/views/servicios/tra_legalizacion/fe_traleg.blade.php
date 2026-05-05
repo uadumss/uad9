@@ -1197,7 +1197,7 @@
                                                 <span class="td-sub" data-campo="sitra-fuente" style="margin-left:4px;"></span>
                                             @endif
                                             <span style="font-size:12px;font-weight:600;color:var(--e-s700);margin-left:8px;">
-                                                Supletorio: <input type="checkbox" name="supletorio" style="accent-color:var(--e-blue);vertical-align:middle;">
+                                                Supletorio: <input type="checkbox" name="supletorio" style="accent-color:var(--e-blue);vertical-align:middle;" onchange="validarSitraEnFormulario(this.closest('form'))">
                                             </span>
                                         </div>
                                     </div>
@@ -1666,6 +1666,7 @@
         if(!form.find('[data-campo="estado-sitra"]').length)return;
         var numero=(form.find('input[name="numero"]').val()||'').trim(),gestion=(form.find('input[name="gestion"]').val()||'').trim();
         var codTipo=(form.find('input[data-campo="tipo-legalizacion-hidden"]').val()||'').trim(),buscarEn=(form.find('select[name="buscar_en"]').val()||'').trim();
+        var supletorio=form.find('input[name="supletorio"]').is(':checked');
         var secuencia=((form.data('sitra-req-seq')||0)+1);form.data('sitra-req-seq',secuencia);
         form.find('[data-campo="fuente-sitra"]').val('');
         if(numero===''||numero==='-'){limpiarSitraFormulario(form);actualizarEstadoSitra(form,'text-muted','SITRA pendiente.');return;}
@@ -1674,7 +1675,7 @@
         actualizarEstadoSitra(form,'text-muted','Validando en SITRA/SID...');
         $.ajax({
             url:"{{url('validar sitra legalizacion/'.$tramite->cod_tra)}}",type:'POST',
-            data:{_token:form.find('input[name="_token"]').val(),numero:numero,gestion:gestion,tipo:codTipo,buscar_en:buscarEn},
+            data:{_token:form.find('input[name="_token"]').val(),numero:numero,gestion:gestion,tipo:codTipo,buscar_en:buscarEn,supletorio:supletorio?'1':'0'},
             success:function(resp){
                 if((form.data('sitra-req-seq')||0)!==secuencia)return;
                 if(!resp||resp.aplica===false){limpiarSitraFormulario(form);actualizarEstadoSitra(form,'text-muted',resp&&resp.message?resp.message:'No aplica para este tipo.');return;}
