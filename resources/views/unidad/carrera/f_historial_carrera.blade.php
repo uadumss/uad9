@@ -18,13 +18,17 @@
                     <div class="font-weight-bold text-dark">Facultad: {{$facultad->fac_nombre ?? '-'}}</div>
                     <div class="text-dark">Carrera: {{$carrera->car_nombre}} <span class="text-muted">({{$carrera->car_abreviacion ?: '-'}})</span></div>
                 </div>
-                <span class="badge px-3 py-2" style="background: #dbeafe; color: #1d4ed8;">{{$acreditacionesNacional->count() + $acreditacionesInternacional->count() + $historial->count()}} registros</span>
+                <div class="d-flex flex-wrap align-items-center">
+                    <span class="badge px-3 py-2 mr-2" style="background: #dbeafe; color: #1d4ed8;">Cambios de nombre: {{$historial->count()}}</span>
+                    <span class="badge px-3 py-2 mr-2" style="background: #ecfeff; color: #0f766e;">CEUB: {{$acreditacionesNacional->count()}}</span>
+                    <span class="badge px-3 py-2" style="background: #ede9fe; color: #7c3aed;">ARCU SUR: {{$acreditacionesInternacional->count()}}</span>
+                </div>
             </div>
 
             <div class="border rounded-lg shadow-sm bg-white p-3 mb-3" style="background: linear-gradient(180deg, #f9fbff 0%, #ffffff 100%);">
                 <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
                     <h6 class="text-info font-weight-bolder mb-0"><i class="fas fa-award text-primary"></i>&nbsp;Historial de acreditaciones CEUB (Nacional)</h6>
-                    <span class="badge badge-light border text-info px-3 py-2">Nacional</span>
+                    <span class="badge badge-light border text-info px-3 py-2">{{$acreditacionesNacional->count()}} registros</span>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-sm table-hover mb-0" width="100%" cellspacing="0" style="font-size: 0.80em">
@@ -38,6 +42,7 @@
                             <th class="border-0">Estado</th>
                             <th class="border-0">Puntaje</th>
                             <th class="border-0">Certif.</th>
+                            <th class="border-0">Acciones</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -81,12 +86,22 @@
                                     <td class="text-left">{{$a->estado_vista ?? ''}}</td>
                                     <td class="text-left">{{$a->puntaje ?? ''}}</td>
                                     <td class="text-center">{{$a->certificado === null ? '' : ($a->certificado ? 'SI' : 'NO')}}</td>
+                                    <td class="text-center">
+                                                    <a href="javascript:void(0)" class="btn btn-light btn-circle btn-sm text-primary mb-2"
+                                                         onclick="cargarDatos('fe_acreditacion/0/{{$carrera->cod_car}}/{{$a->cod_cac}}','panel_econtenido')" title="Editar acreditación">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                                    <a href="javascript:void(0)" class="btn btn-light btn-circle btn-sm text-info"
+                                                         onclick="cargarDatos('f_historial_acreditacion/0/{{$carrera->cod_car}}/{{$a->cod_cac}}','panel_econtenido')" title="Ver historial de acreditación">
+                                            <i class="fas fa-history"></i>
+                                        </a>
+                                    </td>
                                 </tr>
                                 <?php $k++; ?>
                             @endforeach
                         @else
                             <tr>
-                                <td class="text-center text-muted" colspan="8">Sin historial de acreditaciones CEUB.</td>
+                                <td class="text-center text-muted" colspan="9">Sin historial de acreditaciones CEUB.</td>
                             </tr>
                         @endif
                         </tbody>
@@ -97,7 +112,7 @@
             <div class="border rounded-lg shadow-sm bg-white p-3 mb-3" style="background: linear-gradient(180deg, #f9fbff 0%, #ffffff 100%);">
                 <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
                     <h6 class="text-info font-weight-bolder mb-0"><i class="fas fa-award text-primary"></i>&nbsp;Historial de acreditaciones ARCU SUR (Internacional)</h6>
-                    <span class="badge badge-light border text-info px-3 py-2">Internacional</span>
+                    <span class="badge badge-light border text-info px-3 py-2">{{$acreditacionesInternacional->count()}} registros</span>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-sm table-hover mb-0" width="100%" cellspacing="0" style="font-size: 0.80em">
@@ -111,6 +126,7 @@
                             <th class="border-0">Estado</th>
                             <th class="border-0">Puntaje</th>
                             <th class="border-0">Certif.</th>
+                            <th class="border-0">Acciones</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -154,12 +170,22 @@
                                     <td class="text-left">{{$a->estado_vista ?? ''}}</td>
                                     <td class="text-left">{{$a->puntaje ?? ''}}</td>
                                     <td class="text-center">{{$a->certificado === null ? '' : ($a->certificado ? 'SI' : 'NO')}}</td>
+                                    <td class="text-center">
+                                                    <a href="javascript:void(0)" class="btn btn-light btn-circle btn-sm text-primary mb-2"
+                                                         onclick="cargarDatos('fe_acreditacion/0/{{$carrera->cod_car}}/{{$a->cod_cac}}','panel_econtenido')" title="Editar acreditación">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                                    <a href="javascript:void(0)" class="btn btn-light btn-circle btn-sm text-info"
+                                                         onclick="cargarDatos('f_historial_acreditacion/0/{{$carrera->cod_car}}/{{$a->cod_cac}}','panel_econtenido')" title="Ver historial de acreditación">
+                                            <i class="fas fa-history"></i>
+                                        </a>
+                                    </td>
                                 </tr>
                                 <?php $m++; ?>
                             @endforeach
                         @else
                             <tr>
-                                <td class="text-center text-muted" colspan="8">Sin historial de acreditaciones ARCU SUR.</td>
+                                <td class="text-center text-muted" colspan="9">Sin historial de acreditaciones ARCU SUR.</td>
                             </tr>
                         @endif
                         </tbody>
@@ -170,7 +196,7 @@
             <div class="border rounded-lg shadow-sm bg-white p-3">
                 <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
                     <h6 class="text-info font-weight-bolder mb-0"><i class="fas fa-signature text-primary"></i>&nbsp;Historial de cambios de nombre</h6>
-                    <span class="badge badge-light border text-info px-3 py-2">Nombre y abreviación</span>
+                    <span class="badge badge-light border text-info px-3 py-2">{{$historial->count()}} cambios</span>
                 </div>
                 @if(sizeof($historial) > 0)
                     <div class="table-responsive">
@@ -178,31 +204,19 @@
                             <thead style="background: linear-gradient(135deg, #e0fbfc 0%, #cdeffd 100%);">
                             <tr class="text-secondary">
                                 <th class="border-0">Nro</th>
-                                <th class="border-0">Nombre de carrera</th>
-                                <th class="border-0">Nombre corto</th>
-                                <th class="border-0">Fecha de cambio</th>
+                                <th class="border-0">Fecha</th>
+                                <th class="border-0">Cambio de nombre</th>
+                                <th class="border-0">Cambio de abreviación</th>
                             </tr>
                             </thead>
                             <tbody>
                             <?php $i = 1; ?>
                             @foreach($historial as $h)
-                                <?php
-                                $etiquetaAnterior = $loop->last ? 'Primero' : 'Anterior';
-                                $etiquetaNuevo = $loop->first ? 'Actual' : 'Nuevo';
-                                ?>
                                 <tr>
                                     <th class="border-right font-weight-bolder text-primary bg-light">{{$i}}</th>
-                                    <td class="text-left">
-                                        <div><span class="text-muted">{{$etiquetaAnterior}}:</span> {{$h->nombre_anterior}}</div>
-                                        <div><span class="text-primary font-weight-bold">{{$etiquetaNuevo}}:</span> {{$h->nombre_nuevo}}</div>
-                                    </td>
-                                    <td class="text-left">
-                                        <div><span class="text-muted">{{$etiquetaAnterior}}:</span> {{$h->abreviacion_anterior ?? '-'}}</div>
-                                        <div><span class="text-primary font-weight-bold">{{$etiquetaNuevo}}:</span> {{$h->abreviacion_nueva ?? '-'}}</div>
-                                    </td>
-                                    <td class="text-left text-nowrap">
-                                        {{date('d/m/Y H:i', strtotime($h->fecha_cambio ?? $h->created_at))}}
-                                    </td>
+                                    <td class="text-left text-nowrap">{{date('d/m/Y H:i', strtotime($h->fecha_cambio ?? $h->created_at))}}</td>
+                                    <td class="text-left"><span class="text-muted">{{$h->nombre_anterior}}</span> &rarr; <span class="text-primary font-weight-bold">{{$h->nombre_nuevo}}</span></td>
+                                    <td class="text-left"><span class="text-muted">{{$h->abreviacion_anterior ?? '-'}}</span> &rarr; <span class="text-primary font-weight-bold">{{$h->abreviacion_nueva ?? '-'}}</span></td>
                                 </tr>
                                 <?php $i++; ?>
                             @endforeach
