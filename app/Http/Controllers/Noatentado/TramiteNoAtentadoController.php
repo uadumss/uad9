@@ -1991,65 +1991,6 @@ class TramiteNoAtentadoController extends Controller
         ];
     }
 
-    private function mapearMensajeErrorRecaudacionNoAtentado(string $mensajeApi,int $status=0): array
-    {
-        $mensajeApi=trim($mensajeApi);
-        $msgNorm=mb_strtolower($mensajeApi);
-
-        if($status===429 || strpos($msgNorm,'too many')!==false || strpos($msgNorm,'demasiadas solicitudes')!==false || strpos($msgNorm,'rate limit')!==false){
-            return [
-                'code'=>'RATE_LIMIT',
-                'message'=>'Demasiadas solicitudes a recaudaciones. Intente nuevamente en unos segundos.',
-            ];
-        }
-
-        if(
-            strpos($msgNorm,'configur')!==false ||
-            strpos($msgNorm,'services/.env')!==false ||
-            strpos($msgNorm,'no esta configurado')!==false ||
-            strpos($msgNorm,'no está configurado')!==false
-        ){
-            return [
-                'code'=>'SISTEMA_NO_CONFIGURADO',
-                'message'=>'Recaudaciones no está configurado. Contacte al área de sistemas.',
-            ];
-        }
-
-        if(
-            $status===404 ||
-            strpos($msgNorm,'not found')!==false ||
-            strpos($msgNorm,'no se encuentra')!==false ||
-            strpos($msgNorm,'no encontrado')!==false ||
-            strpos($msgNorm,'control')!==false ||
-            strpos($msgNorm,'recibo')!==false
-        ){
-            return [
-                'code'=>'CONTROL_NO_ENCONTRADO',
-                'message'=>'No se encontró información del número de control en recaudaciones.',
-            ];
-        }
-
-        if($status>0 && $status<500){
-            return [
-                'code'=>'API_RECAUDACIONES_ERROR',
-                'message'=>'No se pudo validar el control en recaudaciones. Verifique los datos e intente nuevamente.',
-            ];
-        }
-
-        if(
-            strpos($msgNorm,'comunicacion')!==false ||
-            strpos($msgNorm,'comunicación')!==false ||
-            strpos($msgNorm,'timeout')!==false ||
-            strpos($msgNorm,'sin conexion')!==false ||
-            strpos($msgNorm,'sin conexión')!==false
-        ){
-            return [
-                'code'=>'API_NO_DISPONIBLE',
-                'message'=>'Sin conexión con recaudaciones. Intente nuevamente.',
-            ];
-        }
-
-
     private function extraerResultadoRecaudacionNoAtentado(array $json): array
     {
         $candidatos=[
