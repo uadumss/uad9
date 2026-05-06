@@ -103,7 +103,9 @@
                              </tr>
                          </table>
                          @endif
-                         <button id="otros" class="btn btn-sm btn-primary float-right" onclick="$('#editarApoderadoEntrega').show(500); $('#apoderadoEntrega').hide(500);"> Editar datos</button>
+                         @if(!$apoderado)
+                             <button id="otros" class="btn btn-sm btn-primary float-right" onclick="$('#editarApoderadoEntrega').show(500); $('#apoderadoEntrega').hide(500);"> Registrar apoderado</button>
+                         @endif
                      </div>
                      <div id="editarApoderadoEntrega" class="border rounded shadow" style="display: none;">
                          <div class="p-3">
@@ -124,7 +126,7 @@
                                          <th class="text-right font-italic">CI : </th>
                                          <td class="border-bottom border-dark">
                                              <input class="form-control form-control-sm border-0" placeholder=""
-                                                    id="ci_entrega_apoderado" name="ci" value="{{$ci}}" oninput="cargarDatosApoderado(this.value); verificarBoletaApoderadoEntrega();"/></td>
+                                                    id="ci_entrega_apoderado" name="ci" value="{{$ci}}" oninput="verificarBoletaApoderadoEntrega();"/></td>
                                      </tr>
                                      <tr>
                                          <th class="text-right font-italic">N° control boleta : </th>
@@ -139,13 +141,13 @@
                                          <th class="text-right font-italic">Apellidos : </th>
                                          <td class="border-bottom border-dark">
                                              <input class="form-control form-control-sm border-0" placeholder=""
-                                                    required name="apellido" id="apellido_apoderado" value="{{$apellido}}" /></td>
+                                                    required name="apellido" id="apellido_apoderado" value="{{$apellido}}" readonly /></td>
                                      </tr>
                                      <tr>
                                          <th class="text-right font-italic">Nombres : </th>
                                          <td class="border-bottom border-dark">
                                              <input class="form-control form-control-sm border-0" placeholder=""
-                                                    required name="nombre" id="nombre_apoderado" value="{{$nombre}}" /></td>
+                                                    required name="nombre" id="nombre_apoderado" value="{{$nombre}}" readonly /></td>
                                      </tr>
                                      <tr>
                                          <th class="text-right font-italic" valign="top">Tipo de apoderado : </th>
@@ -289,42 +291,69 @@
         });
     }
 
+    var verificarBoletaApoderadoEntregaTimer = null;
+    var verificarBoletaApoderadoEntregaXHR = null;
+
     function verificarBoletaApoderadoEntrega(){
-        var control=($('#control_boleta_entrega').val()||'').toString().trim();
-        var ci=($('#ci_entrega_apoderado').val()||'').toString().trim();
-        if(control==='')return;
-        if(ci===''){
-            $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-warning').text('Complete CI');
-            $('#control_boleta_valido_entrega').val('0');
-            return;
-        }
-        var link="{{ url('verificar_boleta') }}"+"/"+encodeURIComponent(control)+'?documento='+encodeURIComponent(ci);
-        $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-info').text('Validando...');
-        $('#control_boleta_valido_entrega').val('0');
-        $.ajax({
-            url:link,
-            type:'GET',
-            success:function(resp){
-                if(resp=="No"){
-                    $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-danger').text('No encontrado');
-                    $('#control_boleta_valido_entrega').val('0');
-                    return;
-                }
-                try{
-                    var res=JSON.parse(resp);
-                    if(res['apellido_apoderado']!==undefined)$('#apellido_apoderado').val(res['apellido_apoderado']);
-                    if(res['nombre_apoderado']!==undefined)$('#nombre_apoderado').val(res['nombre_apoderado']);
-                    $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-success').text('Pago validado');
-                    $('#control_boleta_valido_entrega').val('1');
-                }catch(e){
-                    $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
-                    $('#control_boleta_valido_entrega').val('0');
-                }
-            },
-            error:function(){
-                $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-warning').text('Error API');
+        if(verificarBoletaApoderadoEntregaTimer) clearTimeout(verificarBoletaApoderadoEntregaTimer);
+
+        verificarBoletaApoderadoEntregaTimer = setTimeout(function(){
+            var control=($('#control_boleta_entrega').val()||'').toString().trim();
+            var ci=($('#ci_entrega_apoderado').val()||'').toString().trim();
+            if(control===''){
+                $('#nombre_apoderado').val('');
+                $('#apellido_apoderado').val('');
+                $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-secondary').text('Sin validar');
                 $('#control_boleta_valido_entrega').val('0');
+                return;
             }
-        });
+            if(ci===''){
+                $('#nombre_apoderado').val('');
+                $('#apellido_apoderado').val('');
+                $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-warning').text('Complete CI');
+                $('#control_boleta_valido_entrega').val('0');
+                return;
+            }
+            var link="{{ url('verificar_boleta') }}"+"/"+encodeURIComponent(control)+'?documento='+encodeURIComponent(ci);
+            $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-info').text('Validando...');
+            $('#control_boleta_valido_entrega').val('0');
+
+            if(verificarBoletaApoderadoEntregaXHR && verificarBoletaApoderadoEntregaXHR.readyState !== 4){
+                verificarBoletaApoderadoEntregaXHR.abort();
+            }
+
+            verificarBoletaApoderadoEntregaXHR = $.ajax({
+                url:link,
+                type:'GET',
+                success:function(resp){
+                    if(resp=="No" || resp===null || resp===''){
+                        $('#nombre_apoderado').val('');
+                        $('#apellido_apoderado').val('');
+                        $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-danger').text('No encontrado');
+                        $('#control_boleta_valido_entrega').val('0');
+                        return;
+                    }
+                    try{
+                        var res = (typeof resp === 'string') ? JSON.parse(resp) : resp;
+                        $('#apellido_apoderado').val(res['apellido_apoderado'] || '');
+                        $('#nombre_apoderado').val(res['nombre_apoderado'] || '');
+                        $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-success').text('Pago validado');
+                        $('#control_boleta_valido_entrega').val('1');
+                    }catch(e){
+                        $('#nombre_apoderado').val('');
+                        $('#apellido_apoderado').val('');
+                        $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
+                        $('#control_boleta_valido_entrega').val('0');
+                    }
+                },
+                error:function(xhr, textStatus){
+                    if(textStatus === 'abort') return;
+                    $('#nombre_apoderado').val('');
+                    $('#apellido_apoderado').val('');
+                    $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-warning').text('Error API');
+                    $('#control_boleta_valido_entrega').val('0');
+                }
+            });
+        }, 500);
     }
 </script>

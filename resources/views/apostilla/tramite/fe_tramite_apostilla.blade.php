@@ -512,7 +512,7 @@
                                     <div class="e-field fg-span2">
                                         <label>CI apoderado</label>
                                              <input class="e-input" type="text" name="ci_apoderado" id="ci_apoderado_apostilla"
-                                                 oninput="cargarDatosApoderado(this.value); verificarBoleta();" autocomplete="off">
+                                                 oninput="verificarBoleta();" autocomplete="off">
                                     </div>
                                     <div class="e-field fg-span2">
                                         <label>N° control boleta</label>
@@ -525,12 +525,12 @@
                                     <div class="e-field">
                                         <label>Nombres</label>
                                         <input class="e-input" type="text" name="nombre_apoderado"
-                                               id="nombre_apoderado" required autocomplete="off">
+                                               id="nombre_apoderado" required autocomplete="off" readonly>
                                     </div>
                                     <div class="e-field">
                                         <label>Apellidos</label>
                                         <input class="e-input" type="text" name="apellido_apoderado"
-                                               id="apellido_apoderado" required autocomplete="off">
+                                               id="apellido_apoderado" required autocomplete="off" readonly>
                                     </div>
                                     <div class="e-field fg-span2">
                                         <label>Tipo de apoderado</label>
@@ -604,6 +604,7 @@
                             </div>
                             <div class="e-panel-body">
                                 @if($apoderado)
+                                    {{-- Ya está guardado, se muestra estrictamente como Solo Lectura --}}
                                     <div class="fg fg-2">
                                         <div class="e-field">
                                             <label>CI apoderado</label>
@@ -627,12 +628,14 @@
                                         </div>
                                     </div>
                                 @else
+                                    {{-- No está guardado, se permite registrar si tiene permisos --}}
                                     @can('editar apoderado - apo')
                                         <div class="fg fg-2">
                                             <div class="e-field fg-span2">
                                                 <label>CI apoderado</label>
                                                 <input class="e-input" type="text" name="ci_apoderado" id="ci_apoderado_apostilla"
-                                                       oninput="cargarDatosApoderado(this.value); verificarBoleta();" autocomplete="off">
+                                                       value=""
+                                                       oninput="verificarBoleta();" autocomplete="off">
                                             </div>
                                             <div class="e-field fg-span2">
                                                 <label>N° control boleta</label>
@@ -644,12 +647,12 @@
                                             <div class="e-field">
                                                 <label>Nombres</label>
                                                 <input class="e-input" type="text" name="nombre_apoderado"
-                                                       id="nombre_apoderado" required autocomplete="off">
+                                                       id="nombre_apoderado" value="" autocomplete="off" readonly>
                                             </div>
                                             <div class="e-field">
                                                 <label>Apellidos</label>
                                                 <input class="e-input" type="text" name="apellido_apoderado"
-                                                       id="apellido_apoderado" required autocomplete="off">
+                                                       id="apellido_apoderado" value="" autocomplete="off" readonly>
                                             </div>
                                             <div class="e-field fg-span2" style="padding-bottom:0;">
                                                 <label>Tipo de apoderado</label>
@@ -665,6 +668,8 @@
                                                 </div>
                                             </div>
                                         </div>
+                                    @else
+                                        <p class="text-muted" style="font-size:12px;padding:8px 0;">Sin apoderado registrado.</p>
                                     @endcan
                                 @endif
                             </div>
@@ -672,14 +677,14 @@
 
                         <input type="hidden" name="ca" value="{{ $tramite_apostilla->cod_apos }}">
 
-                        @can('editar apoderado - apo')
-                            @if(!$apoderado)
+                        @if(!$apoderado)
+                            @can('editar apoderado - apo')
                                 <button type="button" class="e-btn e-btn-primary e-btn-full"
                                         onclick="enviar('form_tramite_apostilla','{{ $urlGuardarApoderadoTramiteApostilla }}','panel_apostilla');return false;">
                                     <i class="fas fa-user-check" style="font-size:11px;"></i> Guardar apoderado
                                 </button>
-                            @endif
-                        @endcan
+                            @endcan
+                        @endif
                     </form>
                 @endif
             </div>
@@ -935,50 +940,76 @@ function cargarDatosApoderado(ci){
     },error:function(){$('#'+panel).html("<span class='text-danger'>Ocurrio un error, probablemente no tenga permisos para esta acción</span>");}});
 }
 
+var verificarBoletaTimer = null;
+var verificarBoletaXHR = null;
+
 function verificarBoleta(){
-    var control = ($('#control_boleta_apostilla').val()||'').toString().trim();
-    var ci = ($('#ci_apoderado_apostilla').val()||'').toString().trim();
-    if(control===''){
-        return;
-    }
-    if(ci===''){
-        $('#estado_pago_apoderado').removeClass().addClass('badge badge-warning').text('Complete CI');
-        $('#control_boleta_valido').val('0');
-        return;
-    }
-    var link = "{{ url('verificar_boleta') }}" + "/" + encodeURIComponent(control) + '?documento=' + encodeURIComponent(ci);
-    // UI: marcar como validando
-    $('#estado_pago_apoderado').removeClass().addClass('badge badge-info').text('Validando...');
-    $('#control_boleta_valido').val('0');
-    $.ajax({
-        url: link,
-        type: 'GET',
-        success: function(resp){
-            if(resp=="No"){
-                $('#apellido_apoderado').val('');
-                $('#nombre_apoderado').val('');
-                $('#estado_pago_apoderado').removeClass().addClass('badge badge-danger').text('No encontrado');
-                $('#control_boleta_valido').val('0');
-            }else{
-                try{
-                    var res = JSON.parse(resp);
-                    if(res['apellido_apoderado']!==undefined) $('#apellido_apoderado').val(res['apellido_apoderado']);
-                    if(res['nombre_apoderado']!==undefined) $('#nombre_apoderado').val(res['nombre_apoderado']);
-                    $('#estado_pago_apoderado').removeClass().addClass('badge badge-success').text('Pago validado');
-                    $('#control_boleta_valido').val('1');
-                }catch(e){
-                    $('#apellido_apoderado').val('');$('#nombre_apoderado').val('');
-                    $('#estado_pago_apoderado').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
-                    $('#control_boleta_valido').val('0');
-                }
-            }
-        },
-        error: function(){
-            $('#apellido_apoderado').val('');$('#nombre_apoderado').val('');
-            $('#estado_pago_apoderado').removeClass().addClass('badge badge-warning').text('Error API');
+    if(verificarBoletaTimer) clearTimeout(verificarBoletaTimer);
+    
+    verificarBoletaTimer = setTimeout(function(){
+        var control = ($('#control_boleta_apostilla').val()||'').toString().trim();
+        var ci = ($('#ci_apoderado_apostilla').val()||'').toString().trim();
+        if(control===''){
+            $('#nombre_apoderado').val('');
+            $('#apellido_apoderado').val('');
+            $('#estado_pago_apoderado').removeClass().addClass('badge badge-secondary').text('Sin validar');
             $('#control_boleta_valido').val('0');
+            return;
         }
-    });
+        if(ci===''){
+            $('#nombre_apoderado').val('');
+            $('#apellido_apoderado').val('');
+            $('#estado_pago_apoderado').removeClass().addClass('badge badge-warning').text('Complete CI');
+            $('#control_boleta_valido').val('0');
+            return;
+        }
+
+        var link = "{{ url('verificar_boleta') }}" + "/" + encodeURIComponent(control) + '?documento=' + encodeURIComponent(ci);
+
+        $('#estado_pago_apoderado').removeClass().addClass('badge badge-info').text('Validando...');
+        $('#control_boleta_valido').val('0');
+
+        if(verificarBoletaXHR && verificarBoletaXHR.readyState !== 4){
+            verificarBoletaXHR.abort();
+        }
+
+        verificarBoletaXHR = $.ajax({
+            url: link,
+            type: 'GET',
+            success: function(resp){
+                if(resp==="No" || resp===null || resp===''){
+                    $('#nombre_apoderado').val('');
+                    $('#apellido_apoderado').val('');
+                    $('#estado_pago_apoderado').removeClass().addClass('badge badge-danger').text('No encontrado');
+                    $('#control_boleta_valido').val('0');
+                }else{
+                    try{
+                        var res = (typeof resp === 'string') ? JSON.parse(resp) : resp;
+                        // Autocompletar nombre/apellido SOLO si el campo está vacío o de lectura
+                        $('#apellido_apoderado').val(res['apellido_apoderado'] || '');
+                        $('#nombre_apoderado').val(res['nombre_apoderado'] || '');
+                        $('#estado_pago_apoderado').removeClass().addClass('badge badge-success').text('Boleta válida');
+                        $('#control_boleta_valido').val('1');
+                    }catch(e){
+                        $('#nombre_apoderado').val('');
+                        $('#apellido_apoderado').val('');
+                        $('#estado_pago_apoderado').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
+                        $('#control_boleta_valido').val('0');
+                    }
+                }
+            },
+            error: function(xhr, textStatus){
+                if(textStatus === 'abort') return;
+                var msg = 'Error API';
+                if(xhr.status === 404) msg = 'No encontrado';
+                else if(xhr.status === 422) msg = 'Datos inválidos';
+                $('#nombre_apoderado').val('');
+                $('#apellido_apoderado').val('');
+                $('#estado_pago_apoderado').removeClass().addClass('badge badge-warning').text(msg);
+                $('#control_boleta_valido').val('0');
+            }
+        });
+    }, 500);
 }
 
 function setBotonCargandoApostillaUi(btn,texto){

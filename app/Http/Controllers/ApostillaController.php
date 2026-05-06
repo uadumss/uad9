@@ -283,8 +283,15 @@ class ApostillaController extends Controller
                 'tipo'=>'required',
                 'ca'=>'required',
             ]);
-            $nuevo="";
-            $antiguo="";
+
+            $tramite_apostilla=Apostilla::find($form['ca']);
+            if(!$tramite_apostilla){
+                \Session::flash('error','No se encontró el trámite de apostilla.');
+                return redirect()->back();
+            }
+            $antiguo=json_encode($tramite_apostilla);
+
+            // Buscar apoderado por CI o crearlo/actualizarlo
             $apoderado=Apoderado::where('apo_ci','=',$form['ci_apoderado'])->first();
             if(!$apoderado){
                 $apoderado=Apoderado::create([
@@ -293,16 +300,18 @@ class ApostillaController extends Controller
                     'apo_apellido'=>mb_strtoupper($form['apellido_apoderado']),
                     'apo_sistema'=>4,
                 ]);
-                $nuevo=$apoderado;
+            } else {
+                // Actualizar nombre/apellido si cambiaron
+                $apoderado->apo_nombre=mb_strtoupper($form['nombre_apoderado']);
+                $apoderado->apo_apellido=mb_strtoupper($form['apellido_apoderado']);
+                $apoderado->save();
             }
-            $tramite_apostilla=Apostilla::find($form['ca']);
-            $antiguo=json_encode($tramite_apostilla);
 
             $tramite_apostilla->cod_apo=$apoderado->cod_apo;
             $tramite_apostilla->apos_apoderado=$form['tipo'];
             $tramite_apostilla->save();
-            $nuevo=(Object)array_merge($nuevo->toArray(),$tramite_apostilla->toArray());
-            $nuevo=json_encode($nuevo);
+
+            $nuevo=json_encode(array_merge($tramite_apostilla->toArray(), $apoderado->toArray()));
             SessionController::write('C',$antiguo,$nuevo,'apostilla','4',$tramite_apostilla->cod_apos);
 
             return redirect('editar tramite apostilla/'.$tramite_apostilla->cod_apos);

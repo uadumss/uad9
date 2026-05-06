@@ -96,7 +96,9 @@
 
                 </table>
 
-                <button id="otros" class="btn btn-sm btn-primary" onclick="$('#otrosDiv').show(500); $('#otros').hide(500);"> Editar datos</button>
+                @if(!$apoderado)
+                    <button id="otros" class="btn btn-sm btn-primary" onclick="$('#otrosDiv').show(500); $('#otros').hide(500);"> Registrar datos</button>
+                @endif
                 </div>
                 <div class="col-md-6">
                     <div>
@@ -136,13 +138,13 @@
                                             <th class="text-right font-italic">Apellidos : </th>
                                             <td class="border-bottom border-dark">
                                                 <input class="form-control form-control-sm border-0" placeholder=""
-                                                       required name="apellido" id="apellido" value="{{$apellido}}" /></td>
+                                                       required name="apellido" id="apellido" value="{{$apellido}}" readonly /></td>
                                         </tr>
                                         <tr>
                                             <th class="text-right font-italic">Nombres : </th>
                                             <td class="border-bottom border-dark">
                                                 <input class="form-control form-control-sm border-0" placeholder=""
-                                                       required name="nombre" id="nombre" value="{{$nombre}}" /></td>
+                                                       required name="nombre" id="nombre" value="{{$nombre}}" readonly /></td>
                                         </tr>
                                         <tr>
                                             <th class="text-right font-italic" valign="top">Tipo de apoderado : </th>
@@ -182,48 +184,74 @@
 </div>
 
     <script>
+        var verificarBoletaApoderadoTimer = null;
+        var verificarBoletaApoderadoXHR = null;
+
         function verificarBoletaApoderado(){
-            var control = ($('#control_boleta_apoderado').val()||'').toString().trim();
-            var ci = ($('#ci_apoderado_form').val()||'').toString().trim();
-            if(control==='') return;
-            if(ci===''){
-                $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-warning').text('Complete CI');
-                $('#control_boleta_valido_modal').val('0');
-                return;
-            }
-            var link = "{{ url('verificar_boleta') }}" + "/" + encodeURIComponent(control.toString().trim()) + '?documento=' + encodeURIComponent(ci);
-            // UI: marcar como validando
-            $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-info').text('Validando...');
-            $('#control_boleta_valido_modal').val('0');
-            $.ajax({
-                url: link,
-                type: 'GET',
-                success: function(resp){
-                    if(resp=="No"){
-                        $('#apellido').val('');
-                        $('#nombre').val('');
-                        $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-danger').text('No encontrado');
-                        $('#control_boleta_valido_modal').val('0');
-                    }else{
-                        try{
-                            var res = JSON.parse(resp);
-                            if(res['apellido_apoderado']!==undefined) $('#apellido').val(res['apellido_apoderado']);
-                            if(res['nombre_apoderado']!==undefined) $('#nombre').val(res['nombre_apoderado']);
-                            $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-success').text('Pago validado');
-                            $('#control_boleta_valido_modal').val('1');
-                        }catch(e){
-                            $('#apellido').val('');$('#nombre').val('');
-                            $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
-                            $('#control_boleta_valido_modal').val('0');
-                        }
-                    }
-                },
-                error: function(){
-                    $('#apellido').val('');$('#nombre').val('');
-                    $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-warning').text('Error API');
+            if(verificarBoletaApoderadoTimer) clearTimeout(verificarBoletaApoderadoTimer);
+
+            verificarBoletaApoderadoTimer = setTimeout(function(){
+                var control = ($('#control_boleta_apoderado').val()||'').toString().trim();
+                var ci = ($('#ci_apoderado_form').val()||'').toString().trim();
+                if(control===''){
+                    $('#nombre').val('');
+                    $('#apellido').val('');
+                    $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-secondary').text('Sin validar');
                     $('#control_boleta_valido_modal').val('0');
+                    return;
                 }
-            });
+                if(ci===''){
+                    $('#nombre').val('');
+                    $('#apellido').val('');
+                    $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-warning').text('Complete CI');
+                    $('#control_boleta_valido_modal').val('0');
+                    return;
+                }
+
+                var link = "{{ url('verificar_boleta') }}" + "/" + encodeURIComponent(control) + '?documento=' + encodeURIComponent(ci);
+
+                $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-info').text('Validando...');
+                $('#control_boleta_valido_modal').val('0');
+
+                if(verificarBoletaApoderadoXHR && verificarBoletaApoderadoXHR.readyState !== 4){
+                    verificarBoletaApoderadoXHR.abort();
+                }
+
+                verificarBoletaApoderadoXHR = $.ajax({
+                    url: link,
+                    type: 'GET',
+                    success: function(resp){
+                        if(resp==="No" || resp===null || resp===''){
+                            $('#nombre').val('');
+                            $('#apellido').val('');
+                            $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-danger').text('No encontrado');
+                            $('#control_boleta_valido_modal').val('0');
+                        }else{
+                            try{
+                                var res = (typeof resp === 'string') ? JSON.parse(resp) : resp;
+                                $('#apellido').val(res['apellido_apoderado'] || '');
+                                $('#nombre').val(res['nombre_apoderado'] || '');
+                                $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-success').text('Boleta válida');
+                                $('#control_boleta_valido_modal').val('1');
+                            }catch(e){
+                                $('#nombre').val('');
+                                $('#apellido').val('');
+                                $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
+                                $('#control_boleta_valido_modal').val('0');
+                            }
+                        }
+                    },
+                    error: function(xhr, textStatus){
+                        if(textStatus === 'abort') return;
+                        var msg = 'Error API';
+                        if(xhr.status === 404) msg = 'No encontrado';
+                        $('#nombre').val('');
+                        $('#apellido').val('');
+                        $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-warning').text(msg);
+                        $('#control_boleta_valido_modal').val('0');
+                    }
+                });
+            }, 500);
         }
     </script>
 
