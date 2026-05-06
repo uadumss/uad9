@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Carrera;
 use App\Models\CarreraAcreditacion;
+use App\Models\CarreraAcreditacionHistorial;
 use App\Models\CarreraHistorialNombre;
 use App\Models\Facultad;
 use App\Models\FacultadHistorialNombre;
@@ -186,6 +187,65 @@ class FacultadController extends Controller
         }
         return view('unidad.carrera.fe_carrera',compact('facultad','carrera','cod_fac','cod_car','acreditacionNacional','acreditacionInternacional'));
     }
+
+    public function fe_acreditacion($cod_fac,$cod_car,$cod_cac=0){
+        $carrera=Carrera::find($cod_car);
+        if(!$carrera){
+            return response('<div class="modal-content"><div class="modal-body"><div class="alert alert-danger mb-0">No se encontro la carrera solicitada.</div></div></div>');
+        }
+
+        $facultad=$cod_fac!=0 ? Facultad::find($cod_fac) : Facultad::find($carrera->cod_fac);
+        $acreditacion=null;
+        if((int)$cod_cac!==0){
+            $acreditacion=CarreraAcreditacion::find($cod_cac);
+        }
+
+        $tipoDefecto=trim((string)request()->get('tipo',''));
+        if(in_array($tipoDefecto,['Mercosur','ARCU SUR','Internacional'],true)){
+            $tipoDefecto='Internacional';
+        }elseif(in_array($tipoDefecto,['CEUB','Nacional'],true)){
+            $tipoDefecto='Nacional';
+        }else{
+            $tipoDefecto=null;
+        }
+
+        return view('unidad.carrera.fe_acreditacion',compact('facultad','carrera','cod_fac','cod_car','cod_cac','acreditacion','tipoDefecto'));
+    }
+
+    public function f_historial_acreditacion($cod_fac,$cod_car,$cod_cac){
+        $carrera=Carrera::find($cod_car);
+        $acreditacion=CarreraAcreditacion::find($cod_cac);
+
+        if(!$carrera || !$acreditacion || (int)$acreditacion->cod_car!==(int)$cod_car){
+            return response('<div class="modal-content"><div class="modal-body"><div class="alert alert-danger mb-0">No se encontro la acreditación solicitada.</div></div></div>');
+        }
+
+        $facultad=$cod_fac!=0 ? Facultad::find($cod_fac) : Facultad::find($carrera->cod_fac);
+        $tipoVista=$this->resolverTipoAcreditacion($acreditacion);
+        $estadoVista=$this->calcularEstadoAcreditacion(
+            $acreditacion->fecha_acreditacion,
+            $acreditacion->fecha_vencimiento,
+            $acreditacion->proc_sc,
+            $acreditacion->proc_nc
+        );
+
+        $historial=CarreraAcreditacionHistorial::where('cod_cac','=',$acreditacion->cod_cac)
+            ->orderByDesc('version')
+            ->orderByDesc('fecha_cambio')
+            ->orderByDesc('cod_cah')
+            ->get();
+
+        return view('unidad.carrera.f_historial_acreditacion',compact(
+            'facultad',
+            'carrera',
+            'acreditacion',
+            'tipoVista',
+            'estadoVista',
+            'historial',
+            'cod_fac',
+            'cod_car'
+        ));
+    }
     public function g_carrera(Request $form){
         $nombre=trim((string)$form['nombre']);
         $corto=trim((string)$form['corto_c']);
@@ -216,8 +276,6 @@ class FacultadController extends Controller
 
                 $nuevo=json_encode($carrera);
                 SessionController::write('U',$antiguo,$nuevo,'Carreras','1',$carrera->cod_car);
-                $this->guardarAcreditacionPorTipo($form,$carrera->cod_car,'nac','Nacional');
-                $this->guardarAcreditacionPorTipo($form,$carrera->cod_car,'int','Internacional');
             }else{
                 $carrera=Carrera::create([
                     'car_nombre'=>$nombre,
@@ -226,8 +284,6 @@ class FacultadController extends Controller
                 ]);
                 $nuevo=json_encode($carrera);
                 SessionController::write('C','',$nuevo,'Carreras','1',$carrera->cod_car);
-                $this->guardarAcreditacionPorTipo($form,$carrera->cod_car,'nac','Nacional');
-                $this->guardarAcreditacionPorTipo($form,$carrera->cod_car,'int','Internacional');
             }
             \Session::flash('exito','Se ha guardado con éxito la carrera');
         }else{
@@ -264,6 +320,18 @@ class FacultadController extends Controller
             return $item;
         });
 
+        $historialAcreditaciones=CarreraAcreditacionHistorial::where('cod_car','=',$cod_car)
+            ->orderByDesc('version')
+            ->orderByDesc('fecha_cambio')
+            ->orderByDesc('cod_cah')
+            ->get()
+            ->groupBy('cod_cac');
+
+        $acreditaciones=$acreditaciones->map(function ($item) use ($historialAcreditaciones) {
+            $item->historial_vista=$historialAcreditaciones->get($item->cod_cac, collect())->values();
+            return $item;
+        });
+
         $acreditacionesNacional=$acreditaciones->where('tipo_vista','Nacional')->values();
         $acreditacionesInternacional=$acreditaciones->where('tipo_vista','Internacional')->values();
         $codAcreditacionNacionalActiva=$acreditacionesNacional->first()->cod_cac ?? 0;
@@ -279,6 +347,21 @@ class FacultadController extends Controller
             'codAcreditacionInternacionalActiva'
         ));
     }
+
+    public function g_acreditacion(Request $form){
+        $codCar=(int)($form['cc'] ?? 0);
+        $tipo=trim((string)($form['acred_tipo'] ?? ''));
+        $codCac=(int)($form['cod_cac'] ?? 0);
+
+        if($codCar===0 || !in_array($tipo,['Nacional','Internacional'],true)){
+            \Session::flash('error','No se pudo guardar la acreditación.');
+            return;
+        }
+
+        $this->guardarAcreditacionPorTipo($form,$codCar,'acred',$tipo,$codCac,$codCac===0);
+        \Session::flash('exito','Se ha guardado con éxito la acreditación');
+    }
+
     public function f_eli_carrera($cod_fac,$cod_car){
         $carrera=Carrera::find($cod_car);
         $facultad=Facultad::find($carrera->cod_fac);
@@ -298,31 +381,43 @@ class FacultadController extends Controller
         \Session::flash('exito','Se ha eliminado con éxito la carrera');
     }
 
-    private function guardarAcreditacionPorTipo(Request $form,$codCar,$prefijo,$tipo){
+    private function guardarAcreditacionPorTipo(Request $form,$codCar,$prefijo,$tipo,$codCac=0,$forzarNuevo=false){
         $registrar=$form->has($prefijo.'_habilitada');
 
         $acreditaciones=CarreraAcreditacion::where('cod_car','=',$codCar)
             ->orderByDesc('cod_cac')
             ->get();
 
-        $acreditacion=$acreditaciones->first(function ($item) use ($tipo) {
-            return $item->tipo===$tipo;
-        });
+        $acreditacion=null;
+        if((int)$codCac!==0){
+            $acreditacion=$acreditaciones->first(function ($item) use ($codCac) {
+                return (int)$item->cod_cac===(int)$codCac;
+            });
+        }
 
-        if(!$acreditacion){
+        if(!$forzarNuevo && !$acreditacion){
+            $acreditacion=$acreditaciones->first(function ($item) use ($tipo) {
+                return $item->tipo===$tipo;
+            });
+        }
+
+        if(!$forzarNuevo && !$acreditacion){
             $sistemaEsperado=$tipo==='Nacional' ? 'CEUB' : 'ARCU SUR';
             $acreditacion=$acreditaciones->first(function ($item) use ($sistemaEsperado) {
                 return strtoupper(trim((string)$item->sistema))===$sistemaEsperado;
             });
         }
 
-        if(!$acreditacion && $tipo==='Nacional'){
+        if(!$forzarNuevo && !$acreditacion && $tipo==='Nacional'){
             $acreditacion=$acreditaciones->first(function ($item) {
                 return trim((string)$item->tipo)==='';
             });
         }
 
         if(!$registrar){
+            if($acreditacion){
+                $this->registrarHistorialAcreditacion($acreditacion,'ELIMINACION');
+            }
             CarreraAcreditacion::where('cod_car','=',$codCar)
                 ->where(function ($query) use ($tipo) {
                     $query->where('tipo','=',$tipo);
@@ -389,7 +484,43 @@ class FacultadController extends Controller
         }
 
         $datosAcreditacion['cod_car']=$codCar;
-        CarreraAcreditacion::create($datosAcreditacion);
+        if($acreditacion){
+            $acreditacion->fill($datosAcreditacion);
+            $acreditacion->save();
+            $this->registrarHistorialAcreditacion($acreditacion,'EDICION');
+            return;
+        }
+
+        $acreditacion=CarreraAcreditacion::create($datosAcreditacion);
+        $this->registrarHistorialAcreditacion($acreditacion,'CREACION');
+    }
+
+    private function registrarHistorialAcreditacion(CarreraAcreditacion $acreditacion,$operacion){
+        CarreraAcreditacionHistorial::create([
+            'cod_cac'=>$acreditacion->cod_cac,
+            'cod_car'=>$acreditacion->cod_car,
+            'operacion'=>$operacion,
+            'version'=>CarreraAcreditacionHistorial::where('cod_cac','=',$acreditacion->cod_cac)->count()+1,
+            'acreditada'=>$acreditacion->acreditada,
+            'tipo'=>$acreditacion->tipo,
+            'sistema'=>$acreditacion->sistema,
+            'anio'=>$acreditacion->anio,
+            'proc_sc'=>$acreditacion->proc_sc,
+            'proc_nc'=>$acreditacion->proc_nc,
+            'proc_total'=>$acreditacion->proc_total,
+            'fecha_acreditacion'=>$acreditacion->fecha_acreditacion,
+            'fecha_vencimiento'=>$acreditacion->fecha_vencimiento,
+            'resolucion_inicio'=>$acreditacion->resolucion_inicio,
+            'resolucion_fin'=>$acreditacion->resolucion_fin,
+            'resolucion_fecha_emision'=>$acreditacion->resolucion_fecha_emision,
+            'resolucion_numero'=>$acreditacion->resolucion_numero,
+            'resolucion_anio'=>$acreditacion->resolucion_anio,
+            'estado'=>$acreditacion->estado,
+            'puntaje'=>$acreditacion->puntaje,
+            'certificado'=>$acreditacion->certificado,
+            'observacion'=>$acreditacion->observacion,
+            'fecha_cambio'=>now(),
+        ]);
     }
 
     private function acreditacionTieneCambios(CarreraAcreditacion $acreditacion,array $datosAcreditacion){
