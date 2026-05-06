@@ -116,11 +116,11 @@
                     <div class="form-row">
                         <div class="form-group col-md-3 mb-2">
                             <label class="mb-1 text-secondary">S/C</label>
-                            <input type="number" class="form-control form-control-sm shadow-sm" name="acred_proc_sc" min="0" step="1" value="{{ $sc }}" required style="border: 1px solid #c7d7ea; border-radius: .8rem; background: #fff;" />
+                            <input type="number" id="acred_proc_sc" class="form-control form-control-sm shadow-sm" name="acred_proc_sc" min="0" step="1" value="{{ $sc }}" required style="border: 1px solid #c7d7ea; border-radius: .8rem; background: #fff;" />
                         </div>
                         <div class="form-group col-md-3 mb-2">
                             <label class="mb-1 text-secondary">N/C</label>
-                            <input type="number" class="form-control form-control-sm shadow-sm" name="acred_proc_nc" min="0" step="1" value="{{ $nc }}" required style="border: 1px solid #c7d7ea; border-radius: .8rem; background: #fff;" />
+                            <input type="number" id="acred_proc_nc" class="form-control form-control-sm shadow-sm" name="acred_proc_nc" min="0" step="1" value="{{ $nc }}" required style="border: 1px solid #c7d7ea; border-radius: .8rem; background: #fff;" />
                         </div>
                         <div class="form-group col-md-3 mb-2">
                             <label class="mb-1 text-secondary">Total</label>
@@ -268,13 +268,58 @@
     }
 
     $(function(){
+        var formStateByTipo = {};
+        var currentTipo = $('#acred_tipo').val() || 'Nacional';
+
+        function getFormState(){
+            return {
+                proc_sc: $('#acred_proc_sc').val(),
+                proc_nc: $('#acred_proc_nc').val(),
+                proc_total: $('#acred_proc_total').val(),
+                fecha_acred: $('#acred_fecha_acreditacion').val(),
+                fecha_venc: $('#acred_fecha_vencimiento').val(),
+                puntaje_modo: $('#acred_puntaje_modo').val(),
+                puntaje_numero: $('#acred_puntaje_numero').val(),
+                acreditada: $('select[name="acred_acred"]').val(),
+                certificado: $('select[name="acred_certificado"]').val(),
+                resol_num: $('input[name="acred_resolucion_numero"]').val(),
+                resol_anio: $('input[name="acred_resolucion_anio"]').val()
+            };
+        }
+
+        function setFormState(s){
+            s = s || {};
+            $('#acred_proc_sc').val(s.proc_sc || '');
+            $('#acred_proc_nc').val(s.proc_nc || '');
+            $('#acred_proc_total').val(s.proc_total || '');
+            $('#acred_fecha_acreditacion').val(s.fecha_acred || '');
+            $('#acred_fecha_vencimiento').val(s.fecha_venc || '');
+            $('#acred_puntaje_modo').val(s.puntaje_modo || '');
+            $('#acred_puntaje_numero').val(s.puntaje_numero || '');
+            $('select[name="acred_acred"]').val(s.acreditada || 'SI');
+            $('select[name="acred_certificado"]').val(s.certificado || 'NO');
+            $('input[name="acred_resolucion_numero"]').val(s.resol_num || '');
+            $('input[name="acred_resolucion_anio"]').val(s.resol_anio || '');
+        }
+
         $('#acred_tabs [data-acred-tipo]').on('click', function(evento){
             evento.preventDefault();
-            var tipo = $(this).data('acred-tipo');
-            $('#acred_tipo').val(tipo);
+            var newTipo = $(this).data('acred-tipo');
+            // guardar estado actual
+            formStateByTipo[currentTipo] = getFormState();
+            // actualizar tipo
+            $('#acred_tipo').val(newTipo);
+            // restaurar estado si existe, si no -> limpiar campos relevantes
+            if(formStateByTipo[newTipo]){
+                setFormState(formStateByTipo[newTipo]);
+            }else{
+                setFormState({proc_sc:'', proc_nc:'', proc_total:'', fecha_acred:'', fecha_venc:'', puntaje_modo:'', puntaje_numero:'', acreditada:'NO', certificado:'NO', resol_num:'', resol_anio:''});
+            }
+            currentTipo = newTipo;
             recalcularAcreditacion();
             $(this).tab('show');
         });
+
         $('#acred_tipo, #acred_proc_sc, #acred_proc_nc, #acred_fecha_acreditacion, #acred_fecha_vencimiento, #acred_puntaje_modo').on('change keyup', recalcularAcreditacion);
         recalcularAcreditacion();
     });
