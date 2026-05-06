@@ -59,6 +59,27 @@ class PersonaController extends Controller
         }
 
         $data = $response['data'] ?? [];
+        
+        // 1. Intentar parsear con formato estándar de la API de recaudaciones (lista de resultados)
+        $lista = $data['data']['result'] ?? $data['result'] ?? [];
+        if (is_array($lista) && sizeof($lista) > 0) {
+            foreach ($lista as $fila) {
+                $docFila = trim((string)($fila['documento'] ?? ''));
+                // Validar correspondencia de documento si se especificó
+                if ($documento === '' || $docFila === $documento || preg_replace('/[^0-9]/', '', $docFila) === preg_replace('/[^0-9]/', '', $documento)) {
+                    $nombre = trim(($fila['nombre_1'] ?? '').' '.($fila['nombre_2'] ?? ''));
+                    $apellido = trim(($fila['apellido_1'] ?? '').' '.($fila['apellido_2'] ?? ''));
+                    if ($nombre !== '' || $apellido !== '') {
+                        return json_encode([
+                            'nombre_apoderado' => $nombre,
+                            'apellido_apoderado' => $apellido,
+                        ]);
+                    }
+                }
+            }
+        }
+
+        // 2. Fallback por si la respuesta viene con una estructura diferente
         $nombre = $this->buscarCampoRec($data, ['nombre','nombres','payer_nombre','payer.name','pagador_nombre','pagador.name','nombre_pago','nombre_pagador']);
         $apellido = $this->buscarCampoRec($data, ['apellido','apellidos','payer_apellido','payer.lastName','pagador_apellido','pagador.lastName','apellido_pagador']);
 
