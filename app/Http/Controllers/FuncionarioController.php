@@ -873,16 +873,31 @@ class FuncionarioController extends Controller
             'lugarTrabajo' => 'required|string|max:255',
             'carrera' => 'required|string|max:255',
             'observaciones' => 'nullable|string',
+            'telefonos' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
         ]);
 
         $codFun = $request->input('cod_fun');
         $observaciones = $request->input('observaciones', '');
         $lugarTrabajo = $request->input('lugarTrabajo');
         $carrera = $request->input('carrera');
+        $telefonos = $request->input('telefonos');
+        $email = $request->input('email');
 
         $funcionario = Funcionario::find($codFun);
         if (!$funcionario) {
             return redirect()->back()->with('error', 'Funcionario no encontrado');
+        }
+
+        // Actualizar teléfono y email si se proporcionaron
+        if ($telefonos !== null) {
+            $funcionario->fun_telefonos = $telefonos;
+        }
+        if ($email !== null) {
+            $funcionario->fun_email = $email;
+        }
+        if ($funcionario->isDirty()) {
+            $funcionario->save();
         }
 
         $startTime = session('conformidad_start_time_' . $codFun, now());
