@@ -99,8 +99,11 @@
                 $("#verObs").modal('hide');
                 if(objeto=='fila_e_car'){
                     $('#fila_car').html(resp);
+                    resp = resp.replace("id='car'", "id='e_car'");
+                    resp = resp.replace('id="car"', 'id="e_car"');
                 }
                 $('#'+objeto).html(resp);
+                $('#car, #e_car').trigger('change');
             },
             error: function () {
                 $('#panel_editarcar').html('<span class="text-danger font-weight-bold">Ocurrio un error, probablemente no tenga permisos para esta acción</span>');

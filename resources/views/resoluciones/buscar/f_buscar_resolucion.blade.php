@@ -12,6 +12,14 @@
         <div class="card-header py-3 alert-primary">
             <div class="d-sm-flex align-items-center justify-content-between">
                 <h5 class=""><i class="fas fa-book"></i>&nbsp;&nbsp;BÚSQUEDA DE RESOLUCIONES</h5>
+                @if(!isset($primeraBusqueda) && count($resultado)>0)
+                    @php
+                        $queryExcel=(isset($filtrosExcel) && count($filtrosExcel)>0) ? ('?'.http_build_query($filtrosExcel)) : '';
+                    @endphp
+                    <a href="{{url('exportar busqueda resolucion excel').$queryExcel}}" class="d-none d-sm-inline-block btn btn-sm btn-success shadow-sm">
+                        <i class="fas fa-file-excel"></i> Descargar Excel
+                    </a>
+                @endif
             </div>
         </div>
         <div class="card-body">
@@ -139,6 +147,7 @@
                                                     <th class="text-right font-italic">Tipo :</th>
                                                     <td class="border-bottom border-dark">
                                                         <select class="custom-select custom-select-sm"  name="tipo">
+                                                            <option value="">-- Todos --</option>
                                                             <option value="rcu">RCU</option>
                                                             <option value="rr">RR</option>
                                                             <option value="rvr">RVR</option>
@@ -244,6 +253,7 @@
                                                     <th class="text-right font-italic">Tipo :</th>
                                                     <td class="border-bottom border-dark">
                                                         <select class="custom-select custom-select-sm"  name="tipo">
+                                                            <option value="">-- Todos --</option>
                                                             <option value="rcu">RCU</option>
                                                             <option value="rr">RR</option>
                                                             <option value="rvr">RVR</option>
@@ -258,6 +268,7 @@
                                                     <th class="text-right font-italic">Año :</th>
                                                     <td class="border-bottom border-dark">
                                                         <select class="custom-select custom-select-sm" name="gestion">
+                                                            <option value="">-- Todos --</option>
                                                             <?php $año=date('Y');?>
                                                             @for($i=$año;$i>1927;$i--)
                                                                 <option value="{{$i}}">{{$i}}</option>

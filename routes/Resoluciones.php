@@ -5,6 +5,7 @@ use App\Http\Controllers\ResolucionController;
 use App\Http\Controllers\BuscarController;
 use App\Http\Controllers\AutoridadController;
 use App\Http\Controllers\CodigoArchivoController;
+use App\Http\Controllers\ReporteResolucionController;
 
 use App\Http\Controllers\TemasController;
 
@@ -42,6 +43,7 @@ Route::group(['middleware'=>['permission:acceder al sistema - rr']],function(){
 //=========================BUSQUEDAS=============
     Route::get('buscar resolucion',[BuscarController::class,'f_buscar_resolucion'])->middleware(['permission:buscar - rr']);
     Route::post('buscar resolucion',[BuscarController::class,'f_buscar_resolucion_post'])->middleware(['permission:busqueda avanzada - rr|buscar - rr']);
+    Route::get('exportar busqueda resolucion excel',[BuscarController::class,'exportar_busqueda_resolucion_excel'])->middleware(['permission:busqueda avanzada - rr|buscar - rr']);
 
 //=====================CAMBIAR RESOLUCION DE TOMO
     Route::get('f_cambiar a tomo  resolucion/{cod_res}',[ResolucionController::class,'f_cambiarTomo'])->middleware(['permission:cambiar resolucion a tomo - rr']);
@@ -133,6 +135,12 @@ Route::group(['middleware'=>['permission:acceder al sistema - rr']],function(){
     Route::get('mostrar resoluciones tema corregir/{criterio}',[CodigoArchivoController::class,'mostrar_resolucion_tema']);
     Route::post('corregir temas resolucion',[CodigoArchivoController::class,'lista_resoluciones_corregir']);
     route::post('asignar temas resolucion corregido',[CodigoArchivoController::class,'asignar_tema_reslocion_corregido']);
+
+    //===================REPORTES DE RESOLUCIONES====================
+    Route::get('reportes resoluciones',[ReporteResolucionController::class,'lista_reportes_resolucion'])->middleware(['permission:ver reportes - rr']);
+    Route::post('guardar reporte resolucion',[ReporteResolucionController::class,'guardar_reporte'])->middleware(['permission:ver reportes - rr']);
+    Route::get('panel nuevo reporte resolucion',[ReporteResolucionController::class,'panel_nuevo_reporte'])->middleware(['permission:ver reportes - rr']);
+    Route::get('exportar reportes resoluciones excel',[ReporteResolucionController::class,'exportar_excel'])->middleware(['permission:ver reportes - rr']);
 
 });
 Route::get('ver datos resolucion/{cod_res}',[ResolucionController::class,'datos_resolucion'])->middleware(['permission:acceder al sistema - rr|acceder al sistema - noa']);

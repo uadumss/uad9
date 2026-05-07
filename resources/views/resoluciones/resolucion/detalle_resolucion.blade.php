@@ -30,9 +30,6 @@
                             <th class="text-right text-primary font-italic" colspan="2">DATOS DE LA RESOLUCIÓN</th>
                         </tr>
                         <tr>
-                            <th class="text-right font-italic border-bottom">Nº Resolución : </th> <td class="border-bottom border-dark"> &nbsp;&nbsp;{{$resolucion['res_numero']}}</td>
-                        </tr>
-                        <tr>
                             <th class="text-right font-italic border-bottom">Nro. Tomo :</th> <td class="border-bottom border-dark"> &nbsp;&nbsp;
                                 @if($tomo['tom_numero']==0)
                                     <span class="text-danger font-weight-bold"> Sin tomo</span>
@@ -43,17 +40,16 @@
                             </td>
                         </tr>
                         <tr>
-                            <th class="text-right font-italic border-bottom">Gestión :</th> <td class="border-bottom border-dark"> &nbsp;&nbsp;{{$tomo['tom_gestion']}}</td>
-                        </tr>
-                        <tr>
                             <th class="text-right font-italic border-bottom">Fecha : </th> <td class="border-bottom border-dark"> &nbsp;&nbsp;{{date('d/m/Y',strtotime($resolucion['res_fecha']))}}</td>
                         </tr><tr>
                             <th class="text-right font-italic border-bottom">Tipo de Resolución : </th> <td class="border-bottom border-dark"> &nbsp;&nbsp;{{strtoupper($resolucion['res_tipo'])}}</td>
                         </tr><tr>
                             <th class="text-right font-italic border-bottom ">Plan de archivo : </th> <td class="border-bottom border-dark">
-                                @foreach($archivado as $a)
-                                    {{$a->plan_numero.'/'.$a->carch_numero.''}}<br/>
-                                @endforeach
+                                @if(trim($planArchivo ?? '') !== '')
+                                    {!! $planArchivo !!}
+                                @else
+                                    <span class="text-muted">Sin plan de archivo registrado</span>
+                                @endif
                             </td>
                         </tr><tr>
                             <th class="text-right font-italic border-bottom">Tema : </th> <td class="border-bottom border-dark"> &nbsp;&nbsp;{{$resolucion['res_tema']}}</td>

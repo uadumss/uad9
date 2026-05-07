@@ -90,7 +90,7 @@
                     <a class="collapse-item" href="{{url('temas interes/')}}"><i class="fas fa-bookmark"></i> Temas de interés</a>
                     @endcan
                     @can('ver reportes - rr')
-                    <a class="collapse-item" href="{{url('reportes/')}}"><i class="fas fa-chart-area"></i> Reportes</a>
+                    <a class="collapse-item" href="{{url('reportes resoluciones')}}"><i class="fas fa-chart-area"></i> Reportes</a>
                     @endcan
                 </div>
             </div>

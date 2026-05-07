@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\BusquedaResolucionExport;
 use App\Models\D_tramita;
 use App\Models\Tema;
 use App\Models\Titulo;
@@ -9,6 +10,7 @@ use App\Models\Tomo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 
 class BuscarController extends Controller
 {
@@ -19,14 +21,14 @@ class BuscarController extends Controller
         $this->middleware(['permission:buscar - rr'], ['only' => ['f_buscar_resolucion_post']]);
 
     }
+
     public function f_buscar(){
         $resultado=array();
         $primeraBusqueda=1;
         return view('diplomas.buscar.f_buscar',compact('resultado','primeraBusqueda'));
     }
-    public function f_buscarPost(Request $form){
-        //dd($form);
 
+    public function f_buscarPost(Request $form){
         $resultado=array();
         $consulta="select per_ci,per_nombre,per_apellido,cod_tit,tit_nro_titulo,tit_fecha_emision,tom_numero,tom_gestion,tom_tipo,tit_pdf,tit_antecedentes
                     from titulos ti INNER JOIN tomos t ON ti.cod_tom=t.cod_tom INNER JOIN personas p ON ti.id_per=p.id_per where ";
@@ -63,6 +65,7 @@ class BuscarController extends Controller
             return view('diplomas.buscar.f_buscar',compact('resultado'));
         }
     }
+
     public function f_ver_datos($cod_tit){
         $diploma_academico=array();
         $revalida=array();
@@ -94,6 +97,7 @@ class BuscarController extends Controller
         }
         return view('diplomas.buscar.detalleTitulo',compact('titulo','revalida','diploma_academico'));
     }
+
     public function pdf($id){
         $titulo=Titulo::find($id);
         $tomo=Tomo::find($titulo['cod_tom']);
@@ -110,6 +114,7 @@ class BuscarController extends Controller
             return $var;
         }
     }
+
     public function pdf_a($id){
         $titulo=Titulo::find($id);
         $tomo=Tomo::find($titulo['cod_tom']);
@@ -127,110 +132,234 @@ class BuscarController extends Controller
             return $var;
         }
     }
+
     //========================BUSQUEDAS DE RESOLUCIONES===========
     public function f_buscar_resolucion(){
         $resultado=array();
         $criterio=array();
+        $clave='';
+        $filtrosExcel=array();
         $primeraBusqueda=1;
-        $tema=DB::select("select distinct(res_tema) from resolucions order by res_tema ASC");
-        return view('resoluciones.buscar.f_buscar_resolucion',compact('resultado','primeraBusqueda','criterio','tema'));
+        $tema=$this->obtenerTemasResolucion();
+        return view('resoluciones.buscar.f_buscar_resolucion',compact('resultado','primeraBusqueda','criterio','tema','clave','filtrosExcel'));
     }
+
     public function f_buscar_resolucion_post(Request $form){
-        //dd($form);
         $resultado=array();
-        $consulta="SELECT cod_res,res_numero,res_tipo,res_fecha,res_objeto,res_tema,res_desc,res_ant,res_pdf FROM resolucions WHERE";
-        $clausulas=array();
-        $criterio=array();
-        $i=0;
-        if($form['numero']!=''){$clausulas[$i]=" res_numero='".$form['numero']."'";$criterio[$i][0]='Número: ';$criterio[$i][1]=$form['numero']; $i+=1; }
-        if($form['tipo']!=''){$clausulas[$i]=" res_tipo='".$form['tipo']."'";$criterio[$i][0]='Tipo: ';$criterio[$i][1]=$form['tipo'];$i+=1;}
-        if($form['gestion']!=''){$clausulas[$i]=" res_gestion='".$form['gestion']."'";$criterio[$i][0]='Gestión: ';$criterio[$i][1]=$form['gestion'];$i+=1;}
-            if($form['gestion_i']!=''){
-                if($form['gestion_f']!=''){
-                    $clausulas[$i]=" res_fecha>='".$form['gestion_i']."' and res_fecha<='".$form['gestion_f']."'";
-                    $criterio[$i][0]='Rango de fecha: ';$criterio[$i][1]=date('d/m/Y',strtotime($form['gestion_i'])).
-                        "<span class='font-weight-bold'> - </span> ".date('d/m/Y',strtotime($form['gestion_f']));
-                        $i+=1;
-                }else{
-                    $clausulas[$i]=" res_fecha='".$form['gestion_i']."'";$criterio[$i][0]='Fecha: ';$criterio[$i][1]=date('d/m/Y',strtotime($form['gestion_i']));
-                    $i+=1;
-                }
+        $filtros=$this->normalizarFiltrosBusquedaResolucion($form);
+        $configuracionBusqueda=$this->consultaBusquedaResoluciones($filtros);
 
-            }
-        //$claves=explode(' ',$form['clave']);
+        if($configuracionBusqueda['tieneFiltros']){
+            $query=$configuracionBusqueda['query'];
+            $criterio=$configuracionBusqueda['criterio'];
+            $clave=$configuracionBusqueda['clave'];
+            $consulta=$this->consultaConBindings($query);
 
-        if($form['clave']!=''){
-            if($form['tema']!=''){
-                $clausulas[$i]=" res_tema ilike '%".$form['tema'].
-                    "%' and (res_objeto ilike '%".$form['clave'].
-                    "%' or res_desc ilike '%".$form['clave']."%' ";
-            }else{
-                $clausulas[$i]=" (res_tema ilike '%".$form['clave'].
-                    "%' or res_objeto ilike '%".$form['clave'].
-                    "%' or res_desc ilike '%".$form['clave']."%' ";
-            }
-
-
-                $criterio[$i][0]='Palabras clave: ';$criterio[$i][1]=$form['clave'];
-        }
-
-        if($form['clave']!='' && ($form['vistos'] || $form['considerando'] || $form['resuelve'])){
-            $clausulas[$i].=' or';
-            $ban=0;
-                if($form['vistos']){
-                    $clausulas[$i].=" res_vistos ilike '%".$form['clave']."%'";
-                    $criterio[$i][1].=" | <span class='font-weight-bold'>Vistos: </span>Sí ";
-                    $ban=1;
-                }
-                if($form['considerando']) {
-                    if($ban==1){$clausulas[$i].=" or";}
-                    $clausulas[$i].=" res_considerando ilike '%".$form['clave']."%'";
-                    $criterio[$i][1].=" | <span class='font-weight-bold'>Considerando: </span>Sí ";
-                    $ban=2;
-                }
-                if($form['resuelve']) {
-                    if($ban==2 || $ban==1 ){$clausulas[$i].=" or";}
-                    $clausulas[$i].=" res_resuelve ilike '%".$form['clave']."%'";
-                    $criterio[$i][1].=" | <span class='font-weight-bold'>Resuelve: </span>Sí ";
-                }
-            $clausulas[$i].=") ";
-                $i+=1;
-        }else{
-            if($form['clave']) {
-                $clausulas[$i] .= ") ";
-                $i += 1;
-            }
-        }
-        $tam=sizeof($clausulas);
-        if($tam>0){
-            for ($i=0;$i<$tam;$i++){
-                $consulta.=" ".$clausulas[$i];
-                if($i<($tam-1)){
-                    $consulta.=" and";
-                }
-            }
-            $clave=$form['clave'];
-            $consulta.=" order by res_numero, res_fecha ASC";
-            //echo $consulta;
             SessionController::write('B','',$consulta,'resoluciones','2','');
-            $resultado=DB::select($consulta);
-            $tema=DB::select("select distinct(res_tema) from resolucions order by res_tema ASC");
+            $resultado=$query->get();
+            $tema=$this->obtenerTemasResolucion();
+            $filtrosExcel=$this->filtrosParaExportacionExcel($filtros);
+
             if(isset($form['te']) && $form['te']=='t'){
                 $cod_tem=$form['ct'];
                 return view('resoluciones.temas.tema_resolucion.resultado_busqueda',compact('resultado','clave','criterio','cod_tem','tema'));
             }else{
-                return view('resoluciones.buscar.f_buscar_resolucion',compact('resultado','clave','criterio','tema'));
+                return view('resoluciones.buscar.f_buscar_resolucion',compact('resultado','clave','criterio','tema','filtrosExcel'));
             }
 
         }else{
-            $tema=DB::select("select distinct(res_tema) from resolucions order by res_tema ASC");
+            $tema=$this->obtenerTemasResolucion();
+            $criterio=array();
+            $clave='';
+            $filtrosExcel=array();
             if(isset($form['te']) && $form['te']=='t') {
-                return view('resoluciones.temas.tema_resolucion.resultado_busqueda', compact('resultado','tema'));
+                return view('resoluciones.temas.tema_resolucion.resultado_busqueda', compact('resultado','tema','clave','criterio'));
             }else{
                 \Session::flash('error', 'Debe ingresar por lo menos un criterio de búsqueda');
-                return view('resoluciones.buscar.f_buscar_resolucion', compact('resultado','tema'));
+                return view('resoluciones.buscar.f_buscar_resolucion', compact('resultado','tema','clave','criterio','filtrosExcel'));
             }
         }
+    }
+
+    public function exportar_busqueda_resolucion_excel(Request $request){
+        $filtros=$this->normalizarFiltrosBusquedaResolucion($request);
+        $configuracionBusqueda=$this->consultaBusquedaResoluciones($filtros);
+
+        if(!$configuracionBusqueda['tieneFiltros']){
+            return redirect('buscar resolucion')->with('error','Debe ingresar por lo menos un criterio de búsqueda para exportar');
+        }
+
+        $nombreArchivo='busqueda_resoluciones_'.date('Ymd_His').'.xlsx';
+        return Excel::download(new BusquedaResolucionExport($configuracionBusqueda['query']),$nombreArchivo);
+    }
+
+    private function obtenerTemasResolucion(){
+        return DB::table('resolucions')
+            ->select('res_tema')
+            ->whereNotNull('res_tema')
+            ->where('res_tema','<>','')
+            ->distinct()
+            ->orderBy('res_tema','ASC')
+            ->get();
+    }
+
+    private function normalizarFiltrosBusquedaResolucion(Request $request){
+        return [
+            'numero'=>trim((string)$request->input('numero','')),
+            'tipo'=>mb_strtolower(trim((string)$request->input('tipo',''))),
+            'gestion'=>trim((string)$request->input('gestion','')),
+            'gestion_i'=>trim((string)$request->input('gestion_i','')),
+            'gestion_f'=>trim((string)$request->input('gestion_f','')),
+            'clave'=>trim((string)$request->input('clave','')),
+            'tema'=>trim((string)$request->input('tema','')),
+            'vistos'=>$request->boolean('vistos'),
+            'considerando'=>$request->boolean('considerando'),
+            'resuelve'=>$request->boolean('resuelve'),
+        ];
+    }
+
+    private function consultaBusquedaResoluciones(array $filtros){
+        $query=DB::table('resolucions')
+            ->select('cod_res','res_numero','res_tipo','res_fecha','res_objeto','res_tema','res_desc','res_ant','res_pdf');
+
+        $criterio=array();
+        $tieneFiltros=false;
+
+        if($filtros['numero']!==''){
+            $query->whereRaw('TRIM(CAST(res_numero AS TEXT)) = ?',[$filtros['numero']]);
+            $criterio[]=array('Número: ',$filtros['numero']);
+            $tieneFiltros=true;
+        }
+
+        if($filtros['tipo']!==''){
+            $query->whereRaw('UPPER(TRIM(CAST(res_tipo AS TEXT))) = ?',[mb_strtoupper($filtros['tipo'])]);
+            $criterio[]=array('Tipo: ',strtoupper($filtros['tipo']));
+            $tieneFiltros=true;
+        }
+
+        if($filtros['gestion']!==''){
+            $query->where(function($subQuery) use ($filtros){
+                $subQuery->whereRaw('TRIM(CAST(res_gestion AS TEXT)) = ?',[$filtros['gestion']])
+                    ->orWhereRaw("TO_CHAR(res_fecha,'YYYY') = ?",[$filtros['gestion']]);
+            });
+            $criterio[]=array('Gestión: ',$filtros['gestion']);
+            $tieneFiltros=true;
+        }
+
+        if($filtros['gestion_i']!==''){
+            if($filtros['gestion_f']!==''){
+                $fechaInicio=$filtros['gestion_i'];
+                $fechaFin=$filtros['gestion_f'];
+                if($fechaInicio>$fechaFin){
+                    $fechaInicio=$filtros['gestion_f'];
+                    $fechaFin=$filtros['gestion_i'];
+                }
+
+                $query->whereBetween('res_fecha',[$fechaInicio,$fechaFin]);
+                $criterio[]=array(
+                    'Rango de fecha: ',
+                    date('d/m/Y',strtotime($fechaInicio))."<span class='font-weight-bold'> - </span> ".date('d/m/Y',strtotime($fechaFin))
+                );
+            }else{
+                $query->whereDate('res_fecha','=',$filtros['gestion_i']);
+                $criterio[]=array('Fecha: ',date('d/m/Y',strtotime($filtros['gestion_i'])));
+            }
+            $tieneFiltros=true;
+        }
+
+        if($filtros['tema']!==''){
+            $query->where('res_tema','ILIKE','%'.$filtros['tema'].'%');
+            $criterio[]=array('Tema: ',$filtros['tema']);
+            $tieneFiltros=true;
+        }
+
+        if($filtros['clave']!==''){
+            $clave=$filtros['clave'];
+            $query->where(function($subQuery)use($filtros,$clave){
+                if($filtros['tema']!==''){
+                    $subQuery->where('res_objeto','ILIKE','%'.$clave.'%')
+                        ->orWhere('res_desc','ILIKE','%'.$clave.'%');
+                }else{
+                    $subQuery->where('res_tema','ILIKE','%'.$clave.'%')
+                        ->orWhere('res_objeto','ILIKE','%'.$clave.'%')
+                        ->orWhere('res_desc','ILIKE','%'.$clave.'%');
+                }
+
+                if($filtros['vistos']){
+                    $subQuery->orWhere('res_vistos','ILIKE','%'.$clave.'%');
+                }
+                if($filtros['considerando']){
+                    $subQuery->orWhere('res_considerando','ILIKE','%'.$clave.'%');
+                }
+                if($filtros['resuelve']){
+                    $subQuery->orWhere('res_resuelve','ILIKE','%'.$clave.'%');
+                }
+            });
+
+            $descripcionClave=$clave;
+            if($filtros['vistos']){
+                $descripcionClave.=" | <span class='font-weight-bold'>Vistos: </span>Sí";
+            }
+            if($filtros['considerando']){
+                $descripcionClave.=" | <span class='font-weight-bold'>Considerando: </span>Sí";
+            }
+            if($filtros['resuelve']){
+                $descripcionClave.=" | <span class='font-weight-bold'>Resuelve: </span>Sí";
+            }
+
+            $criterio[]=array('Palabras clave: ',$descripcionClave);
+            $tieneFiltros=true;
+        }
+
+        $query->orderBy('res_numero','ASC')
+            ->orderBy('res_fecha','ASC');
+
+        return [
+            'query'=>$query,
+            'criterio'=>$criterio,
+            'clave'=>$filtros['clave'],
+            'tieneFiltros'=>$tieneFiltros,
+        ];
+    }
+
+    private function filtrosParaExportacionExcel(array $filtros){
+        $filtrosExcel=array();
+        foreach (['numero','tipo','gestion','gestion_i','gestion_f','clave','tema'] as $campo){
+            if($filtros[$campo]!==''){
+                $filtrosExcel[$campo]=$filtros[$campo];
+            }
+        }
+
+        if($filtros['vistos']){
+            $filtrosExcel['vistos']=1;
+        }
+        if($filtros['considerando']){
+            $filtrosExcel['considerando']=1;
+        }
+        if($filtros['resuelve']){
+            $filtrosExcel['resuelve']=1;
+        }
+
+        return $filtrosExcel;
+    }
+
+    private function consultaConBindings($query){
+        $consulta=$query->toSql();
+        $bindings=$query->getBindings();
+
+        foreach ($bindings as $valor){
+            if($valor===null){
+                $reemplazo='null';
+            }elseif(is_numeric($valor)){
+                $reemplazo=$valor;
+            }else{
+                $reemplazo="'".str_replace("'","''",(string)$valor)."'";
+            }
+
+            $consulta=preg_replace('/\?/',$reemplazo,$consulta,1);
+        }
+
+        return $consulta;
     }
 
     //=========================END======================

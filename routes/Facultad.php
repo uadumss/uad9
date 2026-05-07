@@ -6,6 +6,7 @@ Route::group(['middleware'=>['permission:acceso al sistema - f']],function() {
     //==============================FACULTADES===========================
 
     Route::get('listar facultad',[FacultadController::class,'l_facultad']);
+    Route::get('exportar facultades carreras excel',[FacultadController::class,'exportar_facultades_carreras_excel']);
     Route::get('fe_facultad/{cod_fac}',[FacultadController::class,'fe_facultad'])->middleware(['permission:crear editar facultad - f']);
     Route::post('g_facultad',[FacultadController::class,'g_facultad'])->middleware(['permission:crear editar facultad - f']);
     Route::get('f_eli_facultad/{cod_fac}',[FacultadController::class,'f_eli_facultad'])->middleware(['permission:eliminar facultad - f']);

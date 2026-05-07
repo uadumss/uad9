@@ -18,6 +18,7 @@
                     <th class="text-left">Fecha</th>
                     <th class="text-left">Tema</th>
                     <th>Objeto</th>
+                    <th>Códigos</th>
                     <th>Opciones</th>
 
                 </tr>
@@ -35,6 +36,11 @@
                         </td>
                         <td>{{$r->res_tema}}</td>
                         <td>{{$r->res_objeto}}
+                        </td>
+                        <td>
+                            <?php $archivado=\App\Http\Controllers\ResolucionController::l_codigo($r->cod_res);
+                                echo $archivado;
+                            ?>
                         </td>
                         <td id="asignar{{$i}}">
                             <button class="btn btn-primary btn-sm" onclick="asignarTomo('asignarTomoRes',{{$r->cod_res}},{{$i}})"><i class="fas fa-angle-right"></i> Asignar</button>

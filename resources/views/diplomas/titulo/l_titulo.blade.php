@@ -148,10 +148,46 @@
                         <div class="bg-primary centrar_bloque p-1 col-md-5 rounded shadow">
                             <h6 class="text-white text-center">{{$tipo_completo}}</h6>
                         </div>
+                        @if($tipo=='da')
+                            <form action="{{url('l_titulo/'.$tomo['cod_tom'])}}" method="GET" class="mt-2 mb-2">
+                                <div class="form-row align-items-end">
+                                    <div class="col-md-3">
+                                        <label class="small font-weight-bold text-dark mb-1">Buscar persona o CI</label>
+                                        <input type="text" class="form-control form-control-sm border border-info" name="q" value="{{$filtrosTitulo['q'] ?? ''}}" placeholder="Apellido, nombre o CI">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="small font-weight-bold text-dark mb-1">Nro. diploma</label>
+                                        <input type="text" class="form-control form-control-sm border border-info" name="nro" value="{{$filtrosTitulo['nro'] ?? ''}}" placeholder="Ej. 12345">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="small font-weight-bold text-dark mb-1">Carrera</label>
+                                        <select class="form-control form-control-sm border border-info" name="car">
+                                            <option value="">Todas</option>
+                                            @foreach($carrera as $c)
+                                                <option value="{{$c->cod_car}}" {{($filtrosTitulo['car'] ?? '')==$c->cod_car ? 'selected' : ''}}>{{$c->fac_abreviacion." - ".$c->car_nombre}}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="small font-weight-bold text-dark mb-1">Modalidad</label>
+                                        <select class="form-control form-control-sm border border-info" name="mod">
+                                            <option value="">Todas</option>
+                                            @foreach($modalidad as $m)
+                                                <option value="{{$m['cod_mod']}}" {{($filtrosTitulo['mod'] ?? '')==$m['cod_mod'] ? 'selected' : ''}}>{{$m['mod_nombre']}}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="submit" class="btn btn-sm btn-primary btn-block">Filtrar</button>
+                                        <a href="{{url('l_titulo/'.$tomo['cod_tom'])}}" class="btn btn-sm btn-outline-secondary btn-block mt-1">Limpiar</a>
+                                    </div>
+                                </div>
+                            </form>
+                        @endif
                         <span class="font-weight-bold text-dark" style="font-size: 0.9em"> Cantidad de títulos : </span><span style="font-size: 0.9em">{{sizeof($titulo)}} </span>
                         <hr class="sidebar-divider"/>
                         <div class="table-responsive">
-                            <table class="table table-sm table-hover border border-right" id="dataTable" width="100%" cellspacing="0">
+                            <table class="table table-sm table-hover border border-right" id="dataTable" width="100%" cellspacing="0" data-page-length="{{$tipo=='da' ? 100 : 500}}" data-search-delay="{{$tipo=='da' ? 350 : 0}}" data-defer-render="{{$tipo=='da' ? 1 : 0}}">
                                 <thead>
                                 <tr class="bg-gradient-secondary text-white text-center" style="font-size: 0.9em">
                                     <th class="border border-right">Nº</th>
@@ -307,7 +343,7 @@
                                                 <tr>
                                                     <th class="text-right font-italic">Grado :</th>
                                                     <td class="border-bottom border-dark">
-                                                        <select class="form-control border-0 form-control-sm" name="grado">
+                                                        <select class="form-control border-0 form-control-sm" name="grado" id="grado">
                                                             @foreach($grado as $g)
                                                                 <option value="{{$g}}">{{$g}}</option>
                                                             @endforeach
@@ -364,7 +400,11 @@
                                                 <tr>
                                                     <th class="text-right font-italic">Título:</th>
                                                     <td class="border-bottom border-dark">
-                                                        <textarea rows="2" class="form-control-sm form-control border-0" name="titulo"></textarea>
+                                                        <textarea rows="2" class="form-control-sm form-control border-0" name="titulo" id="n_tit"></textarea>
+                                                        <input type="hidden" id="n_titulo_manual" value="0"/>
+                                                        <div class="d-flex justify-content-end align-items-center mt-1">
+                                                            <button type="button" class="btn btn-sm btn-primary" id="n_auto_titulo" aria-pressed="true" onclick="return toggleAutoTituloNuevo();">Autocompletado: ACTIVO</button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                                 <?php }?>
@@ -686,7 +726,7 @@
     </div>
     <!--================================ END?===============================-->
     <!--=================================MODAL VER OBSERVACIONES ============================-->
-    <div class="modal fade" id="verObs" style="z-index:1500;" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-backdrop="true">
+    <div class="modal fade" id="verObs" style="z-index:1700;" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-backdrop="true">
         <div class="modal-dialog modal-xl" role="document" id="p_observacion">
 
         </div>
@@ -727,6 +767,215 @@
     </div>
     <!-- =============================== ====================-->
     <script>
+        $('#verObs').on('show.bs.modal', function () {
+            var zIndex = 1700;
+            $(this).css('z-index', zIndex);
+
+            // Ensure the backdrop for nested modal stays just behind this modal.
+            setTimeout(function () {
+                $('.modal-backdrop').last().css('z-index', zIndex - 10);
+            }, 0);
+        });
+
+        function normalizarTituloTexto(texto){
+            if(!texto){
+                return '';
+            }
+            var txt = texto.toString().toUpperCase();
+            if(typeof txt.normalize === 'function'){
+                txt = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            }
+            return txt.replace(/\s+/g, ' ').trim();
+        }
+
+        function basePorGradoYSexo(grado, sexo){
+            var gradoNorm = normalizarTituloTexto(grado);
+            var esFemenino = sexo === 'F';
+            switch (gradoNorm){
+                case 'LICENCIATURA': return esFemenino ? 'LICENCIADA' : 'LICENCIADO';
+                case 'TECNICO SUPERIOR': return esFemenino ? 'TECNICA SUPERIOR' : 'TECNICO SUPERIOR';
+                case 'TECNICO MEDIO': return esFemenino ? 'TECNICA MEDIA' : 'TECNICO MEDIO';
+                case 'AUXILIAR': return 'AUXILIAR';
+                case 'BACHILLER': return 'BACHILLER';
+                case 'DIPLOMADO': return esFemenino ? 'DIPLOMADA' : 'DIPLOMADO';
+                case 'ESPECIALIDAD': return 'ESPECIALISTA';
+                case 'MAESTRIA': return 'MAGISTER';
+                case 'DOCTORADO': return esFemenino ? 'DOCTORA' : 'DOCTOR';
+                default: return '';
+            }
+        }
+
+        function extraerCarrera(optionText){
+            var txt = (optionText || '').trim();
+            var i = txt.indexOf(' - ');
+            if(i >= 0){
+                return txt.substring(i + 3).trim();
+            }
+            return txt;
+        }
+
+        function limpiarPrefijosAcademicos(carrera){
+            var carreraNorm = normalizarTituloTexto(carrera);
+            var prefijos = [
+                'LIC. EN ',
+                'LIC EN ',
+                'LIC. ',
+                'LIC ',
+                'LICENCIATURA EN ',
+                'LICENCIATURA ',
+                'TECNICO SUPERIOR EN ',
+                'TECNICO MEDIO EN ',
+                'DIPLOMADO EN ',
+                'MAESTRIA EN ',
+                'DOCTORADO EN ',
+                'BACHILLER EN ',
+                'AUXILIAR EN '
+            ];
+
+            for(var i = 0; i < prefijos.length; i++){
+                if(carreraNorm.indexOf(prefijos[i]) === 0){
+                    return carreraNorm.substring(prefijos[i].length).trim();
+                }
+            }
+
+            return carreraNorm;
+        }
+
+        function tienePrefijoAcademico(carrera){
+            var carreraNorm = normalizarTituloTexto(carrera);
+            var prefijos = [
+                'LIC. EN ',
+                'LIC EN ',
+                'LIC. ',
+                'LIC ',
+                'LICENCIATURA EN ',
+                'LICENCIATURA ',
+                'TECNICO SUPERIOR EN ',
+                'TECNICO MEDIO EN ',
+                'DIPLOMADO EN ',
+                'MAESTRIA EN ',
+                'DOCTORADO EN ',
+                'BACHILLER EN ',
+                'AUXILIAR EN '
+            ];
+
+            for(var i = 0; i < prefijos.length; i++){
+                if(carreraNorm.indexOf(prefijos[i]) === 0){
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        function sugerirTituloProfesional(carrera, sexo, grado){
+            var sexoNorm = (sexo || '').toUpperCase() === 'F' ? 'F' : 'M';
+            var conPrefijoAcademico = tienePrefijoAcademico(carrera);
+            var carreraNorm = limpiarPrefijosAcademicos(carrera);
+            var carreraClave = carreraNorm.replace(/[^A-Z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+            if(carreraClave === 'PROG ING REC HIDRICOS AGROPECUARIA'){
+                return sexoNorm === 'F'
+                    ? 'LICENCIADA EN INGENIERIA EN GESTION DE RECURSOS HIDRICOS AGROPECUARIOS'
+                    : 'LICENCIADO EN INGENIERIA EN GESTION DE RECURSOS HIDRICOS AGROPECUARIOS';
+            }
+
+            if(!conPrefijoAcademico && carreraNorm.indexOf('INGENIERIA') === 0){
+                var sufijoIng = carreraNorm.replace('INGENIERIA', '').trim();
+                var baseIng = sexoNorm === 'F' ? 'INGENIERA' : 'INGENIERO';
+                return (baseIng + ' ' + sufijoIng).trim();
+            }
+
+            if(!conPrefijoAcademico && carreraNorm.indexOf('ARQUITECTURA') === 0){
+                var sufijoArq = carreraNorm.replace('ARQUITECTURA', '').trim();
+                var baseArq = sexoNorm === 'F' ? 'ARQUITECTA' : 'ARQUITECTO';
+                return (baseArq + ' ' + sufijoArq).trim();
+            }
+
+            var baseGrado = basePorGradoYSexo(grado, sexoNorm);
+            if(baseGrado === ''){
+                return carreraNorm !== '' ? ('PROFESIONAL EN ' + carreraNorm) : '';
+            }
+
+            if(carreraNorm === ''){
+                return baseGrado;
+            }
+
+            return baseGrado + ' EN ' + carreraNorm;
+        }
+
+        function actualizarTituloNuevo(forzar){
+            var esManual = $('#n_titulo_manual').val() === '1';
+            if(esManual && !forzar){
+                return;
+            }
+
+            var sexo = $('#sexo').val() || 'M';
+            var grado = $('#grado').val() || '';
+            var carrera = extraerCarrera($('#car option:selected').text());
+            var sugerido = sugerirTituloProfesional(carrera, sexo, grado);
+
+            if(sugerido !== ''){
+                $('#n_tit').val(sugerido);
+            }
+        }
+
+        function actualizarEstadoBotonAutoNuevo(){
+            var autoActivo = $('#n_titulo_manual').val() === '0';
+            var $btn = $('#n_auto_titulo');
+
+            if(autoActivo){
+                $btn.removeClass('btn-outline-primary').addClass('btn-primary');
+                $btn.text('Autocompletado: ACTIVO');
+                $btn.attr('aria-pressed', 'true');
+            }else{
+                $btn.removeClass('btn-primary').addClass('btn-outline-primary');
+                $btn.text('Autocompletado: INACTIVO');
+                $btn.attr('aria-pressed', 'false');
+            }
+        }
+
+        function toggleAutoTituloNuevo(){
+            var $manual = $('#n_titulo_manual');
+            if($manual.length === 0){
+                return false;
+            }
+
+            var autoActivo = $manual.val() === '0';
+            $manual.val(autoActivo ? '1' : '0');
+            actualizarEstadoBotonAutoNuevo();
+
+            if(!autoActivo){
+                actualizarTituloNuevo(true);
+            }
+
+            return false;
+        }
+
+        $(function(){
+            $('#n_tit').off('input.autoTituloNuevo').on('input.autoTituloNuevo', function(){
+                $('#n_titulo_manual').val('1');
+                actualizarEstadoBotonAutoNuevo();
+            });
+
+            $(document).off('change.autoTituloNuevo input.autoTituloNuevo', '#sexo, #grado, #car');
+            $(document).on('change.autoTituloNuevo input.autoTituloNuevo', '#sexo, #grado, #car', function(){
+                actualizarTituloNuevo(false);
+            });
+
+            $('#nuevoTomo').off('shown.bs.modal.autoTituloNuevo').on('shown.bs.modal.autoTituloNuevo', function(){
+                actualizarTituloNuevo(false);
+            });
+
+            $('#n_auto_titulo').off('click.autoTituloNuevo').on('click.autoTituloNuevo', function(e){
+                e.preventDefault();
+                toggleAutoTituloNuevo();
+            });
+
+            actualizarEstadoBotonAutoNuevo();
+            actualizarTituloNuevo(true);
+        });
+
         function enviarTitulo(){
             var link = "{{url('g_titulo/')}}";
             var token = "{{csrf_token()}}";
@@ -824,6 +1073,7 @@
                         $('#nombre').val(res['per_nombre']);
                         $('#expedido').val(res['per_ci_exp']);
                         $('#sexo').val(res['per_sexo']);
+                        actualizarTituloNuevo(false);
                     }
                 },
                 error: function () {

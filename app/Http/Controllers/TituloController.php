@@ -13,7 +13,9 @@ use App\Models\T_observacion;
 use App\Models\Titulo;
 use App\Models\Tomo;
 use App\Models\Tomo_carrera;
+use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -30,48 +32,44 @@ class TituloController extends Controller
         $this->middleware(['permission:verificar titulos faltantes - dyt'], ['only' => ['verificar_titulos']]);
 
     }
-    public function ListarTitulo($cod_tomo){
+    public function ListarTitulo(Request $request, $cod_tomo){
 
         $tomo=Tomo::find($cod_tomo);
         $tomo_carrera=array();
         $gestion=$tomo['tom_gestion'];
         $listaTomo=Tomo::where('tom_gestion','=',$gestion)->where('tom_tipo','=',$tomo['tom_tipo'])->orderBy('tom_numero')->get();
         $tipo=$tomo['tom_tipo'];
-        $titulo="";
+        $filtrosTitulo=[
+            'q'=>trim((string)$request->query('q','')),
+            'nro'=>trim((string)$request->query('nro','')),
+            'car'=>trim((string)$request->query('car','')),
+            'mod'=>trim((string)$request->query('mod','')),
+        ];
+        $titulo=collect();
         if($tipo=='ca' || $tipo=='da' || $tipo=='tp' || $tipo=='tpa'){
-            if(Auth::user()->can('listado completo titulos - dyt')) {
-                $titulo = DB::table('titulos')
-                    ->join('personas', 'titulos.id_per', '=', 'personas.id_per')
-                    ->leftJoin('nacionalidads', 'personas.cod_nac', '=', 'nacionalidads.cod_nac')
-                    ->leftJoin('diploma_academicos', 'titulos.cod_tit', '=', 'diploma_academicos.cod_tit')
-                    ->leftJoin('carreras', 'diploma_academicos.cod_car', '=', 'carreras.cod_car')
-                    ->leftJoin('facultads', 'carreras.cod_fac', '=', 'facultads.cod_fac')
-                    ->leftJoin('modalidads', 'titulos.cod_mod', '=', 'modalidads.cod_mod')
-                    ->where('cod_tom', '=', $cod_tomo)
-                    ->select('tit_nro_titulo', 'tit_nro_folio', 'titulos.cod_tit', 'per_apellido', 'tit_fecha_emision', 'tit_pdf', 'tit_antecedentes',
-                        'tit_obs', 'per_nombre', 'car_nombre','car_abreviacion', 'mod_nombre', 'fac_nombre', 'tit_revalida', 'tit_usr','fac_abreviacion')
-                    ->orderBy('fac_abreviacion', 'ASC')
-                    ->orderBy('car_abreviacion', 'ASC')
-                    ->orderBy('per_apellido', 'ASC')
-                    ->orderBy('per_nombre', 'ASC')
-                    ->get();
-            }else{
-                $titulo = DB::table('titulos')
-                    ->join('personas', 'titulos.id_per', '=', 'personas.id_per')
-                    ->leftJoin('diploma_academicos', 'titulos.cod_tit', '=', 'diploma_academicos.cod_tit')
-                    ->leftJoin('carreras', 'diploma_academicos.cod_car', '=', 'carreras.cod_car')
-                    ->leftJoin('facultads', 'carreras.cod_fac', '=', 'facultads.cod_fac')
-                    ->leftJoin('modalidads', 'titulos.cod_mod', '=', 'modalidads.cod_mod')
-                    ->where('cod_tom', '=', $cod_tomo)
-                    ->where('tit_usr', '=', Auth::user()->id)
-                    ->select('tit_nro_titulo', 'tit_nro_folio', 'titulos.cod_tit', 'per_apellido', 'tit_fecha_emision', 'tit_pdf', 'tit_antecedentes',
-                        'tit_obs', 'per_nombre', 'car_nombre', 'mod_nombre', 'fac_nombre', 'tit_revalida', 'tit_usr','fac_abreviacion')
-                    ->orderBy('fac_nombre', 'ASC')
-                    ->orderBy('car_nombre', 'ASC')
-                    ->orderBy('per_apellido', 'ASC')
-                    ->orderBy('per_nombre', 'ASC')
-                    ->get();
+            $queryTitulo = DB::table('titulos')
+                ->join('personas', 'titulos.id_per', '=', 'personas.id_per')
+                ->leftJoin('diploma_academicos', 'titulos.cod_tit', '=', 'diploma_academicos.cod_tit')
+                ->leftJoin('carreras', 'diploma_academicos.cod_car', '=', 'carreras.cod_car')
+                ->leftJoin('facultads', 'carreras.cod_fac', '=', 'facultads.cod_fac')
+                ->leftJoin('modalidads', 'titulos.cod_mod', '=', 'modalidads.cod_mod')
+                ->where('titulos.cod_tom', '=', $cod_tomo);
+
+            if(!Auth::user()->can('listado completo titulos - dyt')){
+                $queryTitulo->where('titulos.tit_usr', '=', Auth::id());
             }
+
+            $this->aplicarFiltrosListadoDiplomaAcademico($queryTitulo, $filtrosTitulo, $tipo);
+
+            $titulo = $queryTitulo
+                ->select('tit_nro_titulo', 'tit_nro_folio', 'titulos.cod_tit', 'per_apellido', 'tit_fecha_emision', 'tit_pdf', 'tit_antecedentes',
+                    'tit_obs', 'per_nombre', 'car_nombre','car_abreviacion', 'mod_nombre', 'fac_nombre', 'tit_revalida', 'tit_usr','fac_abreviacion')
+                ->orderBy('fac_abreviacion', 'ASC')
+                ->orderBy('car_abreviacion', 'ASC')
+                ->orderBy('per_apellido', 'ASC')
+                ->orderBy('per_nombre', 'ASC')
+                ->get();
+
             $tomo_carrera=DB::table('tomo_carreras')
                 ->join('carreras','tomo_carreras.cod_car','=','carreras.cod_car')
                 ->leftJoin('facultads','carreras.cod_fac','=','facultads.cod_fac')
@@ -106,7 +104,7 @@ class TituloController extends Controller
 
         $c_tomo=new TomoController();
         $tipo_completo=$c_tomo->tipoTomo($tomo['tom_tipo']);
-        $carrera="";
+        $carrera=collect();
         if($tomo->tom_numero=='0'){
             $carrera = DB::table('carreras')
                 ->join('facultads', 'carreras.cod_fac', '=', 'facultads.cod_fac')
@@ -127,8 +125,36 @@ class TituloController extends Controller
         $nacionalidad=Nacionalidad::orderBy('nac_nombre')->get();
         $modalidad=Modalidad::get();
         $grado=$this->grados($tomo['tom_tipo']);
-        return view('diplomas.titulo.l_titulo',compact('titulo','tomo','tipo_completo','carrera','nacionalidad','modalidad','grado','listaTomo','tomo_carrera'));
+        return view('diplomas.titulo.l_titulo',compact('titulo','tomo','tipo_completo','carrera','nacionalidad','modalidad','grado','listaTomo','tomo_carrera','filtrosTitulo'));
     }
+
+    private function aplicarFiltrosListadoDiplomaAcademico($queryTitulo, array $filtrosTitulo, $tipo){
+        if($tipo!='da'){
+            return;
+        }
+
+        if($filtrosTitulo['q']!=''){
+            $busqueda='%'.mb_strtoupper($filtrosTitulo['q']).'%';
+            $queryTitulo->where(function ($subquery) use ($busqueda) {
+                $subquery->where('personas.per_apellido', 'like', $busqueda)
+                    ->orWhere('personas.per_nombre', 'like', $busqueda)
+                    ->orWhere('personas.per_ci', 'like', $busqueda);
+            });
+        }
+
+        if($filtrosTitulo['nro']!=''){
+            $queryTitulo->where('titulos.tit_nro_titulo', 'like', '%'.$filtrosTitulo['nro'].'%');
+        }
+
+        if($filtrosTitulo['car']!='' && ctype_digit($filtrosTitulo['car'])){
+            $queryTitulo->where('diploma_academicos.cod_car', '=', (int)$filtrosTitulo['car']);
+        }
+
+        if($filtrosTitulo['mod']!='' && ctype_digit($filtrosTitulo['mod'])){
+            $queryTitulo->where('titulos.cod_mod', '=', (int)$filtrosTitulo['mod']);
+        }
+    }
+
     public function GuardarTitulo(TituloRequest $form){
 
         $tomo=Tomo::find($form['ct']);
@@ -156,7 +182,7 @@ class TituloController extends Controller
                     //guarda los datos editados del tomo
                     $titulo->tit_nro_titulo=$form['nro'];
                     $titulo->tit_nro_folio=$form['folio'];       $titulo->tit_fecha_emision=$form['fecha'];      $titulo->tit_grado=$form['grado'];
-                    $titulo->cod_mod=$form['mod'];           $titulo->tit_titulo=mb_strtoupper($form['titulo']);   $titulo->tit_ref=$form['ref'];
+                    $titulo->cod_mod=$form['mod'];           $titulo->tit_titulo=$this->resolverTituloProfesional($form, $tipo);   $titulo->tit_ref=$form['ref'];
                     $titulo->tit_otra_modalidad=mb_strtoupper($form['otra_modalidad']);
                     $titulo->tit_reconocimiento=$form['reconocimiento']=='on' ? 't':'';
                     $titulo->tit_fecha_folio=$form['fecha_folio'];
@@ -374,7 +400,7 @@ class TituloController extends Controller
                             'tit_grado'=>$form['grado'],
                             'cod_mod'=>$form['mod'],
                             'id_per'=>$id_per,
-                            'tit_titulo'=>mb_strtoupper($form['titulo']),
+                            'tit_titulo'=>$this->resolverTituloProfesional($form, $tipo),
                             'tit_ref'=>$form['ref'],
                             'tit_revalida'=>$form['revalida'],
                             'tit_pdf'=>$archivo,
@@ -761,6 +787,121 @@ class TituloController extends Controller
             \Session::flash('error','No puede realizar el cambio al mismo tomo');
         }
         return redirect('l_titulo/'.$tomoAntiguo->cod_tom);
+    }
+
+    private function resolverTituloProfesional(Request $form, string $tipo): string
+    {
+        $tituloFormulario = trim((string) ($form['titulo'] ?? ''));
+        if ($tituloFormulario !== '') {
+            return mb_strtoupper($tituloFormulario);
+        }
+
+        $carreraNombre = '';
+        if (in_array($tipo, ['ca', 'da', 'tp', 'tpa']) && !empty($form['car'])) {
+            $carrera = Carrera::find($form['car']);
+            $carreraNombre = $carrera ? (string) $carrera->car_nombre : '';
+        }
+
+        return $this->sugerirTituloPorSexoYCarrera(
+            $carreraNombre,
+            (string) ($form['sexo'] ?? ''),
+            (string) ($form['grado'] ?? '')
+        );
+    }
+
+    private function sugerirTituloPorSexoYCarrera(string $carreraNombre, string $sexo, string $grado): string
+    {
+        $sexoNormalizado = strtoupper(trim($sexo)) === 'F' ? 'F' : 'M';
+        $carreraNormalizada = $this->normalizarTexto($carreraNombre);
+        $carreraBase = $this->limpiarPrefijosAcademicos($carreraNormalizada);
+        $teniaPrefijoAcademico = $carreraBase !== $carreraNormalizada;
+
+        if ($carreraBase !== '' && !$teniaPrefijoAcademico) {
+            if (Str::startsWith($carreraBase, 'INGENIERIA')) {
+                $sufijo = trim(Str::replaceFirst('INGENIERIA', '', $carreraBase));
+                $base = $sexoNormalizado === 'F' ? 'INGENIERA' : 'INGENIERO';
+                return trim($base . ' ' . $sufijo);
+            }
+
+            if (Str::startsWith($carreraBase, 'ARQUITECTURA')) {
+                $sufijo = trim(Str::replaceFirst('ARQUITECTURA', '', $carreraBase));
+                $base = $sexoNormalizado === 'F' ? 'ARQUITECTA' : 'ARQUITECTO';
+                return trim($base . ' ' . $sufijo);
+            }
+        }
+
+        $basePorGrado = $this->basePorGradoYSexo($grado, $sexoNormalizado);
+        if ($basePorGrado === '') {
+            return $carreraBase !== '' ? 'PROFESIONAL EN ' . $carreraBase : '';
+        }
+
+        if ($carreraBase === '') {
+            return $basePorGrado;
+        }
+
+        return $basePorGrado . ' EN ' . $carreraBase;
+    }
+
+    private function limpiarPrefijosAcademicos(string $carrera): string
+    {
+        $prefijos = [
+            'LIC. EN ',
+            'LIC EN ',
+            'LIC. ',
+            'LIC ',
+            'LICENCIATURA EN ',
+            'LICENCIATURA ',
+            'TECNICO SUPERIOR EN ',
+            'TECNICO MEDIO EN ',
+            'DIPLOMADO EN ',
+            'MAESTRIA EN ',
+            'DOCTORADO EN ',
+            'BACHILLER EN ',
+            'AUXILIAR EN ',
+        ];
+
+        foreach ($prefijos as $prefijo) {
+            if (Str::startsWith($carrera, $prefijo)) {
+                return trim(Str::replaceFirst($prefijo, '', $carrera));
+            }
+        }
+
+        return $carrera;
+    }
+
+    private function basePorGradoYSexo(string $grado, string $sexo): string
+    {
+        $gradoNormalizado = $this->normalizarTexto($grado);
+
+        switch ($gradoNormalizado) {
+            case 'LICENCIATURA':
+                return $sexo === 'F' ? 'LICENCIADA' : 'LICENCIADO';
+            case 'TECNICO SUPERIOR':
+                return $sexo === 'F' ? 'TECNICA SUPERIOR' : 'TECNICO SUPERIOR';
+            case 'TECNICO MEDIO':
+                return $sexo === 'F' ? 'TECNICA MEDIA' : 'TECNICO MEDIO';
+            case 'AUXILIAR':
+                return 'AUXILIAR';
+            case 'BACHILLER':
+                return 'BACHILLER';
+            case 'DIPLOMADO':
+                return $sexo === 'F' ? 'DIPLOMADA' : 'DIPLOMADO';
+            case 'ESPECIALIDAD':
+                return 'ESPECIALISTA';
+            case 'MAESTRIA':
+                return 'MAGISTER';
+            case 'DOCTORADO':
+                return $sexo === 'F' ? 'DOCTORA' : 'DOCTOR';
+            default:
+                return '';
+        }
+    }
+
+    private function normalizarTexto(string $texto): string
+    {
+        $texto = mb_strtoupper(trim($texto));
+        $texto = str_replace(['Á', 'É', 'Í', 'Ó', 'Ú'], ['A', 'E', 'I', 'O', 'U'], $texto);
+        return preg_replace('/\s+/', ' ', $texto) ?? '';
     }
 
     public function grados($tipo){

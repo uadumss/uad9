@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Archivado;
 use App\Models\Autoridad;
 use App\Models\Firma;
+use App\Models\Detalle_codigo;
 use App\Models\Persona;
 use App\Models\Resolucion;
 use App\Models\Tomo;
@@ -99,12 +100,17 @@ class ResolucionController extends Controller
                         $archivado=array();
 
                         if(isset($form['temas']) && $form['temas']!=''){
-                            $archivado=Archivado::create([
-                                'cod_carch'=>$form['plan'],
-                                'cod_res'=>$resolucion->cod_res,
-                                'cod_det'=>$form['temas']
-                            ]);
-                            $objetoCompleto=(object) array_merge($objetoCompleto->toArray(),$archivado->toArray());
+                            $detalle = Detalle_codigo::find($form['temas']);
+                            if ($detalle) {
+                                $archivado=Archivado::create([
+                                    'cod_carch'=>$form['plan'],
+                                    'cod_res'=>$resolucion->cod_res,
+                                    'cod_det'=>$form['temas']
+                                ]);
+                                $objetoCompleto=(object) array_merge($objetoCompleto->toArray(),$archivado->toArray());
+                            } else {
+                                \Session::flash('error', 'La resolución se guardó, pero el tema seleccionado ya no existe. Vuelva a elegirlo.');
+                            }
                         }
 
 
@@ -392,14 +398,30 @@ class ResolucionController extends Controller
         $resolucion=Resolucion::find($cod_res);
         $tomo=Tomo::find($resolucion->cod_tom);
         $fir=Firma::where('cod_res',$cod_res)->first();
-        $archivado=DB::table('archivados')
-            ->join('codigo_archivos','archivados.cod_carch','=','codigo_archivos.cod_carch')
-            ->join('plan_archivos','codigo_archivos.cod_plan','=','plan_archivos.cod_plan')
-            ->select('cod_arc','carch_numero','plan_numero')
-            ->where('archivados.cod_res','=',$cod_res)
+        $archivados = DB::table('archivados')
+            ->select('cod_arc', 'cod_res', 'cod_carch', 'cod_det');
+
+        $archivados1 = DB::table('archivados1')
+            ->select('cod_arc', 'cod_res', 'cod_carch', 'cod_det');
+
+        $archivado=DB::query()
+            ->fromSub($archivados->unionAll($archivados1), 'archivos_resolucion')
+            ->leftJoin('detalle_codigo','archivos_resolucion.cod_det','=','detalle_codigo.cod_det')
+            ->leftJoin('codigo_archivos','archivos_resolucion.cod_carch','=','codigo_archivos.cod_carch')
+            ->leftJoin('plan_archivos','codigo_archivos.cod_plan','=','plan_archivos.cod_plan')
+            ->select('archivos_resolucion.cod_arc','carch_numero','plan_numero','det_nombre')
+            ->where('archivos_resolucion.cod_res','=',$cod_res)
             ->get();
+        $planArchivo = $archivado->map(function ($item) {
+            $texto = $item->plan_numero.'/'.$item->carch_numero;
+            if (isset($item->det_nombre) && $item->det_nombre !== '') {
+                $texto .= ' - '.$item->det_nombre;
+            }
+
+            return $texto;
+        })->implode('<br/>');
         $autoridad=Autoridad::all();
-        return view('resoluciones.resolucion.detalle_resolucion',compact('resolucion','fir','archivado','autoridad','tomo'));
+        return view('resoluciones.resolucion.detalle_resolucion',compact('resolucion','fir','archivado','planArchivo','autoridad','tomo'));
     }
     public function listar_gestion($gestion,$tipo){
         $resoluciones=DB::table('resolucions')
@@ -470,7 +492,7 @@ class ResolucionController extends Controller
                             }
                         }
                     }
-                }catch (Exception $e){
+                }catch (\Exception $e){
                     return $e;
                 }
 
@@ -488,16 +510,33 @@ class ResolucionController extends Controller
     }
     //===================== CODIGO DE ARCHIVADO
     public static function l_codigo($cod_res){
-        $archivados=DB::table('archivados')
-            ->join('codigo_archivos','archivados.cod_carch','=','codigo_archivos.cod_carch')
-            ->join('plan_archivos','codigo_archivos.cod_plan','=','plan_archivos.cod_plan')
-            ->where('cod_res',$cod_res)
-            ->select('cod_arc','carch_numero','plan_numero')
+        $archivados = DB::table('archivados')
+            ->select('cod_res', 'cod_carch');
+
+        $archivados1 = DB::table('archivados1')
+            ->select('cod_res', 'cod_carch');
+
+        $archivos = DB::query()
+            ->fromSub($archivados->unionAll($archivados1), 'archivos_resolucion')
+            ->leftJoin('codigo_archivos', 'archivos_resolucion.cod_carch', '=', 'codigo_archivos.cod_carch')
+            ->leftJoin('plan_archivos', 'codigo_archivos.cod_plan', '=', 'plan_archivos.cod_plan')
+            ->where('archivos_resolucion.cod_res', $cod_res)
+            ->select('plan_archivos.plan_numero', 'codigo_archivos.carch_numero')
             ->get();
+
         $resp='';
-        foreach ($archivados as $a):
-            $resp.=$a->plan_numero."/".$a->carch_numero."<br/>";
-        endforeach;
+        $vistos = [];
+        foreach ($archivos as $a) {
+            if (!isset($a->plan_numero, $a->carch_numero)) {
+                continue;
+            }
+
+            $codigo = $a->plan_numero."/".$a->carch_numero;
+            if (!in_array($codigo, $vistos, true)) {
+                $vistos[] = $codigo;
+                $resp .= $codigo."<br/>";
+            }
+        }
 
         return $resp;
     }

@@ -9,6 +9,177 @@
 }
 </style>
 
+@php
+    $normalizarCarrera = function ($texto) {
+        $txt = mb_strtoupper(trim((string) $texto), 'UTF-8');
+        $txt = strtr($txt, [
+            'Á' => 'A', 'É' => 'E', 'Í' => 'I', 'Ó' => 'O', 'Ú' => 'U', 'Ü' => 'U', 'Ñ' => 'N'
+        ]);
+        $txt = preg_replace('/[^A-Z0-9 ]+/', ' ', $txt);
+        $txt = preg_replace('/\s+/', ' ', $txt);
+        return trim($txt);
+    };
+
+    $ajustarPorSexo = function ($texto, $sexo) {
+        $valor = (string) $texto;
+        if (trim($valor) === '') {
+            return '';
+        }
+
+        $sexoNorm = mb_strtoupper(trim((string) $sexo), 'UTF-8') === 'F' ? 'F' : 'M';
+        $pares = [
+            'LICENCIADO' => 'LICENCIADA',
+            'INGENIERO' => 'INGENIERA',
+            'ARQUITECTO' => 'ARQUITECTA',
+            'TECNICO' => 'TECNICA',
+            'MEDICO' => 'MEDICA',
+            'ABOGADO' => 'ABOGADA',
+            'DOCTOR' => 'DOCTORA',
+            'AUDITOR' => 'AUDITORA',
+            'QUIMICO' => 'QUIMICA',
+            'BIOLOGO' => 'BIOLOGA',
+            'FISICO' => 'FISICA',
+            'MATEMATICO' => 'MATEMATICA',
+            'INFORMATICO' => 'INFORMATICA',
+            'PSICOLOGO' => 'PSICOLOGA',
+            'CONTADOR' => 'CONTADORA',
+            'ADMINISTRADOR' => 'ADMINISTRADORA',
+            'COMUNICADOR' => 'COMUNICADORA',
+            'TRABAJADOR' => 'TRABAJADORA',
+        ];
+
+        if ($sexoNorm === 'F') {
+            foreach ($pares as $masc => $fem) {
+                $valor = preg_replace('/\\b' . preg_quote($masc, '/') . '\\b/u', $fem, $valor);
+            }
+            return $valor;
+        }
+
+        foreach ($pares as $masc => $fem) {
+            $valor = preg_replace('/\\b' . preg_quote($fem, '/') . '\\b/u', $masc, $valor);
+        }
+
+        return $valor;
+    };
+
+    $mapaBaseTitulos = [
+        'PROG. ING. REC. HIDRICOS AGROPECUARIA' => 'INGENIERO EN GESTION DE RECURSOS HIDRICOS AGROPECUARIOS',
+        'LICENCIATURA EN INGENIERIA AGRONOMICA ZOOTECNISTA' => 'INGENIERO AGRONOMICO ZOOTECNISTA',
+        'LICENCIATURA EN INGENIERIA AGRICOLA' => 'INGENIERO AGRICOLA',
+        'LICENCIATURA EN INGENIERIA AGRONOMICA FITOTECNISTA' => 'INGENIERO AGRONOMA FITOTECNISTA',
+        'PROGRAMA LIC. EN INGENIERIA FORESTAL' => 'INGENIERO FORESTAL',
+        'LICENCIATURA EN INGENIERIA AGRONOMICA' => 'INGENIERO AGRONOMO',
+        'PROGRAMA COMPLEMENTACION ING. FORESTAL' => 'INGENIERO FORESTAL',
+        'LICENCIATURA EN INGENIERIA FORESTAL(NUE)' => 'INGENIERO FORESTAL',
+        'LIC. EN ING. AGR TROPICAL MANEJO DE RECURSOS RENOVABLES' => 'INGENIERA EN AGRICULTURA TROPICAL Y MANEJO DE RECURSOS RENOVABLES',
+        'LICENCIATURA EN INGENIERIA AGROINDUSTRIAL' => 'INGENIERO AGROINDUSTRIAL',
+        'TECNICO UNIVERSITARIO SUPERIOR AGRONOMO' => 'TECNICO UNIVERSITARIO SUPERIOR AGRONOMO',
+        'TECNICO UNIVERSITARIO SUPERIOR FORESTAL' => 'TECNICO UNIVERSITARIO SUPERIOR FORESTAL',
+        'LICENCIATURA EN INGENIERIA AGROFORESTAL' => 'INGENIERO AGROFORESTAL',
+        'LICENCIATURA EN INGENIERIA AMBIENTAL' => 'INGENIERO AMBIENTAL',
+        'LICENCIATURA EN INGENIERIA EN AGRICULTURA TROPICAL Y MANEJO DE RECURSOS RENOVABLES' => 'INGENIERIA EN AGRICULTURA TROPICAL Y MANEJO DE RECURSOS RENOVABLES',
+        'PROGRAMA DE INGENIERIA AGRONOMICA ZOOTECNISTA' => 'INGENIERA AGRONOMA ZOOCTENISTA',
+        'LICENCIATURA EN GESTION DEL DESARROLLO ENDOGENO Y AGROECOLOGIA' => 'LICENCIADO EN GESTION DE DESARROLLO ENDOGENO Y AGROECOLOGIA',
+        'LICENCIATURA EN BIOQUIMICA Y FARMACIA' => 'BIOQUIMICA FAMACEUTICA',
+        'LICENCIATURA EN ECONOMIA' => 'ECONOMISTA',
+        'LICENCIATURA EN ADMINISTRACION DE EMPRESAS' => 'ADMINISTRADOR DE EMPRESAS',
+        'LICENCIATURA EN INGENIERIA COMERCIAL' => 'INGENIERO COMERCIAL',
+        'LICENCIATURA EN INGENIERIA FINANCIERA' => 'INGENIERA FINANCIERA',
+        'LICENCIATURA EN CONTADURIA PUBLICA' => 'CONTADORA PUBLICA AUTORIZADA',
+        'TECNICO UNIVERSITARIO SUPERIOR CONTADOR GENERAL' => 'CONTADOR GENERAL',
+        'TECNICO UNIVERSITARIO SUPERIOR EN PROYECTOS DE INVERSION' => 'TECNICO UNIVERSITARIO SUPERIOR EN PROYECTOS DE INVERSION',
+        'TECNICO UNIVERSITARIO SUPERIOR EN PROYECTOS SOCIALES' => 'TECNICO UNIVERSITARIO SUPERIOR EN PROYECTOS SOCIALES',
+        'TECNICO UNIVERSITARIO SUPERIOR EN ESTADÍSTICA' => 'TECNICO UNIVERSITARIO SUPERIOR EN ESTADÍSTICA',
+        'LICENCIATURA EN AUDITORIA' => 'AUDITOR',
+        'LICENCIATURA EN ODONTOLOGIA (PLAN NUEVO)' => 'CIRUJANA DENTISTA',
+        'LICENCIATURA EN FISIOTERAPIA Y KINESIOLOGIA' => 'LICENCIADA EN FISIOTERAPIA Y KINESIOLOGIA',
+        'LICENCIATURA EN MEDICINA' => 'MEDICO CIRUJANO',
+        'TEC.UNIV.SUP. FISIOTERAPIA Y KINESIOLOGIA' => 'TECNICO UNIVERSITARIO SUPERIOR EN FISITERAPIA Y KINESIOLOGIA',
+        'LIC. ENFERMERIA' => 'LICECNIADA EN ENFERMERIA',
+        'LICENCIATURA EN ARQUITECTURA' => 'ARQUITECTO',
+        'LICENCIATURA EN DISEÑO DE INTERIORES Y DEL MOBILIARIO' => 'LICENCIADO EN DISEÑO DE INTERIORES Y DEL MOBILIARIO',
+        'LICENCIATURA EN PLANIFICACION DEL TERRITORIO Y MEDIO AMBIENTE' => 'LICENCIADO EN PLANIFICACION DEL TERRITORIO Y MEDIO AMBIENTE',
+        'LICENCIATURA EN DISEÑO GRAFICO Y COMUNICACION VISUAL' => 'LICENCIADO EN DISEÑO GRAFICO Y COMUNICACION VISUAL',
+        'LICENCIATURA EN TURISMO' => 'LICENCIADA EN TURISMO',
+        'TEC.UNIV. SUP EN CONSTRUCCIONES' => 'TECNICO UNIVERSITARIO SUPERIOR EN CONSTRUCCIONES',
+        'TECNICO UNIVERSITARIO SUPERIOR EN DISEÑO DE INTERIORES' => 'TECNICO UNIVERSITARIO SUPERIOR EN DISEÑO DE INTERIORES',
+        'LICENCIATURA EN CONSTRUCCIONES' => 'LICENCIADO EN CONSTRUCCIONES',
+        'TEC. UNIVERSITARIO SUP. EN CARTOGRAFÍA, CATASTRO Y SIS. DE INFORMACIÓN GEOGRÁFICA' => 'TECNICO UNIVERSITARIO SUPERIOR EN CARTOGRAFÍA, CATASTRO Y SIS. DE INFORMACIÓN GEOGRÁFICA Y CATASTRO',
+        'TEC.UNIV.SUP. DISEÑO GRÁFICO' => 'TECNICO UNIVERSITARIO SUPERIOR EN DISEÑO GRAFICO',
+        'LICENCIATURA EN CIENCIAS DE LA EDUCACION' => 'LICENCIADO EN CIENCIAS DE LA EDUCACION',
+        'PROGRAMA LIC. EN CS. ACT. FISICA Y DEPORTE' => 'LICENCIADO EN CIENCIAS DE LA ACTIVIDAD FISICA Y DEL DEPORTE',
+        'PROGRAMA DE LICENCIATURA EN MUSICA' => 'LICENCIADO EN MUSICA',
+        'PROGRAMA LIC. ESP. ED. INTERCUL.BILINGUE' => 'LICENCIADA EN EDUCACION INTERCULTURAL BILINGUE',
+        'LICENCIATURA EN TRABAJO SOCIAL' => 'TRABAJADORA SOCIAL',
+        'LICENCIATURA EN COMUNICACION SOCIAL' => 'COMUNICADORA SOCIAL',
+        'LICENCIATURA EN PSICOLOGIA (NUE)' => 'PSICOLOGO',
+        'LICENCIATURA EN LINGUISTICA APLICADA EN LA ENSEÑANZA DE LENGUAS' => 'LICENCIADO EN LINGÜÍSTICA APLICADA A LA ENSEÑANZA DE LENGUAS',
+        'LICENCIATURA EN CIENCIAS JURIDICAS' => 'ABOGADO',
+        'LICENCIATURA EN CIENCIAS POLITICAS (NUE)' => 'POLITOLOGA',
+        'LICENCIATURA EN INFORMATICA' => 'INFORMATICO',
+        'LICENCIATURA EN INGENIERIA DE SISTEMAS' => 'INGENIERO DE SISTEMAS',
+        'LICENCIATURA EN DIDACTICA  MATEMATICA' => 'INGENIERO EN DIDCATICA MATEMATICA',
+        'LICENCIATURA EN INGENIERIA INFORMATICA' => 'INGENIERO INFORMATICO',
+        'LICENCIATURA EN INGENIERIA QUIMICA' => 'INGENIERO QUIMICO',
+        'LICENCIATURA EN QUIMICA' => 'QUIMICO',
+        'LICENCIATURA EN ING. ELECTROMECANICA' => 'INGENIERO ELECTROMECANICO',
+        'LICENCIATURA EN MATEMATICAS' => 'MATEMATICO',
+        'LICENCIATURA EN INGENIERIA ELECTRICA' => 'INGENIERO ELECTRICO',
+        'LICENCIATURA EN INGENIERIA MECANICA' => 'INGENIERO MECANICO',
+        'LICENCIATURA EN INGENIERIA INDUSTRIAL' => 'INGENIERO INDUSTRIAL',
+        'LICENCIATURA EN DIDACTICA DE LA FISICA' => 'LICENCIADO EN DICACTICA DE LA FISICA',
+        'LICENCIATURA EN INGENIERIA ELECTRONICA' => 'INGENIERO ELECTRONICO',
+        'LICENCIATURA EN INGENIERIA DE ALIMENTOS' => 'INGENIERA DE ALIMENTOS',
+        'LICENCIATURA EN BIOLOGIA' => 'BIOLOGO',
+        'LICENCIATURA EN FISICA' => 'FISICO',
+        'LICENCIATURA EN INGENIERIA MATEMATICA' => 'INGENIERO MATEMATICO',
+        'LICENCIATURA EN INGENIERIA PETROQUIMICA' => 'INGENIERO EN PETROQUIMICA',
+        'LICENCIATURA EN INGENIERIA CIVIL' => 'INGENIERO CIVIL',
+        'TECNICO SUPERIOR EN FISICA' => 'TECNICO SUPERIOR EN FISICA',
+        'TECNICO SUPERIOR EN BIOLOGIA' => 'TECNICO SUPERIOR EN BIOLOGIA',
+        'TECNICO SUPERIOR EN QUIMICA' => 'TECNICO SUPERIOR EN QUIMICA',
+        'LICENCIATURA ESPECIAL EN DIDACTICA MATEMATICA' => 'LICENCIATURA ESPECIAL EN DIDACTICA MATEMATICA',
+        'AUXILIAR TECNICO EN ENFERMERIA' => 'AUXILIAR TECNICO EN ENFERMERIA',
+        'TEC.UNIV.SUP. EN  MECANICA AUTOMOTRIZ' => 'TECNICO SUPERIOR UNIVERSITARIO EN MECANICA AUTOMOTRIZ',
+        'TEC.UNIV.SUP. EN CONSTRUCCION CIVIL' => 'TECNICO SUPERIOR UNIVERSITARIO EN CONSTRUCCION CIVIL',
+        'TEC.UNIV.MED EN ENFERMERIA' => 'TECNICO UNIVERSITARIO MEDIO EN ENFERMERIA',
+        'LICENCIATURA EN SOCIOLOGIA' => 'SOCIOLOGA',
+        'TECNICO SUPERIOR UNIVERSITARIO EN GESTION CULTURAL' => 'TECNICA SUPERIOR UNIVERSITARIA EN GESTION CULTURAL',
+        'LICENCIATURA EN MEDICINA VETERINARIA Y ZOOTECNIA' => 'MEDICA VETERINARIA Y ZOOCTENISTA',
+        'TEC. UNIVERSITARIO MEDIO EN ENFERMERIA' => 'TECNICO UNIVERSITARIO MEDIO EN ENFERMERIA',
+        'LICENCIATURA EN ENFERMERIA' => 'LICENCIADA EN ENFERMERIA',
+    ];
+
+    $mapaBaseDiplomas = [
+        'PROG. ING. REC. HIDRICOS AGROPECUARIA' => 'LICENCIADO EN INGENIERIA EN GESTION DE RECURSOS HIDRICOS AGROPECUARIOS',
+    ];
+
+    $titulosPorCarrera = [];
+    foreach ($mapaBaseTitulos as $carreraMapa => $tituloMapa) {
+        $titulosPorCarrera[$normalizarCarrera($carreraMapa)] = $tituloMapa;
+    }
+
+    $diplomasPorCarrera = [];
+    foreach ($mapaBaseDiplomas as $carreraMapa => $diplomaMapa) {
+        $diplomasPorCarrera[$normalizarCarrera($carreraMapa)] = $diplomaMapa;
+    }
+
+    $tituloSegunCarrera = '';
+    $diplomaSegunCarrera = '';
+    if (sizeof($diploma_academico) > 0) {
+        $carreraDetalle = $normalizarCarrera($diploma_academico[0]->car_nombre ?? '');
+        $tituloSegunCarrera = $titulosPorCarrera[$carreraDetalle] ?? '';
+        $diplomaSegunCarrera = $diplomasPorCarrera[$carreraDetalle] ?? '';
+    }
+
+    $sexoDetalle = $titulo[0]->per_sexo ?? '';
+    $diplomaBase = $diplomaSegunCarrera !== '' ? $diplomaSegunCarrera : ($titulo[0]->tit_titulo ?? '');
+    $diplomaAcademicoMostrado = $ajustarPorSexo($diplomaBase, $sexoDetalle);
+
+    $tituloBase = $tituloSegunCarrera !== '' ? $tituloSegunCarrera : ($titulo[0]->tit_titulo ?? '');
+    $tituloMostrado = $ajustarPorSexo($tituloBase, $sexoDetalle);
+@endphp
+
 
 <hr class="sidebar-divider"/>
 <div class="row">
@@ -64,11 +235,12 @@
                         <th class="text-dark text-right font-italic">Referencia: </th> <td class="border-bottom border-dark"> &nbsp;&nbsp;{{$titulo[0]->tit_ref}}</td>
                     </tr>
                 @endif
-                @if($titulo[0]->tit_titulo!='')
-                    <tr>
-                        <th class="text-dark text-right font-italic">Título: </th> <td class="border-bottom border-dark"> &nbsp;&nbsp;{{$titulo[0]->tit_titulo}}</td>
-                    </tr>
-                @endif
+                <tr>
+                    <th class="text-dark text-right font-italic">Diploma académico : </th> <td class="border-bottom border-dark"> &nbsp;&nbsp;{{$diplomaAcademicoMostrado}}</td>
+                </tr>
+                <tr>
+                    <th class="text-dark text-right font-italic">Título : </th> <td class="border-bottom border-dark"> &nbsp;&nbsp;{{$tituloMostrado}}</td>
+                </tr>
                 @if($titulo[0]->mod_nombre!='')
                     @if($titulo[0]->mod_nombre=='Otro...')
                     <tr>

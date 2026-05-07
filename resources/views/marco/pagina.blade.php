@@ -77,14 +77,6 @@
 <script src="{{url('vendor/datatables/dataTables.bootstrap4.min.js')}}"></script>
 <!-- Page level custom scripts -->
 <script src="{{url('js/demo/datatables-demo.js')}}"></script>
-<script>
-    $('#dataTable').dataTable( {
-        "pageLength": 500
-    });
-    $('#dataTable2').dataTable( {
-        "pageLength": 500
-    });
-</script>
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 <!-- google chart-->
 </body>

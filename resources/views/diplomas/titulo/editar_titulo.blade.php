@@ -55,7 +55,7 @@
                                 <tr>
                                     <th class="text-right font-italic">Grado :</th>
                                     <td class="border-bottom border-dark">
-                                        <select class="form-control border-0 form-control-sm" name="grado" >
+                                        <select class="form-control border-0 form-control-sm" name="grado" id="e_grado" >
                                             <option value="{{$titulo[0]->tit_grado}}">{{$titulo[0]->tit_grado}}</option>
                                             @foreach($grado as $g)
                                                 <option value="{{$g}}">{{$g}}</option>
@@ -129,6 +129,10 @@
                                     <th class="text-right font-italic">Título:</th>
                                     <td class="border-bottom border-dark">
                                         <textarea rows="2" class="form-control-sm form-control border-0" name="titulo" id="e_tit">{{$titulo[0]->tit_titulo}}</textarea>
+                                        <input type="hidden" id="e_titulo_manual" value="0"/>
+                                        <div class="d-flex justify-content-end align-items-center mt-1">
+                                            <button type="button" class="btn btn-sm btn-primary" id="e_auto_titulo" aria-pressed="true">Autocompletado: ACTIVO</button>
+                                        </div>
                                     </td>
                                 </tr>
                                 <?php }?>
@@ -294,4 +298,186 @@
         <?php if($tipo=='ca' || $tipo=='da' || $tipo=='tp' || $tipo=='tpa'){?>
             <input type="hidden" name="fac" id="e_fac" value="{{$titulo[0]->fac_nombre}}"/>
         <?php }?>
+
+        <script>
+            (function(){
+                function normalizarTituloTexto(texto){
+                    if(!texto){
+                        return '';
+                    }
+                    var txt = texto.toString().toUpperCase();
+                    if(typeof txt.normalize === 'function'){
+                        txt = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                    }
+                    return txt.replace(/\s+/g, ' ').trim();
+                }
+
+                function basePorGradoYSexo(grado, sexo){
+                    var gradoNorm = normalizarTituloTexto(grado);
+                    var esFemenino = sexo === 'F';
+                    switch (gradoNorm){
+                        case 'LICENCIATURA': return esFemenino ? 'LICENCIADA' : 'LICENCIADO';
+                        case 'TECNICO SUPERIOR': return esFemenino ? 'TECNICA SUPERIOR' : 'TECNICO SUPERIOR';
+                        case 'TECNICO MEDIO': return esFemenino ? 'TECNICA MEDIA' : 'TECNICO MEDIO';
+                        case 'AUXILIAR': return 'AUXILIAR';
+                        case 'BACHILLER': return 'BACHILLER';
+                        case 'DIPLOMADO': return esFemenino ? 'DIPLOMADA' : 'DIPLOMADO';
+                        case 'ESPECIALIDAD': return 'ESPECIALISTA';
+                        case 'MAESTRIA': return 'MAGISTER';
+                        case 'DOCTORADO': return esFemenino ? 'DOCTORA' : 'DOCTOR';
+                        default: return '';
+                    }
+                }
+
+                function extraerCarrera(optionText){
+                    var txt = (optionText || '').trim();
+                    var i = txt.indexOf(' - ');
+                    if(i >= 0){
+                        return txt.substring(i + 3).trim();
+                    }
+                    return txt;
+                }
+
+                function limpiarPrefijosAcademicos(carrera){
+                    var carreraNorm = normalizarTituloTexto(carrera);
+                    var prefijos = [
+                        'LICENCIATURA EN ',
+                        'LICENCIATURA ',
+                        'TECNICO SUPERIOR EN ',
+                        'TECNICO MEDIO EN ',
+                        'DIPLOMADO EN ',
+                        'MAESTRIA EN ',
+                        'DOCTORADO EN ',
+                        'BACHILLER EN ',
+                        'AUXILIAR EN '
+                    ];
+
+                    for(var i = 0; i < prefijos.length; i++){
+                        if(carreraNorm.indexOf(prefijos[i]) === 0){
+                            return carreraNorm.substring(prefijos[i].length).trim();
+                        }
+                    }
+
+                    return carreraNorm;
+                }
+
+                function tienePrefijoAcademico(carrera){
+                    var carreraNorm = normalizarTituloTexto(carrera);
+                    var prefijos = [
+                        'LICENCIATURA EN ',
+                        'LICENCIATURA ',
+                        'TECNICO SUPERIOR EN ',
+                        'TECNICO MEDIO EN ',
+                        'DIPLOMADO EN ',
+                        'MAESTRIA EN ',
+                        'DOCTORADO EN ',
+                        'BACHILLER EN ',
+                        'AUXILIAR EN '
+                    ];
+
+                    for(var i = 0; i < prefijos.length; i++){
+                        if(carreraNorm.indexOf(prefijos[i]) === 0){
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }
+
+                function sugerirTituloProfesional(carrera, sexo, grado){
+                    var sexoNorm = (sexo || '').toUpperCase() === 'F' ? 'F' : 'M';
+                    var conPrefijoAcademico = tienePrefijoAcademico(carrera);
+                    var carreraNorm = limpiarPrefijosAcademicos(carrera);
+                    var carreraClave = carreraNorm.replace(/[^A-Z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+                    if(carreraClave === 'PROG ING REC HIDRICOS AGROPECUARIA'){
+                        return sexoNorm === 'F'
+                            ? 'LICENCIADA EN INGENIERIA EN GESTION DE RECURSOS HIDRICOS AGROPECUARIOS'
+                            : 'LICENCIADO EN INGENIERIA EN GESTION DE RECURSOS HIDRICOS AGROPECUARIOS';
+                    }
+
+                    if(!conPrefijoAcademico && carreraNorm.indexOf('INGENIERIA') === 0){
+                        var sufijoIng = carreraNorm.replace('INGENIERIA', '').trim();
+                        var baseIng = sexoNorm === 'F' ? 'INGENIERA' : 'INGENIERO';
+                        return (baseIng + ' ' + sufijoIng).trim();
+                    }
+
+                    if(!conPrefijoAcademico && carreraNorm.indexOf('ARQUITECTURA') === 0){
+                        var sufijoArq = carreraNorm.replace('ARQUITECTURA', '').trim();
+                        var baseArq = sexoNorm === 'F' ? 'ARQUITECTA' : 'ARQUITECTO';
+                        return (baseArq + ' ' + sufijoArq).trim();
+                    }
+
+                    var baseGrado = basePorGradoYSexo(grado, sexoNorm);
+                    if(baseGrado === ''){
+                        return carreraNorm !== '' ? ('PROFESIONAL EN ' + carreraNorm) : '';
+                    }
+
+                    if(carreraNorm === ''){
+                        return baseGrado;
+                    }
+
+                    return baseGrado + ' EN ' + carreraNorm;
+                }
+
+                function actualizarTituloEdicion(forzar){
+                    var esManual = $('#e_titulo_manual').val() === '1';
+                    if(esManual && !forzar){
+                        return;
+                    }
+
+                    var sexo = $('#e_sex').val() || 'M';
+                    var grado = $('#e_grado').val() || '';
+                    var carrera = extraerCarrera($('#e_car option:selected').text());
+                    var sugerido = sugerirTituloProfesional(carrera, sexo, grado);
+
+                    if(sugerido !== ''){
+                        $('#e_tit').val(sugerido);
+                    }
+                }
+
+                function actualizarEstadoBotonAutoEdicion(){
+                    var autoActivo = $('#e_titulo_manual').val() === '0';
+                    var $btn = $('#e_auto_titulo');
+
+                    if(autoActivo){
+                        $btn.removeClass('btn-outline-primary').addClass('btn-primary');
+                        $btn.text('Autocompletado: ACTIVO');
+                        $btn.attr('aria-pressed', 'true');
+                    }else{
+                        $btn.removeClass('btn-primary').addClass('btn-outline-primary');
+                        $btn.text('Autocompletado: INACTIVO');
+                        $btn.attr('aria-pressed', 'false');
+                    }
+                }
+
+                $('#e_tit').off('input.autoTitulo').on('input.autoTitulo', function(){
+                    $('#e_titulo_manual').val('1');
+                    actualizarEstadoBotonAutoEdicion();
+                });
+
+                $(document).off('change.autoTituloEdicion input.autoTituloEdicion', '#e_sex, #e_grado, #e_car');
+                $(document).on('change.autoTituloEdicion input.autoTituloEdicion', '#e_sex, #e_grado, #e_car', function(){
+                    actualizarTituloEdicion(false);
+                });
+
+                $('#editarTitulo').off('shown.bs.modal.autoTituloEdicion').on('shown.bs.modal.autoTituloEdicion', function(){
+                    actualizarTituloEdicion(false);
+                });
+
+                $('#e_auto_titulo').off('click.autoTitulo').on('click.autoTitulo', function(){
+                    var autoActivo = $('#e_titulo_manual').val() === '0';
+                    $('#e_titulo_manual').val(autoActivo ? '1' : '0');
+                    actualizarEstadoBotonAutoEdicion();
+                    if(!autoActivo){
+                        actualizarTituloEdicion(true);
+                    }
+                });
+
+                actualizarEstadoBotonAutoEdicion();
+                if($.trim($('#e_tit').val()) === ''){
+                    actualizarTituloEdicion(true);
+                }
+            })();
+        </script>
 

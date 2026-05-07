@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\FacultadCarreraExport;
 use App\Models\Carrera;
 use App\Models\Facultad;
 use App\Models\Unidad;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 class FacultadController extends Controller
 {
@@ -21,6 +23,50 @@ class FacultadController extends Controller
         $facultades=Facultad::all()->sortBy('cod_fac');
         return view('unidad.facultad.l_facultad',compact('facultades'));
     }
+
+    public function exportar_facultades_carreras_excel(Request $request){
+        $codFacultad=(int)$request->query('facultad',0);
+
+        $consulta=DB::table('facultads')
+            ->leftJoin('carreras','facultads.cod_fac','=','carreras.cod_fac')
+            ->select(
+                'facultads.fac_nombre',
+                'facultads.fac_abreviacion',
+                'carreras.car_nombre',
+                'carreras.car_abreviacion',
+                'facultads.cod_fac'
+            );
+
+        if($codFacultad>0){
+            $consulta->where('facultads.cod_fac','=',$codFacultad);
+        }
+
+        $registros=$consulta
+            ->orderBy('facultads.fac_nombre','ASC')
+            ->orderBy('carreras.car_nombre','ASC')
+            ->get()
+            ->map(function ($fila) {
+                return [
+                    'fac_nombre'=>$fila->fac_nombre ?? '',
+                    'fac_abreviacion'=>$fila->fac_abreviacion ?? '',
+                    'car_nombre'=>$fila->car_nombre ?? '',
+                    'car_abreviacion'=>$fila->car_abreviacion ?? '',
+                ];
+            });
+
+        if($codFacultad>0){
+            $facultad=Facultad::find($codFacultad);
+            if(!$facultad){
+                return redirect('listar facultad')->with('error','La facultad seleccionada no existe');
+            }
+            $nombreArchivo='facultad_'.preg_replace('/[^A-Za-z0-9\-]/','_',strtolower($facultad->fac_abreviacion ?: $facultad->fac_nombre)).'_carreras_'.date('Ymd_His').'.xlsx';
+        }else{
+            $nombreArchivo='facultades_carreras_'.date('Ymd_His').'.xlsx';
+        }
+
+        return Excel::download(new FacultadCarreraExport($registros),$nombreArchivo);
+    }
+
     public function fe_facultad($cod_fac){
         $facultad="";
         if($cod_fac!=0){

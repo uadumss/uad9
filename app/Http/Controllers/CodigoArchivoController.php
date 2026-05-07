@@ -215,6 +215,9 @@ class CodigoArchivoController extends Controller
     }
     public function g_tema_resolucion($cod_res,$cod_det){
         $detalle=Detalle_codigo::find($cod_det);
+        if(!$detalle){
+            return '<div class="alert alert-danger mb-0">El tema seleccionado ya no existe. Vuelva a elegirlo.</div>';
+        }
         if($cod_res!='0'){
             $tema=Archivado::create([
                 'cod_res'=>$cod_res,

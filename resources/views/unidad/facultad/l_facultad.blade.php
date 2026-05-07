@@ -58,12 +58,17 @@
                         <div class="card-header py-3" style="background-color:#e1edff">
                             <div class="d-sm-flex align-items-center justify-content-between">
                                 <h5 class="text-dark"><i class="fas fa-university"></i>&nbsp;Lista facultades</h5>
-                                @can('crear editar facultad - f')
-                                    <a class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm text-white" data-toggle="modal" data-target="#facultad"
-                                       onclick="cargarDatos('fe_facultad/0','panel_contenido')" >
-                                        + Facultad
+                                <div>
+                                    <a class="d-none d-sm-inline-block btn btn-sm btn-success shadow-sm text-white mr-1" data-toggle="modal" data-target="#exportarFacultadesExcel">
+                                        <i class="fas fa-file-excel"></i> Exportar Excel
                                     </a>
-                                @endcan
+                                    @can('crear editar facultad - f')
+                                        <a class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm text-white" data-toggle="modal" data-target="#facultad"
+                                           onclick="cargarDatos('fe_facultad/0','panel_contenido')" >
+                                            + Facultad
+                                        </a>
+                                    @endcan
+                                </div>
                             </div>
                         </div>
                         <div class="card-body">
@@ -143,6 +148,39 @@
     </div>
 
     @can('acceso al sistema - f')
+        <!--===========================MODAL EXPORTAR FACULTADES===================-->
+        <div class="modal fade" id="exportarFacultadesExcel" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-backdrop="static">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content border-bottom-success">
+                    <form action="{{url('exportar facultades carreras excel')}}" method="GET">
+                        <div class="modal-header bg-success">
+                            <h5 class="modal-title text-white" id="exampleModalLabel"><i class="fas fa-file-excel"></i> Exportar facultades y carreras</h5>
+                            <button class="close text-white" type="button" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">×</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-light border text-dark" style="font-size: 0.85em;">
+                                Seleccione una facultad específica o exporte todas las facultades con sus carreras.
+                            </div>
+                            <label class="font-italic font-weight-bold">Facultad</label>
+                            <select class="custom-select" name="facultad">
+                                <option value="0">Todas las facultades</option>
+                                @foreach($facultades as $f)
+                                    <option value="{{$f['cod_fac']}}">{{$f['fac_nombre']}}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" type="button" data-dismiss="modal">Cerrar</button>
+                            <button class="btn btn-success" type="submit">Descargar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!--===========================END ==============================-->
+
         <!--===========================MODAL NUEVA FACULTAD===================-->
         <div class="modal fade" id="facultad" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg" role="document" id="panel_contenido">
