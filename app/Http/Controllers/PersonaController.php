@@ -43,8 +43,23 @@ class PersonaController extends Controller
 
     public function verificar_boleta($control){
         $documento = trim((string) request()->query('documento',''));
+        $modulo = trim((string) request()->query('modulo',''));
+        $controlStr = preg_replace('/[^0-9]/','',(string)$control);
+
+        if ($modulo === 'servicios') {
+            $usado = \Illuminate\Support\Facades\DB::table('tramitas')->where('tra_boleta_apoderado', $controlStr)->exists();
+            if ($usado) {
+                return json_encode(['error' => 'Boleta ya utilizada en Servicios']);
+            }
+        } elseif ($modulo === 'apostilla') {
+            $usado = \Illuminate\Support\Facades\DB::table('apostilla.apostilla')->where('apos_boleta_apoderado', $controlStr)->exists();
+            if ($usado) {
+                return json_encode(['error' => 'Boleta ya utilizada en Apostilla']);
+            }
+        }
+
         try{
-            $controlInt = (int) preg_replace('/[^0-9]/','',(string)$control);
+            $controlInt = (int) $controlStr;
             if($documento !== ''){
                 $response = app(\App\Services\RecaudacionesService::class)->buscarPorControlYDocumento(122, $controlInt, $documento);
             }else{
@@ -69,10 +84,12 @@ class PersonaController extends Controller
                 if ($documento === '' || $docFila === $documento || preg_replace('/[^0-9]/', '', $docFila) === preg_replace('/[^0-9]/', '', $documento)) {
                     $nombre = trim(($fila['nombre_1'] ?? '').' '.($fila['nombre_2'] ?? ''));
                     $apellido = trim(($fila['apellido_1'] ?? '').' '.($fila['apellido_2'] ?? ''));
+                    $monto = floatval($fila['importe'] ?? $fila['monto'] ?? $fila['total'] ?? 0);
                     if ($nombre !== '' || $apellido !== '') {
                         return json_encode([
                             'nombre_apoderado' => $nombre,
                             'apellido_apoderado' => $apellido,
+                            'monto' => $monto,
                         ]);
                     }
                 }
@@ -82,6 +99,7 @@ class PersonaController extends Controller
         // 2. Fallback por si la respuesta viene con una estructura diferente
         $nombre = $this->buscarCampoRec($data, ['nombre','nombres','payer_nombre','payer.name','pagador_nombre','pagador.name','nombre_pago','nombre_pagador']);
         $apellido = $this->buscarCampoRec($data, ['apellido','apellidos','payer_apellido','payer.lastName','pagador_apellido','pagador.lastName','apellido_pagador']);
+        $monto = $this->buscarCampoRec($data, ['monto','importe','amount','total']);
 
         if($nombre === null && $apellido === null){
             return 'No';
@@ -90,6 +108,7 @@ class PersonaController extends Controller
         return json_encode([
             'nombre_apoderado' => $nombre ?? '',
             'apellido_apoderado' => $apellido ?? '',
+            'monto' => floatval($monto ?? 0),
         ]);
     }
 

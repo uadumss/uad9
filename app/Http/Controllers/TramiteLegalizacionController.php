@@ -2275,6 +2275,9 @@ class TramiteLegalizacionController extends Controller
                 'cajero'=>(string)($validacion['cajero'] ?? ''),
                 'cod_tra'=>$codTra,
                 'cod_dtra'=>$codDtra,
+                'modulo'=>'servicios',
+                'tramite'=>(string)($validacion['cuenta'] ?? ''),
+                'monto'=>(float)($validacion['monto'] ?? 0),
                 'usuario_registro'=>Auth::check() ? Auth::user()->name : 'sistema',
                 'created_at'=>now(),
                 'updated_at'=>now(),
@@ -3020,6 +3023,29 @@ class TramiteLegalizacionController extends Controller
             $tramita->cod_apo=$apoderado->cod_apo;
             $tramita->tra_tipo_apoderado=$form['tipo'];
             $tramita->save();
+            
+            if(isset($form['control_boleta'])){
+                $controlStr = preg_replace('/[^0-9]/','', $form['control_boleta']);
+                if($controlStr !== ''){
+                    $identificador = 'APO_SERVICIOS_'.$controlStr;
+                    $existe = \Illuminate\Support\Facades\DB::table('recaudacion_usos')->where('identificador', $identificador)->exists();
+                    if(!$existe) {
+                        \Illuminate\Support\Facades\DB::table('recaudacion_usos')->insert([
+                            'identificador' => $identificador,
+                            'recibo' => $controlStr,
+                            'documento' => $form['ci'] ?? '',
+                            'nombre_persona' => ($form['nombre'] ?? '') . ' ' . ($form['apellido'] ?? ''),
+                            'cod_tra' => $tramita->cod_tra,
+                            'modulo' => 'servicios',
+                            'tramite' => 'Apoderado Declaración Jurada',
+                            'monto' => isset($form['monto_boleta']) ? floatval($form['monto_boleta']) : 0,
+                            'usuario_registro' => \Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::user()->name : 'sistema',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+            }
             $nuevo=json_encode($apoderado);
             SessionController::write('U','',$nuevo,'apoderados','3',$apoderado->cod_apo);
         }else{
@@ -3028,6 +3054,29 @@ class TramiteLegalizacionController extends Controller
             $apoderado->apo_nombre=$form['nombre'];
             $tramita->tra_tipo_apoderado=$form['tipo'];
             $tramita->save();
+            
+            if(isset($form['control_boleta'])){
+                $controlStr = preg_replace('/[^0-9]/','', $form['control_boleta']);
+                if($controlStr !== ''){
+                    $identificador = 'APO_SERVICIOS_'.$controlStr;
+                    $existe = \Illuminate\Support\Facades\DB::table('recaudacion_usos')->where('identificador', $identificador)->exists();
+                    if(!$existe) {
+                        \Illuminate\Support\Facades\DB::table('recaudacion_usos')->insert([
+                            'identificador' => $identificador,
+                            'recibo' => $controlStr,
+                            'documento' => $form['ci'] ?? '',
+                            'nombre_persona' => ($form['nombre'] ?? '') . ' ' . ($form['apellido'] ?? ''),
+                            'cod_tra' => $tramita->cod_tra,
+                            'modulo' => 'servicios',
+                            'tramite' => 'Apoderado Declaración Jurada',
+                            'monto' => isset($form['monto_boleta']) ? floatval($form['monto_boleta']) : 0,
+                            'usuario_registro' => \Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::user()->name : 'sistema',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+            }
             $apoderado->save();
             $antiguo=json_encode($apoderado);
             SessionController::write('U',$antiguo,'','apoderados','3',$apoderado->cod_apo);

@@ -514,12 +514,13 @@
                                              <input class="e-input" type="text" name="ci_apoderado" id="ci_apoderado_apostilla"
                                                  oninput="verificarBoleta();" autocomplete="off">
                                     </div>
-                                    <div class="e-field fg-span2">
+                                    <div class="e-field fg-span2" id="contenedor_boleta_apostilla">
                                         <label>N° control boleta</label>
                                             <input class="e-input" type="text" name="control_boleta" id="control_boleta_apostilla"
                                                      oninput="verificarBoleta()" autocomplete="off" placeholder="Ingrese número de control">
                                         <div style="margin-top:6px;"><span id="estado_pago_apoderado" class="badge badge-secondary">Sin validar</span></div>
                                         <input type="hidden" name="control_boleta_valido" id="control_boleta_valido" value="0">
+                                        <input type="hidden" name="monto_boleta" id="monto_boleta_apostilla" value="0">
                                     </div>
 
                                     <div class="e-field">
@@ -536,11 +537,11 @@
                                         <label>Tipo de apoderado</label>
                                         <div class="e-radio-row">
                                             <label class="e-radio-opt">
-                                                <input type="radio" name="tipo" value="d" checked>
+                                                <input type="radio" name="tipo" value="d" checked onchange="actualizarModoApoderadoApostilla()">
                                                 <span>Declaración jurada</span>
                                             </label>
                                             <label class="e-radio-opt">
-                                                <input type="radio" name="tipo" value="p">
+                                                <input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoApostilla()">
                                                 <span>Poder notariado</span>
                                             </label>
                                         </div>
@@ -637,12 +638,12 @@
                                                        value=""
                                                        oninput="verificarBoleta();" autocomplete="off">
                                             </div>
-                                            <div class="e-field fg-span2">
+                                            <div class="e-field fg-span2" id="contenedor_boleta_apostilla_edi">
                                                 <label>N° control boleta</label>
-                                                <input class="e-input" type="text" name="control_boleta" id="control_boleta_apostilla"
+                                                <input class="e-input" type="text" name="control_boleta" id="control_boleta_apostilla_edi"
                                                        oninput="verificarBoleta()" autocomplete="off" placeholder="Ingrese número de control">
-                                                <div style="margin-top:6px;"><span id="estado_pago_apoderado" class="badge badge-secondary">Sin validar</span></div>
-                                                <input type="hidden" name="control_boleta_valido" id="control_boleta_valido" value="0">
+                                                <div style="margin-top:6px;"><span id="estado_pago_apoderado_edi" class="badge badge-secondary">Sin validar</span></div>
+                                                <input type="hidden" name="control_boleta_valido" id="control_boleta_valido_edi" value="0">
                                             </div>
                                             <div class="e-field">
                                                 <label>Nombres</label>
@@ -658,11 +659,11 @@
                                                 <label>Tipo de apoderado</label>
                                                 <div class="e-radio-row">
                                                     <label class="e-radio-opt">
-                                                        <input type="radio" name="tipo" value="d" checked>
+                                                        <input type="radio" name="tipo" value="d" checked onchange="actualizarModoApoderadoApostilla()">
                                                         <span>Declaración jurada</span>
                                                     </label>
                                                     <label class="e-radio-opt">
-                                                        <input type="radio" name="tipo" value="p">
+                                                        <input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoApostilla()">
                                                         <span>Poder notariado</span>
                                                     </label>
                                                 </div>
@@ -942,11 +943,56 @@ function cargarDatosApoderado(ci){
 
 var verificarBoletaTimer = null;
 var verificarBoletaXHR = null;
+const REQUIERE_BOLETA_DJ_APOSTILLA = false; // TODO: Cambiar a true si se habilita el uso de boleta
+
+function actualizarModoApoderadoApostilla() {
+    var tipo = $('input[name="tipo"]:checked').val() || 'd';
+    if (tipo === 'p' || (tipo === 'd' && !REQUIERE_BOLETA_DJ_APOSTILLA)) {
+        $('#contenedor_boleta_apostilla').hide();
+        $('#control_boleta_apostilla').val('');
+        $('#estado_pago_apoderado').removeClass().addClass('badge badge-secondary').text('Sin validar');
+        $('#control_boleta_valido').val('1'); // Permitir guardar sin boleta
+        
+        $('#contenedor_boleta_apostilla_edi').hide();
+        $('#control_boleta_apostilla_edi').val('');
+        $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-secondary').text('Sin validar');
+        $('#control_boleta_valido_edi').val('1'); // Permitir guardar sin boleta
+        
+        $('#nombre_apoderado').removeAttr('readonly');
+        $('#apellido_apoderado').removeAttr('readonly');
+        
+        var ci = ($('#ci_apoderado_apostilla').val()||'').toString().trim();
+        if(ci !== '') {
+             cargarDatosApoderado(ci);
+        }
+    } else {
+        $('#contenedor_boleta_apostilla').show();
+        $('#contenedor_boleta_apostilla_edi').show();
+        $('#nombre_apoderado').prop('readonly', true).val('');
+        $('#apellido_apoderado').prop('readonly', true).val('');
+        $('#control_boleta_valido').val('0');
+        $('#control_boleta_valido_edi').val('0');
+        verificarBoleta();
+    }
+}
+
+$(function(){
+    actualizarModoApoderadoApostilla();
+});
 
 function verificarBoleta(){
     if(verificarBoletaTimer) clearTimeout(verificarBoletaTimer);
     
     verificarBoletaTimer = setTimeout(function(){
+        var tipo = $('input[name="tipo"]:checked').val() || 'd';
+        if (tipo === 'p' || (tipo === 'd' && !REQUIERE_BOLETA_DJ_APOSTILLA)) {
+            var ci = ($('#ci_apoderado_apostilla').val()||'').toString().trim();
+            if(ci !== '') {
+                cargarDatosApoderado(ci);
+            }
+            return;
+        }
+
         var control = ($('#control_boleta_apostilla').val()||'').toString().trim();
         var ci = ($('#ci_apoderado_apostilla').val()||'').toString().trim();
         if(control===''){
@@ -964,7 +1010,7 @@ function verificarBoleta(){
             return;
         }
 
-        var link = "{{ url('verificar_boleta') }}" + "/" + encodeURIComponent(control) + '?documento=' + encodeURIComponent(ci);
+        var link = "{{ url('verificar_boleta') }}" + "/" + encodeURIComponent(control) + '?documento=' + encodeURIComponent(ci) + '&modulo=apostilla';
 
         $('#estado_pago_apoderado').removeClass().addClass('badge badge-info').text('Validando...');
         $('#control_boleta_valido').val('0');
@@ -985,11 +1031,20 @@ function verificarBoleta(){
                 }else{
                     try{
                         var res = (typeof resp === 'string') ? JSON.parse(resp) : resp;
-                        // Autocompletar nombre/apellido SOLO si el campo está vacío o de lectura
-                        $('#apellido_apoderado').val(res['apellido_apoderado'] || '');
-                        $('#nombre_apoderado').val(res['nombre_apoderado'] || '');
-                        $('#estado_pago_apoderado').removeClass().addClass('badge badge-success').text('Boleta válida');
-                        $('#control_boleta_valido').val('1');
+                        if (res.error) {
+                            $('#nombre_apoderado').val('');
+                            $('#apellido_apoderado').val('');
+                            $('#monto_boleta_apostilla').val('0');
+                            $('#estado_pago_apoderado').removeClass().addClass('badge badge-danger').text(res.error);
+                            $('#control_boleta_valido').val('0');
+                        } else {
+                            // Autocompletar nombre/apellido SOLO si el campo está vacío o de lectura
+                            $('#apellido_apoderado').val(res['apellido_apoderado'] || '');
+                            $('#nombre_apoderado').val(res['nombre_apoderado'] || '');
+                            $('#monto_boleta_apostilla').val(res['monto'] || '0');
+                            $('#estado_pago_apoderado').removeClass().addClass('badge badge-success').text('Boleta válida');
+                            $('#control_boleta_valido').val('1');
+                        }
                     }catch(e){
                         $('#nombre_apoderado').val('');
                         $('#apellido_apoderado').val('');

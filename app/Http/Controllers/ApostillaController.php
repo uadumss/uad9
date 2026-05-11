@@ -258,6 +258,28 @@ class ApostillaController extends Controller
             'apos_apoderado'=>$form['tipo'],
             'apos_gestion'=>date('Y'),
         ]);
+        
+        if(isset($form['control_boleta'])){
+            $controlStr = preg_replace('/[^0-9]/','', $form['control_boleta']);
+            if($controlStr !== ''){
+                $identificador = 'APO_APOSTILLA_'.$controlStr;
+                $existe = \Illuminate\Support\Facades\DB::table('recaudacion_usos')->where('identificador', $identificador)->exists();
+                if(!$existe) {
+                    \Illuminate\Support\Facades\DB::table('recaudacion_usos')->insert([
+                        'identificador' => $identificador,
+                        'recibo' => $controlStr,
+                        'documento' => $form['ci_apoderado'] ?? '',
+                        'nombre_persona' => ($form['nombre_apoderado'] ?? '') . ' ' . ($form['apellido_apoderado'] ?? ''),
+                        'modulo' => 'apostilla',
+                        'tramite' => 'Apoderado Declaración Jurada',
+                        'monto' => isset($form['monto_boleta']) ? floatval($form['monto_boleta']) : 0,
+                        'usuario_registro' => \Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::user()->name : 'sistema',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+        }
         $nuevo=(object) array_merge((Array)$nuevo,$tramite_apostilla->toArray());
         $nuevo=json_encode($nuevo);
         SessionController::write('C','',$nuevo,'apostilla','4',$tramite_apostilla->cod_apos);
@@ -310,6 +332,28 @@ class ApostillaController extends Controller
             $tramite_apostilla->cod_apo=$apoderado->cod_apo;
             $tramite_apostilla->apos_apoderado=$form['tipo'];
             $tramite_apostilla->save();
+            
+            if(isset($form['control_boleta'])){
+                $controlStr = preg_replace('/[^0-9]/','', $form['control_boleta']);
+                if($controlStr !== ''){
+                    $identificador = 'APO_APOSTILLA_'.$controlStr;
+                    $existe = \Illuminate\Support\Facades\DB::table('recaudacion_usos')->where('identificador', $identificador)->exists();
+                    if(!$existe) {
+                        \Illuminate\Support\Facades\DB::table('recaudacion_usos')->insert([
+                            'identificador' => $identificador,
+                            'recibo' => $controlStr,
+                            'documento' => $form['ci_apoderado'] ?? '',
+                            'nombre_persona' => ($form['nombre_apoderado'] ?? '') . ' ' . ($form['apellido_apoderado'] ?? ''),
+                            'modulo' => 'apostilla',
+                            'tramite' => 'Apoderado Declaración Jurada',
+                            'monto' => isset($form['monto_boleta']) ? floatval($form['monto_boleta']) : 0,
+                            'usuario_registro' => \Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::user()->name : 'sistema',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+            }
 
             $nuevo=json_encode(array_merge($tramite_apostilla->toArray(), $apoderado->toArray()));
             SessionController::write('C',$antiguo,$nuevo,'apostilla','4',$tramite_apostilla->cod_apos);
@@ -1529,6 +1573,9 @@ class ApostillaController extends Controller
                 'cajero'=>(string)($validacion['cajero'] ?? ''),
                 'cod_tra'=>$codTra,
                 'cod_dtra'=>$codDtra,
+                'modulo'=>'apostilla',
+                'tramite'=>(string)($validacion['cuenta'] ?? ''),
+                'monto'=>(float)($validacion['monto'] ?? 0),
                 'usuario_registro'=>Auth::check() ? Auth::user()->name : 'sistema',
                 'created_at'=>now(),
                 'updated_at'=>now(),

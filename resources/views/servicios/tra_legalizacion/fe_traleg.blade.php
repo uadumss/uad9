@@ -666,12 +666,13 @@
                                         <input class="e-input" name="ci" id="ci_apoderado_edi" value="{{ $apo_ci }}"
                                                oninput="verificarBoletaApoderadoEdi();" autocomplete="off">
                                     </div>
-                                    <div class="e-field fg-span2">
+                                    <div class="e-field fg-span2" id="contenedor_boleta_apoderado_edi">
                                         <label>N° control boleta</label>
                                         <input class="e-input" name="control_boleta" id="control_boleta_apoderado_edi"
                                                oninput="verificarBoletaApoderadoEdi()" autocomplete="off" placeholder="Ingrese número de control">
                                         <div style="margin-top:6px;"><span id="estado_pago_apoderado_edi" class="badge badge-secondary">Sin validar</span></div>
                                         <input type="hidden" name="control_boleta_valido" id="control_boleta_valido_edi" value="0">
+                                        <input type="hidden" name="monto_boleta" id="monto_boleta_edi" value="0">
                                     </div>
                                     <div class="e-field">
                                         <label>Apellidos</label>
@@ -688,12 +689,12 @@
                                         <div class="e-radio-row">
                                             <label class="e-radio-opt">
                                                 <input type="radio" name="tipo" value="d"
-                                                    {{ $tramite->tra_tipo_apoderado=='d' ? 'checked' : '' }}>
+                                                    {{ $tramite->tra_tipo_apoderado=='d' ? 'checked' : '' }} onchange="actualizarModoApoderadoTraleg()">
                                                 <span>Declaración jurada</span>
                                             </label>
                                             <label class="e-radio-opt">
                                                 <input type="radio" name="tipo" value="p"
-                                                    {{ $tramite->tra_tipo_apoderado=='p' ? 'checked' : '' }}>
+                                                    {{ $tramite->tra_tipo_apoderado=='p' ? 'checked' : '' }} onchange="actualizarModoApoderadoTraleg()">
                                                 <span>Poder notariado</span>
                                             </label>
                                         </div>
@@ -1436,11 +1437,49 @@
 
     var verificarBoletaApoderadoEdiTimer = null;
     var verificarBoletaApoderadoEdiXHR = null;
+    const REQUIERE_BOLETA_DJ_TRALEG = false; // TODO: Cambiar a true si se habilita la validación
+
+    function actualizarModoApoderadoTraleg() {
+        var tipo = $('#form_apoderado_edi input[name="tipo"]:checked').val() || 'd';
+        if (tipo === 'p' || (tipo === 'd' && !REQUIERE_BOLETA_DJ_TRALEG)) {
+            $('#contenedor_boleta_apoderado_edi').hide();
+            $('#control_boleta_apoderado_edi').val('');
+            $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-secondary').text('Sin validar');
+            $('#control_boleta_valido_edi').val('1'); // Permitir guardar
+            
+            $('#nombre_apoderado').removeAttr('readonly');
+            $('#apellido_apoderado').removeAttr('readonly');
+            
+            var ci = ($('#ci_apoderado_edi').val()||'').toString().trim();
+            if(ci !== '') {
+                 cargarDatosApoderado(ci);
+            }
+        } else {
+            $('#contenedor_boleta_apoderado_edi').show();
+            $('#nombre_apoderado').prop('readonly', true).val('');
+            $('#apellido_apoderado').prop('readonly', true).val('');
+            $('#control_boleta_valido_edi').val('0');
+            verificarBoletaApoderadoEdi();
+        }
+    }
+
+    $(function(){
+        actualizarModoApoderadoTraleg();
+    });
 
     function verificarBoletaApoderadoEdi(){
         if(verificarBoletaApoderadoEdiTimer) clearTimeout(verificarBoletaApoderadoEdiTimer);
 
         verificarBoletaApoderadoEdiTimer = setTimeout(function(){
+            var tipo = $('#form_apoderado_edi input[name="tipo"]:checked').val() || 'd';
+            if (tipo === 'p' || (tipo === 'd' && !REQUIERE_BOLETA_DJ_TRALEG)) {
+                var ci = ($('#ci_apoderado_edi').val()||'').toString().trim();
+                if(ci !== '') {
+                    cargarDatosApoderado(ci);
+                }
+                return;
+            }
+
             var control=($('#control_boleta_apoderado_edi').val()||'').toString().trim();
             var ci=($('#ci_apoderado_edi').val()||'').toString().trim();
             if(control===''){
@@ -1457,7 +1496,7 @@
                 $('#control_boleta_valido_edi').val('0');
                 return;
             }
-            var link="{{ url('verificar_boleta') }}"+"/"+encodeURIComponent(control)+'?documento='+encodeURIComponent(ci);
+            var link="{{ url('verificar_boleta') }}"+"/"+encodeURIComponent(control)+'?documento='+encodeURIComponent(ci)+'&modulo=servicios';
             $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-info').text('Validando...');
             $('#control_boleta_valido_edi').val('0');
 
@@ -1478,10 +1517,19 @@
                     }
                     try{
                         var res = (typeof resp === 'string') ? JSON.parse(resp) : resp;
-                        $('#apellido_apoderado').val(res['apellido_apoderado'] || '');
-                        $('#nombre_apoderado').val(res['nombre_apoderado'] || '');
-                        $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-success').text('Pago validado');
-                        $('#control_boleta_valido_edi').val('1');
+                        if (res.error) {
+                            $('#nombre_apoderado').val('');
+                            $('#apellido_apoderado').val('');
+                            $('#monto_boleta_edi').val('0');
+                            $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-danger').text(res.error);
+                            $('#control_boleta_valido_edi').val('0');
+                        } else {
+                            $('#apellido_apoderado').val(res['apellido_apoderado'] || '');
+                            $('#nombre_apoderado').val(res['nombre_apoderado'] || '');
+                            $('#monto_boleta_edi').val(res['monto'] || '0');
+                            $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-success').text('Pago validado');
+                            $('#control_boleta_valido_edi').val('1');
+                        }
                     }catch(e){
                         $('#nombre_apoderado').val('');
                         $('#apellido_apoderado').val('');
