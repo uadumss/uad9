@@ -1,34 +1,36 @@
-@extends('marco/pagina')
-@section('contenido')
-    <script src="{{ asset('node_modules/tinymce/tinymce.js') }}"></script>
-    @if(Session::has('exito'))
+
+<?php $__env->startSection('contenido'); ?>
+    <script src="<?php echo e(asset('node_modules/tinymce/tinymce.js')); ?>"></script>
+    <?php if(Session::has('exito')): ?>
         <div class="alert alert-success alert-dismissible">
             <button type="button" class="close" data-dismiss="alert" aria-label="close">
                 <span aria-hidden="true">&times;</span>
             </button>
-            {!! session('exito') !!}
+            <?php echo session('exito'); ?>
+
         </div>
-    @endif
-    @if(Session::has('error'))
+    <?php endif; ?>
+    <?php if(Session::has('error')): ?>
         <div class="alert alert-danger alert-dismissible">
             <button type="button" class="close" data-dismiss="alert" aria-label="close">
                 <span aria-hidden="true">&times;</span>
             </button>
-            {!! session('error') !!}
+            <?php echo session('error'); ?>
+
         </div>
-    @endif
-    @if(count($errors)>0)
+    <?php endif; ?>
+    <?php if(count($errors)>0): ?>
         <div class="alert alert-danger alert-dismissible">
             <button type="button" class="close" data-dismiss="alert" aria-label="close">
                 <span aria-hidden="true">&times;</span>
             </button>
             <ul>
-                @foreach($errors->all() as $e)
-                    <li>{{$e}} - </li>
-                @endforeach
+                <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $e): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <li><?php echo e($e); ?> - </li>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </ul>
         </div>
-    @endif
+    <?php endif; ?>
 
     <div class="card shadow mb-4">
         <div class="card-header alert-primary py-3">
@@ -36,10 +38,10 @@
                 <h5 class="m-0 font-weight-bold text-dark">Lista de Tareas</h5>
                 <div class="d-flex align-items-center">
                     <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-info shadow-sm mr-2" data-target="#tarea" data-toggle="modal"
-                       onclick="cargarDatos('{{url("historial tareas actividad/".$act->cod_act)}}','panel_tarea')">
+                       onclick="cargarDatos('<?php echo e(url("historial tareas actividad/".$act->cod_act)); ?>','panel_tarea')">
                         <i class="fas fa-history"></i> Historial</a>
                     <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" data-target="#tarea" data-toggle="modal"
-                       onclick="cargarDatos('{{url("f_editar tarea/0/".$act->cod_act)}}','panel_tarea')">
+                       onclick="cargarDatos('<?php echo e(url("f_editar tarea/0/".$act->cod_act)); ?>','panel_tarea')">
                         + Nueva tarea</a>
                 </div>
             </div>
@@ -47,7 +49,7 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-3">
-                    <a href="{{url('listar actividades')}}" class="btn btn-sm btn-outline-info text-dark "><i class="fas fa-arrow-circle-left"></i> Atrás</a><br/><br/>
+                    <a href="<?php echo e(url('listar actividades')); ?>" class="btn btn-sm btn-outline-info text-dark "><i class="fas fa-arrow-circle-left"></i> Atrás</a><br/><br/>
                     <div class="card shadow mb-4">
                         <div class="card-header py-3 bg-primary">
                             <div class="">
@@ -56,27 +58,28 @@
                         </div>
                         <div class="card-body">
                             <i class="fas fa-folder-open text-warning"></i>&nbsp;&nbsp;<span class="text-primary font-weight-bolder">Actividad :</span><br/>
-                            <span class="text-dark font-weight-bolder">{{$act->act_nombre}}</span>
+                            <span class="text-dark font-weight-bolder"><?php echo e($act->act_nombre); ?></span>
 
                             <br/><br/>
                             <table class="table table-sm ml-4 mr-2" style="font-size: 0.8em">
                                 <tr>
 
                                     <td> <span class="text-primary font-weight-bolder">Fecha de inicio: </span><br/>
-                                        <span class="text-dark font-weight-bolder">{{date('d/m/Y',strtotime($act->act_fi))}}</span>
+                                        <span class="text-dark font-weight-bolder"><?php echo e(date('d/m/Y',strtotime($act->act_fi))); ?></span>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td> <span class="text-primary font-weight-bolder">Fecha de conclusión: </span><br/>
                                         <span class="text-dark font-weight-bolder">
-                                            @if($act->act_ff!='')
-                                                {{date('d/m/Y',strtotime($act->act_ff))}}
-                                            @endif
+                                            <?php if($act->act_ff!=''): ?>
+                                                <?php echo e(date('d/m/Y',strtotime($act->act_ff))); ?>
+
+                                            <?php endif; ?>
                                         </span>
                                     </td>
                                 </tr>
                                 <tr>
-                                    @if($act->act_cotidiano!='t')
+                                    <?php if($act->act_cotidiano!='t'): ?>
                                     <td>
                                         <span class="text-primary font-weight-bolder">Avance: </span><br/>
                                         <div class="col-md-10 pt-2">
@@ -88,16 +91,16 @@
                                                 }
                                                 ?>
                                                 <?php if($porcentaje<1){$porcentaje=0;}?>
-                                                <div class="progress-bar progress-bar-striped bg-info text-white" role="progressbar" style="width: {{$porcentaje}}%" aria-valuenow="{{$porcentaje}}" aria-valuemin="0" aria-valuemax="100">
-                                                    <span class="font-weight-bolder">{{$porcentaje}} %</span>
+                                                <div class="progress-bar progress-bar-striped bg-info text-white" role="progressbar" style="width: <?php echo e($porcentaje); ?>%" aria-valuenow="<?php echo e($porcentaje); ?>" aria-valuemin="0" aria-valuemax="100">
+                                                    <span class="font-weight-bolder"><?php echo e($porcentaje); ?> %</span>
 
                                                 </div>
                                             </div>
                                         </div>
                                     </td>
-                                        @else
+                                        <?php else: ?>
                                         <td><span class="bg-info rounded p-1 font-italic text-white font-weight-bold" style="font-size: 1em">Tarea cotidiana</span></td>
-                                        @endif
+                                        <?php endif; ?>
 
 
                                 </tr>
@@ -124,33 +127,35 @@
                                 <th>Reportes</th>
                             </tr>
                             <?php $i=1; $por=0;?>
-                            @foreach($tar as $t)
+                            <?php $__currentLoopData = $tar; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $t): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                 <tr>
-                                    <td>{{$i}}</td>
-                                    <td>{{$t['tar_nombre']}}</td>
-                                    <td>{{date("d/m/Y", strtotime($t['tar_fi']))}}</td>
+                                    <td><?php echo e($i); ?></td>
+                                    <td><?php echo e($t['tar_nombre']); ?></td>
+                                    <td><?php echo e(date("d/m/Y", strtotime($t['tar_fi']))); ?></td>
                                     <td>
                                         <?php if($t['tar_ff']!=''){?>
-                                        {{date("d/m/Y", strtotime($t['tar_ff']))}}
+                                        <?php echo e(date("d/m/Y", strtotime($t['tar_ff']))); ?>
+
                                         <?php }?>
                                     </td>
                                     <td>
 
-                                        @foreach($designados as $des)
-                                            @if($des->cod_tar==$t['cod_tar'])
+                                        <?php $__currentLoopData = $designados; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $des): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <?php if($des->cod_tar==$t['cod_tar']): ?>
                                                 <a href="#" class="" data-target="#tarea" data-toggle="modal"
-                                                   onclick="cargarDatos('{{url("datos asignados/".$des->cod_des)}}','panel_tarea')">
-                                                    @if($des->foto!='')
-                                                        <img src="{{url('img/foto/'.$des->foto)}}" width="40" height="40" class="imgRedonda">
-                                                    @else
-                                                        <img src="{{url('img/icon/sin foto'.$des->sexo.'.png')}}" width="40" height="40" class="imgRedonda">
-                                                    @endif
-                                                    {{$des->name}}
+                                                   onclick="cargarDatos('<?php echo e(url("datos asignados/".$des->cod_des)); ?>','panel_tarea')">
+                                                    <?php if($des->foto!=''): ?>
+                                                        <img src="<?php echo e(url('img/foto/'.$des->foto)); ?>" width="40" height="40" class="imgRedonda">
+                                                    <?php else: ?>
+                                                        <img src="<?php echo e(url('img/icon/sin foto'.$des->sexo.'.png')); ?>" width="40" height="40" class="imgRedonda">
+                                                    <?php endif; ?>
+                                                    <?php echo e($des->name); ?>
+
                                                 </a>
                                                 <br/>
-                                            @endif
-                                        @endforeach
-                                        @php
+                                            <?php endif; ?>
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                        <?php
                                             $verHistorial = Auth::user()->responsable=='t' || Auth::user()->id==$t['id_responsable'];
                                             foreach ($designados as $desHist){
                                                 if($desHist->cod_tar==$t['cod_tar'] && $desHist->id==Auth::user()->id){
@@ -158,20 +163,20 @@
                                                     break;
                                                 }
                                             }
-                                        @endphp
-                                        @if($verHistorial)
+                                        ?>
+                                        <?php if($verHistorial): ?>
                                             <a href="#" class="btn btn-link btn-sm text-info p-0 mt-2" data-target="#tarea" data-toggle="modal"
-                                               onclick="cargarDatos('{{url("historial designaciones/".$t['cod_tar'])}}','panel_tarea')" title="Ver historial y reasignar">
+                                               onclick="cargarDatos('<?php echo e(url("historial designaciones/".$t['cod_tar'])); ?>','panel_tarea')" title="Ver historial y reasignar">
                                                 <i class="fas fa-history"></i> Ver historial / reasignar
                                             </a>
-                                        @endif
+                                        <?php endif; ?>
                                     </td>
-                                    @if($t->tar_cotidiano=='t')
+                                    <?php if($t->tar_cotidiano=='t'): ?>
                                         <td><span class="bg-info rounded p-1 font-italic text-white font-weight-bold">Tarea cotidiana</span></td>
                                         <td></td>
-                                    @else
+                                    <?php else: ?>
                                         <td class="text-right pr-4">
-                                            <span class="bg-primary text-white rounded font-weight-bolder" style="font-size: 0.8em;">&nbsp; {{$t['tar_por']}} % &nbsp;</span>
+                                            <span class="bg-primary text-white rounded font-weight-bolder" style="font-size: 0.8em;">&nbsp; <?php echo e($t['tar_por']); ?> % &nbsp;</span>
                                             <?php $por+=$t['tar_por']?>
                                         </td>
                                         <td>
@@ -184,62 +189,62 @@
                                             endforeach;
                                             ?>
                                             <div class="progress bg-gray-500">
-                                                @if($porcentaje<33)
+                                                <?php if($porcentaje<33): ?>
                                                     <?php if($porcentaje<1){$porcentaje=0;}?>
-                                                    <div class="progress-bar progress-bar-striped bg-danger text-white" role="progressbar" style="width: {{$porcentaje}}%" aria-valuenow="{{$porcentaje}}" aria-valuemin="0" aria-valuemax="100">
-                                                        <span class="font-weight-bolder">{{$porcentaje}} %</span>
-                                                        @else
-                                                            @if($porcentaje<66)
-                                                                <div class="progress-bar progress-bar-striped bg-warning text-white" role="progressbar" style="width: {{$porcentaje}}%" aria-valuenow="{{$porcentaje}}" aria-valuemin="0" aria-valuemax="100">
-                                                                    @else
-                                                                        <div class="progress-bar progress-bar-striped bg-success text-white" role="progressbar" style="width: {{$porcentaje}}%" aria-valuenow="{{$porcentaje}}" aria-valuemin="0" aria-valuemax="100">
-                                                                            @endif
-                                                                            <span class="font-weight-bolder">{{$porcentaje}} %</span>
-                                                                            @endif
+                                                    <div class="progress-bar progress-bar-striped bg-danger text-white" role="progressbar" style="width: <?php echo e($porcentaje); ?>%" aria-valuenow="<?php echo e($porcentaje); ?>" aria-valuemin="0" aria-valuemax="100">
+                                                        <span class="font-weight-bolder"><?php echo e($porcentaje); ?> %</span>
+                                                        <?php else: ?>
+                                                            <?php if($porcentaje<66): ?>
+                                                                <div class="progress-bar progress-bar-striped bg-warning text-white" role="progressbar" style="width: <?php echo e($porcentaje); ?>%" aria-valuenow="<?php echo e($porcentaje); ?>" aria-valuemin="0" aria-valuemax="100">
+                                                                    <?php else: ?>
+                                                                        <div class="progress-bar progress-bar-striped bg-success text-white" role="progressbar" style="width: <?php echo e($porcentaje); ?>%" aria-valuenow="<?php echo e($porcentaje); ?>" aria-valuemin="0" aria-valuemax="100">
+                                                                            <?php endif; ?>
+                                                                            <span class="font-weight-bolder"><?php echo e($porcentaje); ?> %</span>
+                                                                            <?php endif; ?>
 
                                                                         </div>
                                                                 </div>
                                         </td>
-                                    @endif
+                                    <?php endif; ?>
                                     <td>
-                                        @if(Auth::user()->id==$t['id_responsable'])
-                                            @if($t['tar_hab']=='t')
-                                                <a href="{{url('habilitar tarea/'.$t['cod_tar'])}}" class="btn btn-light btn-circle btn-sm text-success">
+                                        <?php if(Auth::user()->id==$t['id_responsable']): ?>
+                                            <?php if($t['tar_hab']=='t'): ?>
+                                                <a href="<?php echo e(url('habilitar tarea/'.$t['cod_tar'])); ?>" class="btn btn-light btn-circle btn-sm text-success">
                                                     <i class="fas fa-check"></i>
                                                 </a>
-                                            @else
-                                                <a href="{{url('habilitar tarea/'.$t['cod_tar'])}}" class="btn btn-light btn-circle btn-sm text-dark">
+                                            <?php else: ?>
+                                                <a href="<?php echo e(url('habilitar tarea/'.$t['cod_tar'])); ?>" class="btn btn-light btn-circle btn-sm text-dark">
                                                     <i class="fas fa-lock"></i>
                                                 </a>
-                                            @endif
+                                            <?php endif; ?>
                                             <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#tarea" data-toggle="modal"
-                                               onclick="cargarDatos('{{url("f_editar tarea/".$t['cod_tar']."/".$act->cod_act)}}','panel_tarea')">
+                                               onclick="cargarDatos('<?php echo e(url("f_editar tarea/".$t['cod_tar']."/".$act->cod_act)); ?>','panel_tarea')">
                                                 <i class="fas fa-edit"></i>
                                             </a>
 
                                             <a href="#" class="btn btn-light btn-circle btn-sm text-danger" data-target="#tarea" data-toggle="modal"
-                                               onclick="cargarDatos('{{url("f_eliminar tarea/".$t['cod_tar'])}}','panel_tarea')">
+                                               onclick="cargarDatos('<?php echo e(url("f_eliminar tarea/".$t['cod_tar'])); ?>','panel_tarea')">
                                                 <i class="fas fa-trash"></i>
                                             </a>
-                                        @endif
+                                        <?php endif; ?>
                                     </td>
                                     <td>
-                                        <a href="{{url('listar reportes/'.$t['cod_tar'].'/tarea')}}" class="btn btn-circle btn-sm btn-light text-primary"><i class="fas fa-angle-right" style="font-size: 1.3em;"></i></a>
+                                        <a href="<?php echo e(url('listar reportes/'.$t['cod_tar'].'/tarea')); ?>" class="btn btn-circle btn-sm btn-light text-primary"><i class="fas fa-angle-right" style="font-size: 1.3em;"></i></a>
                                     </td>
                                 </tr>
                                 <?php $i++;?>
-                            @endforeach
-                            @if($act->act_cot!='t')
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                            <?php if($act->act_cot!='t'): ?>
                             <tr>
                                 <td colspan="5"></td>
-                                @if($por==100)
-                                    <th class="text-right text-dark pr-4">  TOTAL % = {{$por}}</th>
-                                @else
-                                    <th class="text-right text-danger pr-4">  TOTAL % = {{$por}}</th>
-                                @endif
+                                <?php if($por==100): ?>
+                                    <th class="text-right text-dark pr-4">  TOTAL % = <?php echo e($por); ?></th>
+                                <?php else: ?>
+                                    <th class="text-right text-danger pr-4">  TOTAL % = <?php echo e($por); ?></th>
+                                <?php endif; ?>
                                 <td></td>
                             </tr>
-                           @endif
+                           <?php endif; ?>
                         </table>
                     </div>
                 </div>
@@ -282,4 +287,6 @@
             });
         }
     </script>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('marco/pagina', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\Pc\Desktop\UAD9V2\uad9\resources\views/actividad/tarea/l_tarea.blade.php ENDPATH**/ ?>

@@ -80,6 +80,7 @@ Route::get('habilitar tarea/{cod_tar}',[ActividadTareaController::class,'hab_Tar
 Route::get('f_eliminar tarea/{cod_tar}',[ActividadTareaController::class,'f_eliminar_tarea']);
 Route::post('eliminar tarea',[ActividadTareaController::class,'e_tarea']);
 Route::get('datos asignados/{id_des}',[ActividadTareaController::class,'f_listaAsignados']);
+Route::get('historial tareas actividad/{cod_act}',[ActividadTareaController::class,'f_historial_tareas_actividad']);
 
 //=====================REVISION TAREAS================
 
@@ -120,3 +121,10 @@ Route::post('g_observacion_periodico',[Reporte_periodoController::class,'g_obser
 Route::get('personal',function(){return view('prueba.prueba'); });
 Route::post('personal',[ImportarController::class,'comparar_personal']);
 
+//=============== HISTORIAL DE DESIGNACIONES (USER + ADMIN) =================
+Route::get('historial designaciones/{cod_tar}',[ActividadTareaController::class,'f_historial_designaciones']);
+Route::post('guardar_retiro_designacion',[ActividadTareaController::class,'guardar_retiro_designacion']);
+Route::post('guardar_nueva_designacion',[ActividadTareaController::class,'guardar_nueva_designacion']);
+Route::get('historial designaciones adm/{cod_tar}',[AdministradorController::class,'f_historial_designaciones_adm']);
+Route::post('guardar_retiro_designacion_adm',[AdministradorController::class,'guardar_retiro_designacion_adm']);
+Route::post('guardar_nueva_designacion_adm',[AdministradorController::class,'guardar_nueva_designacion_adm']);

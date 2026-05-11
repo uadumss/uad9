@@ -237,4 +237,54 @@ class AdministradorController extends Controller
         return view('session.administracion.reporte.l_reporte_fecha',compact('usuarios','reportes','fecha'));
 
     }
+
+    // ==================== HISTORIAL DE DESIGNACIONES ====================
+    public function f_historial_designaciones_adm($cod_tar){
+        $tarea = Tarea::find($cod_tar);
+        
+        // Designaciones actuales (sin fecha de retiro)
+        $designacionesActuales = DB::table('designas')
+            ->join('users','designas.id','=','users.id')
+            ->select('designas.*','users.name','users.foto','users.sexo')
+            ->where('designas.cod_tar','=',$cod_tar)
+            ->whereNull('designas.des_fech_ret')
+            ->get();
+        
+        // Designaciones retiradas (con fecha de retiro)
+        $designacionesRetiradas = DB::table('designas')
+            ->join('users','designas.id','=','users.id')
+            ->select('designas.*','users.name','users.foto','users.sexo')
+            ->where('designas.cod_tar','=',$cod_tar)
+            ->whereNotNull('designas.des_fech_ret')
+            ->get();
+        
+        // Funcionarios disponibles (usuarios activos)
+        $funcionariosDisponibles = User::where('bloqueado','=','f')->get();
+        
+        return view('actividad.tarea.f_historial_designaciones',compact('tarea','designacionesActuales','designacionesRetiradas','funcionariosDisponibles'));
+    }
+
+    public function guardar_retiro_designacion_adm(Request $request){
+        $designa = Designa::find($request['cod_des']);
+        $designa->des_fech_ret = $request['fecha_retiro'];
+        $designa->save();
+        
+        \Session::flash('exito','Retiro registrado exitosamente. Porcentaje alcanzado: '.$request['porcentaje_alcanzado'].'%');
+        return redirect('listar tareas actividad adm/'.$request['cod_act']);
+    }
+
+    public function guardar_nueva_designacion_adm(Request $request){
+        // Crear nueva designación
+        Designa::create([
+            'cod_tar' => $request['cod_tar'],
+            'id' => $request['id_funcionario'],
+            'id_responsable' => auth()->user()->id,
+            'des_fech_asig' => date('Y-m-d'),
+            'des_hab' => 't',
+            'des_concluido' => 'f'
+        ]);
+        
+        \Session::flash('exito','Nuevo funcionario asignado exitosamente');
+        return redirect('listar tareas actividad adm/'.$request['cod_act']);
+    }
 }

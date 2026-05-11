@@ -36,12 +36,7 @@
                         <tr>
                             <th class="text-dark text-right font-italic">Porcentaje </th>
                             <td class="border-bottom border-dark">
-                                <select name="por" class="custom-select custom-select-sm border-0">
-                                    <option value="{{$tarea['tar_por']}}">{{$tarea['tar_por']}} %</option>
-                                    @for($j=5;$j<101;$j+=5)
-                                        <option value="{{$j}}">{{$j}} % </option>
-                                    @endfor
-                                </select>
+                                <input type="number" name="por" class="form-control form-control-sm border-0" min="0" max="100" value="{{$tarea['tar_por']}}" />
                             </td>
                         </tr>
                         @endif
