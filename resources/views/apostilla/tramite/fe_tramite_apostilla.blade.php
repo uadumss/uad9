@@ -943,11 +943,11 @@ function cargarDatosApoderado(ci){
 
 var verificarBoletaTimer = null;
 var verificarBoletaXHR = null;
-const REQUIERE_BOLETA_DJ_APOSTILLA = false; // TODO: Cambiar a true si se habilita el uso de boleta
+
 
 function actualizarModoApoderadoApostilla() {
     var tipo = $('input[name="tipo"]:checked').val() || 'd';
-    if (tipo === 'p' || (tipo === 'd' && !REQUIERE_BOLETA_DJ_APOSTILLA)) {
+    if (tipo === 'p' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
         $('#contenedor_boleta_apostilla').hide();
         $('#control_boleta_apostilla').val('');
         $('#estado_pago_apoderado').removeClass().addClass('badge badge-secondary').text('Sin validar');
@@ -985,7 +985,7 @@ function verificarBoleta(){
     
     verificarBoletaTimer = setTimeout(function(){
         var tipo = $('input[name="tipo"]:checked').val() || 'd';
-        if (tipo === 'p' || (tipo === 'd' && !REQUIERE_BOLETA_DJ_APOSTILLA)) {
+        if (tipo === 'p' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
             var ci = ($('#ci_apoderado_apostilla').val()||'').toString().trim();
             if(ci !== '') {
                 cargarDatosApoderado(ci);

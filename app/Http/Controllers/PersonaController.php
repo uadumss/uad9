@@ -33,10 +33,15 @@ class PersonaController extends Controller
         return ($dato);
     }
     public function datos_apo($ci){
-        $persona=Apoderado::where('apo_ci','=',$ci)->select('apo_nombre','apo_apellido')->get();
-        $dato="No";
-        if(sizeof($persona)>0){
-            $dato=json_encode($persona[0]);
+        $persona = Persona::where('per_ci', '=', $ci)->select('per_nombre as apo_nombre', 'per_apellido as apo_apellido')->get();
+        $dato = "No";
+        if (sizeof($persona) > 0) {
+            $dato = json_encode($persona[0]);
+        } else {
+            $apoderadoFallback = Apoderado::where('apo_ci', '=', $ci)->select('apo_nombre', 'apo_apellido')->get();
+            if (sizeof($apoderadoFallback) > 0) {
+                $dato = json_encode($apoderadoFallback[0]);
+            }
         }
         return ($dato);
     }

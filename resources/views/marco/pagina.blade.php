@@ -90,6 +90,11 @@
 
 <!-- Bootstrap core JavaScript-->
 
+<script>
+    // Feature flags globales para apoderado
+    window.GLOB_REQUIERE_BOLETA_DJ = @json(config('apoderado.requiere_boleta_dj', false));
+</script>
+
 <script src="{{url('js/jquery-3-4-1.min.js')}}"></script>
 <script src="{{url('vendor/bootstrap/js/bootstrap.bundle.min.js')}}"></script>
 <script src="{{url('js/funciones.js')}}"></script>

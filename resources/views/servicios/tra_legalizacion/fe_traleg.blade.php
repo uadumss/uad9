@@ -1437,11 +1437,10 @@
 
     var verificarBoletaApoderadoEdiTimer = null;
     var verificarBoletaApoderadoEdiXHR = null;
-    const REQUIERE_BOLETA_DJ_TRALEG = false; // TODO: Cambiar a true si se habilita la validación
 
     function actualizarModoApoderadoTraleg() {
         var tipo = $('#form_apoderado_edi input[name="tipo"]:checked').val() || 'd';
-        if (tipo === 'p' || (tipo === 'd' && !REQUIERE_BOLETA_DJ_TRALEG)) {
+        if (tipo === 'p' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
             $('#contenedor_boleta_apoderado_edi').hide();
             $('#control_boleta_apoderado_edi').val('');
             $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-secondary').text('Sin validar');
@@ -1472,7 +1471,7 @@
 
         verificarBoletaApoderadoEdiTimer = setTimeout(function(){
             var tipo = $('#form_apoderado_edi input[name="tipo"]:checked').val() || 'd';
-            if (tipo === 'p' || (tipo === 'd' && !REQUIERE_BOLETA_DJ_TRALEG)) {
+            if (tipo === 'p' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
                 var ci = ($('#ci_apoderado_edi').val()||'').toString().trim();
                 if(ci !== '') {
                     cargarDatosApoderado(ci);

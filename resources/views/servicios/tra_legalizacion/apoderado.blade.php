@@ -187,7 +187,6 @@
     <script>
         var verificarBoletaApoderadoTimer = null;
         var verificarBoletaApoderadoXHR = null;
-        const REQUIERE_BOLETA_DJ_MODAL = false; // TODO: Cambiar a true si se habilita validación
 
         function cargarDatosApoderadoGlobal(ci){
             var link="{{url('datos_apo/')}}"+"/"+encodeURIComponent((ci||'').toString().trim());
@@ -202,7 +201,7 @@
 
         function actualizarModoApoderadoModal() {
             var tipo = $('#form_apoderado input[name="tipo"]:checked').val() || 'd';
-            if (tipo === 'p' || (tipo === 'd' && !REQUIERE_BOLETA_DJ_MODAL)) {
+            if (tipo === 'p' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
                 $('#fila_boleta_apoderado_modal').hide();
                 $('#control_boleta_apoderado').val('');
                 $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-secondary').text('Sin validar');
@@ -233,7 +232,7 @@
 
             verificarBoletaApoderadoTimer = setTimeout(function(){
                 var tipo = $('#form_apoderado input[name="tipo"]:checked').val() || 'd';
-                if (tipo === 'p' || (tipo === 'd' && !REQUIERE_BOLETA_DJ_MODAL)) {
+                if (tipo === 'p' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
                     var ci = ($('#ci_apoderado_form').val()||'').toString().trim();
                     if(ci !== '') {
                         cargarDatosApoderadoGlobal(ci);

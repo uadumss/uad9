@@ -150,7 +150,7 @@
                                                         <input class="form-control form-control-sm border-0" placeholder=""
                                                                id="ci_noa_apoderado" name="ci" value="{{$ci}}" oninput="verificarBoletaApoderadoNoa();"/></td>
                                                 </tr>
-                                                <tr>
+                                                <tr id="fila_boleta_apoderado_noa">
                                                     <th class="text-right font-italic">N° control boleta : </th>
                                                     <td class="border-bottom border-dark">
                                                         <input class="form-control form-control-sm border-0" placeholder="Ingrese número de control"
@@ -175,23 +175,23 @@
                                                     <th class="text-right font-italic" valign="top">Tipo de apoderado : </th>
                                                     <td class="border-bottom border-dark">
                                                         @if($tramite_noatentado->dtra_tipo_apoderado=='d')
-                                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" checked> Declaración jurada<br/>
-                                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p"> Poder notariado<br/>
-                                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="c"> Carta de representación
+                                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" checked onchange="actualizarModoApoderadoNoa()"> Declaración jurada<br/>
+                                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoNoa()"> Poder notariado<br/>
+                                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="c" onchange="actualizarModoApoderadoNoa()"> Carta de representación
                                                         @else
                                                             @if($tramite_noatentado->dtra_tipo_apoderado=='p')
-                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d"> Declaración jurada<br/>
-                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" checked> Poder notariado<br/>
-                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="c"> Carta de representación
+                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" onchange="actualizarModoApoderadoNoa()"> Declaración jurada<br/>
+                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" checked onchange="actualizarModoApoderadoNoa()"> Poder notariado<br/>
+                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="c" onchange="actualizarModoApoderadoNoa()"> Carta de representación
                                                             @else
                                                                 @if($tramite_noatentado->dtra_tipo_apoderado=='c')
-                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d"> Declaración jurada<br/>
-                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p"> Poder notariado<br/>
-                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="c" checked> Carta de representación
+                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" onchange="actualizarModoApoderadoNoa()"> Declaración jurada<br/>
+                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoNoa()"> Poder notariado<br/>
+                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="c" checked onchange="actualizarModoApoderadoNoa()"> Carta de representación
                                                                 @else
-                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d"> Declaración jurada<br/>
-                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p"> Poder notariado<br/>
-                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="c"> Carta de representación
+                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" onchange="actualizarModoApoderadoNoa()"> Declaración jurada<br/>
+                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoNoa()"> Poder notariado<br/>
+                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="c" onchange="actualizarModoApoderadoNoa()"> Carta de representación
                                                                 @endif
                                                             @endif
                                                         @endif
@@ -307,6 +307,51 @@
 </div>
 
 <script>
+
+    function actualizarModoApoderadoNoa() {
+        var tipo = $('input[name="tipo"]:checked').val() || 'd';
+        if (tipo === 'p' || tipo === 'c' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
+            $('#fila_boleta_apoderado_noa').hide();
+            $('#control_boleta_noa').val('');
+            $('#estado_pago_apoderado_noa').removeClass().addClass('badge badge-secondary').text('Sin validar');
+            $('#control_boleta_valido_noa').val('1');
+            
+            $('#nombre_apoderado').removeAttr('readonly');
+            $('#apellido_apoderado').removeAttr('readonly');
+            
+            var ci = ($('#ci_noa_apoderado').val()||'').toString().trim();
+            if(ci !== '') {
+                cargarDatosApoderadoGlobal(ci);
+            }
+        } else {
+            $('#fila_boleta_apoderado_noa').show();
+            $('#nombre_apoderado').prop('readonly', true).val('');
+            $('#apellido_apoderado').prop('readonly', true).val('');
+            $('#control_boleta_valido_noa').val('0');
+            verificarBoletaApoderadoNoa();
+        }
+    }
+
+    $(function(){
+        actualizarModoApoderadoNoa();
+    });
+
+    function cargarDatosApoderadoGlobal(ci){
+        var link="{{url('datos_apo/')}}"+"/"+encodeURIComponent((ci||'').toString().trim());
+        $.ajax({
+            url:link, type:'GET',
+            success:function(resp){
+                if(resp=="No"){
+                    // do nothing, let them type
+                }else{
+                    var res=JSON.parse(resp);
+                    $('#apellido_apoderado').val(res['apo_apellido']);
+                    $('#nombre_apoderado').val(res['apo_nombre']);
+                }
+            }
+        });
+    }
+
     var verificarBoletaApoderadoNoaTimer = null;
     var verificarBoletaApoderadoNoaXHR = null;
 
@@ -314,6 +359,15 @@
         if(verificarBoletaApoderadoNoaTimer) clearTimeout(verificarBoletaApoderadoNoaTimer);
 
         verificarBoletaApoderadoNoaTimer = setTimeout(function(){
+            var tipo = $('input[name="tipo"]:checked').val() || 'd';
+            if (tipo === 'p' || tipo === 'c' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
+                var ci = ($('#ci_noa_apoderado').val()||'').toString().trim();
+                if(ci !== '') {
+                    cargarDatosApoderadoGlobal(ci);
+                }
+                return;
+            }
+
             var control=($('#control_boleta_noa').val()||'').toString().trim();
             var ci=($('#ci_noa_apoderado').val()||'').toString().trim();
             if(control===''){

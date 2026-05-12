@@ -128,7 +128,7 @@
                                              <input class="form-control form-control-sm border-0" placeholder=""
                                                     id="ci_entrega_apoderado" name="ci" value="{{$ci}}" oninput="verificarBoletaApoderadoEntrega();"/></td>
                                      </tr>
-                                     <tr>
+                                     <tr id="fila_boleta_apoderado_entrega">
                                          <th class="text-right font-italic">N° control boleta : </th>
                                          <td class="border-bottom border-dark">
                                              <input class="form-control form-control-sm border-0" placeholder="Ingrese número de control"
@@ -153,15 +153,15 @@
                                          <th class="text-right font-italic" valign="top">Tipo de apoderado : </th>
                                          <td class="border-bottom border-dark">
                                              @if($tramita->tra_tipo_apoderado=='d')
-                                                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" checked> Declaración jurada<br/>
-                                                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p"> Poder notariado
+                                                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" checked onchange="actualizarModoApoderadoEntrega()"> Declaración jurada<br/>
+                                                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoEntrega()"> Poder notariado
                                              @else
                                                  @if($tramita->tra_tipo_apoderado=='p')
-                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d"> Declaración jurada<br/>
-                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" checked> Poder notariado
+                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" onchange="actualizarModoApoderadoEntrega()"> Declaración jurada<br/>
+                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" checked onchange="actualizarModoApoderadoEntrega()"> Poder notariado
                                                  @else
-                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d"> Declaración jurada<br/>
-                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p"> Poder notariado
+                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" onchange="actualizarModoApoderadoEntrega()"> Declaración jurada<br/>
+                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoEntrega()"> Poder notariado
                                          @endif
                                          @endif
 
@@ -294,10 +294,47 @@
     var verificarBoletaApoderadoEntregaTimer = null;
     var verificarBoletaApoderadoEntregaXHR = null;
 
+    function actualizarModoApoderadoEntrega() {
+        var tipo = $('input[name="tipo"]:checked').val() || 'd';
+        if (tipo === 'p' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
+            $('#fila_boleta_apoderado_entrega').hide();
+            $('#control_boleta_entrega').val('');
+            $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-secondary').text('Sin validar');
+            $('#control_boleta_valido_entrega').val('1'); // Permitir guardar sin boleta
+            
+            $('#nombre_apoderado').removeAttr('readonly');
+            $('#apellido_apoderado').removeAttr('readonly');
+            
+            var ci = ($('#ci_entrega_apoderado').val()||'').toString().trim();
+            if(ci !== '') {
+                 cargarDatosApoderado(ci);
+            }
+        } else {
+            $('#fila_boleta_apoderado_entrega').show();
+            $('#nombre_apoderado').prop('readonly', true).val('');
+            $('#apellido_apoderado').prop('readonly', true).val('');
+            $('#control_boleta_valido_entrega').val('0');
+            verificarBoletaApoderadoEntrega();
+        }
+    }
+
+    $(function(){
+        actualizarModoApoderadoEntrega();
+    });
+
     function verificarBoletaApoderadoEntrega(){
         if(verificarBoletaApoderadoEntregaTimer) clearTimeout(verificarBoletaApoderadoEntregaTimer);
 
         verificarBoletaApoderadoEntregaTimer = setTimeout(function(){
+            var tipo = $('input[name="tipo"]:checked').val() || 'd';
+            if (tipo === 'p' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
+                var ci = ($('#ci_entrega_apoderado').val()||'').toString().trim();
+                if(ci !== '') {
+                    cargarDatosApoderado(ci);
+                }
+                return;
+            }
+
             var control=($('#control_boleta_entrega').val()||'').toString().trim();
             var ci=($('#ci_entrega_apoderado').val()||'').toString().trim();
             if(control===''){
