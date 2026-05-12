@@ -226,19 +226,23 @@
          */
         function _reemplazarPanel(panel, html, callback){
             var panelEl=$('#'+panel);
-            var inner=panelEl.children('.modal-content,.eleg').first();
-            var doReplace=function(){
-                panelEl.html(html);
-                if(typeof callback==='function') callback();
-            };
+            panelEl.html(html);
+            var inner = panelEl.children().first();
             if(inner.length){
-                inner.stop(true).animate({opacity:0},140,doReplace);
+                inner.css('opacity', 0).animate({opacity: 1}, 200, function(){
+                    if(typeof callback==='function') callback();
+                });
             } else {
-                doReplace();
+                if(typeof callback==='function') callback();
             }
         }
 
-        function enviar1(formulario,ruta,panel){
+        function enviar1(formulario,ruta,panel,btn){
+            if(btn && btn.dataset.loading==='1'){
+                return;
+            }
+            setBotonCargandoServicios(btn, true, 'Registrando...');
+            var finalizar = function(){ setBotonCargandoServicios(btn, false); };
             $.ajax({
                 type: "POST",
                 url: ruta,
@@ -247,6 +251,7 @@
                     _reemplazarPanel(panel, resp, function(){
                         cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
                         mostrarToastServiciosLeg('Documento registrado correctamente.','ok');
+                        finalizar();
                     });
                 },
                 error: function(resp) {
@@ -263,6 +268,7 @@
                     $('#error_datos_span').html(texto);
                     $('#error_datos').show();
                     setTimeout(function(){$('#error_datos').hide(500);},5000);
+                    finalizar();
                 }
             });
         }
@@ -393,7 +399,13 @@
             });
         }
 
-        function guardarDatos(ruta,panel,form){
+        function guardarDatos(ruta,panel,form,btn){
+            if(btn && btn.dataset.loading==='1'){
+                return;
+            }
+            setBotonCargandoServicios(btn, true, 'Guardando...');
+            var finalizar = function(){ setBotonCargandoServicios(btn, false); };
+
             $.ajax({
                 url: ruta,
                 type: 'POST',
@@ -409,18 +421,28 @@
                                     if(form==='form_traleg'){
                                         var areaTramite=$('#'+panel).find('#divNueTram');
                                         if(areaTramite.length){
-                                            areaTramite.stop(true,true).show(0);
-                                            var campoValorado=areaTramite.find('input[name="control"]').first();
-                                            if(!campoValorado.length){campoValorado=areaTramite.find('input[name="valorado"]:visible').first();}
-                                            if(campoValorado.length && !campoValorado.prop('disabled') && !campoValorado.prop('readonly')){
-                                                setTimeout(function(){campoValorado.trigger('focus');campoValorado.trigger('select');},100);
-                                            }
+                                            areaTramite.css({opacity: 0, marginTop: '30px', display: 'block'});
+                                            setTimeout(function(){
+                                                areaTramite.animate({opacity: 1, marginTop: '0px'}, 450, 'swing', function(){
+                                                    var campoValorado=areaTramite.find('input[name="control"]').first();
+                                                    if(!campoValorado.length){campoValorado=areaTramite.find('input[name="valorado"]:visible').first();}
+                                                    if(campoValorado.length && !campoValorado.prop('disabled') && !campoValorado.prop('readonly')){
+                                                        campoValorado.trigger('focus');campoValorado.trigger('select');
+                                                    }
+                                                    areaTramite.css('margin-top', ''); // Clean up inline styles
+                                                });
+                                            }, 80);
                                         }
+                                        mostrarToastServiciosLeg('Trámite guardado correctamente.', 'ok');
+                                    } else {
+                                        mostrarToastServiciosLeg('Datos guardados correctamente.', 'ok');
                                     }
+                                    finalizar();
                                 });
                             },
                             error: function(){
                                 $('#'+panel).html(resp.redirect ? '<span class="text-danger">No se pudo abrir el trámite recién creado.</span>' : '');
+                                finalizar();
                             }
                         });
                         return;
@@ -429,7 +451,11 @@
                         cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
                         if(form==='form_traleg'){
                             enfocarCampoValoradoServicios(panel);
+                            mostrarToastServiciosLeg('Trámite guardado correctamente.', 'ok');
+                        } else if(form === 'form_apoderado_edi' || form === 'form_apoderado' || form === 'form_editar' || form === 'form_corregir_docleg' || form === 'form_g_obs_docleg') {
+                            mostrarToastServiciosLeg('Datos guardados exitosamente.', 'ok');
                         }
+                        finalizar();
                     });
                 },
                 error: function (resp) {
@@ -448,6 +474,7 @@
                     setTimeout(function(){
                         $('#error_datos').hide(500);
                     },5000);
+                    finalizar();
                 }
             });
         }

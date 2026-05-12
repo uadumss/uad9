@@ -513,7 +513,7 @@
                             <input type="hidden" name="ip" value="{{ $tramite->id_per }}">
                             @can('editar datos traleg - srv')
                                 <button type="button" class="e-btn e-btn-primary e-btn-full"
-                                        onclick="guardarDatos('{{ url('g_traleg') }}','panel_traleg','form_traleg')">
+                                        onclick="guardarDatos('{{ url('g_traleg') }}','panel_traleg','form_traleg', this)">
                                     <i class="fas fa-save" style="font-size:11px;"></i> Guardar
                                 </button>
                             @endcan
@@ -1030,7 +1030,7 @@
                             </form>
                             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;">
                                 <a href="#" class="e-btn e-btn-primary"
-                                   onclick="crearDoclegConValidacion('form_docleg','{{ url('g_docleg') }}','panel_traleg')">
+                                   onclick="crearDoclegConValidacion('form_docleg','{{ url('g_docleg') }}','panel_traleg', this)">
                                     <i class="fas fa-plus" style="font-size:10px;"></i> Crear
                                 </a>
                             </div>
@@ -1137,7 +1137,7 @@
                             </form>
                             <div style="display:flex;justify-content:flex-end;margin-top:10px;">
                                 <a href="#" class="e-btn e-btn-primary"
-                                   onclick="crearConfrontacionConValidacion('form_docleg_f','{{ url('g_docleg') }}','panel_traleg')">
+                                   onclick="crearConfrontacionConValidacion('form_docleg_f','{{ url('g_docleg') }}','panel_traleg', this)">
                                     <i class="fas fa-plus" style="font-size:10px;"></i> Crear
                                 </a>
                             </div>
@@ -1147,31 +1147,7 @@
                             <form id="form_docleg">
                                 @csrf
                                 <div class="e-add-grid g2">
-                                    <div class="e-add-col">
-                                        <label>Tipo de legalización</label>
-                                        <select class="e-select" data-campo="tipo-legalizacion" disabled>
-                                            <option value="" selected></option>
-                                            @foreach($lista_tramites as $l)
-                                                @if(strtoupper((string)($l->tre_tipo ?? ''))==='R') @continue @endif
-                                                <option value="{{ $l->cod_tre }}">{{ $l->tre_nombre }}</option>
-                                            @endforeach
-                                        </select>
-                                        <input type="hidden" name="tipo" data-campo="tipo-legalizacion-hidden" value="">
-                                    </div>
-                                    <div class="e-add-col" data-campo="columna-carrera" style="display:none;">
-                                        <label>Carrera del interesado</label>
-                                        <select class="e-select" id="select_carrera_interesado">
-                                            <option value="">-- Seleccionar carrera --</option>
-                                            @foreach($carreras_persona as $cp)
-                                                <option value="{{ $cp->cod_tit }}" 
-                                                        data-num="{{ $cp->tit_nro_titulo }}" 
-                                                        data-ges="{{ $cp->tit_gestion }}">
-                                                    {{ $cp->car_nombre }} ({{ $cp->tit_nro_titulo }}/{{ $cp->tit_gestion }})
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                        <input type="hidden" name="cod_tit" id="cod_tit_seleccionado" value="">
-                                    </div>
+                                    <!-- ROW 1 -->
                                     <div class="e-add-col">
                                         <label>Tipo de trámite</label>
                                         <div class="e-radio-row" style="padding-top:4px;">
@@ -1202,6 +1178,32 @@
                                         </div>
                                     </div>
                                     <div class="e-add-col">
+                                        <label>Tipo de legalización</label>
+                                        <select class="e-select" data-campo="tipo-legalizacion" disabled>
+                                            <option value="" selected></option>
+                                            @foreach($lista_tramites as $l)
+                                                @if(strtoupper((string)($l->tre_tipo ?? ''))==='R') @continue @endif
+                                                <option value="{{ $l->cod_tre }}">{{ $l->tre_nombre }}</option>
+                                            @endforeach
+                                        </select>
+                                        <input type="hidden" name="tipo" data-campo="tipo-legalizacion-hidden" value="">
+                                    </div>
+
+                                    <!-- ROW 2 -->
+                                    <div class="e-add-col" data-campo="fila-pago-principal">
+                                        <label>Nro. Control</label>
+                                        <div class="e-add-row-inline">
+                                            <input class="e-input" required name="control" oninput="programarValidacionControl(this)" style="flex:1;min-width:0;">
+                                            <a href="#" class="e-pill idle" data-campo="estado-pago-control-icon" data-pago-campo="control"
+                                               title="Ver detalle de validación de pago"
+                                               onclick="abrirDetallePagoFormulario(this); return false;"
+                                               style="text-decoration:none;">
+                                                <i class="fas fa-minus-circle" style="font-size:10px;"></i>
+                                                <span>Pendiente</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="e-add-col">
                                         <label>Nro. Título o Resolución</label>
                                         <div class="e-num-pair">
                                             <input name="numero" class="e-input" style="max-width:90px;">
@@ -1222,16 +1224,18 @@
                                             </span>
                                         </div>
                                     </div>
-                                    <div class="e-add-col" data-campo="fila-pago-principal">
-                                        <label>Nro. Control</label>
+
+                                    <!-- ROW 3 -->
+                                    <div class="e-add-col" data-campo="fila-pago-complementario">
+                                        <label>N° control Búsqueda</label>
                                         <div class="e-add-row-inline">
-                                            <input class="e-input" required name="control" oninput="programarValidacionControl(this)" style="flex:1;min-width:0;">
-                                            <a href="#" class="e-pill idle" data-campo="estado-pago-control-icon" data-pago-campo="control"
+                                            <input class="e-input" name="valorado_bus" oninput="programarValidacionControl(this)" style="flex:1;min-width:0;">
+                                            <a href="#" class="e-pill idle" data-campo="estado-pago-busqueda-icon" data-pago-campo="busqueda"
                                                title="Ver detalle de validación de pago"
                                                onclick="abrirDetallePagoFormulario(this); return false;"
                                                style="text-decoration:none;">
                                                 <i class="fas fa-minus-circle" style="font-size:10px;"></i>
-                                                <span>Pendiente</span>
+                                                <span>—</span>
                                             </a>
                                         </div>
                                     </div>
@@ -1248,18 +1252,21 @@
                                             </a>
                                         </div>
                                     </div>
-                                    <div class="e-add-col" data-campo="fila-pago-complementario">
-                                        <label>N° control Búsqueda</label>
-                                        <div class="e-add-row-inline">
-                                            <input class="e-input" name="valorado_bus" oninput="programarValidacionControl(this)" style="flex:1;min-width:0;">
-                                            <a href="#" class="e-pill idle" data-campo="estado-pago-busqueda-icon" data-pago-campo="busqueda"
-                                               title="Ver detalle de validación de pago"
-                                               onclick="abrirDetallePagoFormulario(this); return false;"
-                                               style="text-decoration:none;">
-                                                <i class="fas fa-minus-circle" style="font-size:10px;"></i>
-                                                <span>—</span>
-                                            </a>
-                                        </div>
+
+                                    <!-- HIDDEN FIELDS (Carrera, Reimpresion) -->
+                                    <div class="e-add-col" data-campo="columna-carrera" style="display:none;grid-column:span 2;">
+                                        <label>Carrera del interesado</label>
+                                        <select class="e-select" id="select_carrera_interesado">
+                                            <option value="">-- Seleccionar carrera --</option>
+                                            @foreach($carreras_persona as $cp)
+                                                <option value="{{ $cp->cod_tit }}" 
+                                                        data-num="{{ $cp->tit_nro_titulo }}" 
+                                                        data-ges="{{ $cp->tit_gestion }}">
+                                                    {{ $cp->car_nombre }} ({{ $cp->tit_nro_titulo }}/{{ $cp->tit_gestion }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <input type="hidden" name="cod_tit" id="cod_tit_seleccionado" value="">
                                     </div>
                                     <input type="hidden" name="reimpresion" data-campo="preimpreso-api" value="">
                                 </div>
@@ -1271,7 +1278,7 @@
                             </form>
                             <div style="display:flex;justify-content:flex-end;margin-top:10px;">
                                 <a href="#" class="e-btn e-btn-primary"
-                                   onclick="crearDoclegConValidacion('form_docleg','{{ url('g_docleg') }}','panel_traleg')">
+                                   onclick="crearDoclegConValidacion('form_docleg','{{ url('g_docleg') }}','panel_traleg', this)">
                                     <i class="fas fa-plus" style="font-size:10px;"></i> Crear
                                 </a>
                             </div>
@@ -1768,7 +1775,7 @@
         });
     }
 
-    function crearDoclegConValidacion(formulario,ruta,panel){
+    function crearDoclegConValidacion(formulario,ruta,panel,btn){
         var form=$('#'+formulario);sincronizarCamposObligatorios(form);
         var cuadis=form.find('input[name="cuadis"]').is(':checked'),validado=form.find('[data-campo="validacion-recaudacion-ok"]').val()==='1';
         if(!cuadis&&!validado){$('#error_datos_span').html('Valide control primero.');$('#error_datos').show();setTimeout(function(){$('#error_datos').hide(500);},4000);return;}
@@ -1786,15 +1793,15 @@
             }
         }
         
-        enviar1(formulario,ruta,panel);
+        enviar1(formulario,ruta,panel,btn);
     }
-    function crearConfrontacionConValidacion(formulario,ruta,panel){
+    function crearConfrontacionConValidacion(formulario,ruta,panel,btn){
         var form=$('#'+formulario);sincronizarCamposObligatorios(form);
         var validado=form.find('[data-campo="validacion-recaudacion-ok"]').val()==='1';
         if(!validado){$('#error_datos_span').html('Valide control primero.');$('#error_datos').show();setTimeout(function(){$('#error_datos').hide(500);},4000);return;}
         var tipoSeleccionado=(form.find('input[data-campo="tipo-legalizacion-hidden"]').val()||'').toString().trim();
         if(tipoSeleccionado===''){$('#error_datos_span').html('Seleccione tipo para continuar.');$('#error_datos').show();setTimeout(function(){$('#error_datos').hide(500);},4000);return;}
-        enviar1(formulario,ruta,panel);
+        enviar1(formulario,ruta,panel,btn);
     }
 
     function actualizarEstadoSitra(formulario,clase,mensaje){
