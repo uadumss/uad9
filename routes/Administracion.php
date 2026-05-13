@@ -128,3 +128,4 @@ Route::post('guardar_nueva_designacion',[ActividadTareaController::class,'guarda
 Route::get('historial designaciones adm/{cod_tar}',[AdministradorController::class,'f_historial_designaciones_adm']);
 Route::post('guardar_retiro_designacion_adm',[AdministradorController::class,'guardar_retiro_designacion_adm']);
 Route::post('guardar_nueva_designacion_adm',[AdministradorController::class,'guardar_nueva_designacion_adm']);
+Route::get('marcar_tarea_completada/{cod_tar}',[ActividadTareaController::class,'marcar_tarea_completada']);

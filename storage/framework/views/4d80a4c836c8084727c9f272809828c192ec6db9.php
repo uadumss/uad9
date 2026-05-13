@@ -208,9 +208,18 @@
                                     <?php endif; ?>
                                     <td>
                                         <?php if(Auth::user()->id==$t['id_responsable']): ?>
-                                            <?php if($t['tar_hab']=='t'): ?>
-                                                <a href="<?php echo e(url('habilitar tarea/'.$t['cod_tar'])); ?>" class="btn btn-light btn-circle btn-sm text-success">
+                                            <?php if($t['tar_concluido']=='t'): ?>
+                                                <span class="btn btn-light btn-circle btn-sm text-success" title="Tarea completada">
+                                                    <i class="fas fa-check-double"></i>
+                                                </span>
+                                            <?php else: ?>
+                                                <a href="<?php echo e(url('marcar_tarea_completada/'.$t['cod_tar'])); ?>" class="btn btn-light btn-circle btn-sm text-success" title="Marcar como completada" onclick="return confirm('¿Marcar esta tarea como completada?')">
                                                     <i class="fas fa-check"></i>
+                                                </a>
+                                            <?php endif; ?>
+                                            <?php if($t['tar_hab']=='t'): ?>
+                                                <a href="<?php echo e(url('habilitar tarea/'.$t['cod_tar'])); ?>" class="btn btn-light btn-circle btn-sm text-info">
+                                                    <i class="fas fa-eye"></i>
                                                 </a>
                                             <?php else: ?>
                                                 <a href="<?php echo e(url('habilitar tarea/'.$t['cod_tar'])); ?>" class="btn btn-light btn-circle btn-sm text-dark">
