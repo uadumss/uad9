@@ -72,9 +72,6 @@
 
         </div>
         <!-- End of Main Content -->
-        <!-- Footer -->
-       @include('marco/pie')
-        <!-- End of Footer -->
     </div>
 
 </div>
