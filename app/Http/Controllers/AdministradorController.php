@@ -266,10 +266,30 @@ class AdministradorController extends Controller
 
     public function guardar_retiro_designacion_adm(Request $request){
         $designa = Designa::find($request['cod_des']);
+        $porcentajeAlcanzado = DB::table('diarios')
+            ->where('cod_des', '=', $designa->cod_des)
+            ->where('cod_tar', '=', $designa->cod_tar)
+            ->sum('dia_porcen');
+
         $designa->des_fech_ret = $request['fecha_retiro'];
+        $designa->des_porcen_alcanzado = $porcentajeAlcanzado;
         $designa->save();
         
-        \Session::flash('exito','Retiro registrado exitosamente. Porcentaje alcanzado: '.$request['porcentaje_alcanzado'].'%');
+        // Check if the total percentage of all designations for this task reaches 100%
+        $tarea = Tarea::find($designa->cod_tar);
+        if($tarea){
+            $totalPorcentaje = DB::table('designas')
+                ->where('cod_tar', '=', $tarea->cod_tar)
+                ->sum('des_porcen_alcanzado');
+            
+            if($totalPorcentaje >= 100){
+                $tarea->tar_concluido = 't';
+                $tarea->save();
+                \Session::flash('exito','Retiro registrado exitosamente. Porcentaje alcanzado: '.$porcentajeAlcanzado.'%. La tarea ha sido marcada como completada.');
+            } else {
+                \Session::flash('exito','Retiro registrado exitosamente. Porcentaje alcanzado: '.$porcentajeAlcanzado.'%. Total: '.$totalPorcentaje.'%');
+            }
+        }
         return redirect('listar tareas actividad adm/'.$request['cod_act']);
     }
 

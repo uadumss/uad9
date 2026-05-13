@@ -203,9 +203,18 @@
                                     @endif
                                     <td>
                                         @if(Auth::user()->id==$t['id_responsable'])
-                                            @if($t['tar_hab']=='t')
-                                                <a href="{{url('habilitar tarea/'.$t['cod_tar'])}}" class="btn btn-light btn-circle btn-sm text-success">
+                                            @if($t['tar_concluido']=='t')
+                                                <span class="btn btn-light btn-circle btn-sm text-success" title="Tarea completada">
+                                                    <i class="fas fa-check-double"></i>
+                                                </span>
+                                            @else
+                                                <a href="{{url('marcar_tarea_completada/'.$t['cod_tar'])}}" class="btn btn-light btn-circle btn-sm text-success" title="Marcar como completada" onclick="return confirm('¿Marcar esta tarea como completada?')">
                                                     <i class="fas fa-check"></i>
+                                                </a>
+                                            @endif
+                                            @if($t['tar_hab']=='t')
+                                                <a href="{{url('habilitar tarea/'.$t['cod_tar'])}}" class="btn btn-light btn-circle btn-sm text-info">
+                                                    <i class="fas fa-eye"></i>
                                                 </a>
                                             @else
                                                 <a href="{{url('habilitar tarea/'.$t['cod_tar'])}}" class="btn btn-light btn-circle btn-sm text-dark">

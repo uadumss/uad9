@@ -161,7 +161,11 @@ class DiarioController extends Controller
             $diario->dia_fech_revision='now()';
             $diario->save();
         }
-        return redirect('listar reportes/'.$tarea['cod_tar'].'/'.$form['redireccion']);
+        $redireccion = trim((string)$form->input('redireccion', ''));
+        if($redireccion===''){
+            return redirect('listar reporte diario adm/'.$tarea['cod_tar']);
+        }
+        return redirect('listar reportes/'.$tarea['cod_tar'].'/'.$redireccion);
     }
     public function aceptarReporteDiario(Request $form){
         $diario=Diario::find($form['cd']);
@@ -185,7 +189,11 @@ class DiarioController extends Controller
             $tarea->tar_concluido='t';
             $tarea->save();
         }
-        return redirect('listar reportes/'.$diario['cod_tar'].'/'.$form['redireccion']);
+        $redireccion = trim((string)$form->input('redireccion', ''));
+        if($redireccion===''){
+            return redirect('listar reporte diario adm/'.$diario['cod_tar']);
+        }
+        return redirect('listar reportes/'.$diario['cod_tar'].'/'.$redireccion);
     }
     public function f_reporte_concluido($cod_tar){
         $tarea=Tarea::find($cod_tar);

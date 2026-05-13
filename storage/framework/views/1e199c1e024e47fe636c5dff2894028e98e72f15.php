@@ -91,11 +91,7 @@
                                     <td><?php echo e(date('d/m/Y',strtotime($d->des_fech_asig))); ?></td>
                                     <td><?php echo e(date('d/m/Y',strtotime($d->des_fech_ret))); ?></td>
                                     <td class="text-center">
-                                        <?php
-                                            $porcentajeHist = DB::select("SELECT COALESCE(SUM(dia_porcen), 0) as total FROM diarios WHERE cod_des = ? AND cod_tar = ?", [$d->cod_des, $tarea->cod_tar]);
-                                            $porcentajeH = $porcentajeHist[0]->total ?? 0;
-                                        ?>
-                                        <span class="badge badge-secondary"><?php echo e($porcentajeH); ?>%</span>
+                                        <span class="badge badge-secondary"><?php echo e($d->des_porcen_alcanzado); ?>%</span>
                                     </td>
                                 </tr>
                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -162,12 +158,12 @@
                     <div class="form-group">
                         <label for="porcentajeAlcanzado" class="font-weight-bold">Porcentaje Alcanzado (%):</label>
                         <div class="input-group input-group-sm">
-                            <input type="number" class="form-control" name="porcentaje_alcanzado" id="porcentajeAlcanzado" min="0" max="100" readonly>
+                            <input type="number" class="form-control bg-light" name="porcentaje_alcanzado" id="porcentajeAlcanzado" min="0" max="100" step="0.01" readonly>
                             <div class="input-group-append">
                                 <span class="input-group-text">%</span>
                             </div>
                         </div>
-                        <small class="form-text text-muted">*Calculado automáticamente desde los reportes registrados</small>
+                        <small class="form-text text-muted">*Calculado automaticamente desde los reportes registrados</small>
                     </div>
 
                     <input type="hidden" name="cod_des" id="codDes" value="">
