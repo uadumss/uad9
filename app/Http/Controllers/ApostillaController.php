@@ -648,7 +648,16 @@ class ApostillaController extends Controller
         $tipoLocal=strtolower($documento);
 
         $numerosCoinciden = app(SitraService::class)->numerosCompatibles($numero, $numeroSitra);
-        if(app(SitraService::class)->nombresCompatibles($nombreLocal,$nombreSitra) && $tipoLocal===$tipoSitraNormalizado && $numerosCoinciden){
+        $nombresCoinciden = app(SitraService::class)->nombresCompatibles($nombreLocal,$nombreSitra);
+
+        \Log::info("SITRA Validacion (Apostilla): ", [
+            'ci' => $ci,
+            'local' => ['n' => $nombreLocal, 't' => $tipoLocal, 'num' => $numero],
+            'sitra' => ['n' => $nombreSitra, 't' => $tipoSitraNormalizado, 'num' => $numeroSitra],
+            'matches' => ['n' => $nombresCoinciden, 't' => ($tipoLocal === $tipoSitraNormalizado), 'num' => $numerosCoinciden]
+        ]);
+
+        if($nombresCoinciden && $tipoLocal===$tipoSitraNormalizado && $numerosCoinciden){
             return [
                 'estado'=>'0',
                 'fuente'=>'sitra',

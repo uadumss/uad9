@@ -33,8 +33,14 @@ class SitraService
         $local = $this->normalizarTexto($nombreLocal);
         $sitra = $this->normalizarTexto($nombreSitra);
 
-        if ($local === '' || $sitra === '') {
+        if ($local === '') {
             return false;
+        }
+
+        // Si SITRA no devuelve nombre pero local sí, permitimos si el resto coincide
+        // (SITRA ya filtró por CI en la consulta)
+        if ($sitra === '') {
+            return true;
         }
 
         if ($local === $sitra) {
