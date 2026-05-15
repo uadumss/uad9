@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::connection('pgsql')->create('universidades', function (Blueprint $table) {
+        Schema::connection('pgsql')->create('doc_adm.universidades', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('nombre')->unique();
             $table->string('sigla')->unique();
@@ -25,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::connection('pgsql')->dropIfExists('universidades');
+        Schema::connection('pgsql')->dropIfExists('doc_adm.universidades');
     }
 };
