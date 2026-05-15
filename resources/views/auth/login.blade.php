@@ -61,25 +61,22 @@
             position: relative;
             z-index: 2;
             display: flex;
-            align-items: flex-end;
+            align-items: center;
             justify-content: space-between;
+            gap: 1.5rem;
             padding: 2.5rem 3.5rem 3rem;
         }
 
-        .header-inner img {
-            max-height: 70px;
+        .header-logo {
             width: auto;
-            filter: brightness(0) invert(1);
             opacity: 0.95;
         }
 
-        .header-label {
-            font-size: 0.62rem;
-            font-weight: 500;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            color: rgba(255,255,255,0.28);
-            padding-bottom: 4px;
+        .header-logo-left { max-height: 90px; }
+
+        .header-logo-right {
+            max-height: 56px;
+            filter: brightness(0) invert(1);
         }
 
         /* ── CARD AREA ── */
@@ -274,7 +271,12 @@
 
         /* responsive */
         @media (max-width: 540px) {
-            .header-inner { padding: 2rem 1.75rem 2.5rem; }
+            .header-inner {
+                padding: 2rem 1.75rem 2.5rem;
+                flex-direction: column;
+                align-items: center;
+                gap: 0.75rem;
+            }
             .card-body { padding: 2.25rem 2rem 2rem; }
         }
     </style>
@@ -284,8 +286,8 @@
     <div class="header">
         <div class="header-top-line"></div>
         <div class="header-inner">
-            <img src="/img/icon/logo sf.png" alt="SID — UMSS">
-            <span class="header-label">Archivos — UMSS</span>
+            <img class="header-logo header-logo-left" src="/img/icon/logo%20archivos%20blanco1.png" alt="Seccion Archivos - UMSS">
+            <img class="header-logo header-logo-right" src="/img/icon/logo sf.png" alt="SID — UMSS">
         </div>
     </div>
 
@@ -356,7 +358,7 @@
             </div>
         </div>
 
-        <div class="page-foot">Universidad Mayor de San Simón &nbsp;·&nbsp; Archivos Centrales</div>
+        <div class="page-foot">Universidad Mayor de San Simón &nbsp;·&nbsp; Sección Archivos</div>
     </div>
 
 </body>
