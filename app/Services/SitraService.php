@@ -41,7 +41,19 @@ class SitraService
             return true;
         }
 
-        return strpos($local, $sitra) !== false || strpos($sitra, $local) !== false;
+        // Dividir en palabras y verificar que todas las palabras de un lado estén en el otro
+        $palabrasLocal = array_filter(explode(' ', $local));
+        $palabrasSitra = array_filter(explode(' ', $sitra));
+
+        if (count($palabrasLocal) === 0 || count($palabrasSitra) === 0) {
+            return false;
+        }
+
+        // Comparación por conjuntos de palabras (ignora orden y espacios extra)
+        $diff1 = array_diff($palabrasLocal, $palabrasSitra);
+        $diff2 = array_diff($palabrasSitra, $palabrasLocal);
+
+        return count($diff1) === 0 || count($diff2) === 0;
     }
 
     /**
@@ -183,6 +195,25 @@ class SitraService
         $texto = preg_replace('/[ÚÙÛÜ]/u', 'U', $texto);
         $texto = str_replace(['Ñ', 'Ç'], ['N', 'C'], $texto);
         
-        return preg_replace('/[^A-Z0-9\s]/', '', $texto) ?? '';
+        $texto = preg_replace('/[^A-Z0-9\s]/', '', $texto) ?? '';
+        // Colapsar múltiples espacios en uno solo
+        return preg_replace('/\s+/', ' ', $texto) ?? $texto;
+    }
+
+    /**
+     * Compara dos números de título, permitiendo que uno tenga la gestión (/23) y el otro no.
+     */
+    public function numerosCompatibles(string $numLocal, string $numSitra): bool
+    {
+        $numLocal = trim($numLocal);
+        $numSitra = trim($numSitra);
+
+        if ($numLocal === $numSitra) return true;
+
+        // Extraer solo la parte numérica principal (antes de / o -)
+        $cleanLocal = explode('/', explode('-', $numLocal)[0])[0];
+        $cleanSitra = explode('/', explode('-', $numSitra)[0])[0];
+
+        return $cleanLocal !== '' && $cleanLocal === $cleanSitra;
     }
 }

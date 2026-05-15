@@ -1683,7 +1683,8 @@ class TramiteLegalizacionController extends Controller
 
         $estado='1';
         $nombresCoinciden=app(SitraService::class)->nombresCompatibles($nombreLocal,$nombreSitra);
-        if($nombresCoinciden && $tipoLocal===$tipoSitraNormalizado && $numeroLocal===$numeroSitra){
+        $numerosCoinciden=app(SitraService::class)->numerosCompatibles($numeroLocal,$numeroSitra);
+        if($nombresCoinciden && $tipoLocal===$tipoSitraNormalizado && $numerosCoinciden){
             $estado='0';
         }elseif($nombreSitra==='' && $tipoSitraNormalizado==='' && $numeroSitra===''){
             $respaldoUad9=null;
