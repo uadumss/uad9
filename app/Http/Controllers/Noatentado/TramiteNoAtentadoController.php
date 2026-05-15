@@ -2973,6 +2973,13 @@ class TramiteNoAtentadoController extends Controller
             'tipo'=>'required|string|max:5',
         ]);
 
+        if (config('apoderado.requiere_boleta_dj') && $form['tipo'] === 'd') {
+            $form->validate([
+                'control_boleta' => 'required|string',
+                'control_boleta_valido' => 'required|in:1',
+            ]);
+        }
+
         $tramita=$this->obtenerTramiteNoAtentadoPorCodigo((int)$form['cdtra']);
         if(!$tramita){
             \Session::flash('error','No se encontró el trámite seleccionado.');
@@ -2989,10 +2996,37 @@ class TramiteNoAtentadoController extends Controller
                     'apo_nombre'=>mb_strtoupper($form['nombre']),
                     'apo_sistema'=>8,
                 ]);
+            }else{
+                $apoderado->apo_apellido=mb_strtoupper($form['apellido']);
+                $apoderado->apo_nombre=mb_strtoupper($form['nombre']);
+                $apoderado->save();
             }
             $tramita->cod_apo=$apoderado->cod_apo;
             $tramita->dtra_tipo_apoderado=$form['tipo'];
             $tramita->save();
+
+            if(isset($form['control_boleta'])){
+                $controlStr = preg_replace('/[^0-9]/','', $form['control_boleta']);
+                if($controlStr !== ''){
+                    $identificador = 'APO_NOATENTADO_'.$controlStr;
+                    $existe = \Illuminate\Support\Facades\DB::table('recaudacion_usos')->where('identificador', $identificador)->exists();
+                    if(!$existe) {
+                        \Illuminate\Support\Facades\DB::table('recaudacion_usos')->insert([
+                            'identificador' => $identificador,
+                            'recibo' => $controlStr,
+                            'documento' => $form['ci'] ?? '',
+                            'nombre_persona' => ($form['nombre'] ?? '') . ' ' . ($form['apellido'] ?? ''),
+                            'cod_tra' => $tramita->cod_dtra,
+                            'modulo' => 'noatentado',
+                            'tramite' => 'Apoderado Declaración Jurada',
+                            'monto' => isset($form['monto_boleta']) ? floatval($form['monto_boleta']) : 0,
+                            'usuario_registro' => \Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::user()->name : 'sistema',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+            }
             $nuevo=json_encode($apoderado);
             SessionController::write('C','',$nuevo,'apoderados','8',$apoderado->cod_apo);
         }else{
@@ -3002,6 +3036,29 @@ class TramiteNoAtentadoController extends Controller
             $tramita->dtra_tipo_apoderado=$form['tipo'];
             $tramita->save();
             $apoderado->save();
+
+            if(isset($form['control_boleta'])){
+                $controlStr = preg_replace('/[^0-9]/','', $form['control_boleta']);
+                if($controlStr !== ''){
+                    $identificador = 'APO_NOATENTADO_'.$controlStr;
+                    $existe = \Illuminate\Support\Facades\DB::table('recaudacion_usos')->where('identificador', $identificador)->exists();
+                    if(!$existe) {
+                        \Illuminate\Support\Facades\DB::table('recaudacion_usos')->insert([
+                            'identificador' => $identificador,
+                            'recibo' => $controlStr,
+                            'documento' => $form['ci'] ?? '',
+                            'nombre_persona' => ($form['nombre'] ?? '') . ' ' . ($form['apellido'] ?? ''),
+                            'cod_tra' => $tramita->cod_dtra,
+                            'modulo' => 'noatentado',
+                            'tramite' => 'Apoderado Declaración Jurada',
+                            'monto' => isset($form['monto_boleta']) ? floatval($form['monto_boleta']) : 0,
+                            'usuario_registro' => \Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::user()->name : 'sistema',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+            }
             $nuevo=json_encode($apoderado);
             SessionController::write('U',$antiguo,$nuevo,'d_tramita','8',$apoderado->cod_apo);
         }

@@ -3009,6 +3009,21 @@ class TramiteLegalizacionController extends Controller
         return view('servicios.tra_legalizacion.apoderado',compact('tramita','apoderado','persona'));
     }
     public function g_apoderado(Request $form){
+        $form->validate([
+            'ctra' => 'required|integer',
+            'ci' => 'required|string|max:30',
+            'nombre' => 'required|string|max:120',
+            'apellido' => 'required|string|max:120',
+            'tipo' => 'required|string|max:5',
+        ]);
+
+        if (config('apoderado.requiere_boleta_dj') && $form['tipo'] === 'd') {
+            $form->validate([
+                'control_boleta' => 'required|string',
+                'control_boleta_valido' => 'required|in:1',
+            ]);
+        }
+
         $tramita=Tramita::find($form['ctra']);
         if($tramita->cod_apo==''){
             $apoderado=Apoderado::where('apo_ci','=',$form['ci'])->first();
@@ -3019,6 +3034,10 @@ class TramiteLegalizacionController extends Controller
                     'apo_nombre'=>mb_strtoupper($form['nombre']),
                     'apo_sistema'=>3,
                 ]);
+            }else{
+                $apoderado->apo_apellido=mb_strtoupper($form['apellido']);
+                $apoderado->apo_nombre=mb_strtoupper($form['nombre']);
+                $apoderado->save();
             }
             $tramita->cod_apo=$apoderado->cod_apo;
             $tramita->tra_tipo_apoderado=$form['tipo'];

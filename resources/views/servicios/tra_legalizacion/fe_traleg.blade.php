@@ -659,6 +659,9 @@
                                 @php
                                     $apo_nombre = ''; $apo_apellido = ''; $apo_ci = '';
                                     if($apoderado){ $apo_ci=$apoderado->apo_ci; $apo_apellido=$apoderado->apo_apellido; $apo_nombre=$apoderado->apo_nombre; }
+                                    $requiereBoletaDj = (bool) config('apoderado.requiere_boleta_dj', false);
+                                    $tipoApoderado = $tramite->tra_tipo_apoderado ?: 'd';
+                                    $mostrarBoleta = ($tipoApoderado === 'd' && $requiereBoletaDj);
                                 @endphp
                                 <div class="fg fg-2">
                                     <div class="e-field fg-span2">
@@ -666,23 +669,23 @@
                                         <input class="e-input" name="ci" id="ci_apoderado_edi" value="{{ $apo_ci }}"
                                                oninput="verificarBoletaApoderadoEdi();" autocomplete="off">
                                     </div>
-                                    <div class="e-field fg-span2" id="contenedor_boleta_apoderado_edi">
+                                    <div class="e-field fg-span2" id="contenedor_boleta_apoderado_edi" style="{{ $mostrarBoleta ? '' : 'display:none;' }}">
                                         <label>N° control boleta</label>
                                         <input class="e-input" name="control_boleta" id="control_boleta_apoderado_edi"
                                                oninput="verificarBoletaApoderadoEdi()" autocomplete="off" placeholder="Ingrese número de control">
                                         <div style="margin-top:6px;"><span id="estado_pago_apoderado_edi" class="badge badge-secondary">Sin validar</span></div>
-                                        <input type="hidden" name="control_boleta_valido" id="control_boleta_valido_edi" value="0">
+                                        <input type="hidden" name="control_boleta_valido" id="control_boleta_valido_edi" value="{{ $mostrarBoleta ? '0' : '1' }}">
                                         <input type="hidden" name="monto_boleta" id="monto_boleta_edi" value="0">
                                     </div>
                                     <div class="e-field">
                                         <label>Apellidos</label>
                                         <input class="e-input" required name="apellido" id="apellido_apoderado"
-                                               value="{{ $apo_apellido }}" autocomplete="off" readonly>
+                                               value="{{ $apo_apellido }}" autocomplete="off" {{ $mostrarBoleta ? 'readonly' : '' }}>
                                     </div>
                                     <div class="e-field">
                                         <label>Nombres</label>
                                         <input class="e-input" required name="nombre" id="nombre_apoderado"
-                                               value="{{ $apo_nombre }}" autocomplete="off" readonly>
+                                               value="{{ $apo_nombre }}" autocomplete="off" {{ $mostrarBoleta ? 'readonly' : '' }}>
                                     </div>
                                     <div class="e-field fg-span2" style="padding-bottom:0;">
                                         <label>Tipo de apoderado</label>
@@ -1436,7 +1439,12 @@
         $.ajax({
             url:link, type:'GET',
             success:function(resp){
-                if(resp=="No"){$('#apellido_apoderado').val('');$('#nombre_apoderado').val('');}
+                if(resp=="No"){
+                    if ($('#nombre_apoderado').prop('readonly')) {
+                        $('#apellido_apoderado').val('');
+                        $('#nombre_apoderado').val('');
+                    }
+                }
                 else{var res=JSON.parse(resp);$('#apellido_apoderado').val(res['apo_apellido']);$('#nombre_apoderado').val(res['apo_nombre']);}
             }
         });

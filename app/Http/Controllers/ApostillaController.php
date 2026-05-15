@@ -297,20 +297,26 @@ class ApostillaController extends Controller
         return redirect('editar tramite apostilla/'.$tramite_apostilla->cod_apos);
     }
     public function g_apoderado_tramite_apostilla(Request $form){
+        $form->validate([
+            'ci_apoderado'=>'required',
+            'nombre_apoderado'=>'required',
+            'apellido_apoderado'=>'required',
+            'tipo'=>'required',
+            'ca'=>'required',
+        ]);
 
+        if (config('apoderado.requiere_boleta_dj') && $form['tipo'] === 'd') {
             $form->validate([
-                'ci_apoderado'=>'required',
-                'nombre_apoderado'=>'required',
-                'apellido_apoderado'=>'required',
-                'tipo'=>'required',
-                'ca'=>'required',
+                'control_boleta' => 'required|string',
+                'control_boleta_valido' => 'required|in:1',
             ]);
+        }
 
-            $tramite_apostilla=Apostilla::find($form['ca']);
-            if(!$tramite_apostilla){
-                \Session::flash('error','No se encontró el trámite de apostilla.');
-                return redirect()->back();
-            }
+        $tramite_apostilla=Apostilla::find($form['ca']);
+        if(!$tramite_apostilla){
+            \Session::flash('error','No se encontró el trámite de apostilla.');
+            return redirect()->back();
+        }
             $antiguo=json_encode($tramite_apostilla);
 
             // Buscar apoderado por CI o crearlo/actualizarlo

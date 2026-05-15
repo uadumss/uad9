@@ -112,19 +112,28 @@
                                 <form id="form_apoderado">
 
                                     @php
-                                        $nombre='';    $apellido='';  $ci="";
-                                        if($apoderado){   $ci=$apoderado->apo_ci;       $apellido=$apoderado->apo_apellido;     $nombre=$apoderado->apo_nombre;  }
+                                        $nombre='';
+                                        $apellido='';
+                                        $ci='';
+                                        if($apoderado){
+                                            $ci=$apoderado->apo_ci;
+                                            $apellido=$apoderado->apo_apellido;
+                                            $nombre=$apoderado->apo_nombre;
+                                        }
+                                        $requiereBoletaDj = (bool) config('apoderado.requiere_boleta_dj', false);
+                                        $tipoApoderado = $tramita->tra_tipo_apoderado ?: 'd';
+                                        $mostrarBoleta = ($tipoApoderado === 'd' && $requiereBoletaDj);
                                     @endphp
 
                                     <table class="table-hover col-md-12">
-                                        <tr id="fila_boleta_apoderado_modal">
+                                        <tr id="fila_boleta_apoderado_modal" data-requiere-boleta="{{ $requiereBoletaDj ? 1 : 0 }}" style="{{ $mostrarBoleta ? '' : 'display:none;' }}">
                                             <th class="text-right font-italic">N° control boleta : </th>
                                             <td class="border-bottom border-dark">
                                                     <input class="form-control form-control-sm border-0" placeholder="Ingrese número de control"
                                                               name="control_boleta" id="control_boleta_apoderado"
                                                               oninput="verificarBoletaApoderado()" />
                                                 <div style="margin-top:6px;"><span id="estado_pago_apoderado_modal" class="badge badge-secondary">Sin validar</span></div>
-                                                <input type="hidden" id="control_boleta_valido_modal" name="control_boleta_valido_modal" value="0">
+                                                <input type="hidden" id="control_boleta_valido_modal" name="control_boleta_valido_modal" value="{{ $mostrarBoleta ? '0' : '1' }}">
                                                 <input type="hidden" name="monto_boleta" id="monto_boleta_modal" value="0">
                                             </td>
                                         </tr>
@@ -139,13 +148,13 @@
                                             <th class="text-right font-italic">Apellidos : </th>
                                             <td class="border-bottom border-dark">
                                                 <input class="form-control form-control-sm border-0" placeholder=""
-                                                       required name="apellido" id="apellido" value="{{$apellido}}" readonly /></td>
+                                                       required name="apellido" id="apellido" value="{{$apellido}}" {{ $mostrarBoleta ? 'readonly' : '' }} /></td>
                                         </tr>
                                         <tr>
                                             <th class="text-right font-italic">Nombres : </th>
                                             <td class="border-bottom border-dark">
                                                 <input class="form-control form-control-sm border-0" placeholder=""
-                                                       required name="nombre" id="nombre" value="{{$nombre}}" readonly /></td>
+                                                       required name="nombre" id="nombre" value="{{$nombre}}" {{ $mostrarBoleta ? 'readonly' : '' }} /></td>
                                         </tr>
                                         <tr>
                                             <th class="text-right font-italic" valign="top">Tipo de apoderado : </th>
@@ -193,15 +202,28 @@
             $.ajax({
                 url:link, type:'GET',
                 success:function(resp){
-                    if(resp=="No"){$('#apellido').val('');$('#nombre').val('');}
+                    if(resp=="No"){
+                        if ($('#nombre').prop('readonly')) {
+                            $('#apellido').val('');
+                            $('#nombre').val('');
+                        }
+                    }
                     else{var res=JSON.parse(resp);$('#apellido').val(res['apo_apellido']);$('#nombre').val(res['apo_nombre']);}
                 }
             });
         }
 
+        function requiereBoletaDjModal() {
+            if (typeof window.GLOB_REQUIERE_BOLETA_DJ === 'boolean') {
+                return window.GLOB_REQUIERE_BOLETA_DJ;
+            }
+            return $('#fila_boleta_apoderado_modal').data('requiere-boleta') === 1;
+        }
+
         function actualizarModoApoderadoModal() {
             var tipo = $('#form_apoderado input[name="tipo"]:checked').val() || 'd';
-            if (tipo === 'p' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
+            var requiereBoleta = requiereBoletaDjModal();
+            if (tipo === 'p' || (tipo === 'd' && !requiereBoleta)) {
                 $('#fila_boleta_apoderado_modal').hide();
                 $('#control_boleta_apoderado').val('');
                 $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-secondary').text('Sin validar');
@@ -232,7 +254,8 @@
 
             verificarBoletaApoderadoTimer = setTimeout(function(){
                 var tipo = $('#form_apoderado input[name="tipo"]:checked').val() || 'd';
-                if (tipo === 'p' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
+                var requiereBoleta = requiereBoletaDjModal();
+                if (tipo === 'p' || (tipo === 'd' && !requiereBoleta)) {
                     var ci = ($('#ci_apoderado_form').val()||'').toString().trim();
                     if(ci !== '') {
                         cargarDatosApoderadoGlobal(ci);

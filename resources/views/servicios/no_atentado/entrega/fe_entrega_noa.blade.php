@@ -139,8 +139,17 @@
                                         <form id="form_apoderado_noa">
                                             @csrf
                                             @php
-                                                $nombre='';    $apellido='';  $ci="";
-                                                if($apoderado){   $ci=$apoderado->apo_ci;       $apellido=$apoderado->apo_apellido;     $nombre=$apoderado->apo_nombre;  }
+                                                $nombre='';
+                                                $apellido='';
+                                                $ci='';
+                                                if($apoderado){
+                                                    $ci=$apoderado->apo_ci;
+                                                    $apellido=$apoderado->apo_apellido;
+                                                    $nombre=$apoderado->apo_nombre;
+                                                }
+                                                $requiereBoletaDj = (bool) config('apoderado.requiere_boleta_dj', false);
+                                                $tipoApoderado = $tramite_noatentado->dtra_tipo_apoderado ?: 'd';
+                                                $mostrarBoleta = ($tipoApoderado === 'd' && $requiereBoletaDj);
                                             @endphp
 
                                             <table class="table-hover col-md-12">
@@ -150,26 +159,27 @@
                                                         <input class="form-control form-control-sm border-0" placeholder=""
                                                                id="ci_noa_apoderado" name="ci" value="{{$ci}}" oninput="verificarBoletaApoderadoNoa();"/></td>
                                                 </tr>
-                                                <tr id="fila_boleta_apoderado_noa">
+                                                <tr id="fila_boleta_apoderado_noa" data-requiere-boleta="{{ $requiereBoletaDj ? 1 : 0 }}" style="{{ $mostrarBoleta ? '' : 'display:none;' }}">
                                                     <th class="text-right font-italic">N° control boleta : </th>
                                                     <td class="border-bottom border-dark">
                                                         <input class="form-control form-control-sm border-0" placeholder="Ingrese número de control"
                                                                id="control_boleta_noa" name="control_boleta" oninput="verificarBoletaApoderadoNoa()"/>
                                                         <div style="margin-top:6px;"><span id="estado_pago_apoderado_noa" class="badge badge-secondary">Sin validar</span></div>
-                                                        <input type="hidden" id="control_boleta_valido_noa" name="control_boleta_valido" value="0">
+                                                         <input type="hidden" id="control_boleta_valido_noa" name="control_boleta_valido" value="{{ $mostrarBoleta ? '0' : '1' }}">
+                                                         <input type="hidden" name="monto_boleta" id="monto_boleta_noa" value="0">
                                                     </td>
                                                 </tr>
                                                 <tr>
                                                     <th class="text-right font-italic">Apellidos : </th>
                                                     <td class="border-bottom border-dark">
-                                                        <input class="form-control form-control-sm border-0" placeholder=""
-                                                               required name="apellido" id="apellido_apoderado" value="{{$apellido}}" readonly /></td>
+                                                         <input class="form-control form-control-sm border-0" placeholder=""
+                                                                required name="apellido" id="apellido_apoderado" value="{{$apellido}}" {{ $mostrarBoleta ? 'readonly' : '' }} /></td>
                                                 </tr>
                                                 <tr>
                                                     <th class="text-right font-italic">Nombres : </th>
                                                     <td class="border-bottom border-dark">
-                                                        <input class="form-control form-control-sm border-0" placeholder=""
-                                                               required name="nombre" id="nombre_apoderado" value="{{$nombre}}" readonly /></td>
+                                                         <input class="form-control form-control-sm border-0" placeholder=""
+                                                                required name="nombre" id="nombre_apoderado" value="{{$nombre}}" {{ $mostrarBoleta ? 'readonly' : '' }} /></td>
                                                 </tr>
                                                 <tr>
                                                     <th class="text-right font-italic" valign="top">Tipo de apoderado : </th>
@@ -308,9 +318,17 @@
 
 <script>
 
+    function requiereBoletaDjNoa() {
+        if (typeof window.GLOB_REQUIERE_BOLETA_DJ === 'boolean') {
+            return window.GLOB_REQUIERE_BOLETA_DJ;
+        }
+        return $('#fila_boleta_apoderado_noa').data('requiere-boleta') === 1;
+    }
+
     function actualizarModoApoderadoNoa() {
         var tipo = $('input[name="tipo"]:checked').val() || 'd';
-        if (tipo === 'p' || tipo === 'c' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
+        var requiereBoleta = requiereBoletaDjNoa();
+        if (tipo === 'p' || tipo === 'c' || (tipo === 'd' && !requiereBoleta)) {
             $('#fila_boleta_apoderado_noa').hide();
             $('#control_boleta_noa').val('');
             $('#estado_pago_apoderado_noa').removeClass().addClass('badge badge-secondary').text('Sin validar');
@@ -360,7 +378,8 @@
 
         verificarBoletaApoderadoNoaTimer = setTimeout(function(){
             var tipo = $('input[name="tipo"]:checked').val() || 'd';
-            if (tipo === 'p' || tipo === 'c' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
+            var requiereBoleta = requiereBoletaDjNoa();
+            if (tipo === 'p' || tipo === 'c' || (tipo === 'd' && !requiereBoleta)) {
                 var ci = ($('#ci_noa_apoderado').val()||'').toString().trim();
                 if(ci !== '') {
                     cargarDatosApoderadoGlobal(ci);

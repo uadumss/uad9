@@ -631,6 +631,11 @@
                                 @else
                                     {{-- No está guardado, se permite registrar si tiene permisos --}}
                                     @can('editar apoderado - apo')
+                                        @php
+                                            $requiereBoletaDj = (bool) config('apoderado.requiere_boleta_dj', false);
+                                            $tipoApoderado = $tramite_apostilla->apos_apoderado ?: 'd';
+                                            $mostrarBoleta = ($tipoApoderado === 'd' && $requiereBoletaDj);
+                                        @endphp
                                         <div class="fg fg-2">
                                             <div class="e-field fg-span2">
                                                 <label>CI apoderado</label>
@@ -638,22 +643,22 @@
                                                        value=""
                                                        oninput="verificarBoleta();" autocomplete="off">
                                             </div>
-                                            <div class="e-field fg-span2" id="contenedor_boleta_apostilla_edi">
+                                            <div class="e-field fg-span2" id="contenedor_boleta_apostilla_edi" style="{{ $mostrarBoleta ? '' : 'display:none;' }}">
                                                 <label>N° control boleta</label>
                                                 <input class="e-input" type="text" name="control_boleta" id="control_boleta_apostilla_edi"
                                                        oninput="verificarBoleta()" autocomplete="off" placeholder="Ingrese número de control">
                                                 <div style="margin-top:6px;"><span id="estado_pago_apoderado_edi" class="badge badge-secondary">Sin validar</span></div>
-                                                <input type="hidden" name="control_boleta_valido" id="control_boleta_valido_edi" value="0">
+                                                <input type="hidden" name="control_boleta_valido" id="control_boleta_valido_edi" value="{{ $mostrarBoleta ? '0' : '1' }}">
                                             </div>
                                             <div class="e-field">
                                                 <label>Nombres</label>
                                                 <input class="e-input" type="text" name="nombre_apoderado"
-                                                       id="nombre_apoderado" value="" autocomplete="off" readonly>
+                                                       id="nombre_apoderado" value="" autocomplete="off" {{ $mostrarBoleta ? 'readonly' : '' }}>
                                             </div>
                                             <div class="e-field">
                                                 <label>Apellidos</label>
                                                 <input class="e-input" type="text" name="apellido_apoderado"
-                                                       id="apellido_apoderado" value="" autocomplete="off" readonly>
+                                                       id="apellido_apoderado" value="" autocomplete="off" {{ $mostrarBoleta ? 'readonly' : '' }}>
                                             </div>
                                             <div class="e-field fg-span2" style="padding-bottom:0;">
                                                 <label>Tipo de apoderado</label>
@@ -936,7 +941,12 @@ function cargarDatosPersonales(ci){
 function cargarDatosApoderado(ci){
     var link="{{url('datos_apo/')}}"+"/"+ci;
     $.ajax({url:link,type:'GET',success:function(resp){
-        if(resp=="No"){$('#apellido_apoderado').val('');$('#nombre_apoderado').val('');}
+        if(resp=="No"){
+            if ($('#nombre_apoderado').prop('readonly')) {
+                $('#apellido_apoderado').val('');
+                $('#nombre_apoderado').val('');
+            }
+        }
         else{var res=JSON.parse(resp);$('#apellido_apoderado').val(res['apo_apellido']);$('#nombre_apoderado').val(res['apo_nombre']);}
     },error:function(){$('#'+panel).html("<span class='text-danger'>Ocurrio un error, probablemente no tenga permisos para esta acción</span>");}});
 }

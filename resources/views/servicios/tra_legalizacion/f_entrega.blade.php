@@ -128,26 +128,27 @@
                                              <input class="form-control form-control-sm border-0" placeholder=""
                                                     id="ci_entrega_apoderado" name="ci" value="{{$ci}}" oninput="verificarBoletaApoderadoEntrega();"/></td>
                                      </tr>
-                                     <tr id="fila_boleta_apoderado_entrega">
-                                         <th class="text-right font-italic">N° control boleta : </th>
-                                         <td class="border-bottom border-dark">
-                                             <input class="form-control form-control-sm border-0" placeholder="Ingrese número de control"
-                                                    id="control_boleta_entrega" name="control_boleta" oninput="verificarBoletaApoderadoEntrega()"/>
-                                             <div style="margin-top:6px;"><span id="estado_pago_apoderado_entrega" class="badge badge-secondary">Sin validar</span></div>
-                                             <input type="hidden" id="control_boleta_valido_entrega" name="control_boleta_valido" value="0">
-                                         </td>
-                                     </tr>
+                                     <tr id="fila_boleta_apoderado_entrega" data-requiere-boleta="{{ $requiereBoletaDj ? 1 : 0 }}" style="{{ $mostrarBoleta ? '' : 'display:none;' }}">
+                                        <th class="text-right font-italic">N° control boleta : </th>
+                                        <td class="border-bottom border-dark">
+                                            <input class="form-control form-control-sm border-0" placeholder="Ingrese número de control"
+                                                   id="control_boleta_entrega" name="control_boleta" oninput="verificarBoletaApoderadoEntrega()"/>
+                                            <div style="margin-top:6px;"><span id="estado_pago_apoderado_entrega" class="badge badge-secondary">Sin validar</span></div>
+                                            <input type="hidden" id="control_boleta_valido_entrega" name="control_boleta_valido" value="0">
+                                            <input type="hidden" name="monto_boleta" id="monto_boleta_entrega" value="0">
+                                        </td>
+                                    </tr>
                                      <tr>
                                          <th class="text-right font-italic">Apellidos : </th>
                                          <td class="border-bottom border-dark">
                                              <input class="form-control form-control-sm border-0" placeholder=""
-                                                    required name="apellido" id="apellido_apoderado" value="{{$apellido}}" readonly /></td>
+                                                    required name="apellido" id="apellido_apoderado" value="{{$apellido}}" {{ $mostrarBoleta ? 'readonly' : '' }} /></td>
                                      </tr>
                                      <tr>
                                          <th class="text-right font-italic">Nombres : </th>
                                          <td class="border-bottom border-dark">
                                              <input class="form-control form-control-sm border-0" placeholder=""
-                                                    required name="nombre" id="nombre_apoderado" value="{{$nombre}}" readonly /></td>
+                                                    required name="nombre" id="nombre_apoderado" value="{{$nombre}}" {{ $mostrarBoleta ? 'readonly' : '' }} /></td>
                                      </tr>
                                      <tr>
                                          <th class="text-right font-italic" valign="top">Tipo de apoderado : </th>
@@ -271,22 +272,22 @@
 </div>
 <script>
     function cargarDatosApoderado(ci){
-        var link="{{url('datos_apo/')}}"+"/"+ci;
+        var link="{{url('datos_apo/')}}"+"/"+encodeURIComponent((ci||'').toString().trim());
         $.ajax({
-            url: link,
-            type: 'GET',
-            success: function (resp) {
+            url:link, type:'GET',
+            success:function(resp){
                 if(resp=="No"){
-                    $('#apellido_apoderado').val('');
-                    $('#nombre_apoderado').val('');
-                }else{
+                    // Solo limpiar si NO estamos en modo manual (es decir, si el campo NO es editable)
+                    if ($('#nombre_apoderado').prop('readonly')) {
+                        $('#apellido_apoderado').val('');
+                        $('#nombre_apoderado').val('');
+                    }
+                }
+                else{
                     var res=JSON.parse(resp);
                     $('#apellido_apoderado').val(res['apo_apellido']);
                     $('#nombre_apoderado').val(res['apo_nombre']);
                 }
-            },
-            error: function () {
-                $('#'+panel).html("<span class='text-danger'>Ocurrio un error, probablemente no tenga permisos para esta acción</span>");
             }
         });
     }
