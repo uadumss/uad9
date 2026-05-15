@@ -2999,8 +2999,8 @@ class TramiteLegalizacionController extends Controller
     }
     public function f_apoderado($cod_tra){
         $tramita=Tramita::find($cod_tra);
-        $apoderado=array();
-        $persona=array();
+        $apoderado=null;
+        $persona=null;
         if($tramita->cod_apo!=''){
             $apoderado=Apoderado::find($tramita->cod_apo);
         }
@@ -3018,7 +3018,7 @@ class TramiteLegalizacionController extends Controller
             'tipo' => 'required|string|max:5',
         ]);
 
-        if (config('apoderado.requiere_boleta_dj') && $form['tipo'] === 'd') {
+        if (config('apoderado.requiere_boleta_dj', false) && ($form['tipo'] === 'd' || $form['tipo'] === 'a')) {
             $form->validate([
                 'control_boleta' => 'required|string',
                 'control_boleta_valido' => 'required|in:1',
@@ -3165,8 +3165,8 @@ class TramiteLegalizacionController extends Controller
         }
 
 
-        $apoderado=array();
-        $persona=array();
+        $apoderado=null;
+        $persona=null;
         if($tramita->cod_apo!=''){
             $apoderado=Apoderado::find($tramita->cod_apo);
         }
@@ -3183,8 +3183,8 @@ class TramiteLegalizacionController extends Controller
                 ->select('tre_nombre','d_tramitas.*')->first();
 
             $tramita=Tramita::find($docleg->cod_tra);
-            $apoderado=array();
-            $persona=array();
+            $apoderado=null;
+            $persona=null;
             if($tramita->cod_apo!=''){
                 $apoderado=Apoderado::find($tramita->cod_apo);
             }
@@ -3199,8 +3199,8 @@ class TramiteLegalizacionController extends Controller
                     ->Join('tramites','d_tramitas.cod_tre','=','tramites.cod_tre')
                     ->where('cod_tra','=',$cod_dtra)->where('dtra_generado','=','t')
                     ->select('tre_nombre','d_tramitas.*')->get();
-                $apoderado=array();
-                $persona=array();
+                $apoderado=null;
+                $persona=null;
                 if($tramita->cod_apo!=''){
                     $apoderado=Apoderado::find($tramita->cod_apo);
                 }

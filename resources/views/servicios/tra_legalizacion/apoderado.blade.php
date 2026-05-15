@@ -133,7 +133,7 @@
                                                               name="control_boleta" id="control_boleta_apoderado"
                                                               oninput="verificarBoletaApoderado()" />
                                                 <div style="margin-top:6px;"><span id="estado_pago_apoderado_modal" class="badge badge-secondary">Sin validar</span></div>
-                                                <input type="hidden" id="control_boleta_valido_modal" name="control_boleta_valido_modal" value="{{ $mostrarBoleta ? '0' : '1' }}">
+                                                <input type="hidden" id="control_boleta_valido_modal" name="control_boleta_valido" value="{{ $mostrarBoleta ? '0' : '1' }}">
                                                 <input type="hidden" name="monto_boleta" id="monto_boleta_modal" value="0">
                                             </td>
                                         </tr>

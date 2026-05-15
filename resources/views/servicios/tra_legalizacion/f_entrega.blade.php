@@ -1,5 +1,11 @@
 
 <div class="modal-content border-bottom-primary">
+    @php
+        $requiereBoletaDj = (bool) config('apoderado.requiere_boleta_dj', false);
+        $tipoApoderado = $tramita->tra_tipo_apoderado ?: 'd';
+        $mostrarBoleta = ($tipoApoderado === 'd' && $requiereBoletaDj);
+    @endphp
+    <script>window.GLOB_REQUIERE_BOLETA_DJ = {{ $requiereBoletaDj ? 'true' : 'false' }};</script>
     <div class="modal-header bg-primary">
         <h5 class="modal-title text-white font-weight-bolder" id="exampleModalLabel"><i class="fas fa-user"></i> Apoderado </h5>
         <button class="close" type="button" data-dismiss="modal" aria-label="Close">

@@ -305,7 +305,7 @@ class ApostillaController extends Controller
             'ca'=>'required',
         ]);
 
-        if (config('apoderado.requiere_boleta_dj') && $form['tipo'] === 'd') {
+        if (config('apoderado.requiere_boleta_dj', false) && ($form['tipo'] === 'd' || $form['tipo'] === 'a')) {
             $form->validate([
                 'control_boleta' => 'required|string',
                 'control_boleta_valido' => 'required|in:1',
