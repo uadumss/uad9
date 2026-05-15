@@ -903,6 +903,11 @@ class TramiteNoAtentadoController extends Controller
         $nombreTipoSugerido=trim((string)($validacionPrincipal['nombre_tipo_noatentado_sugerido'] ?? ''));
         $requiereSeleccionManual=(bool)($validacionPrincipal['requiere_seleccion_manual'] ?? false);
 
+        $reintegroOk=(bool)($validacionReintegro['ok'] ?? false);
+        $reintegroAplica=(bool)($validacionReintegro['aplica'] ?? false);
+        $montoReintegro=$this->normalizarMontoRecaudacionNoAtentado($montos['monto_reintegro_validado'] ?? 0);
+        $usarMontoPorReintegro=$reintegroOk && $reintegroAplica && $montoReintegro>0;
+
         if($tipoSugerido>0){
             $existeSugerido=false;
             foreach($tiposPermitidos as $tipoItem){
@@ -929,53 +934,77 @@ class TramiteNoAtentadoController extends Controller
             }
         }
 
-        $montoTotal=$this->normalizarMontoRecaudacionNoAtentado($montos['monto_total_validado'] ?? 0);
-        if($montoTotal>0){
-            $tiposPorMonto=$this->buscarTiposNoAtentadoPorMontoTotal($montoTotal);
-            if(sizeof($tiposPorMonto)>0){
-                if(sizeof($tiposPorMonto)===1){
-                    $tipoUnico=$tiposPorMonto[0];
-                    return [
-                        'ok'=>true,
-                        'tipo_noatentado_sugerido'=>(int)($tipoUnico['cod_tre'] ?? 0),
-                        'nombre_tipo_noatentado_sugerido'=>trim((string)($tipoUnico['tre_nombre'] ?? '')),
-                        'tipos_noatentado_permitidos'=>$tiposPorMonto,
-                        'requiere_seleccion_manual'=>false,
-                        'message'=>'Pago validado. El tipo de trámite se resolvió por monto total.',
-                    ];
-                }
+        if($usarMontoPorReintegro){
+            $montoTotal=$this->normalizarMontoRecaudacionNoAtentado($montos['monto_total_validado'] ?? 0);
+            if($montoTotal>0){
+                $tiposPorMonto=$this->buscarTiposNoAtentadoPorMontoTotal($montoTotal);
+                if(sizeof($tiposPorMonto)>0 && sizeof($tiposPermitidos)>0){
+                    $permitidosMap=[];
+                    foreach($tiposPermitidos as $tipoItem){
+                        $cod=(int)($tipoItem['cod_tre'] ?? 0);
+                        if($cod>0){
+                            $permitidosMap[$cod]=true;
+                        }
+                    }
 
-                $planchaId = $this->obtenerCodTramitePlanchaNoAtentado();
-                $esPlancha = false;
-                $nombrePlancha = '';
-                foreach($tiposPorMonto as $t) {
-                    if ((int)($t['cod_tre'] ?? 0) === $planchaId) {
-                        $esPlancha = true;
-                        $nombrePlancha = trim((string)($t['tre_nombre'] ?? ''));
-                        break;
+                    if(sizeof($permitidosMap)>0){
+                        $tiposPorMonto=array_values(array_filter($tiposPorMonto,function($item) use ($permitidosMap){
+                            $cod=(int)($item['cod_tre'] ?? 0);
+                            return $cod>0 && array_key_exists($cod,$permitidosMap);
+                        }));
                     }
                 }
+                if(sizeof($tiposPorMonto)>0){
+                    if(sizeof($tiposPorMonto)===1){
+                        $tipoUnico=$tiposPorMonto[0];
+                        return [
+                            'ok'=>true,
+                            'tipo_noatentado_sugerido'=>(int)($tipoUnico['cod_tre'] ?? 0),
+                            'nombre_tipo_noatentado_sugerido'=>trim((string)($tipoUnico['tre_nombre'] ?? '')),
+                            'tipos_noatentado_permitidos'=>$tiposPorMonto,
+                            'requiere_seleccion_manual'=>false,
+                            'message'=>'Pago validado. El tipo de trámite se resolvió por monto total.',
+                        ];
+                    }
 
-                if ($esPlancha) {
+                    $planchaId = $this->obtenerCodTramitePlanchaNoAtentado();
+                    $esPlancha = false;
+                    $nombrePlancha = '';
+                    foreach($tiposPorMonto as $t) {
+                        if ((int)($t['cod_tre'] ?? 0) === $planchaId) {
+                            $esPlancha = true;
+                            $nombrePlancha = trim((string)($t['tre_nombre'] ?? ''));
+                            break;
+                        }
+                    }
+
+                    if ($esPlancha) {
+                        return [
+                            'ok'=>true,
+                            'tipo_noatentado_sugerido'=>$planchaId,
+                            'nombre_tipo_noatentado_sugerido'=>$nombrePlancha,
+                            'tipos_noatentado_permitidos'=>$tiposPorMonto,
+                            'requiere_seleccion_manual'=>false,
+                            'message'=>'Pago validado. Priorizado trámite de plancha por monto total.',
+                        ];
+                    }
+
                     return [
                         'ok'=>true,
-                        'tipo_noatentado_sugerido'=>$planchaId,
-                        'nombre_tipo_noatentado_sugerido'=>$nombrePlancha,
+                        'tipo_noatentado_sugerido'=>0,
+                        'nombre_tipo_noatentado_sugerido'=>'',
                         'tipos_noatentado_permitidos'=>$tiposPorMonto,
-                        'requiere_seleccion_manual'=>false,
-                        'message'=>'Pago validado. Priorizado trámite de plancha por monto total.',
+                        'requiere_seleccion_manual'=>true,
+                        'message'=>'Pago validado. Existen múltiples tipos de trámite con el mismo monto total; seleccione uno manualmente.',
                     ];
                 }
-
-                return [
-                    'ok'=>true,
-                    'tipo_noatentado_sugerido'=>0,
-                    'nombre_tipo_noatentado_sugerido'=>'',
-                    'tipos_noatentado_permitidos'=>$tiposPorMonto,
-                    'requiere_seleccion_manual'=>true,
-                    'message'=>'Pago validado. Existen múltiples tipos de trámite con el mismo monto total; seleccione uno manualmente.',
-                ];
             }
+
+            return [
+                'ok'=>false,
+                'code'=>'MONTO_TOTAL_NO_CORRESPONDE',
+                'message'=>'Pago validado, pero el monto total no coincide con ningún trámite No Atentado.',
+            ];
         }
 
         if($tipoSugerido<=0 && sizeof($tiposPermitidos)===1){

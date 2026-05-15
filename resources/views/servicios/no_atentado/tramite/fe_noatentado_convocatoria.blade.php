@@ -1610,6 +1610,7 @@ function noaIrPaso1() {
         if(codigo==='PAGO_YA_USADO')return{resumen:'Ya utilizado',clase:'badge-warning',detalle:mensaje||'Este pago ya fue utilizado en otro trámite.',codigo:codigo};
         if(codigo==='PREIMPRESO_REQUERIDO_MULTI_CANDIDATO')return{resumen:'Preimpreso requerido',clase:'badge-warning',detalle:mensaje,codigo:codigo};
         if(codigo==='CONTEXTO_CANDIDATOS_REQUERIDO')return{resumen:'Sin contexto',clase:'badge-warning',detalle:mensaje,codigo:codigo};
+        if(codigo==='MONTO_TOTAL_NO_CORRESPONDE')return{resumen:'Monto no coincide',clase:'badge-warning',detalle:mensaje||'El monto total no coincide con ningun tramite.',codigo:codigo};
         if(codigo.indexOf('REINTEGRO_')===0)return{resumen:'Reintegro no válido',clase:'badge-warning',detalle:mensaje,codigo:codigo};
         if(codigo==='CI_CANDIDATO_NO_COINCIDE'||codigo==='CARNET_CANDIDATO_NO_COINCIDE'||codigo==='DOCUMENTO_PAGO_NO_COINCIDE'||codigo==='FILTRO_PAGO_SIN_COINCIDENCIA'||codigo==='PREIMPRESO_PAGO_NO_COINCIDE'||codigo==='CUENTA_NO_CORRESPONDE'||codigo==='CUENTA_SIN_TRAMITE_HABILITADO'||codigo==='CUENTA_NO_IDENTIFICADA')return{resumen:'No corresponde',clase:'badge-warning',detalle:mensaje,codigo:codigo};
         return{resumen:'Pago no válido',clase:'badge-danger',detalle:mensaje,codigo:codigo};
