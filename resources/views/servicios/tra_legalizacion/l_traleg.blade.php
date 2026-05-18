@@ -174,7 +174,7 @@
                                                    title="Insertar datos al trámite"><i class="fas fa-pen-alt"></i>
                                                 </a>
 
-                                                <a href="#traleg" class="btn btn-light btn-circle btn-sm text-primary" data-toggle="modal" onclick="cargarDatos('{{url("f_cambiar tipo tramite/$t->cod_tra")}}','panel_traleg')"
+                                                <a href="#traleg" class="btn btn-light btn-circle btn-sm text-primary" data-toggle="modal" onclick="cargarDatos('{{url("f_cambiar_tipo_tramite/$t->cod_tra")}}','panel_traleg')"
                                                    title="Cambiar tipo de trámite"><i class="fas fa-arrows-alt"></i>
                                                 </a>
 

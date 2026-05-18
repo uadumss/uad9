@@ -3275,7 +3275,7 @@ class TramiteLegalizacionController extends Controller
     }
     public function f_tipo_tramite($cod_tra){
         $tramita=Tramita::find($cod_tra);
-        $docleg=D_tramita::all()->where('cod_tra','=',$cod_tra)->first();
+        $docleg=D_tramita::where('cod_tra','=',$cod_tra)->first();
         $persona="";
         $datos_per=1;
         if($tramita->id_per!=''){
@@ -3292,7 +3292,7 @@ class TramiteLegalizacionController extends Controller
             'tramite'=>'required',
         ]);
         $tramita=Tramita::find($form['ctra']);
-        $docleg=D_tramita::all()->where('cod_tra','=',$form['ctra'])->first();
+        $docleg=D_tramita::where('cod_tra','=',$form['ctra'])->first();
         if($docleg){
             \Session::flash('error','No se puede modificar el tipo de trámite debido a que tiene documentos asociados');
         }else{
