@@ -1150,6 +1150,36 @@ class TramiteNoAtentadoController extends Controller
         return strpos($nombre,'PLANCHA')!==false && strpos($nombre,'ESTUDIANT')!==false;
     }
 
+    private function esTramiteAcreditativoDiplomaAcademico(?Tramite $tramite): bool
+    {
+        if(!$tramite){
+            return false;
+        }
+
+        $campos=[
+            (string)($tramite->tre_nombre ?? ''),
+            (string)($tramite->tre_titulo ?? ''),
+            (string)($tramite->tre_titulo_interno ?? ''),
+        ];
+
+        foreach($campos as $campo){
+            $normalizado=$this->normalizarTextoComparacionNoAtentado($campo);
+            if($normalizado===''){
+                continue;
+            }
+
+            $tieneCert=strpos($normalizado,'CERT')!==false;
+            $tieneAcreditat=strpos($normalizado,'ACREDITAT')!==false;
+            $tieneDipl=strpos($normalizado,'DIPL')!==false;
+            $tieneAcadem=strpos($normalizado,'ACADEM')!==false;
+            if($tieneCert && $tieneAcreditat && $tieneDipl && $tieneAcadem){
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function obtenerCodTramitePlanchaNoAtentado(): int
     {
         $tramites=Tramite::query()
@@ -2832,8 +2862,16 @@ class TramiteNoAtentadoController extends Controller
             ->where('cod_dtra','=',$cod_dtra)->orderBy('cod_noa','ASC')->get();
         if(sizeof($candidatos)>0){
             if($tramite_noatentado->dtra_cod_glosa==''){
-                $tramite_noatentado->dtra_cod_glosa=$modelo_glosa->cod_glo;
-                $tramite_noatentado->dtra_glosa=Funciones::glosa_noatentado($tramite,$modelo_glosa,$tramite_noatentado,$convocatoria,$candidatos);
+                $preservarGlosa=$this->esTramiteAcreditativoDiplomaAcademico($tramite);
+                $glosaExistente=trim((string)($tramite_noatentado->dtra_glosa ?? ''));
+                if($preservarGlosa && $glosaExistente!=='' && $glosaExistente!=='0'){
+                    if($modelo_glosa){
+                        $tramite_noatentado->dtra_cod_glosa=$modelo_glosa->cod_glo;
+                    }
+                }else{
+                    $tramite_noatentado->dtra_cod_glosa=$modelo_glosa->cod_glo;
+                    $tramite_noatentado->dtra_glosa=Funciones::glosa_noatentado($tramite,$modelo_glosa,$tramite_noatentado,$convocatoria,$candidatos);
+                }
             }else{
                 $modelo_glosa=Glosa::find($tramite_noatentado->dtra_cod_glosa);
             }
@@ -3154,9 +3192,14 @@ class TramiteNoAtentadoController extends Controller
             return redirect()->back();
         }
 
+        $tramite=Tramite::find($tramite_noatentado->cod_tre);
+        $preservarGlosa=$this->esTramiteAcreditativoDiplomaAcademico($tramite);
+
         $tramite_noatentado->dtra_entregado=null;
         $tramite_noatentado->dtra_fecha_recojo=null;
-        $tramite_noatentado->dtra_cod_glosa=null;
+        if(!$preservarGlosa){
+            $tramite_noatentado->dtra_cod_glosa=null;
+        }
         $tramite_noatentado->dtra_generado=null;
         $tramite_noatentado->save();
         SessionController::write('U','','Editar noatentado','d_tramitas','8',$tramite_noatentado->cod_dtra);
