@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Funciones;
+use App\Models\Resolucion;
 use App\Models\Titulo;
 use App\Models\Tramite;
 use Illuminate\Support\Facades\DB;
@@ -129,6 +130,32 @@ class SitraService
         ]);
 
         return $query->first();
+    }
+
+    /**
+     * Busca una resolución en la base local (UAD9/SID)
+     */
+    public function buscarResolucionInterna(string $numero, string $gestion = ''): ?Resolucion
+    {
+        $numero = trim($numero);
+        if ($numero === '') {
+            return null;
+        }
+
+        $gestion = trim($gestion);
+        if ($gestion !== '') {
+            $resolucion = Resolucion::where('res_numero', '=', $numero)
+                ->where('res_gestion', '=', $gestion)
+                ->orderByDesc('cod_res')
+                ->first();
+            if ($resolucion) {
+                return $resolucion;
+            }
+        }
+
+        return Resolucion::where('res_numero', '=', $numero)
+            ->orderByDesc('cod_res')
+            ->first();
     }
 
     /**

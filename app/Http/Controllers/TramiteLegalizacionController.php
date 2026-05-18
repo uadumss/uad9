@@ -302,6 +302,29 @@ class TramiteLegalizacionController extends Controller
         $fuente='';
         $titulo = null;
 
+        if ($buscarEnSitra === 'res') {
+            $resolucion = app(SitraService::class)->buscarResolucionInterna(
+                (string)$numero,
+                trim((string)($docleg->dtra_gestion ?? ''))
+            );
+
+            if ($resolucion) {
+                $fuente='sid';
+                $respuesta=(object)[
+                    'nombre'=>trim((string)($persona->per_apellido.' '.$persona->per_nombre)),
+                    'titulo'=>trim((string)($resolucion->res_objeto ?? $resolucion->res_desc ?? $resolucion->res_tema ?? '')),
+                    'numero'=>trim((string)$resolucion->res_numero),
+                    'gestion'=>trim((string)$resolucion->res_gestion),
+                    'tipo'=>Funciones::DocumentoSitra($buscarEnSitra),
+                ];
+            } else {
+                $fuente='ninguno';
+                $respuesta=(object)[];
+            }
+
+            return view('servicios.tra_legalizacion.verificacion_sitra', compact('respuesta','persona','docleg','documento','fuente','titulo', 'buscarEnSitra'));
+        }
+
         try {
             $respuesta=app(SitraService::class)->consultarSitra($persona->per_ci, $numero, $buscarEnSitra);
         } catch (\Throwable $e) {
@@ -501,7 +524,7 @@ class TramiteLegalizacionController extends Controller
             $verificar_sitra=app(SitraService::class)->debeValidar($a) ? '2' : '';
             $numeroDoc=$form['numero'];
 
-            if(!in_array($datosTramita->tra_tipo_tramite,['E','F'],true) && app(SitraService::class)->debeValidar($a)){
+            if(!in_array($datosTramita->tra_tipo_tramite,['E','F'],true) && app(SitraService::class)->debeValidar($a) && $a !== 'res'){
                 $valGestion = intval(trim((string)($form['gestion'] ?? '')));
                 if($valGestion < 1832) {
                     $verificar_sitra = '2'; // No existe en SITRA/SID
@@ -550,6 +573,24 @@ class TramiteLegalizacionController extends Controller
                     }else{
                         $numeroDoc=0;
                     }
+                }
+            } elseif ($a === 'res') {
+                $resolucion = app(SitraService::class)->buscarResolucionInterna(
+                    (string)$form['numero'], 
+                    trim((string)($form['gestion'] ?? ''))
+                );
+
+                if ($resolucion) {
+                    $verificar_sitra = '0';
+                    $respuesta = (object)[
+                        'nombre' => trim((string)($persona->per_apellido.' '.$persona->per_nombre)),
+                        'titulo' => trim((string)($resolucion->res_objeto ?? $resolucion->res_desc ?? $resolucion->res_tema ?? '')),
+                        'numero' => trim((string)$resolucion->res_numero),
+                        'gestion' => trim((string)$resolucion->res_gestion),
+                        'tipo' => Funciones::DocumentoSitra($buscarEnSitra),
+                    ];
+                } else {
+                    $verificar_sitra = '2';
                 }
             }
 
@@ -1644,6 +1685,36 @@ class TramiteLegalizacionController extends Controller
                 'ok'=>true,
                 'aplica'=>false,
                 'message'=>'SITRA: no aplica para este tipo.',
+            ]);
+        }
+
+        if ($buscarEn === 'res') {
+            $nombre = trim((string)(($persona->per_apellido ?? '').' '.($persona->per_nombre ?? '')));
+            $resolucion = app(SitraService::class)->buscarResolucionInterna($numero, $gestion);
+            if ($resolucion) {
+                return response()->json([
+                    'ok'=>true,
+                    'aplica'=>true,
+                    'estado'=>'0',
+                    'fuente'=>'sid',
+                    'nombre'=>$nombre,
+                    'titulo'=>trim((string)($resolucion->res_objeto ?? $resolucion->res_desc ?? $resolucion->res_tema ?? '')),
+                    'tipo'=>Funciones::DocumentoSitra($buscarEn),
+                    'numero'=>trim((string)$resolucion->res_numero),
+                    'gestion'=>trim((string)$resolucion->res_gestion),
+                    'message'=>'Validado con respaldo SID.',
+                ]);
+            }
+
+            return response()->json([
+                'ok'=>true,
+                'aplica'=>true,
+                'estado'=>'2',
+                'fuente'=>'sitra_sid',
+                'message'=>'No existe en resoluciones.',
+                'numero'=>$numero,
+                'gestion'=>$gestion,
+                'tipo'=>Funciones::DocumentoSitra($buscarEn),
             ]);
         }
 

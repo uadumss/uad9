@@ -809,8 +809,9 @@ class Funciones extends Model
             case 'tp': return 'Título Profesional'; break;
             case 'tpos': return 'Título de posgrado'; break;
             case 'di': return 'Diploma Académico'; break;
-            case 'su': return 'Certificado Supletorio';break;
+            case 'su': return 'Certificado Supletorio'; break;
             case 're': return 'Reválida'; break;
+            case 'res': return 'Resolución'; break;
         }
     }
     public static function tipo_resolucion($documento){
@@ -864,6 +865,14 @@ class Funciones extends Model
             case "di":  return 'DI'; break;
             case "tpos": return 'TPOS'; break;
             case "re":  return 'RE'; break;
+            case "res": return 'RE'; break;
+            case "rr":  return 'RE'; break;
+            case "rcu": return 'RE'; break;
+            case "rvr": return 'RE'; break;
+            case "rs":  return 'RE'; break;
+            case "rcf": return 'RE'; break;
+            case "rcc": return 'RE'; break;
+            case "rc":  return 'RE'; break;
             case "su":  return 'SU'; break;
         }
     }
