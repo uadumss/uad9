@@ -105,7 +105,7 @@ class TramiteLegalizacionController extends Controller
             ->leftJoin('personas','tramitas.id_per','=','personas.id_per')
             ->where('cod_tra',$cod_tra)
             ->select('tramitas.*','per_nombre','per_apellido')->first();
-        $docleg=D_tramita::all()->where('cod_tra',$cod_tra);
+        $docleg=D_tramita::where('cod_tra',$cod_tra)->get();
         return view('servicios.tra_legalizacion.f_eli_tramita',compact('tramita','docleg'));
     }
     public function fe_traleg($cod_tra){
@@ -264,19 +264,24 @@ class TramiteLegalizacionController extends Controller
     }
     public function eli_traleg(Request $form){
         $tramita=Tramita::find($form['ctra']);
+        if(!$tramita){
+            \Session::flash('error','Trámite no encontrado.');
+            return redirect('listar tramite legalizacion/'.date('Y-m-d'));
+        }
+
         $fecha=date('Y-m-d',strtotime($tramita->tra_fecha_solicitud));
         if($tramita->tra_tipo_tramite=='F') {
-            $d_tramita = D_tramita::all()->where('cod_tra', '=', $tramita->cod_tra)->first();
+            $d_tramita = D_tramita::where('cod_tra', $tramita->cod_tra)->first();
             if ($d_tramita){
-                $eli_docleg = DB::delete('delete from d_confrontacions  where cod_dtra=' . $d_tramita->cod_dtra);
+                DB::delete('delete from d_confrontacions where cod_dtra=' . $d_tramita->cod_dtra);
                 $d_tramita->delete();
             }
         }else{
-            $eli_docleg=DB::delete('delete from d_tramitas where cod_tra='.$form['ctra']);
+            DB::delete('delete from d_tramitas where cod_tra='.$form['ctra']);
         }
         $tramita->delete();
         //[id persona]*[apoderado]*[numero]*
-        $nuevo=$tramita->id_per."*".$tramita->cod_apro.'*'.$tramita['numero'].'*'.$tramita['fecha_solicitud'];
+        $nuevo=$tramita->id_per."*".$tramita->cod_apo.'*'.$tramita->tra_numero.'*'.$tramita->tra_fecha_solicitud;
         SessionController::write('D',$nuevo,'','tramitas','3',$tramita->cod_tra);
         \Session::flash('exito','Se ha eliminado correctamente el trámite');
         return redirect('listar tramite legalizacion/'.$fecha);
