@@ -2759,52 +2759,6 @@ class TramiteLegalizacionController extends Controller
         return false;
     }
 
-    private function normalizarTextoComparacionGlosa(string $texto): string
-    {
-        $valor=mb_strtoupper(trim($texto));
-        $valor=strtr($valor,[
-            'Á'=>'A',
-            'É'=>'E',
-            'Í'=>'I',
-            'Ó'=>'O',
-            'Ú'=>'U',
-            'Ñ'=>'N',
-        ]);
-        $valor=preg_replace('/[^A-Z0-9 ]+/',' ',$valor) ?? '';
-        $valor=preg_replace('/\s+/',' ',trim((string)$valor)) ?? '';
-        return (string)$valor;
-    }
-
-    private function esTramiteAcreditativoDiplomaAcademico(?Tramite $tramite): bool
-    {
-        if(!$tramite){
-            return false;
-        }
-
-        $campos=[
-            (string)($tramite->tre_nombre ?? ''),
-            (string)($tramite->tre_titulo ?? ''),
-            (string)($tramite->tre_titulo_interno ?? ''),
-        ];
-
-        foreach($campos as $campo){
-            $normalizado=$this->normalizarTextoComparacionGlosa($campo);
-            if($normalizado===''){
-                continue;
-            }
-
-            $tieneCert=strpos($normalizado,'CERT')!==false;
-            $tieneAcreditat=strpos($normalizado,'ACREDITAT')!==false;
-            $tieneDipl=strpos($normalizado,'DIPL')!==false;
-            $tieneAcadem=strpos($normalizado,'ACADEM')!==false;
-            if($tieneCert && $tieneAcreditat && $tieneDipl && $tieneAcadem){
-                return true;
-            }
-        }
-
-        return false;
-    }
-
 
     public function obs_docleg($cod_dtra){
         $docleg=DB::table('d_tramitas')->join('tramites','d_tramitas.cod_tre','=','tramites.cod_tre')
@@ -2897,9 +2851,8 @@ class TramiteLegalizacionController extends Controller
 
             $mes=Funciones::mes(date('n'));
             $numero="<span style='font-weight:bold'>".$docleg->dtra_numero."/".substr($docleg->dtra_gestion,-2)."</span>";
-            $preservarGlosa=$this->esTramiteAcreditativoDiplomaAcademico($tramite);
             $glosaExistente=trim((string)($docleg->dtra_glosa ?? ''));
-            $usarGlosaGuardada=$preservarGlosa && $glosaExistente!=='' && $glosaExistente!=='0';
+            $usarGlosaGuardada=$glosaExistente!=='' && $glosaExistente!=='0';
 
             if(!$usarGlosaGuardada){
                 if($docleg->dtra_cod_glosa==''){
