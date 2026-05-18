@@ -11,6 +11,7 @@ return [
     |
     */
 
+    'habilitado' => env('APODERADO_HABILITADO', true),
     'requiere_boleta_dj' => env('REQUIERE_BOLETA_DJ', false),
 
 ];

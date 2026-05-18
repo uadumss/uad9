@@ -194,12 +194,13 @@ class ApostillaController extends Controller
         $persona=array();
         $apoderado=array();
         $nuevo="";
+        $apoderadoHabilitado = (bool) config('apoderado.habilitado', true);
         $form->validate([
             'ci'=>'required',
             'nombre'=>'required',
             'apellido'=>'required',
         ]);
-        if($form['ci_apoderado']!='' || $form['apellido_apoderado']!='' || $form['nombre_apoderado']!=''){
+        if($apoderadoHabilitado && ($form['ci_apoderado']!='' || $form['apellido_apoderado']!='' || $form['nombre_apoderado']!='')){
             $form->validate([
                 'ci_apoderado'=>'required',
                 'nombre_apoderado'=>'required',
@@ -297,6 +298,9 @@ class ApostillaController extends Controller
         return redirect('editar tramite apostilla/'.$tramite_apostilla->cod_apos);
     }
     public function g_apoderado_tramite_apostilla(Request $form){
+        if (!config('apoderado.habilitado', true)) {
+            abort(404);
+        }
         $form->validate([
             'ci_apoderado'=>'required',
             'nombre_apoderado'=>'required',

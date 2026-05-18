@@ -4,6 +4,7 @@
         $requiereBoletaDj = (bool) config('apoderado.requiere_boleta_dj', false);
         $tipoApoderado = $tramita->tra_tipo_apoderado ?: 'd';
         $mostrarBoleta = ($tipoApoderado === 'd' && $requiereBoletaDj);
+        $apoderadoHabilitado = (bool) config('apoderado.habilitado', true);
     @endphp
     <script>window.GLOB_REQUIERE_BOLETA_DJ = {{ $requiereBoletaDj ? 'true' : 'false' }};</script>
     <div class="modal-header bg-primary">
@@ -67,121 +68,123 @@
                  </table>
 
 
-                 <span class="text-primary font-weight-bold font-italic" style="font-size: 0.85em">* Datos del apoderado</span>
-                 <br/>
-                 <br/>
-                     <div class="" id="apoderadoEntrega">
-                         @if($apoderado)
-                         <table class=" table table-sm">
-                             <tr>
-                                 <th class="text-right font-italic text-dark">CI : </th>
-                                 <td class="border-bottom border-dark">
-                                     @if($apoderado)
-                                         {{$apoderado['apo_ci']}}
-                                     @else
-                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                     @endif
-                                 </td>
-                             </tr>
-                             <tr>
-                                 <th class="text-right font-italic text-dark font-italic">Nombre apoderado : </th>
-                                 <td class="border-bottom border-dark">
-                                     @if($apoderado)
-                                         {{$apoderado['apo_apellido']." ".$apoderado['apo_nombre']}}
-                                     @else
-                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                     @endif
-                                 </td>
-                             </tr>
-                             <tr>
-                                 <th class="text-right font-italic text-dark">Tipo de apoderado : </th>
-                                 <td class="border-bottom border-dark">
-                                     @if($tramita->tra_tipo_apoderado=='d')
-                                         Declaración jurada
-                                     @else
-                                         @if($tramita->tra_tipo_apoderado=='p')
-                                             Poder notariado
+                 @if($apoderadoHabilitado)
+                     <span class="text-primary font-weight-bold font-italic" style="font-size: 0.85em">* Datos del apoderado</span>
+                     <br/>
+                     <br/>
+                         <div class="" id="apoderadoEntrega">
+                             @if($apoderado)
+                             <table class=" table table-sm">
+                                 <tr>
+                                     <th class="text-right font-italic text-dark">CI : </th>
+                                     <td class="border-bottom border-dark">
+                                         @if($apoderado)
+                                             {{$apoderado['apo_ci']}}
                                          @else
                                              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                                          @endif
-                                     @endif
-                                 </td>
-                             </tr>
-                         </table>
-                         @endif
-                         @if(!$apoderado)
-                             <button id="otros" class="btn btn-sm btn-primary float-right" onclick="$('#editarApoderadoEntrega').show(500); $('#apoderadoEntrega').hide(500);"> Registrar apoderado</button>
-                         @endif
-                     </div>
-                     <div id="editarApoderadoEntrega" class="border rounded shadow" style="display: none;">
-                         <div class="p-3">
-                             <a onclick="$('#editarApoderadoEntrega').hide(500);$('#apoderadoEntrega').show(500); " id="ocultar" style="float:right">
-                                 <i class="fas fa-minus-circle text-danger"></i></a>
-                             <span class="text-primary font-weight-bold font-italic" style="font-size: 0.85em">* Editar datos del apoderado</span>
-                             <br><br>
-
-                             <form id="form_apoderado_ent">
-                                @csrf
-                                 @php
-                                     $nombre='';    $apellido='';  $ci="";
-                                     if($apoderado){   $ci=$apoderado->apo_ci;       $apellido=$apoderado->apo_apellido;     $nombre=$apoderado->apo_nombre;  }
-                                 @endphp
-
-                                 <table class="table-hover col-md-12">
-                                     <tr>
-                                         <th class="text-right font-italic">CI : </th>
-                                         <td class="border-bottom border-dark">
-                                             <input class="form-control form-control-sm border-0" placeholder=""
-                                                    id="ci_entrega_apoderado" name="ci" value="{{$ci}}" oninput="verificarBoletaApoderadoEntrega();"/></td>
-                                     </tr>
-                                     <tr id="fila_boleta_apoderado_entrega" data-requiere-boleta="{{ $requiereBoletaDj ? 1 : 0 }}" style="{{ $mostrarBoleta ? '' : 'display:none;' }}">
-                                        <th class="text-right font-italic">N° control boleta : </th>
-                                        <td class="border-bottom border-dark">
-                                            <input class="form-control form-control-sm border-0" placeholder="Ingrese número de control"
-                                                   id="control_boleta_entrega" name="control_boleta" oninput="verificarBoletaApoderadoEntrega()"/>
-                                            <div style="margin-top:6px;"><span id="estado_pago_apoderado_entrega" class="badge badge-secondary">Sin validar</span></div>
-                                            <input type="hidden" id="control_boleta_valido_entrega" name="control_boleta_valido" value="0">
-                                            <input type="hidden" name="monto_boleta" id="monto_boleta_entrega" value="0">
-                                        </td>
-                                    </tr>
-                                     <tr>
-                                         <th class="text-right font-italic">Apellidos : </th>
-                                         <td class="border-bottom border-dark">
-                                             <input class="form-control form-control-sm border-0" placeholder=""
-                                                    required name="apellido" id="apellido_apoderado" value="{{$apellido}}" {{ $mostrarBoleta ? 'readonly' : '' }} /></td>
-                                     </tr>
-                                     <tr>
-                                         <th class="text-right font-italic">Nombres : </th>
-                                         <td class="border-bottom border-dark">
-                                             <input class="form-control form-control-sm border-0" placeholder=""
-                                                    required name="nombre" id="nombre_apoderado" value="{{$nombre}}" {{ $mostrarBoleta ? 'readonly' : '' }} /></td>
-                                     </tr>
-                                     <tr>
-                                         <th class="text-right font-italic" valign="top">Tipo de apoderado : </th>
-                                         <td class="border-bottom border-dark">
-                                             @if($tramita->tra_tipo_apoderado=='d')
-                                                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" checked onchange="actualizarModoApoderadoEntrega()"> Declaración jurada<br/>
-                                                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoEntrega()"> Poder notariado
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <th class="text-right font-italic text-dark font-italic">Nombre apoderado : </th>
+                                     <td class="border-bottom border-dark">
+                                         @if($apoderado)
+                                             {{$apoderado['apo_apellido']." ".$apoderado['apo_nombre']}}
+                                         @else
+                                             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                         @endif
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <th class="text-right font-italic text-dark">Tipo de apoderado : </th>
+                                     <td class="border-bottom border-dark">
+                                         @if($tramita->tra_tipo_apoderado=='d')
+                                             Declaración jurada
+                                         @else
+                                             @if($tramita->tra_tipo_apoderado=='p')
+                                                 Poder notariado
                                              @else
-                                                 @if($tramita->tra_tipo_apoderado=='p')
-                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" onchange="actualizarModoApoderadoEntrega()"> Declaración jurada<br/>
-                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" checked onchange="actualizarModoApoderadoEntrega()"> Poder notariado
-                                                 @else
-                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" onchange="actualizarModoApoderadoEntrega()"> Declaración jurada<br/>
-                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoEntrega()"> Poder notariado
+                                                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                             @endif
                                          @endif
-                                         @endif
-
-                                     </tr>
-                                 </table>
-                                 <br/>
-                                 <input type="hidden" name="ctra" value="{{$tramita->cod_tra}}">
-                                 <input type="hidden" name="pan" value="ent">
-                             </form>
-                             <a class="btn btn-primary btn-sm text-white float-right" onclick="enviar('form_apoderado_ent','{{url("guardar apoderado")}}','panel_traleg');" >Guardar</a><br/>
-                             <br/>
+                                     </td>
+                                 </tr>
+                             </table>
+                             @endif
+                             @if(!$apoderado)
+                                 <button id="otros" class="btn btn-sm btn-primary float-right" onclick="$('#editarApoderadoEntrega').show(500); $('#apoderadoEntrega').hide(500);"> Registrar apoderado</button>
+                             @endif
                          </div>
-                     </div>
+                         <div id="editarApoderadoEntrega" class="border rounded shadow" style="display: none;">
+                             <div class="p-3">
+                                 <a onclick="$('#editarApoderadoEntrega').hide(500);$('#apoderadoEntrega').show(500); " id="ocultar" style="float:right">
+                                     <i class="fas fa-minus-circle text-danger"></i></a>
+                                 <span class="text-primary font-weight-bold font-italic" style="font-size: 0.85em">* Editar datos del apoderado</span>
+                                 <br><br>
+
+                                 <form id="form_apoderado_ent">
+                                    @csrf
+                                     @php
+                                         $nombre='';    $apellido='';  $ci="";
+                                         if($apoderado){   $ci=$apoderado->apo_ci;       $apellido=$apoderado->apo_apellido;     $nombre=$apoderado->apo_nombre;  }
+                                     @endphp
+
+                                     <table class="table-hover col-md-12">
+                                         <tr>
+                                             <th class="text-right font-italic">CI : </th>
+                                             <td class="border-bottom border-dark">
+                                                 <input class="form-control form-control-sm border-0" placeholder=""
+                                                        id="ci_entrega_apoderado" name="ci" value="{{$ci}}" oninput="verificarBoletaApoderadoEntrega();"/></td>
+                                         </tr>
+                                         <tr id="fila_boleta_apoderado_entrega" data-requiere-boleta="{{ $requiereBoletaDj ? 1 : 0 }}" style="{{ $mostrarBoleta ? '' : 'display:none;' }}">
+                                            <th class="text-right font-italic">N° control boleta : </th>
+                                            <td class="border-bottom border-dark">
+                                                <input class="form-control form-control-sm border-0" placeholder="Ingrese número de control"
+                                                       id="control_boleta_entrega" name="control_boleta" oninput="verificarBoletaApoderadoEntrega()"/>
+                                                <div style="margin-top:6px;"><span id="estado_pago_apoderado_entrega" class="badge badge-secondary">Sin validar</span></div>
+                                                <input type="hidden" id="control_boleta_valido_entrega" name="control_boleta_valido" value="{{ $mostrarBoleta ? '0' : '1' }}">
+                                                <input type="hidden" name="monto_boleta" id="monto_boleta_entrega" value="0">
+                                            </td>
+                                        </tr>
+                                         <tr>
+                                             <th class="text-right font-italic">Apellidos : </th>
+                                             <td class="border-bottom border-dark">
+                                                 <input class="form-control form-control-sm border-0" placeholder=""
+                                                        required name="apellido" id="apellido_apoderado" value="{{$apellido}}" {{ $mostrarBoleta ? 'readonly' : '' }} /></td>
+                                         </tr>
+                                         <tr>
+                                             <th class="text-right font-italic">Nombres : </th>
+                                             <td class="border-bottom border-dark">
+                                                 <input class="form-control form-control-sm border-0" placeholder=""
+                                                        required name="nombre" id="nombre_apoderado" value="{{$nombre}}" {{ $mostrarBoleta ? 'readonly' : '' }} /></td>
+                                         </tr>
+                                         <tr>
+                                             <th class="text-right font-italic" valign="top">Tipo de apoderado : </th>
+                                             <td class="border-bottom border-dark">
+                                                 @if($tramita->tra_tipo_apoderado=='d')
+                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" checked onchange="actualizarModoApoderadoEntrega()"> Declaración jurada<br/>
+                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoEntrega()"> Poder notariado
+                                                 @else
+                                                     @if($tramita->tra_tipo_apoderado=='p')
+                                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" onchange="actualizarModoApoderadoEntrega()"> Declaración jurada<br/>
+                                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" checked onchange="actualizarModoApoderadoEntrega()"> Poder notariado
+                                                     @else
+                                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" onchange="actualizarModoApoderadoEntrega()"> Declaración jurada<br/>
+                                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoEntrega()"> Poder notariado
+                                             @endif
+                                             @endif
+
+                                         </tr>
+                                     </table>
+                                     <br/>
+                                     <input type="hidden" name="ctra" value="{{$tramita->cod_tra}}">
+                                     <input type="hidden" name="pan" value="ent">
+                                 </form>
+                                 <a class="btn btn-primary btn-sm text-white float-right" onclick="enviar('form_apoderado_ent','{{url("guardar apoderado")}}','panel_traleg');" >Guardar</a><br/>
+                                 <br/>
+                             </div>
+                         </div>
+                 @endif
              </div>
 
 

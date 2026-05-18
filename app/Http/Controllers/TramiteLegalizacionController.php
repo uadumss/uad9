@@ -3015,6 +3015,9 @@ class TramiteLegalizacionController extends Controller
 
     }
     public function f_apoderado($cod_tra){
+        if (!config('apoderado.habilitado', true)) {
+            abort(404);
+        }
         $tramita=Tramita::find($cod_tra);
         $apoderado=null;
         $persona=null;
@@ -3027,6 +3030,9 @@ class TramiteLegalizacionController extends Controller
         return view('servicios.tra_legalizacion.apoderado',compact('tramita','apoderado','persona'));
     }
     public function g_apoderado(Request $form){
+        if (!config('apoderado.habilitado', true)) {
+            abort(404);
+        }
         $form->validate([
             'ctra' => 'required|integer',
             'ci' => 'required|string|max:30',

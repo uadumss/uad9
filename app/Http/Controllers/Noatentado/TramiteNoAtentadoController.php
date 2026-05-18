@@ -3032,6 +3032,9 @@ class TramiteNoAtentadoController extends Controller
         return view('servicios.no_atentado.entrega.fe_entrega_noa',compact('tramite_noatentado','convocatoria','noatentados','apoderado'));
     }
     public function g_apoderado(Request $form){
+        if (!config('apoderado.habilitado', true)) {
+            abort(404);
+        }
         $form->validate([
             'cdtra'=>'required|integer',
             'ci'=>'required|string|max:30',

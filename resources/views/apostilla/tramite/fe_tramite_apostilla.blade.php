@@ -459,6 +459,9 @@
             $urlGuardarApoderadoTramiteApostilla = url('guardar apoderado tramite apostilla');
             $urlTablaTramiteApostilla            = url('listar tramite apostilla tabla/' . date('Y-m-d'));
             $urlMostrarObservacionApostilla      = url('mostrar observacion tramite apostilla/' . ($tramite_apostilla->cod_apos ?? ''));
+            $apoderadoHabilitado = (bool) config('apoderado.habilitado', true);
+            $requiereBoletaDj = (bool) config('apoderado.requiere_boleta_dj', false);
+            $mostrarBoletaNuevo = $requiereBoletaDj;
         @endphp
 
         {{-- ════ GRID PRINCIPAL ════ --}}
@@ -501,54 +504,56 @@
                             </div>
                         </div>
 
-                        {{-- Apoderado --}}
-                        <div class="e-panel">
-                            <div class="e-panel-head">
-                                <span class="ph-bar slate"></span>
-                                <span class="ph-title">Apoderado</span>
-                            </div>
-                            <div class="e-panel-body">
-                                <div class="fg fg-2">
-                                    <div class="e-field fg-span2">
-                                        <label>CI apoderado</label>
-                                             <input class="e-input" type="text" name="ci_apoderado" id="ci_apoderado_apostilla"
-                                                 oninput="verificarBoleta();" autocomplete="off">
-                                    </div>
-                                    <div class="e-field fg-span2" id="contenedor_boleta_apostilla">
-                                        <label>N° control boleta</label>
-                                            <input class="e-input" type="text" name="control_boleta" id="control_boleta_apostilla"
-                                                     oninput="verificarBoleta()" autocomplete="off" placeholder="Ingrese número de control">
-                                        <div style="margin-top:6px;"><span id="estado_pago_apoderado" class="badge badge-secondary">Sin validar</span></div>
-                                        <input type="hidden" name="control_boleta_valido" id="control_boleta_valido" value="0">
-                                        <input type="hidden" name="monto_boleta" id="monto_boleta_apostilla" value="0">
-                                    </div>
+                        @if($apoderadoHabilitado)
+                            {{-- Apoderado --}}
+                            <div class="e-panel">
+                                <div class="e-panel-head">
+                                    <span class="ph-bar slate"></span>
+                                    <span class="ph-title">Apoderado</span>
+                                </div>
+                                <div class="e-panel-body">
+                                    <div class="fg fg-2">
+                                        <div class="e-field fg-span2">
+                                            <label>CI apoderado</label>
+                                                 <input class="e-input" type="text" name="ci_apoderado" id="ci_apoderado_apostilla"
+                                                     oninput="verificarBoleta();" autocomplete="off">
+                                        </div>
+                                        <div class="e-field fg-span2" id="contenedor_boleta_apostilla" style="{{ $mostrarBoletaNuevo ? '' : 'display:none;' }}">
+                                            <label>N° control boleta</label>
+                                                <input class="e-input" type="text" name="control_boleta" id="control_boleta_apostilla"
+                                                         oninput="verificarBoleta()" autocomplete="off" placeholder="Ingrese número de control">
+                                            <div style="margin-top:6px;"><span id="estado_pago_apoderado" class="badge badge-secondary">Sin validar</span></div>
+                                        <input type="hidden" name="control_boleta_valido" id="control_boleta_valido" value="{{ $mostrarBoletaNuevo ? '0' : '1' }}">
+                                            <input type="hidden" name="monto_boleta" id="monto_boleta_apostilla" value="0">
+                                        </div>
 
-                                    <div class="e-field">
-                                        <label>Nombres</label>
-                                        <input class="e-input" type="text" name="nombre_apoderado"
-                                               id="nombre_apoderado" required autocomplete="off" readonly>
-                                    </div>
-                                    <div class="e-field">
-                                        <label>Apellidos</label>
-                                        <input class="e-input" type="text" name="apellido_apoderado"
-                                               id="apellido_apoderado" required autocomplete="off" readonly>
-                                    </div>
-                                    <div class="e-field fg-span2">
-                                        <label>Tipo de apoderado</label>
-                                        <div class="e-radio-row">
-                                            <label class="e-radio-opt">
-                                                <input type="radio" name="tipo" value="d" checked onchange="actualizarModoApoderadoApostilla()">
-                                                <span>Declaración jurada</span>
-                                            </label>
-                                            <label class="e-radio-opt">
-                                                <input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoApostilla()">
-                                                <span>Poder notariado</span>
-                                            </label>
+                                        <div class="e-field">
+                                            <label>Nombres</label>
+                                                 <input class="e-input" type="text" name="nombre_apoderado"
+                                                     id="nombre_apoderado" required autocomplete="off" {{ $mostrarBoletaNuevo ? 'readonly' : '' }}>
+                                        </div>
+                                        <div class="e-field">
+                                            <label>Apellidos</label>
+                                                 <input class="e-input" type="text" name="apellido_apoderado"
+                                                     id="apellido_apoderado" required autocomplete="off" {{ $mostrarBoletaNuevo ? 'readonly' : '' }}>
+                                        </div>
+                                        <div class="e-field fg-span2">
+                                            <label>Tipo de apoderado</label>
+                                            <div class="e-radio-row">
+                                                <label class="e-radio-opt">
+                                                    <input type="radio" name="tipo" value="d" checked onchange="actualizarModoApoderadoApostilla()">
+                                                    <span>Declaración jurada</span>
+                                                </label>
+                                                <label class="e-radio-opt">
+                                                    <input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoApostilla()">
+                                                    <span>Poder notariado</span>
+                                                </label>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        @endif
 
                         <input type="hidden" name="ca" value="{{ $cod_apos }}">
 
@@ -598,88 +603,90 @@
                             </div>
                         </div>
 
-                        <div class="e-panel">
-                            <div class="e-panel-head">
-                                <span class="ph-bar slate"></span>
-                                <span class="ph-title">Apoderado</span>
-                            </div>
-                            <div class="e-panel-body">
-                                @if($apoderado)
-                                    {{-- Ya está guardado, se muestra estrictamente como Solo Lectura --}}
-                                    <div class="fg fg-2">
-                                        <div class="e-field">
-                                            <label>CI apoderado</label>
-                                            <div class="e-val">{{ $apoderado->apo_ci }}</div>
-                                        </div>
-                                        <div class="e-field">
-                                            <label>Tipo</label>
-                                            <div class="e-val">
-                                                @if($tramite_apostilla->apos_apoderado == 'd') Decl. jurada
-                                                @elseif($tramite_apostilla->apos_apoderado == 'p') Poder notariado
-                                                @endif
-                                            </div>
-                                        </div>
-                                        <div class="e-field">
-                                            <label>Nombre</label>
-                                            <div class="e-val">{{ $apoderado->apo_nombre }}</div>
-                                        </div>
-                                        <div class="e-field" style="padding-bottom:0;">
-                                            <label>Apellido</label>
-                                            <div class="e-val">{{ $apoderado->apo_apellido }}</div>
-                                        </div>
-                                    </div>
-                                @else
-                                    {{-- No está guardado, se permite registrar si tiene permisos --}}
-                                    @can('editar apoderado - apo')
-                                        @php
-                                            $requiereBoletaDj = (bool) config('apoderado.requiere_boleta_dj', false);
-                                            $tipoApoderado = $tramite_apostilla->apos_apoderado ?: 'd';
-                                            $mostrarBoleta = ($tipoApoderado === 'd' && $requiereBoletaDj);
-                                        @endphp
+                        @if($apoderadoHabilitado)
+                            <div class="e-panel">
+                                <div class="e-panel-head">
+                                    <span class="ph-bar slate"></span>
+                                    <span class="ph-title">Apoderado</span>
+                                </div>
+                                <div class="e-panel-body">
+                                    @if($apoderado)
+                                        {{-- Ya está guardado, se muestra estrictamente como Solo Lectura --}}
                                         <div class="fg fg-2">
-                                            <div class="e-field fg-span2">
+                                            <div class="e-field">
                                                 <label>CI apoderado</label>
-                                                <input class="e-input" type="text" name="ci_apoderado" id="ci_apoderado_apostilla"
-                                                       value=""
-                                                       oninput="verificarBoleta();" autocomplete="off">
-                                            </div>
-                                            <div class="e-field fg-span2" id="contenedor_boleta_apostilla_edi" style="{{ $mostrarBoleta ? '' : 'display:none;' }}">
-                                                <label>N° control boleta</label>
-                                                <input class="e-input" type="text" name="control_boleta" id="control_boleta_apostilla_edi"
-                                                       oninput="verificarBoleta()" autocomplete="off" placeholder="Ingrese número de control">
-                                                <div style="margin-top:6px;"><span id="estado_pago_apoderado_edi" class="badge badge-secondary">Sin validar</span></div>
-                                                <input type="hidden" name="control_boleta_valido" id="control_boleta_valido_edi" value="{{ $mostrarBoleta ? '0' : '1' }}">
+                                                <div class="e-val">{{ $apoderado->apo_ci }}</div>
                                             </div>
                                             <div class="e-field">
-                                                <label>Nombres</label>
-                                                <input class="e-input" type="text" name="nombre_apoderado"
-                                                       id="nombre_apoderado" value="" autocomplete="off" {{ $mostrarBoleta ? 'readonly' : '' }}>
-                                            </div>
-                                            <div class="e-field">
-                                                <label>Apellidos</label>
-                                                <input class="e-input" type="text" name="apellido_apoderado"
-                                                       id="apellido_apoderado" value="" autocomplete="off" {{ $mostrarBoleta ? 'readonly' : '' }}>
-                                            </div>
-                                            <div class="e-field fg-span2" style="padding-bottom:0;">
-                                                <label>Tipo de apoderado</label>
-                                                <div class="e-radio-row">
-                                                    <label class="e-radio-opt">
-                                                        <input type="radio" name="tipo" value="d" checked onchange="actualizarModoApoderadoApostilla()">
-                                                        <span>Declaración jurada</span>
-                                                    </label>
-                                                    <label class="e-radio-opt">
-                                                        <input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoApostilla()">
-                                                        <span>Poder notariado</span>
-                                                    </label>
+                                                <label>Tipo</label>
+                                                <div class="e-val">
+                                                    @if($tramite_apostilla->apos_apoderado == 'd') Decl. jurada
+                                                    @elseif($tramite_apostilla->apos_apoderado == 'p') Poder notariado
+                                                    @endif
                                                 </div>
+                                            </div>
+                                            <div class="e-field">
+                                                <label>Nombre</label>
+                                                <div class="e-val">{{ $apoderado->apo_nombre }}</div>
+                                            </div>
+                                            <div class="e-field" style="padding-bottom:0;">
+                                                <label>Apellido</label>
+                                                <div class="e-val">{{ $apoderado->apo_apellido }}</div>
                                             </div>
                                         </div>
                                     @else
-                                        <p class="text-muted" style="font-size:12px;padding:8px 0;">Sin apoderado registrado.</p>
-                                    @endcan
-                                @endif
+                                        {{-- No está guardado, se permite registrar si tiene permisos --}}
+                                        @can('editar apoderado - apo')
+                                            @php
+                                                $requiereBoletaDj = (bool) config('apoderado.requiere_boleta_dj', false);
+                                                $tipoApoderado = $tramite_apostilla->apos_apoderado ?: 'd';
+                                                $mostrarBoleta = ($tipoApoderado === 'd' && $requiereBoletaDj);
+                                            @endphp
+                                            <div class="fg fg-2">
+                                                <div class="e-field fg-span2">
+                                                    <label>CI apoderado</label>
+                                                    <input class="e-input" type="text" name="ci_apoderado" id="ci_apoderado_apostilla"
+                                                           value=""
+                                                           oninput="verificarBoleta();" autocomplete="off">
+                                                </div>
+                                                <div class="e-field fg-span2" id="contenedor_boleta_apostilla_edi" style="{{ $mostrarBoleta ? '' : 'display:none;' }}">
+                                                    <label>N° control boleta</label>
+                                                    <input class="e-input" type="text" name="control_boleta" id="control_boleta_apostilla_edi"
+                                                           oninput="verificarBoleta()" autocomplete="off" placeholder="Ingrese número de control">
+                                                    <div style="margin-top:6px;"><span id="estado_pago_apoderado_edi" class="badge badge-secondary">Sin validar</span></div>
+                                                    <input type="hidden" name="control_boleta_valido" id="control_boleta_valido_edi" value="{{ $mostrarBoleta ? '0' : '1' }}">
+                                                </div>
+                                                <div class="e-field">
+                                                    <label>Nombres</label>
+                                                    <input class="e-input" type="text" name="nombre_apoderado"
+                                                           id="nombre_apoderado" value="" autocomplete="off" {{ $mostrarBoleta ? 'readonly' : '' }}>
+                                                </div>
+                                                <div class="e-field">
+                                                    <label>Apellidos</label>
+                                                    <input class="e-input" type="text" name="apellido_apoderado"
+                                                           id="apellido_apoderado" value="" autocomplete="off" {{ $mostrarBoleta ? 'readonly' : '' }}>
+                                                </div>
+                                                <div class="e-field fg-span2" style="padding-bottom:0;">
+                                                    <label>Tipo de apoderado</label>
+                                                    <div class="e-radio-row">
+                                                        <label class="e-radio-opt">
+                                                            <input type="radio" name="tipo" value="d" checked onchange="actualizarModoApoderadoApostilla()">
+                                                            <span>Declaración jurada</span>
+                                                        </label>
+                                                        <label class="e-radio-opt">
+                                                            <input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoApostilla()">
+                                                            <span>Poder notariado</span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @else
+                                            <p class="text-muted" style="font-size:12px;padding:8px 0;">Sin apoderado registrado.</p>
+                                        @endcan
+                                    @endif
+                                </div>
                             </div>
-                        </div>
+                        @endif
 
                         <input type="hidden" name="ca" value="{{ $tramite_apostilla->cod_apos }}">
 
