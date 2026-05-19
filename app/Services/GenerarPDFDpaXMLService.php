@@ -50,7 +50,8 @@ class GenerarPDFDpaXMLService
             $nombreArchivo = 'dpa-' . $funcionario->cod_fun . '-' . date('Y-m-d_H-i-s');
             $rutaPdfFinal = storage_path("app/temp/{$nombreArchivo}.pdf");
 
-            $pdf = Pdf::loadHTML($html)->setPaper('letter', 'portrait');
+            // Cambiar el tamaño del papel a oficio
+            $pdf = Pdf::loadHTML($html)->setPaper([0, 0, 612, 1008], 'portrait');
             $pdf->save($rutaPdfFinal);
 
             if (!file_exists($rutaPdfFinal)) {
@@ -193,7 +194,7 @@ class GenerarPDFDpaXMLService
 <head>
     <meta charset="utf-8">
     <style>
-        @page { margin: 18mm 18mm 18mm 18mm; }
+        @page { margin: 30mm 15mm 15mm 30mm; }
         body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color: #111; margin: 0; }
         .pagina { padding-top: 10mm; }
         .cabecera { width: 100%; margin-bottom: 8px; }
