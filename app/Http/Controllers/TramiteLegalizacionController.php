@@ -270,6 +270,22 @@ class TramiteLegalizacionController extends Controller
         }
 
         $fecha=date('Y-m-d',strtotime($tramita->tra_fecha_solicitud));
+        
+        // Liberar todos los pagos en recaudacion_usos asociados a este trámite global
+        if (Schema::hasTable('recaudacion_usos')) {
+            try {
+                DB::table('recaudacion_usos')
+                    ->where('cod_tra', '=', $tramita->cod_tra)
+                    ->where('modulo', '=', 'servicios')
+                    ->delete();
+            } catch (\Throwable $e) {
+                Log::warning('No se pudieron liberar los pagos al eliminar el trámite global en Servicios.', [
+                    'cod_tra' => $tramita->cod_tra,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         if($tramita->tra_tipo_tramite=='F') {
             $d_tramita = D_tramita::where('cod_tra', $tramita->cod_tra)->first();
             if ($d_tramita){
@@ -2867,6 +2883,10 @@ class TramiteLegalizacionController extends Controller
         $docleg=D_tramita::find($form['cdtra']);
         if($docleg->dtra_falso!='t') {
             DB::delete('delete from d_confrontacions where cod_dtra='.$docleg->cod_dtra);
+            
+            // Liberar pago en recaudaciones usos
+            $this->eliminarUsosRecaudacionPorTramite((int)$docleg->cod_dtra);
+
             $docleg->delete();
             $antiguo=json_encode($docleg);
             SessionController::write('D',$antiguo,'','d_tramitas','3',$docleg->cod_dtra);
@@ -2876,6 +2896,25 @@ class TramiteLegalizacionController extends Controller
             \Session::flash('error','No se puede eliminar el documento');
         }
         return redirect('datos tramite legalizacion/'.$form['ctra']);
+    }
+
+    private function eliminarUsosRecaudacionPorTramite(int $codDtra): void
+    {
+        if($codDtra<=0 || !Schema::hasTable('recaudacion_usos')){
+            return;
+        }
+
+        try{
+            DB::table('recaudacion_usos')
+                ->where('cod_dtra','=',$codDtra)
+                ->where('modulo','=','servicios')
+                ->delete();
+        }catch(\Throwable $e){
+            Log::warning('No se pudo liberar el pago de recaudaciones en Servicios.',[
+                'cod_dtra'=>$codDtra,
+                'error'=>$e->getMessage(),
+            ]);
+        }
     }
     public function generar_glosa_legalizacion($cod_dtra)
     {

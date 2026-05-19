@@ -805,6 +805,9 @@ class ApostillaController extends Controller
         if($detalle_apostilla){
             $cod_apos=$detalle_apostilla->cod_apos;
 
+            // Liberar pago en recaudaciones usos
+            $this->eliminarUsosRecaudacionApostilla((int)$detalle_apostilla->cod_dapo);
+
             $antiguo=json_encode($detalle_apostilla);
             SessionController::write('D',$antiguo,'','detalle_apostilla','4',$detalle_apostilla->cod_dapo);
 
@@ -820,6 +823,25 @@ class ApostillaController extends Controller
             \Session::flash('error_agregar','No se puede eliminar el documento seleccionado');
         }
         return redirect('ajax tabla agregar/'.$cod_apos);
+    }
+
+    private function eliminarUsosRecaudacionApostilla(int $codDtra): void
+    {
+        if($codDtra<=0 || !Schema::hasTable('recaudacion_usos')){
+            return;
+        }
+
+        try{
+            DB::table('recaudacion_usos')
+                ->where('cod_dtra','=',$codDtra)
+                ->where('modulo','=','apostilla')
+                ->delete();
+        }catch(\Throwable $e){
+            Log::warning('No se pudo liberar el pago de recaudaciones en Apostilla.',[
+                'cod_dtra'=>$codDtra,
+                'error'=>$e->getMessage(),
+            ]);
+        }
     }
     public function generar_pdf_apostilla($cod_apos){
 
