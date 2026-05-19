@@ -801,19 +801,24 @@ class Funciones extends Model
         return $glosa;
     }
     public static function nombre_titulo($documento){
-
-        switch ($documento){
-            case 'db': return 'Diploma de Bachiller'; break;
-            case 'da': return 'Diploma Académico'; break;
-            case 'ca': return 'Certificado Académico'; break;
-            case 'tp': return 'Título Profesional'; break;
-            case 'tpos': return 'Título de posgrado'; break;
-            case 'di': return 'Diploma Académico'; break;
-            case 'su': return 'Certificado Supletorio'; break;
-            case 're': return 'Reválida'; break;
-            case 'res': return 'Resolución'; break;
+        $parts = explode(',', $documento);
+        $nombres = [];
+        foreach($parts as $part) {
+            switch (trim($part)){
+                case 'db': $nombres[] = 'Diploma de Bachiller'; break;
+                case 'da': $nombres[] = 'Diploma Académico'; break;
+                case 'ca': $nombres[] = 'Certificado Académico'; break;
+                case 'tp': $nombres[] = 'Título Profesional'; break;
+                case 'tpos': $nombres[] = 'Título de posgrado'; break;
+                case 'di': $nombres[] = 'Diploma Académico'; break;
+                case 'su': $nombres[] = 'Certificado Supletorio'; break;
+                case 're': $nombres[] = 'Reválida'; break;
+                case 'res': $nombres[] = 'Resolución'; break;
+            }
         }
+        return implode(' / ', $nombres);
     }
+
     public static function tipo_resolucion($documento){
         switch ($documento){
             case 'rr': return 'Resolución rectoral'; break;

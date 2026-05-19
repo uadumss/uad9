@@ -633,74 +633,91 @@ class ApostillaController extends Controller
             ];
         }
 
-        $sitraDisponible=true;
-        try {
-            $respuesta=app(SitraService::class)->consultarSitra($ci,$numero,$buscarEn);
-        } catch (\Throwable $e) {
-            $sitraDisponible=false;
-            $respuesta=(object)[];
-        }
-        if(!is_object($respuesta)){
-            $respuesta=(object)[];
-        }
+        $lugares = explode(',', $buscarEn);
+        $respuestaValidacion = [
+            'estado'=>'1',
+            'fuente'=>'sitra',
+            'respuesta'=>(object)[],
+        ];
 
-        $documento=trim((string)Funciones::DocumentoSitra($buscarEn));
-        $nombreSitra=trim((string)($respuesta->nombre ?? ''));
-        $tipoSitraNormalizado=strtolower(trim((string)($respuesta->tipo ?? '')));
-        $numeroSitra=trim((string)($respuesta->numero ?? ''));
-        $nombreLocal=trim((string)$nombreCompleto);
-        $tipoLocal=strtolower($documento);
+        foreach($lugares as $lugarStr) {
+            $lugar = strtolower(trim(explode('-', trim($lugarStr))[0]));
+            if ($lugar === '') continue;
 
-        $numerosCoinciden = app(SitraService::class)->numerosCompatibles($numero, $numeroSitra);
-        $nombresCoinciden = app(SitraService::class)->nombresCompatibles($nombreLocal,$nombreSitra);
+            if ($lugar === 'res') {
+                $resolucion = app(SitraService::class)->buscarResolucionInterna($numero, $gestion);
+                if ($resolucion) {
+                    return [
+                        'estado'=>'0',
+                        'fuente'=>'sid',
+                        'respuesta'=>(object)[
+                            'nombre'=>$nombreCompleto,
+                            'titulo'=>trim((string)($resolucion->res_objeto ?? $resolucion->res_desc ?? $resolucion->res_tema ?? '')),
+                            'numero'=>trim((string)$resolucion->res_numero),
+                            'gestion'=>trim((string)$resolucion->res_gestion),
+                            'tipo'=>Funciones::DocumentoSitra($lugar),
+                        ],
+                        'message'=>'Validado con respaldo SID.',
+                    ];
+                }
+            } else {
+                $sitraDisponible=true;
+                try {
+                    $respuesta=app(SitraService::class)->consultarSitra($ci,$numero,$lugar);
+                } catch (\Throwable $e) {
+                    $sitraDisponible=false;
+                    $respuesta=(object)[];
+                }
+                if(!is_object($respuesta)){
+                    $respuesta=(object)[];
+                }
 
-        \Log::info("SITRA Validacion (Apostilla): ", [
-            'ci' => $ci,
-            'local' => ['n' => $nombreLocal, 't' => $tipoLocal, 'num' => $numero],
-            'sitra' => ['n' => $nombreSitra, 't' => $tipoSitraNormalizado, 'num' => $numeroSitra],
-            'matches' => ['n' => $nombresCoinciden, 't' => ($tipoLocal === $tipoSitraNormalizado), 'num' => $numerosCoinciden]
-        ]);
+                $documento=trim((string)Funciones::DocumentoSitra($lugar));
+                $nombreSitra=trim((string)($respuesta->nombre ?? ''));
+                $tipoSitraNormalizado=strtolower(trim((string)($respuesta->tipo ?? '')));
+                $numeroSitra=trim((string)($respuesta->numero ?? ''));
+                $nombreLocal=trim((string)$nombreCompleto);
+                $tipoLocal=strtolower($documento);
 
-        if($nombresCoinciden && $tipoLocal===$tipoSitraNormalizado && $numerosCoinciden){
-            return [
-                'estado'=>'0',
-                'fuente'=>'sitra',
-                'respuesta'=>$respuesta,
-            ];
-        }
+                $numerosCoinciden = app(SitraService::class)->numerosCompatibles($numero, $numeroSitra);
+                $nombresCoinciden = app(SitraService::class)->nombresCompatibles($nombreLocal,$nombreSitra);
 
-        if($nombreSitra==='' && $tipoSitraNormalizado==='' && $numeroSitra===''){
-            $respaldoUad9=null;
-            if($gestion!==''){
-                $respaldoUad9=app(SitraService::class)->buscarRespaldoInterno($idPer,$numero,$buscarEn,$gestion);
+                if($nombresCoinciden && $tipoLocal===$tipoSitraNormalizado && $numerosCoinciden){
+                    return [
+                        'estado'=>'0',
+                        'fuente'=>'sitra',
+                        'respuesta'=>$respuesta,
+                    ];
+                }
+
+                if($nombreSitra==='' && $tipoSitraNormalizado==='' && $numeroSitra===''){
+                    $respaldoUad9=null;
+                    if($gestion!==''){
+                        $respaldoUad9=app(SitraService::class)->buscarRespaldoInterno($idPer,$numero,$lugar,$gestion);
+                    }
+                    if($respaldoUad9){
+                        return [
+                            'estado'=>'0',
+                            'fuente'=>'sid',
+                            'respuesta'=>(object)[
+                                'nombre'=>$nombreLocal,
+                                'titulo'=>trim((string)($respaldoUad9->tit_titulo ?? '')),
+                                'numero'=>(string)($respaldoUad9->tit_nro_titulo ?? $numero),
+                                'gestion'=>(string)($respaldoUad9->tit_gestion ?? $gestion),
+                                'tipo'=>$documento,
+                            ],
+                            'message'=>'Validado con respaldo SID'.($sitraDisponible ? '' : ' (SITRA no disponible)').'.',
+                        ];
+                    }
+                }
             }
-            if($respaldoUad9){
-                return [
-                    'estado'=>'0',
-                    'fuente'=>'sid',
-                    'respuesta'=>(object)[
-                        'nombre'=>$nombreLocal,
-                        'titulo'=>trim((string)($respaldoUad9->tit_titulo ?? '')),
-                        'numero'=>(string)($respaldoUad9->tit_nro_titulo ?? $numero),
-                        'gestion'=>(string)($respaldoUad9->tit_gestion ?? $gestion),
-                        'tipo'=>$documento,
-                    ],
-                    'message'=>'Validado con respaldo SID'.($sitraDisponible ? '' : ' (SITRA no disponible)').'.',
-                ];
-            }
-
-            return [
-                'estado'=>'2',
-                'fuente'=>'sitra_sid',
-                'respuesta'=>(object)[],
-                'message'=>$sitraDisponible ? '' : 'SITRA no disponible.',
-            ];
         }
 
         return [
-            'estado'=>'1',
-            'fuente'=>'sitra',
-            'respuesta'=>$respuesta,
+            'estado'=>'2',
+            'fuente'=>'sitra_sid',
+            'respuesta'=>(object)[],
+            'message'=>'No existe en SITRA/SID.',
         ];
     }
 

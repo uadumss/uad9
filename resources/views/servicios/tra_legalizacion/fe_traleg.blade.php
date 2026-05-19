@@ -1795,7 +1795,8 @@
         var tipoSeleccionado=(form.find('input[data-campo="tipo-legalizacion-hidden"]').val()||'').toString().trim();
         if(tipoSeleccionado===''){$('#error_datos_span').html('Seleccione tipo para continuar.');$('#error_datos').show();setTimeout(function(){$('#error_datos').hide(500);},4000);return;}
         
-        var tieneSitra = form.find('[data-campo="estado-sitra"]').length > 0;
+        var sitraElement = form.find('[data-campo="estado-sitra"]');
+        var tieneSitra = sitraElement.length > 0 && sitraElement.is(':visible');
         if (tieneSitra) {
             var estadoSitra = form.data('sitra-estado');
             if (estadoSitra !== '0' && estadoSitra !== 'no-aplica') {
@@ -1960,7 +1961,11 @@
         var select=formulario.find('select[data-campo="tipo-legalizacion"]');
         if(select.length){
             var opcionSeleccionada=select.find('option:selected'),valorSeleccionado='';
-            if(opcionSeleccionada.length&&!opcionSeleccionada.prop('disabled'))valorSeleccionado=opcionSeleccionada.val()||'';
+            var textoSeleccionado='';
+            if(opcionSeleccionada.length&&!opcionSeleccionada.prop('disabled')) {
+                valorSeleccionado=opcionSeleccionada.val()||'';
+                textoSeleccionado=opcionSeleccionada.text()||'';
+            }
             select.val(valorSeleccionado);
             formulario.find('input[data-campo="tipo-legalizacion-hidden"]').val(valorSeleccionado);
             
@@ -1969,6 +1974,18 @@
             formulario.find('#cod_tit_seleccionado').val('');
             formulario.find('input[name="numero"]').prop('readonly', false).removeClass('readonly');
             formulario.find('input[name="gestion"]').prop('readonly', false).removeClass('readonly');
+
+            var textoMinusculas = textoSeleccionado.toLowerCase();
+            var esExtranjero = (textoMinusculas.indexOf('extrajero') !== -1 || textoMinusculas.indexOf('extranjero') !== -1);
+            if(esExtranjero) {
+                formulario.find('[data-campo="estado-sitra-icon"]').hide();
+                formulario.find('[data-campo="sitra-fuente"]').hide();
+                formulario.find('[data-campo="estado-sitra"]').hide();
+            } else {
+                formulario.find('[data-campo="estado-sitra-icon"]').show();
+                formulario.find('[data-campo="sitra-fuente"]').show();
+                formulario.find('[data-campo="estado-sitra"]').show();
+            }
         }
     }
     function limpiarTipoLegalizacion(formulario){
@@ -1981,6 +1998,10 @@
         formulario.find('#cod_tit_seleccionado').val('');
         formulario.find('input[name="numero"]').prop('readonly', false).removeClass('readonly');
         formulario.find('input[name="gestion"]').prop('readonly', false).removeClass('readonly');
+
+        formulario.find('[data-campo="estado-sitra-icon"]').show();
+        formulario.find('[data-campo="sitra-fuente"]').show();
+        formulario.find('[data-campo="estado-sitra"]').show();
     }
     function aplicarPtagSugerido(formulario,resp){
         var check=formulario.find('input[name="ptaang"]'),wrap=formulario.find('[data-campo="ptag-wrap"]');if(!check.length)return;

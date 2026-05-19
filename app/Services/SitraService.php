@@ -73,8 +73,12 @@ class SitraService
             return '';
         }
 
-        $buscarEn = explode('-', $buscarEn)[0] ?? '';
-        return strtolower(trim($buscarEn));
+        $parts = explode(',', $buscarEn);
+        $normalized = [];
+        foreach($parts as $part) {
+            $normalized[] = strtolower(trim(explode('-', trim($part))[0] ?? ''));
+        }
+        return implode(',', array_filter($normalized));
     }
 
     /**
@@ -95,7 +99,13 @@ class SitraService
      */
     public function debeValidar(string $buscarEn): bool
     {
-        return trim((string)Funciones::DocumentoSitra($buscarEn)) !== '';
+        $parts = explode(',', $buscarEn);
+        foreach($parts as $part) {
+            if (trim((string)Funciones::DocumentoSitra(trim($part))) !== '') {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -142,20 +152,14 @@ class SitraService
             return null;
         }
 
+        $query = Resolucion::where('res_numero', '=', $numero)->orderByDesc('cod_res');
+
         $gestion = trim($gestion);
         if ($gestion !== '') {
-            $resolucion = Resolucion::where('res_numero', '=', $numero)
-                ->where('res_gestion', '=', $gestion)
-                ->orderByDesc('cod_res')
-                ->first();
-            if ($resolucion) {
-                return $resolucion;
-            }
+            $query->where('res_gestion', '=', $gestion);
         }
 
-        return Resolucion::where('res_numero', '=', $numero)
-            ->orderByDesc('cod_res')
-            ->first();
+        return $query->first();
     }
 
     /**
@@ -168,13 +172,21 @@ class SitraService
             return null;
         }
 
-        $buscarBase = explode('-', $buscarEn)[0];
-        $titulo = $this->buscarRespaldoInterno($idPer, $numero, $buscarBase, $gestion);
-        if ($titulo) {
-            return $titulo;
+        $lugares = explode(',', $buscarEn);
+        foreach($lugares as $lugar) {
+            $buscarBase = explode('-', trim($lugar))[0];
+            $titulo = $this->buscarRespaldoInterno($idPer, $numero, $buscarBase, $gestion);
+            if ($titulo) {
+                return $titulo;
+            }
+
+            $titulo = $this->buscarRespaldoInterno($idPer, $numero, $buscarBase, '');
+            if ($titulo) {
+                return $titulo;
+            }
         }
 
-        return $this->buscarRespaldoInterno($idPer, $numero, $buscarBase, '');
+        return null;
     }
 
     /**
@@ -197,20 +209,30 @@ class SitraService
             }
         }
 
-        $query = Titulo::whereIn('id_per', $idsPersona)
-            ->whereNotNull('tit_fecha_emision');
+        $lugares = explode(',', $buscarEn);
+        foreach($lugares as $lugar) {
+            $buscarBase = strtolower(trim(explode('-', trim($lugar))[0] ?? ''));
 
-        if ($buscarBase === 'da') {
-            $query->whereIn('tit_tipo', ['da', 'ca']);
-        } elseif ($buscarBase === 'tpos') {
-            $query->whereIn('tit_tipo', ['tpos', 'di']);
-        } else {
-            if ($buscarBase !== '') {
-                $query->where('tit_tipo', '=', $buscarBase);
+            $query = Titulo::whereIn('id_per', $idsPersona)
+                ->whereNotNull('tit_fecha_emision');
+
+            if ($buscarBase === 'da') {
+                $query->whereIn('tit_tipo', ['da', 'ca']);
+            } elseif ($buscarBase === 'tpos') {
+                $query->whereIn('tit_tipo', ['tpos', 'di']);
+            } else {
+                if ($buscarBase !== '') {
+                    $query->where('tit_tipo', '=', $buscarBase);
+                }
+            }
+
+            $titulo = $query->orderByDesc('cod_tit')->first();
+            if ($titulo) {
+                return $titulo;
             }
         }
 
-        return $query->orderByDesc('cod_tit')->first();
+        return null;
     }
 
     private function normalizarTexto(string $texto): string
