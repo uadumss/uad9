@@ -2799,7 +2799,20 @@ class TramiteLegalizacionController extends Controller
         }
 
         $buscarEnSugerido=strtolower(trim((string)($tramiteSugerido->tre_buscar_en ?? '')));
-        if(!in_array($buscarEnSugerido,['da','db'],true)){
+        $valores = array_map('trim', explode(',', $buscarEnSugerido));
+
+        $tieneDa = false;
+        $tieneDb = false;
+        foreach($valores as $val){
+            if(in_array($val,['da','da-ant'],true)){
+                $tieneDa = true;
+            }
+            if(in_array($val,['db','db-ant'],true)){
+                $tieneDb = true;
+            }
+        }
+
+        if(!$tieneDa && !$tieneDb){
             return false;
         }
 
@@ -2817,12 +2830,12 @@ class TramiteLegalizacionController extends Controller
         $esAcademico=(strpos($texto,'ACADEM')!==false);
         $esBachiller=(strpos($texto,'BACHILLER')!==false);
 
-        if($buscarEnSugerido==='da'){
-            return $esAcademico;
+        if($tieneDa && $esAcademico){
+            return true;
         }
 
-        if($buscarEnSugerido==='db'){
-            return $esBachiller;
+        if($tieneDb && $esBachiller){
+            return true;
         }
 
         return false;
