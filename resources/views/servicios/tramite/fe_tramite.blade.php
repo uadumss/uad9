@@ -55,27 +55,25 @@
                             <tr>
                                 <th class="text-right font-italic border-bottom">Buscar en :</th>
                                 <td class="border-bottom border-dark">
-                                    <select class="custom-select custom-select-sm border-0 " name="buscar_en">
-                                        <option></option>
-                                        <option value="db">DB</option>
-                                        <option value="ca">CA</option>
-                                        <option value="da">DA</option>
-                                        <option value="tp">TP</option>
-                                        <option value="di">DI</option>
-                                        <option value="tpos">TPOS</option>
-                                        <option value="re">RE</option>
-                                        <option value="su">SU</option>
-                                        <option value="res">RESOLUCION</option>
-                                        <option value="db-ant">DB-ANTECEDENTE</option>
-                                        <option value="ca-ant">CA-ANTECEDENTE</option>
-                                        <option value="da-ant">DA-ANTECEDENTE</option>
-                                        <option value="tp-ant">TP-ANTECEDENTE</option>
-                                        <option value="di-ant">DI-ANTECEDENTE</option>
-                                        <option value="tpos-ant">TPOS-ANTECEDENTE</option>
-                                        <option value="re-ant">RE-ANTECEDENTE</option>
-                                        <option value="su-ant">SU-ANTECEDENTE</option>
-
-                                    </select>
+                                    <div style="max-height: 150px; overflow-y: auto; padding: 5px; border: 1px solid #ddd; border-radius: 4px; background: #fff;">
+                                        @php
+                                            $opciones = [
+                                                'db' => 'DB', 'ca' => 'CA', 'da' => 'DA', 'tp' => 'TP',
+                                                'di' => 'DI', 'tpos' => 'TPOS', 're' => 'RE', 'su' => 'SU',
+                                                'res' => 'RESOLUCION', 'db-ant' => 'DB-ANTECEDENTE',
+                                                'ca-ant' => 'CA-ANTECEDENTE', 'da-ant' => 'DA-ANTECEDENTE',
+                                                'tp-ant' => 'TP-ANTECEDENTE', 'di-ant' => 'DI-ANTECEDENTE',
+                                                'tpos-ant' => 'TPOS-ANTECEDENTE', 're-ant' => 'RE-ANTECEDENTE',
+                                                'su-ant' => 'SU-ANTECEDENTE'
+                                            ];
+                                        @endphp
+                                        @foreach($opciones as $val => $label)
+                                            <div class="custom-control custom-checkbox">
+                                                <input type="checkbox" class="custom-control-input" id="chk_crear_{{$val}}" name="buscar_en[]" value="{{$val}}">
+                                                <label class="custom-control-label" for="chk_crear_{{$val}}" style="font-size: 0.85rem; cursor: pointer;">{{$label}}</label>
+                                            </div>
+                                        @endforeach
+                                    </div>
                                 </td>
                             </tr>
                             @endif
@@ -156,27 +154,26 @@
                                         <tr>
                                             <th class="text-right font-italic border-bottom">Buscar en :</th>
                                             <td class="border-bottom border-dark">
-                                                <select class="custom-select custom-select-sm border-0 " name="buscar_en">
-                                                    <option value="{{$tramite['tre_buscar_en']}}">{{strtoupper($tramite['tre_buscar_en'])}}</option>
-                                                    <option></option>
-                                                    <option value="db">DB</option>
-                                                    <option value="ca">CA</option>
-                                                    <option value="da">DA</option>
-                                                    <option value="tp">TP</option>
-                                                    <option value="di">DI</option>
-                                                    <option value="tpos">TPOS</option>
-                                                    <option value="re">RE</option>
-                                                    <option value="su">SU</option>
-                                                    <option value="res">RESOLUCION</option>
-                                                    <option value="db-ant">DB-ANT</option>
-                                                    <option value="ca-ant">CA-ANT</option>
-                                                    <option value="da-ant">DA-ANT</option>
-                                                    <option value="tp-ant">TP-ANT</option>
-                                                    <option value="di-ant">DI-ANT</option>
-                                                    <option value="tpos-ant">TPOS-ANT</option>
-                                                    <option value="re-ant">RE-ANT</option>
-                                                    <option value="su-ant">SU-ANT</option>
-                                                </select>
+                                                @php $selecciones = explode(',', $tramite['tre_buscar_en'] ?? ''); @endphp
+                                                <div style="max-height: 150px; overflow-y: auto; padding: 5px; border: 1px solid #ddd; border-radius: 4px; background: #fff;">
+                                                    @php
+                                                        $opciones = [
+                                                            'db' => 'DB', 'ca' => 'CA', 'da' => 'DA', 'tp' => 'TP',
+                                                            'di' => 'DI', 'tpos' => 'TPOS', 're' => 'RE', 'su' => 'SU',
+                                                            'res' => 'RESOLUCION', 'db-ant' => 'DB-ANT',
+                                                            'ca-ant' => 'CA-ANT', 'da-ant' => 'DA-ANT',
+                                                            'tp-ant' => 'TP-ANT', 'di-ant' => 'DI-ANT',
+                                                            'tpos-ant' => 'TPOS-ANT', 're-ant' => 'RE-ANT',
+                                                            'su-ant' => 'SU-ANT'
+                                                        ];
+                                                    @endphp
+                                                    @foreach($opciones as $val => $label)
+                                                        <div class="custom-control custom-checkbox">
+                                                            <input type="checkbox" class="custom-control-input" id="chk_editar_{{$val}}" name="buscar_en[]" value="{{$val}}" {{ in_array($val, $selecciones) ? 'checked' : '' }}>
+                                                            <label class="custom-control-label" for="chk_editar_{{$val}}" style="font-size: 0.85rem; cursor: pointer;">{{$label}}</label>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
                                             </td>
                                         </tr>
                                         @endif

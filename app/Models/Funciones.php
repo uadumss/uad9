@@ -801,18 +801,24 @@ class Funciones extends Model
         return $glosa;
     }
     public static function nombre_titulo($documento){
-
-        switch ($documento){
-            case 'db': return 'Diploma de Bachiller'; break;
-            case 'da': return 'Diploma Académico'; break;
-            case 'ca': return 'Certificado Académico'; break;
-            case 'tp': return 'Título Profesional'; break;
-            case 'tpos': return 'Título de posgrado'; break;
-            case 'di': return 'Diploma Académico'; break;
-            case 'su': return 'Certificado Supletorio';break;
-            case 're': return 'Reválida'; break;
+        $parts = explode(',', $documento);
+        $nombres = [];
+        foreach($parts as $part) {
+            switch (trim($part)){
+                case 'db': $nombres[] = 'Diploma de Bachiller'; break;
+                case 'da': $nombres[] = 'Diploma Académico'; break;
+                case 'ca': $nombres[] = 'Certificado Académico'; break;
+                case 'tp': $nombres[] = 'Título Profesional'; break;
+                case 'tpos': $nombres[] = 'Título de posgrado'; break;
+                case 'di': $nombres[] = 'Diploma Académico'; break;
+                case 'su': $nombres[] = 'Certificado Supletorio'; break;
+                case 're': $nombres[] = 'Reválida'; break;
+                case 'res': $nombres[] = 'Resolución'; break;
+            }
         }
+        return implode(' / ', $nombres);
     }
+
     public static function tipo_resolucion($documento){
         switch ($documento){
             case 'rr': return 'Resolución rectoral'; break;
@@ -864,6 +870,14 @@ class Funciones extends Model
             case "di":  return 'DI'; break;
             case "tpos": return 'TPOS'; break;
             case "re":  return 'RE'; break;
+            case "res": return 'RE'; break;
+            case "rr":  return 'RE'; break;
+            case "rcu": return 'RE'; break;
+            case "rvr": return 'RE'; break;
+            case "rs":  return 'RE'; break;
+            case "rcf": return 'RE'; break;
+            case "rcc": return 'RE'; break;
+            case "rc":  return 'RE'; break;
             case "su":  return 'SU'; break;
         }
     }

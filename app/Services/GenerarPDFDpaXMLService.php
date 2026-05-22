@@ -50,7 +50,8 @@ class GenerarPDFDpaXMLService
             $nombreArchivo = 'dpa-' . $funcionario->cod_fun . '-' . date('Y-m-d_H-i-s');
             $rutaPdfFinal = storage_path("app/temp/{$nombreArchivo}.pdf");
 
-            $pdf = Pdf::loadHTML($html)->setPaper('letter', 'portrait');
+            // Cambiar el tamaño del papel a oficio
+            $pdf = Pdf::loadHTML($html)->setPaper([0, 0, 612, 1008], 'portrait');
             $pdf->save($rutaPdfFinal);
 
             if (!file_exists($rutaPdfFinal)) {
@@ -193,7 +194,7 @@ class GenerarPDFDpaXMLService
 <head>
     <meta charset="utf-8">
     <style>
-        @page { margin: 18mm 18mm 18mm 18mm; }
+        @page { margin: 30mm 15mm 15mm 30mm; }
         body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color: #111; margin: 0; }
         .pagina { padding-top: 10mm; }
         .cabecera { width: 100%; margin-bottom: 8px; }
@@ -263,10 +264,13 @@ class GenerarPDFDpaXMLService
      */
     private function generarFilasTabla($documentos, Funcionario $funcionario): string
     {
+        // Ordenar documentos según el orden especificado
+        $documentosOrdenados = $this->ordenarDocumentos($documentos);
+
         $filas = '';
         $contador = 1;
 
-        foreach ($documentos as $doc) {
+        foreach ($documentosOrdenados as $doc) {
             $fecha = '';
             if (!empty($doc->doc_fecha_emision)) {
                 $timestamp = strtotime($doc->doc_fecha_emision);
@@ -299,19 +303,132 @@ class GenerarPDFDpaXMLService
     }
 
     /**
-     * Para esta carta, "Grado académico" debe mostrar el titulo del diploma.
+     * Para esta carta, "Grado académico" debe mostrar el tipo + titulo del diploma.
+     * Formato: "DOCTORADO - dasdasd"
      */
     private function obtenerGradoAcademico($doc): string
     {
-        if (!empty($doc->doc_titulo)) {
-            return (string)$doc->doc_titulo;
+        $tipoDocumento = (string)($doc->doc_tipo ?? '');
+        $docTitulo = (string)($doc->doc_titulo ?? '');
+        $docGrado = (string)($doc->doc_grado ?? '');
+
+        $tipoDescripcion = $this->obtenerTipoDocumentoDescripcion($tipoDocumento);
+        $valor = '';
+
+        if (!empty($docTitulo)) {
+            $valor = $docTitulo;
+        } elseif (!empty($docGrado)) {
+            $valor = $docGrado;
         }
 
-        if (!empty($doc->doc_grado)) {
-            return (string)$doc->doc_grado;
+        if ($tipoDescripcion && $valor) {
+            return $tipoDescripcion . ' - ' . $valor;
+        } elseif ($tipoDescripcion) {
+            return $tipoDescripcion;
         }
 
-        return (string)($doc->doc_tipo ?? '');
+        return $valor ?: $tipoDocumento;
+    }
+
+    /**
+     * Obtener la descripción legible del tipo de documento
+     */
+    private function obtenerTipoDocumentoDescripcion(string $tipo): string
+    {
+        $tipo = strtolower(trim($tipo));
+        
+        // Mapeo para códigos cortos
+        $mapeo = [
+            'db' => 'DIPLOMA DE BACHILLER',
+            'da' => 'DIPLOMA ACADÉMICO',
+            'tp' => 'TÍTULO PROFESIONAL',
+            'dip' => 'DIPLOMADO',
+            'di' => 'DIPLOMADO',
+            'maestria' => 'MAESTRÍA',
+            'especialidad' => 'ESPECIALIDAD',
+            'doctorado' => 'DOCTORADO',
+            'tpos' => 'TÍTULO POSGRADO',
+        ];
+
+        // Si encuentra un mapeo directo, usarlo
+        if (isset($mapeo[$tipo])) {
+            return $mapeo[$tipo];
+        }
+
+        // Si el tipo contiene palabras completas, normalizarlas
+        $tipoBuscado = strtoupper($tipo);
+
+        // Mapeo para nombres completos
+        $mapeoCompleto = [
+            'DIPLOMA DE BACHILLER' => 'DIPLOMA DE BACHILLER',
+            'DIPLOMA ACADEMICO' => 'DIPLOMA ACADÉMICO',
+            'DIPLOMA ACADÉMICO' => 'DIPLOMA ACADÉMICO',
+            'TITULO PROFESIONAL' => 'TÍTULO PROFESIONAL',
+            'TÍTULO PROFESIONAL' => 'TÍTULO PROFESIONAL',
+            'DIPLOMADO' => 'DIPLOMADO',
+            'MAESTRIA' => 'MAESTRÍA',
+            'MAESTRÍA' => 'MAESTRÍA',
+            'ESPECIALIDAD' => 'ESPECIALIDAD',
+            'DOCTORADO' => 'DOCTORADO',
+            'TITULO POSGRADO' => 'TÍTULO POSGRADO',
+            'TÍTULO POSGRADO' => 'TÍTULO POSGRADO',
+        ];
+
+        return $mapeoCompleto[$tipoBuscado] ?? '';
+    }
+
+    /**
+     * Ordenar documentos según el orden especificado
+     */
+    private function ordenarDocumentos($documentos)
+    {
+        // Mapeos de códigos cortos
+        $ordenCodigos = [
+            'db' => 1,
+            'da' => 2,
+            'tp' => 3,
+            'dip' => 4,
+            'di' => 4,
+            'maestria' => 5,
+            'especialidad' => 6,
+            'doctorado' => 7,
+            'tpos' => 6,
+        ];
+
+        // Mapeos de nombres completos
+        $ordenNombres = [
+            'DIPLOMA DE BACHILLER' => 1,
+            'DIPLOMA ACADEMICO' => 2,
+            'DIPLOMA ACADÉMICO' => 2,
+            'TITULO PROFESIONAL' => 3,
+            'TÍTULO PROFESIONAL' => 3,
+            'DIPLOMADO' => 4,
+            'MAESTRIA' => 5,
+            'MAESTRÍA' => 5,
+            'ESPECIALIDAD' => 6,
+            'DOCTORADO' => 7,
+            'TITULO POSGRADO' => 6,
+            'TÍTULO POSGRADO' => 6,
+        ];
+
+        return $documentos->sortBy(function ($doc) use ($ordenCodigos, $ordenNombres) {
+            $tipo = trim((string)($doc->doc_tipo ?? ''));
+            $tipoLower = strtolower($tipo);
+
+            // Primero intenta con códigos cortos
+            if (isset($ordenCodigos[$tipoLower])) {
+                return $ordenCodigos[$tipoLower];
+            }
+
+            // Luego intenta con nombres completos
+            $tipoUpper = strtoupper($tipo);
+            if (isset($ordenNombres[$tipoUpper])) {
+                return $ordenNombres[$tipoUpper];
+            }
+
+            // Default para tipos desconocidos
+            return 999;
+        })->values();
     }
 
     /**

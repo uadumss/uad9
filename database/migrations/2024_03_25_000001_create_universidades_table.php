@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('universidades', function (Blueprint $table) {
+        Schema::connection('pgsql')->create('doc_adm.universidades', function (Blueprint $table) {
             $table->id();
             $table->string('nombre')->unique();
             $table->string('sigla')->unique();
@@ -29,6 +29,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('universidades');
+        Schema::connection('pgsql')->dropIfExists('doc_adm.universidades');
     }
 };

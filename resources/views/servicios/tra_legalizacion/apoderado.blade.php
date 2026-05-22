@@ -96,7 +96,9 @@
 
                 </table>
 
-                <button id="otros" class="btn btn-sm btn-primary" onclick="$('#otrosDiv').show(500); $('#otros').hide(500);"> Editar datos</button>
+                @if(!$apoderado)
+                    <button id="otros" class="btn btn-sm btn-primary" onclick="$('#otrosDiv').show(500); $('#otros').hide(500);"> Registrar datos</button>
+                @endif
                 </div>
                 <div class="col-md-6">
                     <div>
@@ -110,19 +112,29 @@
                                 <form id="form_apoderado">
 
                                     @php
-                                        $nombre='';    $apellido='';  $ci="";
-                                        if($apoderado){   $ci=$apoderado->apo_ci;       $apellido=$apoderado->apo_apellido;     $nombre=$apoderado->apo_nombre;  }
+                                        $nombre='';
+                                        $apellido='';
+                                        $ci='';
+                                        if($apoderado){
+                                            $ci=$apoderado->apo_ci;
+                                            $apellido=$apoderado->apo_apellido;
+                                            $nombre=$apoderado->apo_nombre;
+                                        }
+                                        $requiereBoletaDj = (bool) config('apoderado.requiere_boleta_dj', false);
+                                        $tipoApoderado = $tramita->tra_tipo_apoderado ?: 'd';
+                                        $mostrarBoleta = ($tipoApoderado === 'd' && $requiereBoletaDj);
                                     @endphp
 
                                     <table class="table-hover col-md-12">
-                                        <tr>
+                                        <tr id="fila_boleta_apoderado_modal" data-requiere-boleta="{{ $requiereBoletaDj ? 1 : 0 }}" style="{{ $mostrarBoleta ? '' : 'display:none;' }}">
                                             <th class="text-right font-italic">N° control boleta : </th>
                                             <td class="border-bottom border-dark">
                                                     <input class="form-control form-control-sm border-0" placeholder="Ingrese número de control"
                                                               name="control_boleta" id="control_boleta_apoderado"
                                                               oninput="verificarBoletaApoderado()" />
                                                 <div style="margin-top:6px;"><span id="estado_pago_apoderado_modal" class="badge badge-secondary">Sin validar</span></div>
-                                                <input type="hidden" id="control_boleta_valido_modal" name="control_boleta_valido_modal" value="0">
+                                                <input type="hidden" id="control_boleta_valido_modal" name="control_boleta_valido" value="{{ $mostrarBoleta ? '0' : '1' }}">
+                                                <input type="hidden" name="monto_boleta" id="monto_boleta_modal" value="0">
                                             </td>
                                         </tr>
                                         <tr>
@@ -136,27 +148,27 @@
                                             <th class="text-right font-italic">Apellidos : </th>
                                             <td class="border-bottom border-dark">
                                                 <input class="form-control form-control-sm border-0" placeholder=""
-                                                       required name="apellido" id="apellido" value="{{$apellido}}" /></td>
+                                                       required name="apellido" id="apellido" value="{{$apellido}}" {{ $mostrarBoleta ? 'readonly' : '' }} /></td>
                                         </tr>
                                         <tr>
                                             <th class="text-right font-italic">Nombres : </th>
                                             <td class="border-bottom border-dark">
                                                 <input class="form-control form-control-sm border-0" placeholder=""
-                                                       required name="nombre" id="nombre" value="{{$nombre}}" /></td>
+                                                       required name="nombre" id="nombre" value="{{$nombre}}" {{ $mostrarBoleta ? 'readonly' : '' }} /></td>
                                         </tr>
                                         <tr>
                                             <th class="text-right font-italic" valign="top">Tipo de apoderado : </th>
                                             <td class="border-bottom border-dark">
                                                 @if($tramita->tra_tipo_apoderado=='d')
-                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" checked> Declaración jurada<br/>
-                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p"> Poder notariado
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" checked onchange="actualizarModoApoderadoModal()"> Declaración jurada<br/>
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoModal()"> Poder notariado
                                                 @else
                                                     @if($tramita->tra_tipo_apoderado=='p')
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d"> Declaración jurada<br/>
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" checked> Poder notariado
+                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" onchange="actualizarModoApoderadoModal()"> Declaración jurada<br/>
+                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" checked onchange="actualizarModoApoderadoModal()"> Poder notariado
                                                     @else
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d"> Declaración jurada<br/>
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p"> Poder notariado
+                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" onchange="actualizarModoApoderadoModal()"> Declaración jurada<br/>
+                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoModal()"> Poder notariado
                                                     @endif
                                                 @endif
 
@@ -182,48 +194,145 @@
 </div>
 
     <script>
-        function verificarBoletaApoderado(){
-            var control = ($('#control_boleta_apoderado').val()||'').toString().trim();
-            var ci = ($('#ci_apoderado_form').val()||'').toString().trim();
-            if(control==='') return;
-            if(ci===''){
-                $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-warning').text('Complete CI');
-                $('#control_boleta_valido_modal').val('0');
-                return;
-            }
-            var link = "{{ url('verificar_boleta') }}" + "/" + encodeURIComponent(control.toString().trim()) + '?documento=' + encodeURIComponent(ci);
-            // UI: marcar como validando
-            $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-info').text('Validando...');
-            $('#control_boleta_valido_modal').val('0');
+        var verificarBoletaApoderadoTimer = null;
+        var verificarBoletaApoderadoXHR = null;
+
+        function cargarDatosApoderadoGlobal(ci){
+            var link="{{url('datos_apo/')}}"+"/"+encodeURIComponent((ci||'').toString().trim());
             $.ajax({
-                url: link,
-                type: 'GET',
-                success: function(resp){
+                url:link, type:'GET',
+                success:function(resp){
                     if(resp=="No"){
-                        $('#apellido').val('');
-                        $('#nombre').val('');
-                        $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-danger').text('No encontrado');
-                        $('#control_boleta_valido_modal').val('0');
-                    }else{
-                        try{
-                            var res = JSON.parse(resp);
-                            if(res['apellido_apoderado']!==undefined) $('#apellido').val(res['apellido_apoderado']);
-                            if(res['nombre_apoderado']!==undefined) $('#nombre').val(res['nombre_apoderado']);
-                            $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-success').text('Pago validado');
-                            $('#control_boleta_valido_modal').val('1');
-                        }catch(e){
-                            $('#apellido').val('');$('#nombre').val('');
-                            $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
-                            $('#control_boleta_valido_modal').val('0');
+                        if ($('#nombre').prop('readonly')) {
+                            $('#apellido').val('');
+                            $('#nombre').val('');
                         }
                     }
-                },
-                error: function(){
-                    $('#apellido').val('');$('#nombre').val('');
-                    $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-warning').text('Error API');
-                    $('#control_boleta_valido_modal').val('0');
+                    else{var res=JSON.parse(resp);$('#apellido').val(res['apo_apellido']);$('#nombre').val(res['apo_nombre']);}
                 }
             });
+        }
+
+        function requiereBoletaDjModal() {
+            if (typeof window.GLOB_REQUIERE_BOLETA_DJ === 'boolean') {
+                return window.GLOB_REQUIERE_BOLETA_DJ;
+            }
+            return $('#fila_boleta_apoderado_modal').data('requiere-boleta') === 1;
+        }
+
+        function actualizarModoApoderadoModal() {
+            var tipo = $('#form_apoderado input[name="tipo"]:checked').val() || 'd';
+            var requiereBoleta = requiereBoletaDjModal();
+            if (tipo === 'p' || (tipo === 'd' && !requiereBoleta)) {
+                $('#fila_boleta_apoderado_modal').hide();
+                $('#control_boleta_apoderado').val('');
+                $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-secondary').text('Sin validar');
+                $('#control_boleta_valido_modal').val('1'); // Permitir guardar
+                
+                $('#nombre').removeAttr('readonly');
+                $('#apellido').removeAttr('readonly');
+                
+                var ci = ($('#ci_apoderado_form').val()||'').toString().trim();
+                if(ci !== '') {
+                    cargarDatosApoderadoGlobal(ci);
+                }
+            } else {
+                $('#fila_boleta_apoderado_modal').show();
+                $('#nombre').prop('readonly', true).val('');
+                $('#apellido').prop('readonly', true).val('');
+                $('#control_boleta_valido_modal').val('0');
+                verificarBoletaApoderado();
+            }
+        }
+
+        $(function(){
+            actualizarModoApoderadoModal();
+        });
+
+        function verificarBoletaApoderado(){
+            if(verificarBoletaApoderadoTimer) clearTimeout(verificarBoletaApoderadoTimer);
+
+            verificarBoletaApoderadoTimer = setTimeout(function(){
+                var tipo = $('#form_apoderado input[name="tipo"]:checked').val() || 'd';
+                var requiereBoleta = requiereBoletaDjModal();
+                if (tipo === 'p' || (tipo === 'd' && !requiereBoleta)) {
+                    var ci = ($('#ci_apoderado_form').val()||'').toString().trim();
+                    if(ci !== '') {
+                        cargarDatosApoderadoGlobal(ci);
+                    }
+                    return;
+                }
+
+                var control = ($('#control_boleta_apoderado').val()||'').toString().trim();
+                var ci = ($('#ci_apoderado_form').val()||'').toString().trim();
+                if(control===''){
+                    $('#nombre').val('');
+                    $('#apellido').val('');
+                    $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-secondary').text('Sin validar');
+                    $('#control_boleta_valido_modal').val('0');
+                    return;
+                }
+                if(ci===''){
+                    $('#nombre').val('');
+                    $('#apellido').val('');
+                    $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-warning').text('Complete CI');
+                    $('#control_boleta_valido_modal').val('0');
+                    return;
+                }
+
+                var link = "{{ url('verificar_boleta') }}" + "/" + encodeURIComponent(control) + '?documento=' + encodeURIComponent(ci) + '&modulo=servicios';
+
+                $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-info').text('Validando...');
+                $('#control_boleta_valido_modal').val('0');
+
+                if(verificarBoletaApoderadoXHR && verificarBoletaApoderadoXHR.readyState !== 4){
+                    verificarBoletaApoderadoXHR.abort();
+                }
+
+                verificarBoletaApoderadoXHR = $.ajax({
+                    url: link,
+                    type: 'GET',
+                    success: function(resp){
+                        if(resp==="No" || resp===null || resp===''){
+                            $('#nombre').val('');
+                            $('#apellido').val('');
+                            $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-danger').text('No encontrado');
+                            $('#control_boleta_valido_modal').val('0');
+                        }else{
+                            try{
+                                var res = (typeof resp === 'string') ? JSON.parse(resp) : resp;
+                                if (res.error) {
+                                    $('#nombre').val('');
+                                    $('#apellido').val('');
+                                    $('#monto_boleta_modal').val('0');
+                                    $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-danger').text(res.error);
+                                    $('#control_boleta_valido_modal').val('0');
+                                } else {
+                                    $('#apellido').val(res['apellido_apoderado'] || '');
+                                    $('#nombre').val(res['nombre_apoderado'] || '');
+                                    $('#monto_boleta_modal').val(res['monto'] || '0');
+                                    $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-success').text('Boleta válida');
+                                    $('#control_boleta_valido_modal').val('1');
+                                }
+                            }catch(e){
+                                $('#nombre').val('');
+                                $('#apellido').val('');
+                                $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
+                                $('#control_boleta_valido_modal').val('0');
+                            }
+                        }
+                    },
+                    error: function(xhr, textStatus){
+                        if(textStatus === 'abort') return;
+                        var msg = 'Error API';
+                        if(xhr.status === 404) msg = 'No encontrado';
+                        $('#nombre').val('');
+                        $('#apellido').val('');
+                        $('#estado_pago_apoderado_modal').removeClass().addClass('badge badge-warning').text(msg);
+                        $('#control_boleta_valido_modal').val('0');
+                    }
+                });
+            }, 500);
         }
     </script>
 

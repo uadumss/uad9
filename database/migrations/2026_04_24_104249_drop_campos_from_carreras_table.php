@@ -13,13 +13,18 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::table('carreras', function (Blueprint $table) {
-            $table->dropColumn([
-                'car_campo_amplio',
-                'car_campo_especifico',
-                'car_campo_detallado'
-            ]);
-        });
+        $columnsToDrop = [];
+        foreach (['car_campo_amplio', 'car_campo_especifico', 'car_campo_detallado'] as $column) {
+            if (Schema::hasColumn('carreras', $column)) {
+                $columnsToDrop[] = $column;
+            }
+        }
+
+        if (!empty($columnsToDrop)) {
+            Schema::table('carreras', function (Blueprint $table) use ($columnsToDrop) {
+                $table->dropColumn($columnsToDrop);
+            });
+        }
     }
 
     /**
@@ -29,10 +34,19 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('carreras', function (Blueprint $table) {
-            $table->string('car_campo_amplio')->nullable();
-            $table->string('car_campo_especifico')->nullable();
-            $table->string('car_campo_detallado')->nullable();
-        });
+        $columnsToAdd = [];
+        foreach (['car_campo_amplio', 'car_campo_especifico', 'car_campo_detallado'] as $column) {
+            if (!Schema::hasColumn('carreras', $column)) {
+                $columnsToAdd[] = $column;
+            }
+        }
+
+        if (!empty($columnsToAdd)) {
+            Schema::table('carreras', function (Blueprint $table) use ($columnsToAdd) {
+                foreach ($columnsToAdd as $column) {
+                    $table->string($column)->nullable();
+                }
+            });
+        }
     }
 };

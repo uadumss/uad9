@@ -194,12 +194,13 @@ class ApostillaController extends Controller
         $persona=array();
         $apoderado=array();
         $nuevo="";
+        $apoderadoHabilitado = (bool) config('apoderado.habilitado', true);
         $form->validate([
             'ci'=>'required',
             'nombre'=>'required',
             'apellido'=>'required',
         ]);
-        if($form['ci_apoderado']!='' || $form['apellido_apoderado']!='' || $form['nombre_apoderado']!=''){
+        if($apoderadoHabilitado && ($form['ci_apoderado']!='' || $form['apellido_apoderado']!='' || $form['nombre_apoderado']!='')){
             $form->validate([
                 'ci_apoderado'=>'required',
                 'nombre_apoderado'=>'required',
@@ -258,6 +259,28 @@ class ApostillaController extends Controller
             'apos_apoderado'=>$form['tipo'],
             'apos_gestion'=>date('Y'),
         ]);
+        
+        if(isset($form['control_boleta'])){
+            $controlStr = preg_replace('/[^0-9]/','', $form['control_boleta']);
+            if($controlStr !== ''){
+                $identificador = 'APO_APOSTILLA_'.$controlStr;
+                $existe = \Illuminate\Support\Facades\DB::table('recaudacion_usos')->where('identificador', $identificador)->exists();
+                if(!$existe) {
+                    \Illuminate\Support\Facades\DB::table('recaudacion_usos')->insert([
+                        'identificador' => $identificador,
+                        'recibo' => $controlStr,
+                        'documento' => $form['ci_apoderado'] ?? '',
+                        'nombre_persona' => ($form['nombre_apoderado'] ?? '') . ' ' . ($form['apellido_apoderado'] ?? ''),
+                        'modulo' => 'apostilla',
+                        'tramite' => 'Apoderado Declaración Jurada',
+                        'monto' => isset($form['monto_boleta']) ? floatval($form['monto_boleta']) : 0,
+                        'usuario_registro' => \Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::user()->name : 'sistema',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+        }
         $nuevo=(object) array_merge((Array)$nuevo,$tramite_apostilla->toArray());
         $nuevo=json_encode($nuevo);
         SessionController::write('C','',$nuevo,'apostilla','4',$tramite_apostilla->cod_apos);
@@ -275,16 +298,32 @@ class ApostillaController extends Controller
         return redirect('editar tramite apostilla/'.$tramite_apostilla->cod_apos);
     }
     public function g_apoderado_tramite_apostilla(Request $form){
+        if (!config('apoderado.habilitado', true)) {
+            abort(404);
+        }
+        $form->validate([
+            'ci_apoderado'=>'required',
+            'nombre_apoderado'=>'required',
+            'apellido_apoderado'=>'required',
+            'tipo'=>'required',
+            'ca'=>'required',
+        ]);
 
+        if (config('apoderado.requiere_boleta_dj', false) && ($form['tipo'] === 'd' || $form['tipo'] === 'a')) {
             $form->validate([
-                'ci_apoderado'=>'required',
-                'nombre_apoderado'=>'required',
-                'apellido_apoderado'=>'required',
-                'tipo'=>'required',
-                'ca'=>'required',
+                'control_boleta' => 'required|string',
+                'control_boleta_valido' => 'required|in:1',
             ]);
-            $nuevo="";
-            $antiguo="";
+        }
+
+        $tramite_apostilla=Apostilla::find($form['ca']);
+        if(!$tramite_apostilla){
+            \Session::flash('error','No se encontró el trámite de apostilla.');
+            return redirect()->back();
+        }
+            $antiguo=json_encode($tramite_apostilla);
+
+            // Buscar apoderado por CI o crearlo/actualizarlo
             $apoderado=Apoderado::where('apo_ci','=',$form['ci_apoderado'])->first();
             if(!$apoderado){
                 $apoderado=Apoderado::create([
@@ -293,16 +332,40 @@ class ApostillaController extends Controller
                     'apo_apellido'=>mb_strtoupper($form['apellido_apoderado']),
                     'apo_sistema'=>4,
                 ]);
-                $nuevo=$apoderado;
+            } else {
+                // Actualizar nombre/apellido si cambiaron
+                $apoderado->apo_nombre=mb_strtoupper($form['nombre_apoderado']);
+                $apoderado->apo_apellido=mb_strtoupper($form['apellido_apoderado']);
+                $apoderado->save();
             }
-            $tramite_apostilla=Apostilla::find($form['ca']);
-            $antiguo=json_encode($tramite_apostilla);
 
             $tramite_apostilla->cod_apo=$apoderado->cod_apo;
             $tramite_apostilla->apos_apoderado=$form['tipo'];
             $tramite_apostilla->save();
-            $nuevo=(Object)array_merge($nuevo->toArray(),$tramite_apostilla->toArray());
-            $nuevo=json_encode($nuevo);
+            
+            if(isset($form['control_boleta'])){
+                $controlStr = preg_replace('/[^0-9]/','', $form['control_boleta']);
+                if($controlStr !== ''){
+                    $identificador = 'APO_APOSTILLA_'.$controlStr;
+                    $existe = \Illuminate\Support\Facades\DB::table('recaudacion_usos')->where('identificador', $identificador)->exists();
+                    if(!$existe) {
+                        \Illuminate\Support\Facades\DB::table('recaudacion_usos')->insert([
+                            'identificador' => $identificador,
+                            'recibo' => $controlStr,
+                            'documento' => $form['ci_apoderado'] ?? '',
+                            'nombre_persona' => ($form['nombre_apoderado'] ?? '') . ' ' . ($form['apellido_apoderado'] ?? ''),
+                            'modulo' => 'apostilla',
+                            'tramite' => 'Apoderado Declaración Jurada',
+                            'monto' => isset($form['monto_boleta']) ? floatval($form['monto_boleta']) : 0,
+                            'usuario_registro' => \Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::user()->name : 'sistema',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+            }
+
+            $nuevo=json_encode(array_merge($tramite_apostilla->toArray(), $apoderado->toArray()));
             SessionController::write('C',$antiguo,$nuevo,'apostilla','4',$tramite_apostilla->cod_apos);
 
             return redirect('editar tramite apostilla/'.$tramite_apostilla->cod_apos);
@@ -570,64 +633,91 @@ class ApostillaController extends Controller
             ];
         }
 
-        $sitraDisponible=true;
-        try {
-            $respuesta=app(SitraService::class)->consultarSitra($ci,$numero,$buscarEn);
-        } catch (\Throwable $e) {
-            $sitraDisponible=false;
-            $respuesta=(object)[];
-        }
-        if(!is_object($respuesta)){
-            $respuesta=(object)[];
-        }
+        $lugares = explode(',', $buscarEn);
+        $respuestaValidacion = [
+            'estado'=>'1',
+            'fuente'=>'sitra',
+            'respuesta'=>(object)[],
+        ];
 
-        $documento=trim((string)Funciones::DocumentoSitra($buscarEn));
-        $nombreSitra=trim((string)($respuesta->nombre ?? ''));
-        $tipoSitraNormalizado=strtolower(trim((string)($respuesta->tipo ?? '')));
-        $numeroSitra=trim((string)($respuesta->numero ?? ''));
-        $nombreLocal=trim((string)$nombreCompleto);
-        $tipoLocal=strtolower($documento);
+        foreach($lugares as $lugarStr) {
+            $lugar = strtolower(trim(explode('-', trim($lugarStr))[0]));
+            if ($lugar === '') continue;
 
-        if(app(SitraService::class)->nombresCompatibles($nombreLocal,$nombreSitra) && $tipoLocal===$tipoSitraNormalizado && trim($numero)===$numeroSitra){
-            return [
-                'estado'=>'0',
-                'fuente'=>'sitra',
-                'respuesta'=>$respuesta,
-            ];
-        }
+            if ($lugar === 'res') {
+                $resolucion = app(SitraService::class)->buscarResolucionInterna($numero, $gestion);
+                if ($resolucion) {
+                    return [
+                        'estado'=>'0',
+                        'fuente'=>'sid',
+                        'respuesta'=>(object)[
+                            'nombre'=>$nombreCompleto,
+                            'titulo'=>trim((string)($resolucion->res_objeto ?? $resolucion->res_desc ?? $resolucion->res_tema ?? '')),
+                            'numero'=>trim((string)$resolucion->res_numero),
+                            'gestion'=>trim((string)$resolucion->res_gestion),
+                            'tipo'=>Funciones::DocumentoSitra($lugar),
+                        ],
+                        'message'=>'Validado con respaldo SID.',
+                    ];
+                }
+            } else {
+                $sitraDisponible=true;
+                try {
+                    $respuesta=app(SitraService::class)->consultarSitra($ci,$numero,$lugar);
+                } catch (\Throwable $e) {
+                    $sitraDisponible=false;
+                    $respuesta=(object)[];
+                }
+                if(!is_object($respuesta)){
+                    $respuesta=(object)[];
+                }
 
-        if($nombreSitra==='' && $tipoSitraNormalizado==='' && $numeroSitra===''){
-            $respaldoUad9=null;
-            if($gestion!==''){
-                $respaldoUad9=app(SitraService::class)->buscarRespaldoInterno($idPer,$numero,$buscarEn,$gestion);
+                $documento=trim((string)Funciones::DocumentoSitra($lugar));
+                $nombreSitra=trim((string)($respuesta->nombre ?? ''));
+                $tipoSitraNormalizado=strtolower(trim((string)($respuesta->tipo ?? '')));
+                $numeroSitra=trim((string)($respuesta->numero ?? ''));
+                $nombreLocal=trim((string)$nombreCompleto);
+                $tipoLocal=strtolower($documento);
+
+                $numerosCoinciden = app(SitraService::class)->numerosCompatibles($numero, $numeroSitra);
+                $nombresCoinciden = app(SitraService::class)->nombresCompatibles($nombreLocal,$nombreSitra);
+
+                if($nombresCoinciden && $tipoLocal===$tipoSitraNormalizado && $numerosCoinciden){
+                    return [
+                        'estado'=>'0',
+                        'fuente'=>'sitra',
+                        'respuesta'=>$respuesta,
+                    ];
+                }
+
+                if($nombreSitra==='' && $tipoSitraNormalizado==='' && $numeroSitra===''){
+                    $respaldoUad9=null;
+                    if($gestion!==''){
+                        $respaldoUad9=app(SitraService::class)->buscarRespaldoInterno($idPer,$numero,$lugar,$gestion);
+                    }
+                    if($respaldoUad9){
+                        return [
+                            'estado'=>'0',
+                            'fuente'=>'sid',
+                            'respuesta'=>(object)[
+                                'nombre'=>$nombreLocal,
+                                'titulo'=>trim((string)($respaldoUad9->tit_titulo ?? '')),
+                                'numero'=>(string)($respaldoUad9->tit_nro_titulo ?? $numero),
+                                'gestion'=>(string)($respaldoUad9->tit_gestion ?? $gestion),
+                                'tipo'=>$documento,
+                            ],
+                            'message'=>'Validado con respaldo SID'.($sitraDisponible ? '' : ' (SITRA no disponible)').'.',
+                        ];
+                    }
+                }
             }
-            if($respaldoUad9){
-                return [
-                    'estado'=>'0',
-                    'fuente'=>'sid',
-                    'respuesta'=>(object)[
-                        'nombre'=>$nombreLocal,
-                        'titulo'=>trim((string)($respaldoUad9->tit_titulo ?? '')),
-                        'numero'=>(string)($respaldoUad9->tit_nro_titulo ?? $numero),
-                        'gestion'=>(string)($respaldoUad9->tit_gestion ?? $gestion),
-                        'tipo'=>$documento,
-                    ],
-                    'message'=>'Validado con respaldo SID'.($sitraDisponible ? '' : ' (SITRA no disponible)').'.',
-                ];
-            }
-
-            return [
-                'estado'=>'2',
-                'fuente'=>'sitra_sid',
-                'respuesta'=>(object)[],
-                'message'=>$sitraDisponible ? '' : 'SITRA no disponible.',
-            ];
         }
 
         return [
-            'estado'=>'1',
-            'fuente'=>'sitra',
-            'respuesta'=>$respuesta,
+            'estado'=>'2',
+            'fuente'=>'sitra_sid',
+            'respuesta'=>(object)[],
+            'message'=>'No existe en SITRA/SID.',
         ];
     }
 
@@ -715,6 +805,9 @@ class ApostillaController extends Controller
         if($detalle_apostilla){
             $cod_apos=$detalle_apostilla->cod_apos;
 
+            // Liberar pago en recaudaciones usos
+            $this->eliminarUsosRecaudacionApostilla((int)$detalle_apostilla->cod_dapo);
+
             $antiguo=json_encode($detalle_apostilla);
             SessionController::write('D',$antiguo,'','detalle_apostilla','4',$detalle_apostilla->cod_dapo);
 
@@ -730,6 +823,25 @@ class ApostillaController extends Controller
             \Session::flash('error_agregar','No se puede eliminar el documento seleccionado');
         }
         return redirect('ajax tabla agregar/'.$cod_apos);
+    }
+
+    private function eliminarUsosRecaudacionApostilla(int $codDtra): void
+    {
+        if($codDtra<=0 || !Schema::hasTable('recaudacion_usos')){
+            return;
+        }
+
+        try{
+            DB::table('recaudacion_usos')
+                ->where('cod_dtra','=',$codDtra)
+                ->where('modulo','=','apostilla')
+                ->delete();
+        }catch(\Throwable $e){
+            Log::warning('No se pudo liberar el pago de recaudaciones en Apostilla.',[
+                'cod_dtra'=>$codDtra,
+                'error'=>$e->getMessage(),
+            ]);
+        }
     }
     public function generar_pdf_apostilla($cod_apos){
 
@@ -1520,6 +1632,9 @@ class ApostillaController extends Controller
                 'cajero'=>(string)($validacion['cajero'] ?? ''),
                 'cod_tra'=>$codTra,
                 'cod_dtra'=>$codDtra,
+                'modulo'=>'apostilla',
+                'tramite'=>(string)($validacion['cuenta'] ?? ''),
+                'monto'=>(float)($validacion['monto'] ?? 0),
                 'usuario_registro'=>Auth::check() ? Auth::user()->name : 'sistema',
                 'created_at'=>now(),
                 'updated_at'=>now(),

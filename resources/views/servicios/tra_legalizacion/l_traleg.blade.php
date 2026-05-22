@@ -174,7 +174,7 @@
                                                    title="Insertar datos al trámite"><i class="fas fa-pen-alt"></i>
                                                 </a>
 
-                                                <a href="#traleg" class="btn btn-light btn-circle btn-sm text-primary" data-toggle="modal" onclick="cargarDatos('{{url("f_cambiar tipo tramite/$t->cod_tra")}}','panel_traleg')"
+                                                <a href="#traleg" class="btn btn-light btn-circle btn-sm text-primary" data-toggle="modal" onclick="cargarDatos('{{url("f_cambiar_tipo_tramite/$t->cod_tra")}}','panel_traleg')"
                                                    title="Cambiar tipo de trámite"><i class="fas fa-arrows-alt"></i>
                                                 </a>
 
@@ -220,14 +220,39 @@
     <!--===========================END ==============================-->
 
     <script>
-        function enviar1(formulario,ruta,panel){
+        /**
+         * Reemplaza el contenido de un panel con transicion suave (fade 140ms).
+         * Evita el corte visual abrupto al cambiar el contenido del modal.
+         */
+        function _reemplazarPanel(panel, html, callback){
+            var panelEl=$('#'+panel);
+            panelEl.html(html);
+            var inner = panelEl.children().first();
+            if(inner.length){
+                inner.css('opacity', 0).animate({opacity: 1}, 200, function(){
+                    if(typeof callback==='function') callback();
+                });
+            } else {
+                if(typeof callback==='function') callback();
+            }
+        }
+
+        function enviar1(formulario,ruta,panel,btn){
+            if(btn && btn.dataset.loading==='1'){
+                return;
+            }
+            setBotonCargandoServicios(btn, true, 'Registrando...');
+            var finalizar = function(){ setBotonCargandoServicios(btn, false); };
             $.ajax({
                 type: "POST",
                 url: ruta,
                 data: $("#"+formulario).serialize(), // Adjuntar los campos del formulario enviado.
                 success: function(resp) {
-                    $('#'+panel).html(resp);
-                    cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
+                    _reemplazarPanel(panel, resp, function(){
+                        cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
+                        mostrarToastServiciosLeg('Documento registrado correctamente.','ok');
+                        finalizar();
+                    });
                 },
                 error: function (resp) {
                     var obj=resp.responseJSON.errors;
@@ -239,10 +264,8 @@
                         $('#error_datos_span').html(texto);
                     }
                     $('#error_datos').show();
-                    setTimeout(function () {
-                        $('#error_datos').hide(500);
-                    }, 4000);
-
+                    setTimeout(function(){$('#error_datos').hide(500);},5000);
+                    finalizar();
                 }
             });
         }
@@ -271,31 +294,85 @@
             });
         }
 
-        function guardarDatos(ruta,panel,form){
+        function guardarDatos(ruta,panel,form,btn){
+            if(btn && btn.dataset.loading==='1'){
+                return;
+            }
+            setBotonCargandoServicios(btn, true, 'Guardando...');
+            var finalizar = function(){ setBotonCargandoServicios(btn, false); };
+
             $.ajax({
                 url: ruta,
                 type: 'POST',
                 data:$('#'+form).serialize(),
                 success: function (resp) {
-                    $('#'+panel).html(resp);
-                    cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
+                    if(resp && typeof resp === 'object' && resp.ok===true && resp.redirect){
+                        $.ajax({
+                            url: resp.redirect,
+                            type: 'GET',
+                            success: function(vista){
+                                _reemplazarPanel(panel, vista, function(){
+                                    cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
+                                    if(form==='form_traleg'){
+                                        var areaTramite=$('#'+panel).find('#divNueTram');
+                                        if(areaTramite.length){
+                                            areaTramite.css({opacity: 0, marginTop: '30px', display: 'block'});
+                                            setTimeout(function(){
+                                                areaTramite.animate({opacity: 1, marginTop: '0px'}, 450, 'swing', function(){
+                                                    var campoValorado=areaTramite.find('input[name="control"]').first();
+                                                    if(!campoValorado.length){campoValorado=areaTramite.find('input[name="valorado"]:visible').first();}
+                                                    if(campoValorado.length && !campoValorado.prop('disabled') && !campoValorado.prop('readonly')){
+                                                        campoValorado.trigger('focus');campoValorado.trigger('select');
+                                                    }
+                                                    areaTramite.css('margin-top', ''); // Clean up inline styles
+                                                });
+                                            }, 80);
+                                        }
+                                        mostrarToastServiciosLeg('Trámite guardado correctamente.', 'ok');
+                                    } else {
+                                        mostrarToastServiciosLeg('Datos guardados correctamente.', 'ok');
+                                    }
+                                    finalizar();
+                                });
+                            },
+                            error: function(){
+                                $('#'+panel).html(resp.redirect ? '<span class="text-danger">No se pudo abrir el trámite recién creado.</span>' : '');
+                                finalizar();
+                            }
+                        });
+                        return;
+                    }
+                    _reemplazarPanel(panel, resp, function(){
+                        cargarDatosTabla('{{url("ltl_ajax/".$fecha)}}','panel_tabla_tramites');
+                        if(form==='form_traleg'){
+                            enfocarCampoValoradoServicios(panel);
+                            mostrarToastServiciosLeg('Trámite guardado correctamente.', 'ok');
+                        } else if(form === 'form_apoderado_edi' || form === 'form_apoderado' || form === 'form_editar' || form === 'form_corregir_docleg' || form === 'form_g_obs_docleg') {
+                            mostrarToastServiciosLeg('Datos guardados exitosamente.', 'ok');
+                        }
+                        finalizar();
+                    });
                 },
                 error: function (resp) {
 			alert('Error en los datos');
                     var obj=resp.responseJSON.errors;
                     var texto='';
-                    $.each(obj, function(key,value) {
-                        texto=texto+value+'<br/>';
-                    });
-                    if(texto!=''){
-                        $('#error_datos_span').html(texto);
-                    }
-                        $('#error_datos').show();
-                        setTimeout(function () {
-                            $('#error_datos').hide(500);
-                        }, 4000);
-
-                    }
+                    try{
+                        var obj=resp.responseJSON;
+                        if(obj && obj.errors){
+                            $.each(obj.errors,function(k,v){texto+=v+'<br/>';});
+                        } else if(obj && obj.message){
+                            texto=obj.message;
+                        }
+                    }catch(e){}
+                    if(!texto) texto='Error al guardar los datos.';
+                    $('#error_datos_span').html(texto);
+                    $('#error_datos').show();
+                    setTimeout(function(){
+                        $('#error_datos').hide(500);
+                    },5000);
+                    finalizar();
+                }
             });
         }
         function cargarDatosTabla(ruta,panel){

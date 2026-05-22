@@ -1,5 +1,12 @@
 
 <div class="modal-content border-bottom-primary">
+    @php
+        $requiereBoletaDj = (bool) config('apoderado.requiere_boleta_dj', false);
+        $tipoApoderado = $tramita->tra_tipo_apoderado ?: 'd';
+        $mostrarBoleta = ($tipoApoderado === 'd' && $requiereBoletaDj);
+        $apoderadoHabilitado = (bool) config('apoderado.habilitado', true);
+    @endphp
+    <script>window.GLOB_REQUIERE_BOLETA_DJ = {{ $requiereBoletaDj ? 'true' : 'false' }};</script>
     <div class="modal-header bg-primary">
         <h5 class="modal-title text-white font-weight-bolder" id="exampleModalLabel"><i class="fas fa-user"></i> Apoderado </h5>
         <button class="close" type="button" data-dismiss="modal" aria-label="Close">
@@ -61,118 +68,123 @@
                  </table>
 
 
-                 <span class="text-primary font-weight-bold font-italic" style="font-size: 0.85em">* Datos del apoderado</span>
-                 <br/>
-                 <br/>
-                     <div class="" id="apoderadoEntrega">
-                         @if($apoderado)
-                         <table class=" table table-sm">
-                             <tr>
-                                 <th class="text-right font-italic text-dark">CI : </th>
-                                 <td class="border-bottom border-dark">
-                                     @if($apoderado)
-                                         {{$apoderado['apo_ci']}}
-                                     @else
-                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                     @endif
-                                 </td>
-                             </tr>
-                             <tr>
-                                 <th class="text-right font-italic text-dark font-italic">Nombre apoderado : </th>
-                                 <td class="border-bottom border-dark">
-                                     @if($apoderado)
-                                         {{$apoderado['apo_apellido']." ".$apoderado['apo_nombre']}}
-                                     @else
-                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                     @endif
-                                 </td>
-                             </tr>
-                             <tr>
-                                 <th class="text-right font-italic text-dark">Tipo de apoderado : </th>
-                                 <td class="border-bottom border-dark">
-                                     @if($tramita->tra_tipo_apoderado=='d')
-                                         Declaración jurada
-                                     @else
-                                         @if($tramita->tra_tipo_apoderado=='p')
-                                             Poder notariado
+                 @if($apoderadoHabilitado)
+                     <span class="text-primary font-weight-bold font-italic" style="font-size: 0.85em">* Datos del apoderado</span>
+                     <br/>
+                     <br/>
+                         <div class="" id="apoderadoEntrega">
+                             @if($apoderado)
+                             <table class=" table table-sm">
+                                 <tr>
+                                     <th class="text-right font-italic text-dark">CI : </th>
+                                     <td class="border-bottom border-dark">
+                                         @if($apoderado)
+                                             {{$apoderado['apo_ci']}}
                                          @else
                                              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                                          @endif
-                                     @endif
-                                 </td>
-                             </tr>
-                         </table>
-                         @endif
-                         <button id="otros" class="btn btn-sm btn-primary float-right" onclick="$('#editarApoderadoEntrega').show(500); $('#apoderadoEntrega').hide(500);"> Editar datos</button>
-                     </div>
-                     <div id="editarApoderadoEntrega" class="border rounded shadow" style="display: none;">
-                         <div class="p-3">
-                             <a onclick="$('#editarApoderadoEntrega').hide(500);$('#apoderadoEntrega').show(500); " id="ocultar" style="float:right">
-                                 <i class="fas fa-minus-circle text-danger"></i></a>
-                             <span class="text-primary font-weight-bold font-italic" style="font-size: 0.85em">* Editar datos del apoderado</span>
-                             <br><br>
-
-                             <form id="form_apoderado_ent">
-                                @csrf
-                                 @php
-                                     $nombre='';    $apellido='';  $ci="";
-                                     if($apoderado){   $ci=$apoderado->apo_ci;       $apellido=$apoderado->apo_apellido;     $nombre=$apoderado->apo_nombre;  }
-                                 @endphp
-
-                                 <table class="table-hover col-md-12">
-                                     <tr>
-                                         <th class="text-right font-italic">CI : </th>
-                                         <td class="border-bottom border-dark">
-                                             <input class="form-control form-control-sm border-0" placeholder=""
-                                                    id="ci_entrega_apoderado" name="ci" value="{{$ci}}" oninput="cargarDatosApoderado(this.value); verificarBoletaApoderadoEntrega();"/></td>
-                                     </tr>
-                                     <tr>
-                                         <th class="text-right font-italic">N° control boleta : </th>
-                                         <td class="border-bottom border-dark">
-                                             <input class="form-control form-control-sm border-0" placeholder="Ingrese número de control"
-                                                    id="control_boleta_entrega" name="control_boleta" oninput="verificarBoletaApoderadoEntrega()"/>
-                                             <div style="margin-top:6px;"><span id="estado_pago_apoderado_entrega" class="badge badge-secondary">Sin validar</span></div>
-                                             <input type="hidden" id="control_boleta_valido_entrega" name="control_boleta_valido" value="0">
-                                         </td>
-                                     </tr>
-                                     <tr>
-                                         <th class="text-right font-italic">Apellidos : </th>
-                                         <td class="border-bottom border-dark">
-                                             <input class="form-control form-control-sm border-0" placeholder=""
-                                                    required name="apellido" id="apellido_apoderado" value="{{$apellido}}" /></td>
-                                     </tr>
-                                     <tr>
-                                         <th class="text-right font-italic">Nombres : </th>
-                                         <td class="border-bottom border-dark">
-                                             <input class="form-control form-control-sm border-0" placeholder=""
-                                                    required name="nombre" id="nombre_apoderado" value="{{$nombre}}" /></td>
-                                     </tr>
-                                     <tr>
-                                         <th class="text-right font-italic" valign="top">Tipo de apoderado : </th>
-                                         <td class="border-bottom border-dark">
-                                             @if($tramita->tra_tipo_apoderado=='d')
-                                                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" checked> Declaración jurada<br/>
-                                                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p"> Poder notariado
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <th class="text-right font-italic text-dark font-italic">Nombre apoderado : </th>
+                                     <td class="border-bottom border-dark">
+                                         @if($apoderado)
+                                             {{$apoderado['apo_apellido']." ".$apoderado['apo_nombre']}}
+                                         @else
+                                             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                         @endif
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <th class="text-right font-italic text-dark">Tipo de apoderado : </th>
+                                     <td class="border-bottom border-dark">
+                                         @if($tramita->tra_tipo_apoderado=='d')
+                                             Declaración jurada
+                                         @else
+                                             @if($tramita->tra_tipo_apoderado=='p')
+                                                 Poder notariado
                                              @else
-                                                 @if($tramita->tra_tipo_apoderado=='p')
-                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d"> Declaración jurada<br/>
-                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" checked> Poder notariado
-                                                 @else
-                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d"> Declaración jurada<br/>
-                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p"> Poder notariado
+                                                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                             @endif
                                          @endif
-                                         @endif
-
-                                     </tr>
-                                 </table>
-                                 <br/>
-                                 <input type="hidden" name="ctra" value="{{$tramita->cod_tra}}">
-                                 <input type="hidden" name="pan" value="ent">
-                             </form>
-                             <a class="btn btn-primary btn-sm text-white float-right" onclick="enviar('form_apoderado_ent','{{url("guardar apoderado")}}','panel_traleg');" >Guardar</a><br/>
-                             <br/>
+                                     </td>
+                                 </tr>
+                             </table>
+                             @endif
+                             @if(!$apoderado)
+                                 <button id="otros" class="btn btn-sm btn-primary float-right" onclick="$('#editarApoderadoEntrega').show(500); $('#apoderadoEntrega').hide(500);"> Registrar apoderado</button>
+                             @endif
                          </div>
-                     </div>
+                         <div id="editarApoderadoEntrega" class="border rounded shadow" style="display: none;">
+                             <div class="p-3">
+                                 <a onclick="$('#editarApoderadoEntrega').hide(500);$('#apoderadoEntrega').show(500); " id="ocultar" style="float:right">
+                                     <i class="fas fa-minus-circle text-danger"></i></a>
+                                 <span class="text-primary font-weight-bold font-italic" style="font-size: 0.85em">* Editar datos del apoderado</span>
+                                 <br><br>
+
+                                 <form id="form_apoderado_ent">
+                                    @csrf
+                                     @php
+                                         $nombre='';    $apellido='';  $ci="";
+                                         if($apoderado){   $ci=$apoderado->apo_ci;       $apellido=$apoderado->apo_apellido;     $nombre=$apoderado->apo_nombre;  }
+                                     @endphp
+
+                                     <table class="table-hover col-md-12">
+                                         <tr>
+                                             <th class="text-right font-italic">CI : </th>
+                                             <td class="border-bottom border-dark">
+                                                 <input class="form-control form-control-sm border-0" placeholder=""
+                                                        id="ci_entrega_apoderado" name="ci" value="{{$ci}}" oninput="verificarBoletaApoderadoEntrega();"/></td>
+                                         </tr>
+                                         <tr id="fila_boleta_apoderado_entrega" data-requiere-boleta="{{ $requiereBoletaDj ? 1 : 0 }}" style="{{ $mostrarBoleta ? '' : 'display:none;' }}">
+                                            <th class="text-right font-italic">N° control boleta : </th>
+                                            <td class="border-bottom border-dark">
+                                                <input class="form-control form-control-sm border-0" placeholder="Ingrese número de control"
+                                                       id="control_boleta_entrega" name="control_boleta" oninput="verificarBoletaApoderadoEntrega()"/>
+                                                <div style="margin-top:6px;"><span id="estado_pago_apoderado_entrega" class="badge badge-secondary">Sin validar</span></div>
+                                                <input type="hidden" id="control_boleta_valido_entrega" name="control_boleta_valido" value="{{ $mostrarBoleta ? '0' : '1' }}">
+                                                <input type="hidden" name="monto_boleta" id="monto_boleta_entrega" value="0">
+                                            </td>
+                                        </tr>
+                                         <tr>
+                                             <th class="text-right font-italic">Apellidos : </th>
+                                             <td class="border-bottom border-dark">
+                                                 <input class="form-control form-control-sm border-0" placeholder=""
+                                                        required name="apellido" id="apellido_apoderado" value="{{$apellido}}" {{ $mostrarBoleta ? 'readonly' : '' }} /></td>
+                                         </tr>
+                                         <tr>
+                                             <th class="text-right font-italic">Nombres : </th>
+                                             <td class="border-bottom border-dark">
+                                                 <input class="form-control form-control-sm border-0" placeholder=""
+                                                        required name="nombre" id="nombre_apoderado" value="{{$nombre}}" {{ $mostrarBoleta ? 'readonly' : '' }} /></td>
+                                         </tr>
+                                         <tr>
+                                             <th class="text-right font-italic" valign="top">Tipo de apoderado : </th>
+                                             <td class="border-bottom border-dark">
+                                                 @if($tramita->tra_tipo_apoderado=='d')
+                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" checked onchange="actualizarModoApoderadoEntrega()"> Declaración jurada<br/>
+                                                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoEntrega()"> Poder notariado
+                                                 @else
+                                                     @if($tramita->tra_tipo_apoderado=='p')
+                                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" onchange="actualizarModoApoderadoEntrega()"> Declaración jurada<br/>
+                                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" checked onchange="actualizarModoApoderadoEntrega()"> Poder notariado
+                                                     @else
+                                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" onchange="actualizarModoApoderadoEntrega()"> Declaración jurada<br/>
+                                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoEntrega()"> Poder notariado
+                                             @endif
+                                             @endif
+
+                                         </tr>
+                                     </table>
+                                     <br/>
+                                     <input type="hidden" name="ctra" value="{{$tramita->cod_tra}}">
+                                     <input type="hidden" name="pan" value="ent">
+                                 </form>
+                                 <a class="btn btn-primary btn-sm text-white float-right" onclick="enviar('form_apoderado_ent','{{url("guardar apoderado")}}','panel_traleg');" >Guardar</a><br/>
+                                 <br/>
+                             </div>
+                         </div>
+                 @endif
              </div>
 
 
@@ -269,62 +281,126 @@
 </div>
 <script>
     function cargarDatosApoderado(ci){
-        var link="{{url('datos_apo/')}}"+"/"+ci;
+        var link="{{url('datos_apo/')}}"+"/"+encodeURIComponent((ci||'').toString().trim());
         $.ajax({
-            url: link,
-            type: 'GET',
-            success: function (resp) {
+            url:link, type:'GET',
+            success:function(resp){
                 if(resp=="No"){
-                    $('#apellido_apoderado').val('');
-                    $('#nombre_apoderado').val('');
-                }else{
+                    // Solo limpiar si NO estamos en modo manual (es decir, si el campo NO es editable)
+                    if ($('#nombre_apoderado').prop('readonly')) {
+                        $('#apellido_apoderado').val('');
+                        $('#nombre_apoderado').val('');
+                    }
+                }
+                else{
                     var res=JSON.parse(resp);
                     $('#apellido_apoderado').val(res['apo_apellido']);
                     $('#nombre_apoderado').val(res['apo_nombre']);
                 }
-            },
-            error: function () {
-                $('#'+panel).html("<span class='text-danger'>Ocurrio un error, probablemente no tenga permisos para esta acción</span>");
             }
         });
     }
 
-    function verificarBoletaApoderadoEntrega(){
-        var control=($('#control_boleta_entrega').val()||'').toString().trim();
-        var ci=($('#ci_entrega_apoderado').val()||'').toString().trim();
-        if(control==='')return;
-        if(ci===''){
-            $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-warning').text('Complete CI');
-            $('#control_boleta_valido_entrega').val('0');
-            return;
-        }
-        var link="{{ url('verificar_boleta') }}"+"/"+encodeURIComponent(control)+'?documento='+encodeURIComponent(ci);
-        $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-info').text('Validando...');
-        $('#control_boleta_valido_entrega').val('0');
-        $.ajax({
-            url:link,
-            type:'GET',
-            success:function(resp){
-                if(resp=="No"){
-                    $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-danger').text('No encontrado');
-                    $('#control_boleta_valido_entrega').val('0');
-                    return;
-                }
-                try{
-                    var res=JSON.parse(resp);
-                    if(res['apellido_apoderado']!==undefined)$('#apellido_apoderado').val(res['apellido_apoderado']);
-                    if(res['nombre_apoderado']!==undefined)$('#nombre_apoderado').val(res['nombre_apoderado']);
-                    $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-success').text('Pago validado');
-                    $('#control_boleta_valido_entrega').val('1');
-                }catch(e){
-                    $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
-                    $('#control_boleta_valido_entrega').val('0');
-                }
-            },
-            error:function(){
-                $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-warning').text('Error API');
-                $('#control_boleta_valido_entrega').val('0');
+    var verificarBoletaApoderadoEntregaTimer = null;
+    var verificarBoletaApoderadoEntregaXHR = null;
+
+    function actualizarModoApoderadoEntrega() {
+        var tipo = $('input[name="tipo"]:checked').val() || 'd';
+        if (tipo === 'p' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
+            $('#fila_boleta_apoderado_entrega').hide();
+            $('#control_boleta_entrega').val('');
+            $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-secondary').text('Sin validar');
+            $('#control_boleta_valido_entrega').val('1'); // Permitir guardar sin boleta
+            
+            $('#nombre_apoderado').removeAttr('readonly');
+            $('#apellido_apoderado').removeAttr('readonly');
+            
+            var ci = ($('#ci_entrega_apoderado').val()||'').toString().trim();
+            if(ci !== '') {
+                 cargarDatosApoderado(ci);
             }
-        });
+        } else {
+            $('#fila_boleta_apoderado_entrega').show();
+            $('#nombre_apoderado').prop('readonly', true).val('');
+            $('#apellido_apoderado').prop('readonly', true).val('');
+            $('#control_boleta_valido_entrega').val('0');
+            verificarBoletaApoderadoEntrega();
+        }
+    }
+
+    $(function(){
+        actualizarModoApoderadoEntrega();
+    });
+
+    function verificarBoletaApoderadoEntrega(){
+        if(verificarBoletaApoderadoEntregaTimer) clearTimeout(verificarBoletaApoderadoEntregaTimer);
+
+        verificarBoletaApoderadoEntregaTimer = setTimeout(function(){
+            var tipo = $('input[name="tipo"]:checked').val() || 'd';
+            if (tipo === 'p' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
+                var ci = ($('#ci_entrega_apoderado').val()||'').toString().trim();
+                if(ci !== '') {
+                    cargarDatosApoderado(ci);
+                }
+                return;
+            }
+
+            var control=($('#control_boleta_entrega').val()||'').toString().trim();
+            var ci=($('#ci_entrega_apoderado').val()||'').toString().trim();
+            if(control===''){
+                $('#nombre_apoderado').val('');
+                $('#apellido_apoderado').val('');
+                $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-secondary').text('Sin validar');
+                $('#control_boleta_valido_entrega').val('0');
+                return;
+            }
+            if(ci===''){
+                $('#nombre_apoderado').val('');
+                $('#apellido_apoderado').val('');
+                $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-warning').text('Complete CI');
+                $('#control_boleta_valido_entrega').val('0');
+                return;
+            }
+            var link="{{ url('verificar_boleta') }}"+"/"+encodeURIComponent(control)+'?documento='+encodeURIComponent(ci);
+            $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-info').text('Validando...');
+            $('#control_boleta_valido_entrega').val('0');
+
+            if(verificarBoletaApoderadoEntregaXHR && verificarBoletaApoderadoEntregaXHR.readyState !== 4){
+                verificarBoletaApoderadoEntregaXHR.abort();
+            }
+
+            verificarBoletaApoderadoEntregaXHR = $.ajax({
+                url:link,
+                type:'GET',
+                success:function(resp){
+                    if(resp=="No" || resp===null || resp===''){
+                        $('#nombre_apoderado').val('');
+                        $('#apellido_apoderado').val('');
+                        $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-danger').text('No encontrado');
+                        $('#control_boleta_valido_entrega').val('0');
+                        return;
+                    }
+                    try{
+                        var res = (typeof resp === 'string') ? JSON.parse(resp) : resp;
+                        $('#apellido_apoderado').val(res['apellido_apoderado'] || '');
+                        $('#nombre_apoderado').val(res['nombre_apoderado'] || '');
+                        $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-success').text('Pago validado');
+                        $('#control_boleta_valido_entrega').val('1');
+                    }catch(e){
+                        $('#nombre_apoderado').val('');
+                        $('#apellido_apoderado').val('');
+                        $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
+                        $('#control_boleta_valido_entrega').val('0');
+                    }
+                },
+                error:function(xhr, textStatus){
+                    if(textStatus === 'abort') return;
+                    $('#nombre_apoderado').val('');
+                    $('#apellido_apoderado').val('');
+                    $('#estado_pago_apoderado_entrega').removeClass().addClass('badge badge-warning').text('Error API');
+                    $('#control_boleta_valido_entrega').val('0');
+                }
+            });
+        }, 500);
     }
 </script>

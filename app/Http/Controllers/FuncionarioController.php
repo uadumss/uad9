@@ -873,16 +873,31 @@ class FuncionarioController extends Controller
             'lugarTrabajo' => 'required|string|max:255',
             'carrera' => 'required|string|max:255',
             'observaciones' => 'nullable|string',
+            'telefonos' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
         ]);
 
         $codFun = $request->input('cod_fun');
         $observaciones = $request->input('observaciones', '');
         $lugarTrabajo = $request->input('lugarTrabajo');
         $carrera = $request->input('carrera');
+        $telefonos = $request->input('telefonos');
+        $email = $request->input('email');
 
         $funcionario = Funcionario::find($codFun);
         if (!$funcionario) {
             return redirect()->back()->with('error', 'Funcionario no encontrado');
+        }
+
+        // Actualizar teléfono y email si se proporcionaron
+        if ($telefonos !== null) {
+            $funcionario->fun_telefonos = $telefonos;
+        }
+        if ($email !== null) {
+            $funcionario->fun_email = $email;
+        }
+        if ($funcionario->isDirty()) {
+            $funcionario->save();
         }
 
         $startTime = session('conformidad_start_time_' . $codFun, now());
@@ -1012,13 +1027,61 @@ class FuncionarioController extends Controller
         $templateProcessor->setValue('fecha',       $fecha);
         $templateProcessor->setValue('codigo',      $formulario->codigo ?? '');
 
-        $documentos = \App\Models\Documento::where('cod_fcon', $cod_fcon)->orderBy('doc_tipo')->get();
-        $templateProcessor->setValue('cantidad_documentos', count($documentos) + 1);
-        $valoresDocs = [];
+        $documentos = \App\Models\Documento::where('cod_fcon', $cod_fcon)->get();
+        $titularidades = \App\Models\Titularidad::where('cod_fcon', $cod_fcon)->get();
+
+        $lista = [];
+
         foreach ($documentos as $doc) {
-            $valoresDocs[] = [
+            $tipoStr = strtoupper(trim($doc->doc_tipo));
+            $peso = 99; // Por defecto 'Otro'
+            
+            if (strpos($tipoStr, 'DIPLOMA') !== false && strpos($tipoStr, 'BACHILLER') !== false) {
+                $peso = 1;
+            } elseif (strpos($tipoStr, 'DIPLOMA') !== false && strpos($tipoStr, 'ACADEMICO') !== false) {
+                $peso = 2;
+            } elseif (strpos($tipoStr, 'TITULO') !== false && strpos($tipoStr, 'PROFESIONAL') !== false) {
+                $peso = 3;
+            } elseif (strpos($tipoStr, 'DIPLOMADO') !== false) {
+                $peso = 4;
+            } elseif (strpos($tipoStr, 'MAESTRIA') !== false) {
+                $peso = 5;
+            } elseif (strpos($tipoStr, 'ESPECIALIDAD') !== false) {
+                $peso = 6;
+            } elseif (strpos($tipoStr, 'DOCTORADO') !== false) {
+                $peso = 7;
+            }
+
+            $lista[] = [
                 'doc_tipo' => htmlspecialchars($doc->doc_tipo ?? ''),
                 'doc_titulo' => htmlspecialchars($doc->doc_titulo ?? ''),
+                'peso' => $peso
+            ];
+        }
+
+        foreach ($titularidades as $tit) {
+            $lista[] = [
+                'doc_tipo' => htmlspecialchars('Titularidad'),
+                'doc_titulo' => htmlspecialchars(($tit->dt_materia ?? '') . ' - ' . ($tit->dt_categoria ?? '')),
+                'peso' => 8 // TITULARIDAD
+            ];
+        }
+
+        usort($lista, function($a, $b) {
+            if ($a['peso'] == $b['peso']) {
+                return strcmp($a['doc_tipo'], $b['doc_tipo']);
+            }
+            return $a['peso'] - $b['peso'];
+        });
+
+        // Set cantidad (se suma 1 por defecto según lo solicitado)
+        $templateProcessor->setValue('cantidad_documentos', count($lista) + 1);
+
+        $valoresDocs = [];
+        foreach ($lista as $item) {
+            $valoresDocs[] = [
+                'doc_tipo' => $item['doc_tipo'],
+                'doc_titulo' => $item['doc_titulo'],
             ];
         }
         

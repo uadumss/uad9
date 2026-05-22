@@ -133,6 +133,19 @@ class ActividadTareaController extends Controller
 
         return view('actividad.tarea.f_asignados',compact('usu','tarea'));
     }
+    public function f_historial_tareas_actividad($cod_act){
+        $act = Actividad::find($cod_act);
+        $tar = Tarea::all()->where('cod_act','=',$cod_act)->sortBy('cod_tar');
+
+        $designados = DB::table('designas')
+            ->join('users','designas.id','=','users.id')
+            ->join('tareas','designas.cod_tar','=','tareas.cod_tar')
+            ->select('designas.cod_tar','designas.cod_des','users.name','users.foto','users.id','users.sexo')
+            ->where('tareas.cod_act','=',$cod_act)
+            ->get();
+
+        return view('actividad.tarea.f_historial_actividad',compact('act','tar','designados'));
+    }
     public function g_funcionarioTarea(Request $request){
         Designa::create([
             'des_fech_asig'=>'now',
@@ -146,6 +159,93 @@ class ActividadTareaController extends Controller
         $tar=Tarea::find($request['it']);
         \Session::flash('exito','Se ha asignado un nuevo funcionario a la tarea "'.$tar['tar_nombre'].'"');
         return redirect('listar_tareas/'.$tar->id_act);
+    }
+
+    public function f_historial_designaciones($cod_tar){
+        $tarea = Tarea::find($cod_tar);
+        
+        // Designaciones actuales (sin fecha de retiro)
+        $designacionesActuales = DB::table('designas')
+            ->join('users','designas.id','=','users.id')
+            ->select('designas.*','users.name','users.foto','users.sexo')
+            ->where('designas.cod_tar','=',$cod_tar)
+            ->whereNull('designas.des_fech_ret')
+            ->get();
+        
+        // Designaciones retiradas (con fecha de retiro)
+        $designacionesRetiradas = DB::table('designas')
+            ->join('users','designas.id','=','users.id')
+            ->select('designas.*','users.name','users.foto','users.sexo')
+            ->where('designas.cod_tar','=',$cod_tar)
+            ->whereNotNull('designas.des_fech_ret')
+            ->get();
+        
+        // Funcionarios disponibles (usuarios activos)
+        $funcionariosDisponibles = User::where('bloqueado','=','f')->get();
+        
+        return view('actividad.tarea.f_historial_designaciones',compact('tarea','designacionesActuales','designacionesRetiradas','funcionariosDisponibles'));
+    }
+
+    public function guardar_retiro_designacion(Request $request){
+        $designa = Designa::find($request['cod_des']);
+        $porcentajeAlcanzado = DB::table('diarios')
+            ->where('cod_des', '=', $designa->cod_des)
+            ->where('cod_tar', '=', $designa->cod_tar)
+            ->sum('dia_porcen');
+
+        $designa->des_fech_ret = $request['fecha_retiro'];
+        $designa->des_porcen_alcanzado = $porcentajeAlcanzado;
+        $designa->save();
+
+        // Determine the related task and its activity so we redirect correctly
+        $tarea = Tarea::find($designa->cod_tar);
+
+        // Check if the total percentage of all designations for this task reaches 100%
+        if($tarea){
+            $totalPorcentaje = DB::table('designas')
+                ->where('cod_tar', '=', $tarea->cod_tar)
+                ->sum('des_porcen_alcanzado');
+            
+            if($totalPorcentaje >= 100){
+                $tarea->tar_concluido = 't';
+                $tarea->save();
+                \Session::flash('exito','Retiro registrado exitosamente. Porcentaje alcanzado: '.$porcentajeAlcanzado.'%. La tarea ha sido marcada como completada.');
+            } else {
+                \Session::flash('exito','Retiro registrado exitosamente. Porcentaje alcanzado: '.$porcentajeAlcanzado.'%. Total: '.$totalPorcentaje.'%');
+            }
+            
+            return redirect('listar tareas/'.$tarea->cod_act);
+        }
+
+        // Fallback: redirect to actividades list if task/activity can't be resolved
+        return redirect('listar actividades');
+    }
+
+    public function guardar_nueva_designacion(Request $request){
+        // Crear nueva designación
+        Designa::create([
+            'cod_tar' => $request['cod_tar'],
+            'id' => $request['id_funcionario'],
+            'id_responsable' => Auth::user()->id,
+            'des_fech_asig' => date('Y-m-d'),
+            'des_hab' => 't',
+            'des_concluido' => 'f'
+        ]);
+        
+        \Session::flash('exito','Nuevo funcionario asignado exitosamente');
+        return redirect('listar tareas/'.$request['cod_act']);
+    }
+
+    public function marcar_tarea_completada($cod_tar){
+        $tarea = Tarea::find($cod_tar);
+        if($tarea){
+            $tarea->tar_concluido = 't';
+            $tarea->save();
+            \Session::flash('exito','Tarea marcada como completada exitosamente');
+            return redirect('listar tareas/'.$tarea->cod_act);
+        }
+        \Session::flash('error','No se pudo encontrar la tarea');
+        return redirect('listar actividades');
     }
 
     //==================END TAREAS

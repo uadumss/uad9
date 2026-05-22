@@ -34,9 +34,14 @@
         <div class="card-header alert-primary py-3">
             <div class="d-sm-flex align-items-center justify-content-between">
                 <h5 class="m-0 font-weight-bold text-dark">Lista de Tareas</h5>
-                <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" data-target="#tarea" data-toggle="modal"
-                   onclick="cargarDatos('{{url("f_editar tarea/0/".$act->cod_act)}}','panel_tarea')">
-                    + Nueva tarea</a>
+                <div class="d-flex align-items-center">
+                    <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-info shadow-sm mr-2" data-target="#tarea" data-toggle="modal"
+                       onclick="cargarDatos('{{url("historial tareas actividad/".$act->cod_act)}}','panel_tarea')">
+                        <i class="fas fa-history"></i> Historial</a>
+                    <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" data-target="#tarea" data-toggle="modal"
+                       onclick="cargarDatos('{{url("f_editar tarea/0/".$act->cod_act)}}','panel_tarea')">
+                        + Nueva tarea</a>
+                </div>
             </div>
         </div>
         <div class="card-body">
@@ -145,7 +150,21 @@
                                                 <br/>
                                             @endif
                                         @endforeach
-
+                                        @php
+                                            $verHistorial = Auth::user()->responsable=='t' || Auth::user()->id==$t['id_responsable'];
+                                            foreach ($designados as $desHist){
+                                                if($desHist->cod_tar==$t['cod_tar'] && $desHist->id==Auth::user()->id){
+                                                    $verHistorial = true;
+                                                    break;
+                                                }
+                                            }
+                                        @endphp
+                                        @if($verHistorial)
+                                            <a href="#" class="btn btn-link btn-sm text-info p-0 mt-2" data-target="#tarea" data-toggle="modal"
+                                               onclick="cargarDatos('{{url("historial designaciones/".$t['cod_tar'])}}','panel_tarea')" title="Ver historial y reasignar">
+                                                <i class="fas fa-history"></i> Ver historial / reasignar
+                                            </a>
+                                        @endif
                                     </td>
                                     @if($t->tar_cotidiano=='t')
                                         <td><span class="bg-info rounded p-1 font-italic text-white font-weight-bold">Tarea cotidiana</span></td>
@@ -184,9 +203,18 @@
                                     @endif
                                     <td>
                                         @if(Auth::user()->id==$t['id_responsable'])
-                                            @if($t['tar_hab']=='t')
-                                                <a href="{{url('habilitar tarea/'.$t['cod_tar'])}}" class="btn btn-light btn-circle btn-sm text-success">
+                                            @if($t['tar_concluido']=='t')
+                                                <span class="btn btn-light btn-circle btn-sm text-success" title="Tarea completada">
+                                                    <i class="fas fa-check-double"></i>
+                                                </span>
+                                            @else
+                                                <a href="{{url('marcar_tarea_completada/'.$t['cod_tar'])}}" class="btn btn-light btn-circle btn-sm text-success" title="Marcar como completada" onclick="return confirm('¿Marcar esta tarea como completada?')">
                                                     <i class="fas fa-check"></i>
+                                                </a>
+                                            @endif
+                                            @if($t['tar_hab']=='t')
+                                                <a href="{{url('habilitar tarea/'.$t['cod_tar'])}}" class="btn btn-light btn-circle btn-sm text-info">
+                                                    <i class="fas fa-eye"></i>
                                                 </a>
                                             @else
                                                 <a href="{{url('habilitar tarea/'.$t['cod_tar'])}}" class="btn btn-light btn-circle btn-sm text-dark">

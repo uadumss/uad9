@@ -75,11 +75,11 @@
                                         </div>
                                         <div class="form-group col-md-4">
                                             <label>Teléfono</label>
-                                            <input type="text" class="form-control" value="{{$funcionario->fun_telefonos ?? ''}}" readonly>
+                                            <input type="text" class="form-control" name="telefonos" value="{{old('telefonos', $funcionario->fun_telefonos ?? '')}}">
                                         </div>
                                         <div class="form-group col-md-4">
                                             <label>Email</label>
-                                            <input type="email" class="form-control" value="{{$funcionario->fun_email ?? ''}}" readonly>
+                                            <input type="email" class="form-control" name="email" value="{{old('email', $funcionario->fun_email ?? '')}}">
                                         </div>
                                     </div>
                                     <div class="form-row">

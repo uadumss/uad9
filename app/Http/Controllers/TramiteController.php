@@ -33,7 +33,7 @@ class TramiteController extends Controller
             $tramite->tre_desc=$form['desc'];
             $tramite->tre_titulo=$form['titulo'];
             $tramite->tre_solo_sello=$sello;
-            $tramite->tre_buscar_en=$form['buscar_en'];
+            $tramite->tre_buscar_en=is_array($form['buscar_en']) ? implode(',', $form['buscar_en']) : $form['buscar_en'];
             $tramite->tre_titulo_interno=$form['titulo_interno'];
             $tramite->save();
             \Session::flash('exito', 'Se ha actualizado exitosamente el trámite');
@@ -48,7 +48,7 @@ class TramiteController extends Controller
                 'tre_desc'=>$form['desc'],
                 'tre_titulo'=>$form['titulo'],
                 'tre_solo_sello'=>$sello,
-                'tre_buscar_en'=>$form['buscar_en'],
+                'tre_buscar_en'=>is_array($form['buscar_en']) ? implode(',', $form['buscar_en']) : $form['buscar_en'],
                 'tre_titulo_interno'=>$form['titulo_interno'],
                 'tre_tipo'=>$form['tipo'],
                 'tre_hab'=>'t',

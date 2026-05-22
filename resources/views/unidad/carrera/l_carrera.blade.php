@@ -146,6 +146,10 @@
                                            onclick="cargarDatos('fe_carrera/0/{{$c['cod_car']}}','panel_contenido')" title="Editar carrera">
                                             <i class="fas fa-edit"></i>
                                         </a>
+                                        <a href="#" class="btn btn-light btn-circle btn-sm text-success mr-1" data-target="#facultad" data-toggle="modal"
+                                           onclick="cargarDatos('fe_acreditacion/0/{{$c['cod_car']}}','panel_contenido')" title="Agregar acreditación">
+                                            <i class="fas fa-award"></i>
+                                        </a>
                                         @endcan
                                         @can('eliminar carrera - f')
                                         <a href="#" class="btn btn-light btn-circle btn-sm text-danger mr-1" data-target="#efacultad" data-toggle="modal"

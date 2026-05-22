@@ -45,8 +45,8 @@ Route::group(['middleware'=>['permission:acceso al sistema - srv']],function(){
 
     Route::get('buscar tramite legalizacion/{tramite}',[TramiteLegalizacionController::class,'buscar_tramite']);
                 //===============================CAMBIAR TIPO DE TRAMITE Y NOMBRE================
-    Route::get('f_cambiar tipo tramite/{cod_tra}',[TramiteLegalizacionController::class,'f_tipo_tramite']);
-    Route::post('e_tipo tramite',[TramiteLegalizacionController::class,'e_tipo_tramite']);
+    Route::get('f_cambiar_tipo_tramite/{cod_tra}',[TramiteLegalizacionController::class,'f_tipo_tramite']);
+    Route::post('e_tipo_tramite',[TramiteLegalizacionController::class,'e_tipo_tramite']);
 
     //===============================CERTIFICACION================
     //Route::post('generar numero certificacion',[TramiteLegalizacionController::class,'generar_numero_certificacion']);

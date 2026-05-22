@@ -1,6 +1,6 @@
 <div class="modal-dialog modal-xl" role="document" id="panel_docleg">
     <div class="modal-content border-bottom-danger shadow-lg">
-        <form action="{{url('e_tipo tramite')}}" method="post" id="form_eli_docleg">
+        <form action="{{url('e_tipo_tramite')}}" method="post" id="form_eli_docleg">
         <div class="modal-header bg-danger">
             <h5 class="modal-title text-white" id="exampleModalLabel"> <i class="fas fa-question-circle text-danger"></i>&nbsp;&nbsp;Cambiar tipo de trámite</h5>
             <button class="close" type="button" data-dismiss="modal" aria-label="Close">

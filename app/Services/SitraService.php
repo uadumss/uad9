@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Funciones;
+use App\Models\Resolucion;
 use App\Models\Titulo;
 use App\Models\Tramite;
 use Illuminate\Support\Facades\DB;
@@ -33,15 +34,33 @@ class SitraService
         $local = $this->normalizarTexto($nombreLocal);
         $sitra = $this->normalizarTexto($nombreSitra);
 
-        if ($local === '' || $sitra === '') {
+        if ($local === '') {
             return false;
+        }
+
+        // Si SITRA no devuelve nombre pero local sí, permitimos si el resto coincide
+        // (SITRA ya filtró por CI en la consulta)
+        if ($sitra === '') {
+            return true;
         }
 
         if ($local === $sitra) {
             return true;
         }
 
-        return strpos($local, $sitra) !== false || strpos($sitra, $local) !== false;
+        // Dividir en palabras y verificar que todas las palabras de un lado estén en el otro
+        $palabrasLocal = array_filter(explode(' ', $local));
+        $palabrasSitra = array_filter(explode(' ', $sitra));
+
+        if (count($palabrasLocal) === 0 || count($palabrasSitra) === 0) {
+            return false;
+        }
+
+        // Comparación por conjuntos de palabras (ignora orden y espacios extra)
+        $diff1 = array_diff($palabrasLocal, $palabrasSitra);
+        $diff2 = array_diff($palabrasSitra, $palabrasLocal);
+
+        return count($diff1) === 0 || count($diff2) === 0;
     }
 
     /**
@@ -54,8 +73,12 @@ class SitraService
             return '';
         }
 
-        $buscarEn = explode('-', $buscarEn)[0] ?? '';
-        return strtolower(trim($buscarEn));
+        $parts = explode(',', $buscarEn);
+        $normalized = [];
+        foreach($parts as $part) {
+            $normalized[] = strtolower(trim(explode('-', trim($part))[0] ?? ''));
+        }
+        return implode(',', array_filter($normalized));
     }
 
     /**
@@ -76,7 +99,13 @@ class SitraService
      */
     public function debeValidar(string $buscarEn): bool
     {
-        return trim((string)Funciones::DocumentoSitra($buscarEn)) !== '';
+        $parts = explode(',', $buscarEn);
+        foreach($parts as $part) {
+            if (trim((string)Funciones::DocumentoSitra(trim($part))) !== '') {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -114,6 +143,26 @@ class SitraService
     }
 
     /**
+     * Busca una resolución en la base local (UAD9/SID)
+     */
+    public function buscarResolucionInterna(string $numero, string $gestion = ''): ?Resolucion
+    {
+        $numero = trim($numero);
+        if ($numero === '') {
+            return null;
+        }
+
+        $query = Resolucion::where('res_numero', '=', $numero)->orderByDesc('cod_res');
+
+        $gestion = trim($gestion);
+        if ($gestion !== '') {
+            $query->where('res_gestion', '=', $gestion);
+        }
+
+        return $query->first();
+    }
+
+    /**
      * Resuelve el título buscando con y sin gestión
      */
     public function resolverTitulo(int $idPer, string $numero, string $buscarEn, string $gestion = ''): ?Titulo
@@ -123,13 +172,21 @@ class SitraService
             return null;
         }
 
-        $buscarBase = explode('-', $buscarEn)[0];
-        $titulo = $this->buscarRespaldoInterno($idPer, $numero, $buscarBase, $gestion);
-        if ($titulo) {
-            return $titulo;
+        $lugares = explode(',', $buscarEn);
+        foreach($lugares as $lugar) {
+            $buscarBase = explode('-', trim($lugar))[0];
+            $titulo = $this->buscarRespaldoInterno($idPer, $numero, $buscarBase, $gestion);
+            if ($titulo) {
+                return $titulo;
+            }
+
+            $titulo = $this->buscarRespaldoInterno($idPer, $numero, $buscarBase, '');
+            if ($titulo) {
+                return $titulo;
+            }
         }
 
-        return $this->buscarRespaldoInterno($idPer, $numero, $buscarBase, '');
+        return null;
     }
 
     /**
@@ -152,20 +209,30 @@ class SitraService
             }
         }
 
-        $query = Titulo::whereIn('id_per', $idsPersona)
-            ->whereNotNull('tit_fecha_emision');
+        $lugares = explode(',', $buscarEn);
+        foreach($lugares as $lugar) {
+            $buscarBase = strtolower(trim(explode('-', trim($lugar))[0] ?? ''));
 
-        if ($buscarBase === 'da') {
-            $query->whereIn('tit_tipo', ['da', 'ca']);
-        } elseif ($buscarBase === 'tpos') {
-            $query->whereIn('tit_tipo', ['tpos', 'di']);
-        } else {
-            if ($buscarBase !== '') {
-                $query->where('tit_tipo', '=', $buscarBase);
+            $query = Titulo::whereIn('id_per', $idsPersona)
+                ->whereNotNull('tit_fecha_emision');
+
+            if ($buscarBase === 'da') {
+                $query->whereIn('tit_tipo', ['da', 'ca']);
+            } elseif ($buscarBase === 'tpos') {
+                $query->whereIn('tit_tipo', ['tpos', 'di']);
+            } else {
+                if ($buscarBase !== '') {
+                    $query->where('tit_tipo', '=', $buscarBase);
+                }
+            }
+
+            $titulo = $query->orderByDesc('cod_tit')->first();
+            if ($titulo) {
+                return $titulo;
             }
         }
 
-        return $query->orderByDesc('cod_tit')->first();
+        return null;
     }
 
     private function normalizarTexto(string $texto): string
@@ -183,6 +250,25 @@ class SitraService
         $texto = preg_replace('/[ÚÙÛÜ]/u', 'U', $texto);
         $texto = str_replace(['Ñ', 'Ç'], ['N', 'C'], $texto);
         
-        return preg_replace('/[^A-Z0-9\s]/', '', $texto) ?? '';
+        $texto = preg_replace('/[^A-Z0-9\s]/', '', $texto) ?? '';
+        // Colapsar múltiples espacios en uno solo
+        return preg_replace('/\s+/', ' ', $texto) ?? $texto;
+    }
+
+    /**
+     * Compara dos números de título, permitiendo que uno tenga la gestión (/23) y el otro no.
+     */
+    public function numerosCompatibles(string $numLocal, string $numSitra): bool
+    {
+        $numLocal = trim($numLocal);
+        $numSitra = trim($numSitra);
+
+        if ($numLocal === $numSitra) return true;
+
+        // Extraer solo la parte numérica principal (antes de / o -)
+        $cleanLocal = explode('/', explode('-', $numLocal)[0])[0];
+        $cleanSitra = explode('/', explode('-', $numSitra)[0])[0];
+
+        return $cleanLocal !== '' && $cleanLocal === $cleanSitra;
     }
 }

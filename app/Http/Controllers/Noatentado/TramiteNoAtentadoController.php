@@ -903,6 +903,11 @@ class TramiteNoAtentadoController extends Controller
         $nombreTipoSugerido=trim((string)($validacionPrincipal['nombre_tipo_noatentado_sugerido'] ?? ''));
         $requiereSeleccionManual=(bool)($validacionPrincipal['requiere_seleccion_manual'] ?? false);
 
+        $reintegroOk=(bool)($validacionReintegro['ok'] ?? false);
+        $reintegroAplica=(bool)($validacionReintegro['aplica'] ?? false);
+        $montoReintegro=$this->normalizarMontoRecaudacionNoAtentado($montos['monto_reintegro_validado'] ?? 0);
+        $usarMontoPorReintegro=$reintegroOk && $reintegroAplica && $montoReintegro>0;
+
         if($tipoSugerido>0){
             $existeSugerido=false;
             foreach($tiposPermitidos as $tipoItem){
@@ -929,53 +934,77 @@ class TramiteNoAtentadoController extends Controller
             }
         }
 
-        $montoTotal=$this->normalizarMontoRecaudacionNoAtentado($montos['monto_total_validado'] ?? 0);
-        if($montoTotal>0){
-            $tiposPorMonto=$this->buscarTiposNoAtentadoPorMontoTotal($montoTotal);
-            if(sizeof($tiposPorMonto)>0){
-                if(sizeof($tiposPorMonto)===1){
-                    $tipoUnico=$tiposPorMonto[0];
-                    return [
-                        'ok'=>true,
-                        'tipo_noatentado_sugerido'=>(int)($tipoUnico['cod_tre'] ?? 0),
-                        'nombre_tipo_noatentado_sugerido'=>trim((string)($tipoUnico['tre_nombre'] ?? '')),
-                        'tipos_noatentado_permitidos'=>$tiposPorMonto,
-                        'requiere_seleccion_manual'=>false,
-                        'message'=>'Pago validado. El tipo de trámite se resolvió por monto total.',
-                    ];
-                }
+        if($usarMontoPorReintegro){
+            $montoTotal=$this->normalizarMontoRecaudacionNoAtentado($montos['monto_total_validado'] ?? 0);
+            if($montoTotal>0){
+                $tiposPorMonto=$this->buscarTiposNoAtentadoPorMontoTotal($montoTotal);
+                if(sizeof($tiposPorMonto)>0 && sizeof($tiposPermitidos)>0){
+                    $permitidosMap=[];
+                    foreach($tiposPermitidos as $tipoItem){
+                        $cod=(int)($tipoItem['cod_tre'] ?? 0);
+                        if($cod>0){
+                            $permitidosMap[$cod]=true;
+                        }
+                    }
 
-                $planchaId = $this->obtenerCodTramitePlanchaNoAtentado();
-                $esPlancha = false;
-                $nombrePlancha = '';
-                foreach($tiposPorMonto as $t) {
-                    if ((int)($t['cod_tre'] ?? 0) === $planchaId) {
-                        $esPlancha = true;
-                        $nombrePlancha = trim((string)($t['tre_nombre'] ?? ''));
-                        break;
+                    if(sizeof($permitidosMap)>0){
+                        $tiposPorMonto=array_values(array_filter($tiposPorMonto,function($item) use ($permitidosMap){
+                            $cod=(int)($item['cod_tre'] ?? 0);
+                            return $cod>0 && array_key_exists($cod,$permitidosMap);
+                        }));
                     }
                 }
+                if(sizeof($tiposPorMonto)>0){
+                    if(sizeof($tiposPorMonto)===1){
+                        $tipoUnico=$tiposPorMonto[0];
+                        return [
+                            'ok'=>true,
+                            'tipo_noatentado_sugerido'=>(int)($tipoUnico['cod_tre'] ?? 0),
+                            'nombre_tipo_noatentado_sugerido'=>trim((string)($tipoUnico['tre_nombre'] ?? '')),
+                            'tipos_noatentado_permitidos'=>$tiposPorMonto,
+                            'requiere_seleccion_manual'=>false,
+                            'message'=>'Pago validado. El tipo de trámite se resolvió por monto total.',
+                        ];
+                    }
 
-                if ($esPlancha) {
+                    $planchaId = $this->obtenerCodTramitePlanchaNoAtentado();
+                    $esPlancha = false;
+                    $nombrePlancha = '';
+                    foreach($tiposPorMonto as $t) {
+                        if ((int)($t['cod_tre'] ?? 0) === $planchaId) {
+                            $esPlancha = true;
+                            $nombrePlancha = trim((string)($t['tre_nombre'] ?? ''));
+                            break;
+                        }
+                    }
+
+                    if ($esPlancha) {
+                        return [
+                            'ok'=>true,
+                            'tipo_noatentado_sugerido'=>$planchaId,
+                            'nombre_tipo_noatentado_sugerido'=>$nombrePlancha,
+                            'tipos_noatentado_permitidos'=>$tiposPorMonto,
+                            'requiere_seleccion_manual'=>false,
+                            'message'=>'Pago validado. Priorizado trámite de plancha por monto total.',
+                        ];
+                    }
+
                     return [
                         'ok'=>true,
-                        'tipo_noatentado_sugerido'=>$planchaId,
-                        'nombre_tipo_noatentado_sugerido'=>$nombrePlancha,
+                        'tipo_noatentado_sugerido'=>0,
+                        'nombre_tipo_noatentado_sugerido'=>'',
                         'tipos_noatentado_permitidos'=>$tiposPorMonto,
-                        'requiere_seleccion_manual'=>false,
-                        'message'=>'Pago validado. Priorizado trámite de plancha por monto total.',
+                        'requiere_seleccion_manual'=>true,
+                        'message'=>'Pago validado. Existen múltiples tipos de trámite con el mismo monto total; seleccione uno manualmente.',
                     ];
                 }
-
-                return [
-                    'ok'=>true,
-                    'tipo_noatentado_sugerido'=>0,
-                    'nombre_tipo_noatentado_sugerido'=>'',
-                    'tipos_noatentado_permitidos'=>$tiposPorMonto,
-                    'requiere_seleccion_manual'=>true,
-                    'message'=>'Pago validado. Existen múltiples tipos de trámite con el mismo monto total; seleccione uno manualmente.',
-                ];
             }
+
+            return [
+                'ok'=>false,
+                'code'=>'MONTO_TOTAL_NO_CORRESPONDE',
+                'message'=>'Pago validado, pero el monto total no coincide con ningún trámite No Atentado.',
+            ];
         }
 
         if($tipoSugerido<=0 && sizeof($tiposPermitidos)===1){
@@ -1119,6 +1148,36 @@ class TramiteNoAtentadoController extends Controller
         }
 
         return strpos($nombre,'PLANCHA')!==false && strpos($nombre,'ESTUDIANT')!==false;
+    }
+
+    private function esTramiteAcreditativoDiplomaAcademico(?Tramite $tramite): bool
+    {
+        if(!$tramite){
+            return false;
+        }
+
+        $campos=[
+            (string)($tramite->tre_nombre ?? ''),
+            (string)($tramite->tre_titulo ?? ''),
+            (string)($tramite->tre_titulo_interno ?? ''),
+        ];
+
+        foreach($campos as $campo){
+            $normalizado=$this->normalizarTextoComparacionNoAtentado($campo);
+            if($normalizado===''){
+                continue;
+            }
+
+            $tieneCert=strpos($normalizado,'CERT')!==false;
+            $tieneAcreditat=strpos($normalizado,'ACREDITAT')!==false;
+            $tieneDipl=strpos($normalizado,'DIPL')!==false;
+            $tieneAcadem=strpos($normalizado,'ACADEM')!==false;
+            if($tieneCert && $tieneAcreditat && $tieneDipl && $tieneAcadem){
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function obtenerCodTramitePlanchaNoAtentado(): int
@@ -1991,65 +2050,6 @@ class TramiteNoAtentadoController extends Controller
         ];
     }
 
-    private function mapearMensajeErrorRecaudacionNoAtentado(string $mensajeApi,int $status=0): array
-    {
-        $mensajeApi=trim($mensajeApi);
-        $msgNorm=mb_strtolower($mensajeApi);
-
-        if($status===429 || strpos($msgNorm,'too many')!==false || strpos($msgNorm,'demasiadas solicitudes')!==false || strpos($msgNorm,'rate limit')!==false){
-            return [
-                'code'=>'RATE_LIMIT',
-                'message'=>'Demasiadas solicitudes a recaudaciones. Intente nuevamente en unos segundos.',
-            ];
-        }
-
-        if(
-            strpos($msgNorm,'configur')!==false ||
-            strpos($msgNorm,'services/.env')!==false ||
-            strpos($msgNorm,'no esta configurado')!==false ||
-            strpos($msgNorm,'no está configurado')!==false
-        ){
-            return [
-                'code'=>'SISTEMA_NO_CONFIGURADO',
-                'message'=>'Recaudaciones no está configurado. Contacte al área de sistemas.',
-            ];
-        }
-
-        if(
-            $status===404 ||
-            strpos($msgNorm,'not found')!==false ||
-            strpos($msgNorm,'no se encuentra')!==false ||
-            strpos($msgNorm,'no encontrado')!==false ||
-            strpos($msgNorm,'control')!==false ||
-            strpos($msgNorm,'recibo')!==false
-        ){
-            return [
-                'code'=>'CONTROL_NO_ENCONTRADO',
-                'message'=>'No se encontró información del número de control en recaudaciones.',
-            ];
-        }
-
-        if($status>0 && $status<500){
-            return [
-                'code'=>'API_RECAUDACIONES_ERROR',
-                'message'=>'No se pudo validar el control en recaudaciones. Verifique los datos e intente nuevamente.',
-            ];
-        }
-
-        if(
-            strpos($msgNorm,'comunicacion')!==false ||
-            strpos($msgNorm,'comunicación')!==false ||
-            strpos($msgNorm,'timeout')!==false ||
-            strpos($msgNorm,'sin conexion')!==false ||
-            strpos($msgNorm,'sin conexión')!==false
-        ){
-            return [
-                'code'=>'API_NO_DISPONIBLE',
-                'message'=>'Sin conexión con recaudaciones. Intente nuevamente.',
-            ];
-        }
-
-
     private function extraerResultadoRecaudacionNoAtentado(array $json): array
     {
         $candidatos=[
@@ -2269,6 +2269,9 @@ class TramiteNoAtentadoController extends Controller
                 'cajero'=>(string)($validacion['cajero'] ?? ''),
                 'cod_tra'=>$codTra,
                 'cod_dtra'=>$codDtra,
+                'modulo'=>'no_atentado',
+                'tramite'=>(string)($validacion['cuenta'] ?? ''),
+                'monto'=>(float)($validacion['total'] ?? ($validacion['monto'] ?? 0)),
                 'usuario_registro'=>Auth::check() ? Auth::user()->name : 'sistema',
                 'created_at'=>now(),
                 'updated_at'=>now(),
@@ -2859,8 +2862,16 @@ class TramiteNoAtentadoController extends Controller
             ->where('cod_dtra','=',$cod_dtra)->orderBy('cod_noa','ASC')->get();
         if(sizeof($candidatos)>0){
             if($tramite_noatentado->dtra_cod_glosa==''){
-                $tramite_noatentado->dtra_cod_glosa=$modelo_glosa->cod_glo;
-                $tramite_noatentado->dtra_glosa=Funciones::glosa_noatentado($tramite,$modelo_glosa,$tramite_noatentado,$convocatoria,$candidatos);
+                $preservarGlosa=$this->esTramiteAcreditativoDiplomaAcademico($tramite);
+                $glosaExistente=trim((string)($tramite_noatentado->dtra_glosa ?? ''));
+                if($preservarGlosa && $glosaExistente!=='' && $glosaExistente!=='0'){
+                    if($modelo_glosa){
+                        $tramite_noatentado->dtra_cod_glosa=$modelo_glosa->cod_glo;
+                    }
+                }else{
+                    $tramite_noatentado->dtra_cod_glosa=$modelo_glosa->cod_glo;
+                    $tramite_noatentado->dtra_glosa=Funciones::glosa_noatentado($tramite,$modelo_glosa,$tramite_noatentado,$convocatoria,$candidatos);
+                }
             }else{
                 $modelo_glosa=Glosa::find($tramite_noatentado->dtra_cod_glosa);
             }
@@ -2976,7 +2987,7 @@ class TramiteNoAtentadoController extends Controller
             
             $antiguo=json_encode($tramite);
             SessionController::write('D',$antiguo,'','d_tramitas','8',$tramite->cod_dtra);
-            // $this->eliminarUsosRecaudacionPorTramite((int)$tramite->cod_dtra); // Se comenta para no liberar el control
+            $this->eliminarUsosRecaudacionPorTramite((int)$tramite->cod_dtra);
             $tramite->delete();
             \Session::flash('exito','Se ha eliminado con exito el trámite');
         }
@@ -3021,6 +3032,9 @@ class TramiteNoAtentadoController extends Controller
         return view('servicios.no_atentado.entrega.fe_entrega_noa',compact('tramite_noatentado','convocatoria','noatentados','apoderado'));
     }
     public function g_apoderado(Request $form){
+        if (!config('apoderado.habilitado', true)) {
+            abort(404);
+        }
         $form->validate([
             'cdtra'=>'required|integer',
             'ci'=>'required|string|max:30',
@@ -3028,6 +3042,13 @@ class TramiteNoAtentadoController extends Controller
             'nombre'=>'required|string|max:120',
             'tipo'=>'required|string|max:5',
         ]);
+
+        if (config('apoderado.requiere_boleta_dj', false) && ($form['tipo'] === 'd' || $form['tipo'] === 'a')) {
+            $form->validate([
+                'control_boleta' => 'required|string',
+                'control_boleta_valido' => 'required|in:1',
+            ]);
+        }
 
         $tramita=$this->obtenerTramiteNoAtentadoPorCodigo((int)$form['cdtra']);
         if(!$tramita){
@@ -3045,10 +3066,37 @@ class TramiteNoAtentadoController extends Controller
                     'apo_nombre'=>mb_strtoupper($form['nombre']),
                     'apo_sistema'=>8,
                 ]);
+            }else{
+                $apoderado->apo_apellido=mb_strtoupper($form['apellido']);
+                $apoderado->apo_nombre=mb_strtoupper($form['nombre']);
+                $apoderado->save();
             }
             $tramita->cod_apo=$apoderado->cod_apo;
             $tramita->dtra_tipo_apoderado=$form['tipo'];
             $tramita->save();
+
+            if(isset($form['control_boleta'])){
+                $controlStr = preg_replace('/[^0-9]/','', $form['control_boleta']);
+                if($controlStr !== ''){
+                    $identificador = 'APO_NOATENTADO_'.$controlStr;
+                    $existe = \Illuminate\Support\Facades\DB::table('recaudacion_usos')->where('identificador', $identificador)->exists();
+                    if(!$existe) {
+                        \Illuminate\Support\Facades\DB::table('recaudacion_usos')->insert([
+                            'identificador' => $identificador,
+                            'recibo' => $controlStr,
+                            'documento' => $form['ci'] ?? '',
+                            'nombre_persona' => ($form['nombre'] ?? '') . ' ' . ($form['apellido'] ?? ''),
+                            'cod_tra' => $tramita->cod_dtra,
+                            'modulo' => 'noatentado',
+                            'tramite' => 'Apoderado Declaración Jurada',
+                            'monto' => isset($form['monto_boleta']) ? floatval($form['monto_boleta']) : 0,
+                            'usuario_registro' => \Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::user()->name : 'sistema',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+            }
             $nuevo=json_encode($apoderado);
             SessionController::write('C','',$nuevo,'apoderados','8',$apoderado->cod_apo);
         }else{
@@ -3058,6 +3106,29 @@ class TramiteNoAtentadoController extends Controller
             $tramita->dtra_tipo_apoderado=$form['tipo'];
             $tramita->save();
             $apoderado->save();
+
+            if(isset($form['control_boleta'])){
+                $controlStr = preg_replace('/[^0-9]/','', $form['control_boleta']);
+                if($controlStr !== ''){
+                    $identificador = 'APO_NOATENTADO_'.$controlStr;
+                    $existe = \Illuminate\Support\Facades\DB::table('recaudacion_usos')->where('identificador', $identificador)->exists();
+                    if(!$existe) {
+                        \Illuminate\Support\Facades\DB::table('recaudacion_usos')->insert([
+                            'identificador' => $identificador,
+                            'recibo' => $controlStr,
+                            'documento' => $form['ci'] ?? '',
+                            'nombre_persona' => ($form['nombre'] ?? '') . ' ' . ($form['apellido'] ?? ''),
+                            'cod_tra' => $tramita->cod_dtra,
+                            'modulo' => 'noatentado',
+                            'tramite' => 'Apoderado Declaración Jurada',
+                            'monto' => isset($form['monto_boleta']) ? floatval($form['monto_boleta']) : 0,
+                            'usuario_registro' => \Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::user()->name : 'sistema',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+            }
             $nuevo=json_encode($apoderado);
             SessionController::write('U',$antiguo,$nuevo,'d_tramita','8',$apoderado->cod_apo);
         }
@@ -3124,9 +3195,14 @@ class TramiteNoAtentadoController extends Controller
             return redirect()->back();
         }
 
+        $tramite=Tramite::find($tramite_noatentado->cod_tre);
+        $preservarGlosa=$this->esTramiteAcreditativoDiplomaAcademico($tramite);
+
         $tramite_noatentado->dtra_entregado=null;
         $tramite_noatentado->dtra_fecha_recojo=null;
-        $tramite_noatentado->dtra_cod_glosa=null;
+        if(!$preservarGlosa){
+            $tramite_noatentado->dtra_cod_glosa=null;
+        }
         $tramite_noatentado->dtra_generado=null;
         $tramite_noatentado->save();
         SessionController::write('U','','Editar noatentado','d_tramitas','8',$tramite_noatentado->cod_dtra);

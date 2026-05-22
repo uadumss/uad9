@@ -1,4 +1,7 @@
 <div class="modal-content border-bottom-primary">
+    @php
+        $apoderadoHabilitado = (bool) config('apoderado.habilitado', true);
+    @endphp
     <div class="modal-header bg-primary">
         <h5 class="modal-title font-weight-bolder text-white" id="exampleModalLabel"><i class="fas fa-file-alt"></i> TRAMITE CONVOCATORIA</h5>
         <button class="close text-white" type="button" data-dismiss="modal" aria-label="Close">
@@ -78,131 +81,145 @@
                                         </tr>
                                         </tbody>
                                     </table>
-                                <div class="" id="apoderadoEntrega">
-                                    <span class="text-primary font-weight-bold font-italic" style="font-size: 0.85em">* Datos del apoderado</span>
-                                    <br/>
-                                    <br/>
-                                    @if($apoderado)
-                                        <table class="table table-sm">
-                                            <tr>
-                                                <th class="text-right font-italic text-dark">CI : </th>
-                                                <td class="border-bottom border-dark">
-                                                    @if($apoderado)
-                                                        {{$apoderado['apo_ci']}}
-                                                    @else
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <th class="text-right font-italic text-dark font-italic">Nombre apoderado : </th>
-                                                <td class="border-bottom border-dark">
-                                                    @if($apoderado)
-                                                        {{$apoderado['apo_apellido']." ".$apoderado['apo_nombre']}}
-                                                    @else
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <th class="text-right font-italic text-dark">Tipo de apoderado : </th>
-                                                <td class="border-bottom border-dark">
-                                                    <span class="text-primary font-weight-bold">
-                                                        @if($tramite_noatentado->dtra_tipo_apoderado=='d')
-                                                            Declaración jurada
+                                @if($apoderadoHabilitado)
+                                    <div class="" id="apoderadoEntrega">
+                                        <span class="text-primary font-weight-bold font-italic" style="font-size: 0.85em">* Datos del apoderado</span>
+                                        <br/>
+                                        <br/>
+                                        @if($apoderado)
+                                            <table class="table table-sm">
+                                                <tr>
+                                                    <th class="text-right font-italic text-dark">CI : </th>
+                                                    <td class="border-bottom border-dark">
+                                                        @if($apoderado)
+                                                            {{$apoderado['apo_ci']}}
                                                         @else
-                                                            @if($tramite_noatentado->dtra_tipo_apoderado=='p')
-                                                                Poder notariado
-                                                            @else
-                                                                @if($tramite_noatentado->dtra_tipo_apoderado=='c')
-                                                                    Carta de representación
-                                                                @else
-                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                                                @endif
-                                                            @endif
+                                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                                                         @endif
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    @endif
-                                    <button id="otros" class="btn btn-sm btn-primary float-right" onclick="$('#editarApoderadoEntrega').show(500); $('#apoderadoEntrega').hide(500);"> Editar datos del Apoderado</button>
-                                </div>
-                                <div id="editarApoderadoEntrega" class="border rounded shadow" style="display: none;">
-                                    <div class="p-3">
-                                        <a onclick="$('#editarApoderadoEntrega').hide(500);$('#apoderadoEntrega').show(500); " id="ocultar" style="float:right">
-                                            <i class="fas fa-minus-circle text-danger"></i></a>
-                                        <span class="text-primary font-weight-bold font-italic" style="font-size: 0.85em">* Editar datos del apoderado</span>
-                                        <br><br>
-                                        <form id="form_apoderado_noa">
-                                            @csrf
-                                            @php
-                                                $nombre='';    $apellido='';  $ci="";
-                                                if($apoderado){   $ci=$apoderado->apo_ci;       $apellido=$apoderado->apo_apellido;     $nombre=$apoderado->apo_nombre;  }
-                                            @endphp
-
-                                            <table class="table-hover col-md-12">
-                                                <tr>
-                                                    <th class="text-right font-italic">CI : </th>
-                                                    <td class="border-bottom border-dark">
-                                                        <input class="form-control form-control-sm border-0" placeholder=""
-                                                               id="ci_noa_apoderado" name="ci" value="{{$ci}}" oninput="cargarDatosApoderado(this.value); verificarBoletaApoderadoNoa();"/></td>
-                                                </tr>
-                                                <tr>
-                                                    <th class="text-right font-italic">N° control boleta : </th>
-                                                    <td class="border-bottom border-dark">
-                                                        <input class="form-control form-control-sm border-0" placeholder="Ingrese número de control"
-                                                               id="control_boleta_noa" name="control_boleta" oninput="verificarBoletaApoderadoNoa()"/>
-                                                        <div style="margin-top:6px;"><span id="estado_pago_apoderado_noa" class="badge badge-secondary">Sin validar</span></div>
-                                                        <input type="hidden" id="control_boleta_valido_noa" name="control_boleta_valido" value="0">
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <th class="text-right font-italic">Apellidos : </th>
+                                                    <th class="text-right font-italic text-dark font-italic">Nombre apoderado : </th>
                                                     <td class="border-bottom border-dark">
-                                                        <input class="form-control form-control-sm border-0" placeholder=""
-                                                               required name="apellido" id="apellido_apoderado" value="{{$apellido}}" /></td>
-                                                </tr>
-                                                <tr>
-                                                    <th class="text-right font-italic">Nombres : </th>
-                                                    <td class="border-bottom border-dark">
-                                                        <input class="form-control form-control-sm border-0" placeholder=""
-                                                               required name="nombre" id="nombre_apoderado" value="{{$nombre}}" /></td>
-                                                </tr>
-                                                <tr>
-                                                    <th class="text-right font-italic" valign="top">Tipo de apoderado : </th>
-                                                    <td class="border-bottom border-dark">
-                                                        @if($tramite_noatentado->dtra_tipo_apoderado=='d')
-                                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" checked> Declaración jurada<br/>
-                                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p"> Poder notariado<br/>
-                                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="c"> Carta de representación
+                                                        @if($apoderado)
+                                                            {{$apoderado['apo_apellido']." ".$apoderado['apo_nombre']}}
                                                         @else
-                                                            @if($tramite_noatentado->dtra_tipo_apoderado=='p')
-                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d"> Declaración jurada<br/>
-                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" checked> Poder notariado<br/>
-                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="c"> Carta de representación
+                                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="text-right font-italic text-dark">Tipo de apoderado : </th>
+                                                    <td class="border-bottom border-dark">
+                                                        <span class="text-primary font-weight-bold">
+                                                            @if($tramite_noatentado->dtra_tipo_apoderado=='d')
+                                                                Declaración jurada
                                                             @else
-                                                                @if($tramite_noatentado->dtra_tipo_apoderado=='c')
-                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d"> Declaración jurada<br/>
-                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p"> Poder notariado<br/>
-                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="c" checked> Carta de representación
+                                                                @if($tramite_noatentado->dtra_tipo_apoderado=='p')
+                                                                    Poder notariado
                                                                 @else
-                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d"> Declaración jurada<br/>
-                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p"> Poder notariado<br/>
-                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="c"> Carta de representación
+                                                                    @if($tramite_noatentado->dtra_tipo_apoderado=='c')
+                                                                        Carta de representación
+                                                                    @else
+                                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                                                    @endif
                                                                 @endif
                                                             @endif
-                                                        @endif
+                                                        </span>
+                                                    </td>
                                                 </tr>
                                             </table>
-                                            <br/>
-                                            <input type="hidden" name="cdtra" value="{{$tramite_noatentado->cod_dtra}}">
-                                            <input type="hidden" name="pan" value="ent">
-                                        </form>
-                                        <a class="btn btn-primary btn-sm text-white float-right" onclick="enviar('form_apoderado_noa','{{url("guardar apoderado noatentado")}}','panel_traleg');" >Guardar</a><br/>
-                                        <br/>
+                                        @endif
+                                         @if(!$apoderado)
+                                             <button id="otros" class="btn btn-sm btn-primary float-right" onclick="$('#editarApoderadoEntrega').show(500); $('#apoderadoEntrega').hide(500);"> Registrar datos del Apoderado</button>
+                                         @endif
                                     </div>
-                                </div>
+                                    <div id="editarApoderadoEntrega" class="border rounded shadow" style="display: none;">
+                                        <div class="p-3">
+                                            <a onclick="$('#editarApoderadoEntrega').hide(500);$('#apoderadoEntrega').show(500); " id="ocultar" style="float:right">
+                                                <i class="fas fa-minus-circle text-danger"></i></a>
+                                            <span class="text-primary font-weight-bold font-italic" style="font-size: 0.85em">* Editar datos del apoderado</span>
+                                            <br><br>
+                                            <form id="form_apoderado_noa">
+                                                @csrf
+                                                @php
+                                                    $nombre='';
+                                                    $apellido='';
+                                                    $ci='';
+                                                    if($apoderado){
+                                                        $ci=$apoderado->apo_ci;
+                                                        $apellido=$apoderado->apo_apellido;
+                                                        $nombre=$apoderado->apo_nombre;
+                                                    }
+                                                    $requiereBoletaDj = (bool) config('apoderado.requiere_boleta_dj', false);
+                                                    $tipoApoderado = $tramite_noatentado->dtra_tipo_apoderado ?: 'd';
+                                                    $mostrarBoleta = ($tipoApoderado === 'd' && $requiereBoletaDj);
+                                                @endphp
+
+                                                <table class="table-hover col-md-12">
+                                                    <tr>
+                                                        <th class="text-right font-italic">CI : </th>
+                                                        <td class="border-bottom border-dark">
+                                                            <input class="form-control form-control-sm border-0" placeholder=""
+                                                                   id="ci_noa_apoderado" name="ci" value="{{$ci}}" oninput="verificarBoletaApoderadoNoa();"/></td>
+                                                    </tr>
+                                                    <tr id="fila_boleta_apoderado_noa" data-requiere-boleta="{{ $requiereBoletaDj ? 1 : 0 }}" style="{{ $mostrarBoleta ? '' : 'display:none;' }}">
+                                                        <th class="text-right font-italic">N° control boleta : </th>
+                                                        <td class="border-bottom border-dark">
+                                                            <input class="form-control form-control-sm border-0" placeholder="Ingrese número de control"
+                                                                   id="control_boleta_noa" name="control_boleta" oninput="verificarBoletaApoderadoNoa()"/>
+                                                            <div style="margin-top:6px;"><span id="estado_pago_apoderado_noa" class="badge badge-secondary">Sin validar</span></div>
+                                                             <input type="hidden" id="control_boleta_valido_noa" name="control_boleta_valido" value="{{ $mostrarBoleta ? '0' : '1' }}">
+                                                             <input type="hidden" name="monto_boleta" id="monto_boleta_noa" value="0">
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th class="text-right font-italic">Apellidos : </th>
+                                                        <td class="border-bottom border-dark">
+                                                             <input class="form-control form-control-sm border-0" placeholder=""
+                                                                    required name="apellido" id="apellido_apoderado" value="{{$apellido}}" {{ $mostrarBoleta ? 'readonly' : '' }} /></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th class="text-right font-italic">Nombres : </th>
+                                                        <td class="border-bottom border-dark">
+                                                             <input class="form-control form-control-sm border-0" placeholder=""
+                                                                    required name="nombre" id="nombre_apoderado" value="{{$nombre}}" {{ $mostrarBoleta ? 'readonly' : '' }} /></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th class="text-right font-italic" valign="top">Tipo de apoderado : </th>
+                                                        <td class="border-bottom border-dark">
+                                                            @if($tramite_noatentado->dtra_tipo_apoderado=='d')
+                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" checked onchange="actualizarModoApoderadoNoa()"> Declaración jurada<br/>
+                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoNoa()"> Poder notariado<br/>
+                                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="c" onchange="actualizarModoApoderadoNoa()"> Carta de representación
+                                                            @else
+                                                                @if($tramite_noatentado->dtra_tipo_apoderado=='p')
+                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" onchange="actualizarModoApoderadoNoa()"> Declaración jurada<br/>
+                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" checked onchange="actualizarModoApoderadoNoa()"> Poder notariado<br/>
+                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="c" onchange="actualizarModoApoderadoNoa()"> Carta de representación
+                                                                @else
+                                                                    @if($tramite_noatentado->dtra_tipo_apoderado=='c')
+                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" onchange="actualizarModoApoderadoNoa()"> Declaración jurada<br/>
+                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoNoa()"> Poder notariado<br/>
+                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="c" checked onchange="actualizarModoApoderadoNoa()"> Carta de representación
+                                                                    @else
+                                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="d" onchange="actualizarModoApoderadoNoa()"> Declaración jurada<br/>
+                                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoNoa()"> Poder notariado<br/>
+                                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" name="tipo" value="c" onchange="actualizarModoApoderadoNoa()"> Carta de representación
+                                                                    @endif
+                                                                @endif
+                                                            @endif
+                                                    </tr>
+                                                </table>
+                                                <br/>
+                                                <input type="hidden" name="cdtra" value="{{$tramite_noatentado->cod_dtra}}">
+                                                <input type="hidden" name="pan" value="ent">
+                                            </form>
+                                            <a class="btn btn-primary btn-sm text-white float-right" onclick="enviar('form_apoderado_noa','{{url("guardar apoderado noatentado")}}','panel_traleg');" >Guardar</a><br/>
+                                            <br/>
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                             <div class="col-md-7 shadow border rounded p-2" >
                                 <div>
@@ -305,43 +322,133 @@
 </div>
 
 <script>
-    function verificarBoletaApoderadoNoa(){
-        var control=($('#control_boleta_noa').val()||'').toString().trim();
-        var ci=($('#ci_noa_apoderado').val()||'').toString().trim();
-        if(control==='')return;
-        if(ci===''){
-            $('#estado_pago_apoderado_noa').removeClass().addClass('badge badge-warning').text('Complete CI');
-            $('#control_boleta_valido_noa').val('0');
-            return;
+
+    function requiereBoletaDjNoa() {
+        if (typeof window.GLOB_REQUIERE_BOLETA_DJ === 'boolean') {
+            return window.GLOB_REQUIERE_BOLETA_DJ;
         }
-        var link="{{ url('verificar_boleta') }}"+"/"+encodeURIComponent(control)+'?documento='+encodeURIComponent(ci);
-        $('#estado_pago_apoderado_noa').removeClass().addClass('badge badge-info').text('Validando...');
-        $('#control_boleta_valido_noa').val('0');
+        return $('#fila_boleta_apoderado_noa').data('requiere-boleta') === 1;
+    }
+
+    function actualizarModoApoderadoNoa() {
+        var tipo = $('input[name="tipo"]:checked').val() || 'd';
+        var requiereBoleta = requiereBoletaDjNoa();
+        if (tipo === 'p' || tipo === 'c' || (tipo === 'd' && !requiereBoleta)) {
+            $('#fila_boleta_apoderado_noa').hide();
+            $('#control_boleta_noa').val('');
+            $('#estado_pago_apoderado_noa').removeClass().addClass('badge badge-secondary').text('Sin validar');
+            $('#control_boleta_valido_noa').val('1');
+            
+            $('#nombre_apoderado').removeAttr('readonly');
+            $('#apellido_apoderado').removeAttr('readonly');
+            
+            var ci = ($('#ci_noa_apoderado').val()||'').toString().trim();
+            if(ci !== '') {
+                cargarDatosApoderadoGlobal(ci);
+            }
+        } else {
+            $('#fila_boleta_apoderado_noa').show();
+            $('#nombre_apoderado').prop('readonly', true).val('');
+            $('#apellido_apoderado').prop('readonly', true).val('');
+            $('#control_boleta_valido_noa').val('0');
+            verificarBoletaApoderadoNoa();
+        }
+    }
+
+    $(function(){
+        actualizarModoApoderadoNoa();
+    });
+
+    function cargarDatosApoderadoGlobal(ci){
+        var link="{{url('datos_apo/')}}"+"/"+encodeURIComponent((ci||'').toString().trim());
         $.ajax({
-            url:link,
-            type:'GET',
+            url:link, type:'GET',
             success:function(resp){
                 if(resp=="No"){
-                    $('#estado_pago_apoderado_noa').removeClass().addClass('badge badge-danger').text('No encontrado');
-                    $('#control_boleta_valido_noa').val('0');
-                    return;
-                }
-                try{
+                    // do nothing, let them type
+                }else{
                     var res=JSON.parse(resp);
-                    if(res['apellido_apoderado']!==undefined)$('#apellido_apoderado').val(res['apellido_apoderado']);
-                    if(res['nombre_apoderado']!==undefined)$('#nombre_apoderado').val(res['nombre_apoderado']);
-                    $('#estado_pago_apoderado_noa').removeClass().addClass('badge badge-success').text('Pago validado');
-                    $('#control_boleta_valido_noa').val('1');
-                }catch(e){
-                    $('#estado_pago_apoderado_noa').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
-                    $('#control_boleta_valido_noa').val('0');
+                    $('#apellido_apoderado').val(res['apo_apellido']);
+                    $('#nombre_apoderado').val(res['apo_nombre']);
                 }
-            },
-            error:function(){
-                $('#estado_pago_apoderado_noa').removeClass().addClass('badge badge-warning').text('Error API');
-                $('#control_boleta_valido_noa').val('0');
             }
         });
+    }
+
+    var verificarBoletaApoderadoNoaTimer = null;
+    var verificarBoletaApoderadoNoaXHR = null;
+
+    function verificarBoletaApoderadoNoa(){
+        if(verificarBoletaApoderadoNoaTimer) clearTimeout(verificarBoletaApoderadoNoaTimer);
+
+        verificarBoletaApoderadoNoaTimer = setTimeout(function(){
+            var tipo = $('input[name="tipo"]:checked').val() || 'd';
+            var requiereBoleta = requiereBoletaDjNoa();
+            if (tipo === 'p' || tipo === 'c' || (tipo === 'd' && !requiereBoleta)) {
+                var ci = ($('#ci_noa_apoderado').val()||'').toString().trim();
+                if(ci !== '') {
+                    cargarDatosApoderadoGlobal(ci);
+                }
+                return;
+            }
+
+            var control=($('#control_boleta_noa').val()||'').toString().trim();
+            var ci=($('#ci_noa_apoderado').val()||'').toString().trim();
+            if(control===''){
+                $('#nombre_apoderado').val('');
+                $('#apellido_apoderado').val('');
+                $('#estado_pago_apoderado_noa').removeClass().addClass('badge badge-secondary').text('Sin validar');
+                $('#control_boleta_valido_noa').val('0');
+                return;
+            }
+            if(ci===''){
+                $('#nombre_apoderado').val('');
+                $('#apellido_apoderado').val('');
+                $('#estado_pago_apoderado_noa').removeClass().addClass('badge badge-warning').text('Complete CI');
+                $('#control_boleta_valido_noa').val('0');
+                return;
+            }
+            var link="{{ url('verificar_boleta') }}"+"/"+encodeURIComponent(control)+'?documento='+encodeURIComponent(ci);
+            $('#estado_pago_apoderado_noa').removeClass().addClass('badge badge-info').text('Validando...');
+            $('#control_boleta_valido_noa').val('0');
+
+            if(verificarBoletaApoderadoNoaXHR && verificarBoletaApoderadoNoaXHR.readyState !== 4){
+                verificarBoletaApoderadoNoaXHR.abort();
+            }
+
+            verificarBoletaApoderadoNoaXHR = $.ajax({
+                url:link,
+                type:'GET',
+                success:function(resp){
+                    if(resp=="No" || resp===null || resp===''){
+                        $('#nombre_apoderado').val('');
+                        $('#apellido_apoderado').val('');
+                        $('#estado_pago_apoderado_noa').removeClass().addClass('badge badge-danger').text('No encontrado');
+                        $('#control_boleta_valido_noa').val('0');
+                        return;
+                    }
+                    try{
+                        var res = (typeof resp === 'string') ? JSON.parse(resp) : resp;
+                        $('#apellido_apoderado').val(res['apellido_apoderado'] || '');
+                        $('#nombre_apoderado').val(res['nombre_apoderado'] || '');
+                        $('#estado_pago_apoderado_noa').removeClass().addClass('badge badge-success').text('Pago validado');
+                        $('#control_boleta_valido_noa').val('1');
+                    }catch(e){
+                        $('#nombre_apoderado').val('');
+                        $('#apellido_apoderado').val('');
+                        $('#estado_pago_apoderado_noa').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
+                        $('#control_boleta_valido_noa').val('0');
+                    }
+                },
+                error:function(xhr, textStatus){
+                    if(textStatus === 'abort') return;
+                    $('#nombre_apoderado').val('');
+                    $('#apellido_apoderado').val('');
+                    $('#estado_pago_apoderado_noa').removeClass().addClass('badge badge-warning').text('Error API');
+                    $('#control_boleta_valido_noa').val('0');
+                }
+            });
+        }, 500);
     }
 </script>
 

@@ -46,6 +46,9 @@
                         <a class="nav-link" href="#" onclick="cambiar(2,'{{url("lista a cargos/".$usu['id'])}}')" id="2"><i class="fas fa-user-friends"></i> Responsable</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="cambiar(10,'{{url("historial asignacion/".$usu['id'])}}')" id="10"><i class="fas fa-history"></i> Historial</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="#" onclick="cambiar(3,'{{url('listar actividades adm/'.$usu['id'])}}')" id="3"><i class="fas fa-atlas"></i> Actividad</a>
                     </li>
                     <li class="nav-item">
@@ -157,7 +160,7 @@
     function cambiar(id,url){
         $('#panel').html("<br/><br/><div class='d-flex justify-content-center'><div class='spinner-border' role='status'> <span class='visually-hidden'></span></div></div>");
         var i=0;
-        for(i=0;i<10;i++){
+        for(i=0;i<11;i++){
             $('#'+i).removeClass('active');
         }
         $('#'+id).addClass('active');

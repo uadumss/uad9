@@ -513,7 +513,7 @@
                             <input type="hidden" name="ip" value="{{ $tramite->id_per }}">
                             @can('editar datos traleg - srv')
                                 <button type="button" class="e-btn e-btn-primary e-btn-full"
-                                        onclick="guardarDatos('{{ url('g_traleg') }}','panel_traleg','form_traleg')">
+                                        onclick="guardarDatos('{{ url('g_traleg') }}','panel_traleg','form_traleg', this)">
                                     <i class="fas fa-save" style="font-size:11px;"></i> Guardar
                                 </button>
                             @endcan
@@ -607,112 +607,123 @@
                 </div>
                 @endif
 
-                {{-- ── Apoderado ── --}}
-                <div class="e-panel" style="margin-top:10px;">
-                    <div class="e-panel-head">
-                        <div class="e-panel-head-left">
-                            <span class="ph-bar slate"></span>
-                            <span class="ph-title">Apoderado</span>
-                        </div>
-                        @can('editar apoderado traleg - srv')
-                            <button class="e-btn e-btn-sm e-btn-ghost"
-                                    onclick="$('#eleg-apo-edit').show(300);$('#eleg-apo-view').hide(300);">
-                                <i class="fas fa-edit" style="font-size:10px;"></i> Editar
-                            </button>
-                        @endcan
-                    </div>
-                    <div class="e-panel-body">
-                        {{-- Vista lectura --}}
-                        <div id="eleg-apo-view">
-                            <div class="fg fg-2">
-                                <div class="e-field">
-                                    <label>CI apoderado</label>
-                                    <div class="e-val">
-                                        @if($apoderado) {{ $apoderado['apo_ci'] }} @else <span class="muted">Sin registro</span> @endif
-                                    </div>
-                                </div>
-                                <div class="e-field">
-                                    <label>Tipo</label>
-                                    <div class="e-val muted">
-                                        @if($tramite->tra_tipo_apoderado=='d') Decl. jurada
-                                        @elseif($tramite->tra_tipo_apoderado=='p') Poder notariado
-                                        @else —
-                                        @endif
-                                    </div>
-                                </div>
-                                <div class="e-field fg-span2" style="padding-bottom:0;">
-                                    <label>Nombre apoderado</label>
-                                    <div class="e-val">
-                                        @if($apoderado) {{ $apoderado['apo_apellido'] . ' ' . $apoderado['apo_nombre'] }} @else <span class="muted">Sin registro</span> @endif
-                                    </div>
-                                </div>
+                @php
+                    $apoderadoHabilitado = (bool) config('apoderado.habilitado', true);
+                @endphp
+                @if($apoderadoHabilitado)
+                    {{-- ── Apoderado ── --}}
+                    <div class="e-panel" style="margin-top:10px;">
+                        <div class="e-panel-head">
+                            <div class="e-panel-head-left">
+                                <span class="ph-bar slate"></span>
+                                <span class="ph-title">Apoderado</span>
                             </div>
+                            @if(!$apoderado)
+                                @can('editar apoderado traleg - srv')
+                                    <button class="e-btn e-btn-sm e-btn-ghost"
+                                            onclick="$('#eleg-apo-edit').show(300);$('#eleg-apo-view').hide(300);">
+                                        <i class="fas fa-user-plus" style="font-size:10px;"></i> Registrar apoderado
+                                    </button>
+                                @endcan
+                            @endif
                         </div>
-
-                        {{-- Formulario edición apoderado --}}
-                        @can('editar apoderado traleg - srv')
-                        <div id="eleg-apo-edit" style="display:none;">
-                            <form id="form_apoderado_edi">
-                                @csrf
-                                @php
-                                    $apo_nombre = ''; $apo_apellido = ''; $apo_ci = '';
-                                    if($apoderado){ $apo_ci=$apoderado->apo_ci; $apo_apellido=$apoderado->apo_apellido; $apo_nombre=$apoderado->apo_nombre; }
-                                @endphp
+                        <div class="e-panel-body">
+                            {{-- Vista lectura --}}
+                            <div id="eleg-apo-view">
                                 <div class="fg fg-2">
-                                    <div class="e-field fg-span2">
+                                    <div class="e-field">
                                         <label>CI apoderado</label>
-                                        <input class="e-input" name="ci" id="ci_apoderado_edi" value="{{ $apo_ci }}"
-                                               oninput="cargarDatosApoderado(this.value); verificarBoletaApoderadoEdi();" autocomplete="off">
-                                    </div>
-                                    <div class="e-field fg-span2">
-                                        <label>N° control boleta</label>
-                                        <input class="e-input" name="control_boleta" id="control_boleta_apoderado_edi"
-                                               oninput="verificarBoletaApoderadoEdi()" autocomplete="off" placeholder="Ingrese número de control">
-                                        <div style="margin-top:6px;"><span id="estado_pago_apoderado_edi" class="badge badge-secondary">Sin validar</span></div>
-                                        <input type="hidden" name="control_boleta_valido" id="control_boleta_valido_edi" value="0">
+                                        <div class="e-val">
+                                            @if($apoderado) {{ $apoderado['apo_ci'] }} @else <span class="muted">Sin registro</span> @endif
+                                        </div>
                                     </div>
                                     <div class="e-field">
-                                        <label>Apellidos</label>
-                                        <input class="e-input" required name="apellido" id="apellido_apoderado"
-                                               value="{{ $apo_apellido }}" autocomplete="off">
-                                    </div>
-                                    <div class="e-field">
-                                        <label>Nombres</label>
-                                        <input class="e-input" required name="nombre" id="nombre_apoderado"
-                                               value="{{ $apo_nombre }}" autocomplete="off">
+                                        <label>Tipo</label>
+                                        <div class="e-val muted">
+                                            @if($tramite->tra_tipo_apoderado=='d') Decl. jurada
+                                            @elseif($tramite->tra_tipo_apoderado=='p') Poder notariado
+                                            @else —
+                                            @endif
+                                        </div>
                                     </div>
                                     <div class="e-field fg-span2" style="padding-bottom:0;">
-                                        <label>Tipo de apoderado</label>
-                                        <div class="e-radio-row">
-                                            <label class="e-radio-opt">
-                                                <input type="radio" name="tipo" value="d"
-                                                    {{ $tramite->tra_tipo_apoderado=='d' ? 'checked' : '' }}>
-                                                <span>Declaración jurada</span>
-                                            </label>
-                                            <label class="e-radio-opt">
-                                                <input type="radio" name="tipo" value="p"
-                                                    {{ $tramite->tra_tipo_apoderado=='p' ? 'checked' : '' }}>
-                                                <span>Poder notariado</span>
-                                            </label>
+                                        <label>Nombre apoderado</label>
+                                        <div class="e-val">
+                                            @if($apoderado) {{ $apoderado['apo_apellido'] . ' ' . $apoderado['apo_nombre'] }} @else <span class="muted">Sin registro</span> @endif
                                         </div>
                                     </div>
                                 </div>
-                                <input type="hidden" name="ctra" value="{{ $tramite->cod_tra }}">
-                            </form>
-                            <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
-                                <button class="e-btn e-btn-ghost e-btn-sm"
-                                        onclick="$('#eleg-apo-edit').hide(300);$('#eleg-apo-view').show(300);">
-                                    Cancelar
-                                </button>
-                                <button class="e-btn e-btn-primary e-btn-sm"
-                                        onclick="enviar('form_apoderado_edi','{{ url('guardar apoderado') }}','panel_traleg');">
-                                    <i class="fas fa-save" style="font-size:10px;"></i> Guardar
-                                </button>
                             </div>
+
+                            {{-- Formulario edición apoderado --}}
+                            @can('editar apoderado traleg - srv')
+                            <div id="eleg-apo-edit" style="display:none;">
+                                <form id="form_apoderado_edi">
+                                    @csrf
+                                    @php
+                                        $apo_nombre = ''; $apo_apellido = ''; $apo_ci = '';
+                                        if($apoderado){ $apo_ci=$apoderado->apo_ci; $apo_apellido=$apoderado->apo_apellido; $apo_nombre=$apoderado->apo_nombre; }
+                                        $requiereBoletaDj = (bool) config('apoderado.requiere_boleta_dj', false);
+                                        $tipoApoderado = $tramite->tra_tipo_apoderado ?: 'd';
+                                        $mostrarBoleta = ($tipoApoderado === 'd' && $requiereBoletaDj);
+                                    @endphp
+                                    <div class="fg fg-2">
+                                        <div class="e-field fg-span2">
+                                            <label>CI apoderado</label>
+                                            <input class="e-input" name="ci" id="ci_apoderado_edi" value="{{ $apo_ci }}"
+                                                   oninput="verificarBoletaApoderadoEdi();" autocomplete="off">
+                                        </div>
+                                        <div class="e-field fg-span2" id="contenedor_boleta_apoderado_edi" style="{{ $mostrarBoleta ? '' : 'display:none;' }}">
+                                            <label>N° control boleta</label>
+                                            <input class="e-input" name="control_boleta" id="control_boleta_apoderado_edi"
+                                                   oninput="verificarBoletaApoderadoEdi()" autocomplete="off" placeholder="Ingrese número de control">
+                                            <div style="margin-top:6px;"><span id="estado_pago_apoderado_edi" class="badge badge-secondary">Sin validar</span></div>
+                                            <input type="hidden" name="control_boleta_valido" id="control_boleta_valido_edi" value="{{ $mostrarBoleta ? '0' : '1' }}">
+                                            <input type="hidden" name="monto_boleta" id="monto_boleta_edi" value="0">
+                                        </div>
+                                        <div class="e-field">
+                                            <label>Apellidos</label>
+                                            <input class="e-input" required name="apellido" id="apellido_apoderado"
+                                                   value="{{ $apo_apellido }}" autocomplete="off" {{ $mostrarBoleta ? 'readonly' : '' }}>
+                                        </div>
+                                        <div class="e-field">
+                                            <label>Nombres</label>
+                                            <input class="e-input" required name="nombre" id="nombre_apoderado"
+                                                   value="{{ $apo_nombre }}" autocomplete="off" {{ $mostrarBoleta ? 'readonly' : '' }}>
+                                        </div>
+                                        <div class="e-field fg-span2" style="padding-bottom:0;">
+                                            <label>Tipo de apoderado</label>
+                                            <div class="e-radio-row">
+                                                <label class="e-radio-opt">
+                                                    <input type="radio" name="tipo" value="d"
+                                                        {{ $tramite->tra_tipo_apoderado=='d' ? 'checked' : '' }} onchange="actualizarModoApoderadoTraleg()">
+                                                    <span>Declaración jurada</span>
+                                                </label>
+                                                <label class="e-radio-opt">
+                                                    <input type="radio" name="tipo" value="p"
+                                                        {{ $tramite->tra_tipo_apoderado=='p' ? 'checked' : '' }} onchange="actualizarModoApoderadoTraleg()">
+                                                    <span>Poder notariado</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <input type="hidden" name="ctra" value="{{ $tramite->cod_tra }}">
+                                </form>
+                                <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
+                                    <button class="e-btn e-btn-ghost e-btn-sm"
+                                            onclick="$('#eleg-apo-edit').hide(300);$('#eleg-apo-view').show(300);">
+                                        Cancelar
+                                    </button>
+                                    <button class="e-btn e-btn-primary e-btn-sm"
+                                            onclick="enviar('form_apoderado_edi','{{ url('guardar apoderado') }}','panel_traleg');">
+                                        <i class="fas fa-save" style="font-size:10px;"></i> Guardar
+                                    </button>
+                                </div>
+                            </div>
+                            @endcan
                         </div>
-                        @endcan
                     </div>
-                </div>
+                @endif
 
             </div>{{-- /col left --}}
 
@@ -1027,7 +1038,7 @@
                             </form>
                             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;">
                                 <a href="#" class="e-btn e-btn-primary"
-                                   onclick="crearDoclegConValidacion('form_docleg','{{ url('g_docleg') }}','panel_traleg')">
+                                   onclick="crearDoclegConValidacion('form_docleg','{{ url('g_docleg') }}','panel_traleg', this)">
                                     <i class="fas fa-plus" style="font-size:10px;"></i> Crear
                                 </a>
                             </div>
@@ -1134,7 +1145,7 @@
                             </form>
                             <div style="display:flex;justify-content:flex-end;margin-top:10px;">
                                 <a href="#" class="e-btn e-btn-primary"
-                                   onclick="crearConfrontacionConValidacion('form_docleg_f','{{ url('g_docleg') }}','panel_traleg')">
+                                   onclick="crearConfrontacionConValidacion('form_docleg_f','{{ url('g_docleg') }}','panel_traleg', this)">
                                     <i class="fas fa-plus" style="font-size:10px;"></i> Crear
                                 </a>
                             </div>
@@ -1144,31 +1155,7 @@
                             <form id="form_docleg">
                                 @csrf
                                 <div class="e-add-grid g2">
-                                    <div class="e-add-col">
-                                        <label>Tipo de legalización</label>
-                                        <select class="e-select" data-campo="tipo-legalizacion" disabled>
-                                            <option value="" selected></option>
-                                            @foreach($lista_tramites as $l)
-                                                @if(strtoupper((string)($l->tre_tipo ?? ''))==='R') @continue @endif
-                                                <option value="{{ $l->cod_tre }}">{{ $l->tre_nombre }}</option>
-                                            @endforeach
-                                        </select>
-                                        <input type="hidden" name="tipo" data-campo="tipo-legalizacion-hidden" value="">
-                                    </div>
-                                    <div class="e-add-col" data-campo="columna-carrera" style="display:none;">
-                                        <label>Carrera del interesado</label>
-                                        <select class="e-select" id="select_carrera_interesado">
-                                            <option value="">-- Seleccionar carrera --</option>
-                                            @foreach($carreras_persona as $cp)
-                                                <option value="{{ $cp->cod_tit }}" 
-                                                        data-num="{{ $cp->tit_nro_titulo }}" 
-                                                        data-ges="{{ $cp->tit_gestion }}">
-                                                    {{ $cp->car_nombre }} ({{ $cp->tit_nro_titulo }}/{{ $cp->tit_gestion }})
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                        <input type="hidden" name="cod_tit" id="cod_tit_seleccionado" value="">
-                                    </div>
+                                    <!-- ROW 1 -->
                                     <div class="e-add-col">
                                         <label>Tipo de trámite</label>
                                         <div class="e-radio-row" style="padding-top:4px;">
@@ -1199,6 +1186,32 @@
                                         </div>
                                     </div>
                                     <div class="e-add-col">
+                                        <label>Tipo de legalización</label>
+                                        <select class="e-select" data-campo="tipo-legalizacion" disabled>
+                                            <option value="" selected></option>
+                                            @foreach($lista_tramites as $l)
+                                                @if(strtoupper((string)($l->tre_tipo ?? ''))==='R') @continue @endif
+                                                <option value="{{ $l->cod_tre }}">{{ $l->tre_nombre }}</option>
+                                            @endforeach
+                                        </select>
+                                        <input type="hidden" name="tipo" data-campo="tipo-legalizacion-hidden" value="">
+                                    </div>
+
+                                    <!-- ROW 2 -->
+                                    <div class="e-add-col" data-campo="fila-pago-principal">
+                                        <label>Nro. Control</label>
+                                        <div class="e-add-row-inline">
+                                            <input class="e-input" required name="control" oninput="programarValidacionControl(this)" style="flex:1;min-width:0;">
+                                            <a href="#" class="e-pill idle" data-campo="estado-pago-control-icon" data-pago-campo="control"
+                                               title="Ver detalle de validación de pago"
+                                               onclick="abrirDetallePagoFormulario(this); return false;"
+                                               style="text-decoration:none;">
+                                                <i class="fas fa-minus-circle" style="font-size:10px;"></i>
+                                                <span>Pendiente</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="e-add-col">
                                         <label>Nro. Título o Resolución</label>
                                         <div class="e-num-pair">
                                             <input name="numero" class="e-input" style="max-width:90px;">
@@ -1219,16 +1232,18 @@
                                             </span>
                                         </div>
                                     </div>
-                                    <div class="e-add-col" data-campo="fila-pago-principal">
-                                        <label>Nro. Control</label>
+
+                                    <!-- ROW 3 -->
+                                    <div class="e-add-col" data-campo="fila-pago-complementario">
+                                        <label>N° control Búsqueda</label>
                                         <div class="e-add-row-inline">
-                                            <input class="e-input" required name="control" oninput="programarValidacionControl(this)" style="flex:1;min-width:0;">
-                                            <a href="#" class="e-pill idle" data-campo="estado-pago-control-icon" data-pago-campo="control"
+                                            <input class="e-input" name="valorado_bus" oninput="programarValidacionControl(this)" style="flex:1;min-width:0;">
+                                            <a href="#" class="e-pill idle" data-campo="estado-pago-busqueda-icon" data-pago-campo="busqueda"
                                                title="Ver detalle de validación de pago"
                                                onclick="abrirDetallePagoFormulario(this); return false;"
                                                style="text-decoration:none;">
                                                 <i class="fas fa-minus-circle" style="font-size:10px;"></i>
-                                                <span>Pendiente</span>
+                                                <span>—</span>
                                             </a>
                                         </div>
                                     </div>
@@ -1245,18 +1260,21 @@
                                             </a>
                                         </div>
                                     </div>
-                                    <div class="e-add-col" data-campo="fila-pago-complementario">
-                                        <label>N° control Búsqueda</label>
-                                        <div class="e-add-row-inline">
-                                            <input class="e-input" name="valorado_bus" oninput="programarValidacionControl(this)" style="flex:1;min-width:0;">
-                                            <a href="#" class="e-pill idle" data-campo="estado-pago-busqueda-icon" data-pago-campo="busqueda"
-                                               title="Ver detalle de validación de pago"
-                                               onclick="abrirDetallePagoFormulario(this); return false;"
-                                               style="text-decoration:none;">
-                                                <i class="fas fa-minus-circle" style="font-size:10px;"></i>
-                                                <span>—</span>
-                                            </a>
-                                        </div>
+
+                                    <!-- HIDDEN FIELDS (Carrera, Reimpresion) -->
+                                    <div class="e-add-col" data-campo="columna-carrera" style="display:none;grid-column:span 2;">
+                                        <label>Carrera del interesado</label>
+                                        <select class="e-select" id="select_carrera_interesado">
+                                            <option value="">-- Seleccionar carrera --</option>
+                                            @foreach($carreras_persona as $cp)
+                                                <option value="{{ $cp->cod_tit }}" 
+                                                        data-num="{{ $cp->tit_nro_titulo }}" 
+                                                        data-ges="{{ $cp->tit_gestion }}">
+                                                    {{ $cp->car_nombre }} ({{ $cp->tit_nro_titulo }}/{{ $cp->tit_gestion }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <input type="hidden" name="cod_tit" id="cod_tit_seleccionado" value="">
                                     </div>
                                     <input type="hidden" name="reimpresion" data-campo="preimpreso-api" value="">
                                 </div>
@@ -1268,7 +1286,7 @@
                             </form>
                             <div style="display:flex;justify-content:flex-end;margin-top:10px;">
                                 <a href="#" class="e-btn e-btn-primary"
-                                   onclick="crearDoclegConValidacion('form_docleg','{{ url('g_docleg') }}','panel_traleg')">
+                                   onclick="crearDoclegConValidacion('form_docleg','{{ url('g_docleg') }}','panel_traleg', this)">
                                     <i class="fas fa-plus" style="font-size:10px;"></i> Crear
                                 </a>
                             </div>
@@ -1426,49 +1444,127 @@
         $.ajax({
             url:link, type:'GET',
             success:function(resp){
-                if(resp=="No"){$('#apellido_apoderado').val('');$('#nombre_apoderado').val('');}
+                if(resp=="No"){
+                    if ($('#nombre_apoderado').prop('readonly')) {
+                        $('#apellido_apoderado').val('');
+                        $('#nombre_apoderado').val('');
+                    }
+                }
                 else{var res=JSON.parse(resp);$('#apellido_apoderado').val(res['apo_apellido']);$('#nombre_apoderado').val(res['apo_nombre']);}
             }
         });
     }
 
-    function verificarBoletaApoderadoEdi(){
-        var control=($('#control_boleta_apoderado_edi').val()||'').toString().trim();
-        var ci=($('#ci_apoderado_edi').val()||'').toString().trim();
-        if(control==='')return;
-        if(ci===''){
-            $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-warning').text('Complete CI');
-            $('#control_boleta_valido_edi').val('0');
-            return;
-        }
-        var link="{{ url('verificar_boleta') }}"+"/"+encodeURIComponent(control)+'?documento='+encodeURIComponent(ci);
-        $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-info').text('Validando...');
-        $('#control_boleta_valido_edi').val('0');
-        $.ajax({
-            url:link,
-            type:'GET',
-            success:function(resp){
-                if(resp=="No"){
-                    $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-danger').text('No encontrado');
-                    $('#control_boleta_valido_edi').val('0');
-                    return;
-                }
-                try{
-                    var res=JSON.parse(resp);
-                    if(res['apellido_apoderado']!==undefined)$('#apellido_apoderado').val(res['apellido_apoderado']);
-                    if(res['nombre_apoderado']!==undefined)$('#nombre_apoderado').val(res['nombre_apoderado']);
-                    $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-success').text('Pago validado');
-                    $('#control_boleta_valido_edi').val('1');
-                }catch(e){
-                    $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
-                    $('#control_boleta_valido_edi').val('0');
-                }
-            },
-            error:function(){
-                $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-warning').text('Error API');
-                $('#control_boleta_valido_edi').val('0');
+    var verificarBoletaApoderadoEdiTimer = null;
+    var verificarBoletaApoderadoEdiXHR = null;
+
+    function actualizarModoApoderadoTraleg() {
+        var tipo = $('#form_apoderado_edi input[name="tipo"]:checked').val() || 'd';
+        if (tipo === 'p' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
+            $('#contenedor_boleta_apoderado_edi').hide();
+            $('#control_boleta_apoderado_edi').val('');
+            $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-secondary').text('Sin validar');
+            $('#control_boleta_valido_edi').val('1'); // Permitir guardar
+            
+            $('#nombre_apoderado').removeAttr('readonly');
+            $('#apellido_apoderado').removeAttr('readonly');
+            
+            var ci = ($('#ci_apoderado_edi').val()||'').toString().trim();
+            if(ci !== '') {
+                 cargarDatosApoderado(ci);
             }
-        });
+        } else {
+            $('#contenedor_boleta_apoderado_edi').show();
+            $('#nombre_apoderado').prop('readonly', true).val('');
+            $('#apellido_apoderado').prop('readonly', true).val('');
+            $('#control_boleta_valido_edi').val('0');
+            verificarBoletaApoderadoEdi();
+        }
+    }
+
+    $(function(){
+        actualizarModoApoderadoTraleg();
+    });
+
+    function verificarBoletaApoderadoEdi(){
+        if(verificarBoletaApoderadoEdiTimer) clearTimeout(verificarBoletaApoderadoEdiTimer);
+
+        verificarBoletaApoderadoEdiTimer = setTimeout(function(){
+            var tipo = $('#form_apoderado_edi input[name="tipo"]:checked').val() || 'd';
+            if (tipo === 'p' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
+                var ci = ($('#ci_apoderado_edi').val()||'').toString().trim();
+                if(ci !== '') {
+                    cargarDatosApoderado(ci);
+                }
+                return;
+            }
+
+            var control=($('#control_boleta_apoderado_edi').val()||'').toString().trim();
+            var ci=($('#ci_apoderado_edi').val()||'').toString().trim();
+            if(control===''){
+                $('#nombre_apoderado').val('');
+                $('#apellido_apoderado').val('');
+                $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-secondary').text('Sin validar');
+                $('#control_boleta_valido_edi').val('0');
+                return;
+            }
+            if(ci===''){
+                $('#nombre_apoderado').val('');
+                $('#apellido_apoderado').val('');
+                $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-warning').text('Complete CI');
+                $('#control_boleta_valido_edi').val('0');
+                return;
+            }
+            var link="{{ url('verificar_boleta') }}"+"/"+encodeURIComponent(control)+'?documento='+encodeURIComponent(ci)+'&modulo=servicios';
+            $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-info').text('Validando...');
+            $('#control_boleta_valido_edi').val('0');
+
+            if(verificarBoletaApoderadoEdiXHR && verificarBoletaApoderadoEdiXHR.readyState !== 4){
+                verificarBoletaApoderadoEdiXHR.abort();
+            }
+
+            verificarBoletaApoderadoEdiXHR = $.ajax({
+                url:link,
+                type:'GET',
+                success:function(resp){
+                    if(resp=="No" || resp===null || resp===''){
+                        $('#nombre_apoderado').val('');
+                        $('#apellido_apoderado').val('');
+                        $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-danger').text('No encontrado');
+                        $('#control_boleta_valido_edi').val('0');
+                        return;
+                    }
+                    try{
+                        var res = (typeof resp === 'string') ? JSON.parse(resp) : resp;
+                        if (res.error) {
+                            $('#nombre_apoderado').val('');
+                            $('#apellido_apoderado').val('');
+                            $('#monto_boleta_edi').val('0');
+                            $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-danger').text(res.error);
+                            $('#control_boleta_valido_edi').val('0');
+                        } else {
+                            $('#apellido_apoderado').val(res['apellido_apoderado'] || '');
+                            $('#nombre_apoderado').val(res['nombre_apoderado'] || '');
+                            $('#monto_boleta_edi').val(res['monto'] || '0');
+                            $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-success').text('Pago validado');
+                            $('#control_boleta_valido_edi').val('1');
+                        }
+                    }catch(e){
+                        $('#nombre_apoderado').val('');
+                        $('#apellido_apoderado').val('');
+                        $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-warning').text('Respuesta inválida');
+                        $('#control_boleta_valido_edi').val('0');
+                    }
+                },
+                error:function(xhr, textStatus){
+                    if(textStatus === 'abort') return;
+                    $('#nombre_apoderado').val('');
+                    $('#apellido_apoderado').val('');
+                    $('#estado_pago_apoderado_edi').removeClass().addClass('badge badge-warning').text('Error API');
+                    $('#control_boleta_valido_edi').val('0');
+                }
+            });
+        }, 500);
     }
 
     /* ── Funciones UX de pills de pago/SITRA ── */
@@ -1692,21 +1788,34 @@
         });
     }
 
-    function crearDoclegConValidacion(formulario,ruta,panel){
+    function crearDoclegConValidacion(formulario,ruta,panel,btn){
         var form=$('#'+formulario);sincronizarCamposObligatorios(form);
         var cuadis=form.find('input[name="cuadis"]').is(':checked'),validado=form.find('[data-campo="validacion-recaudacion-ok"]').val()==='1';
         if(!cuadis&&!validado){$('#error_datos_span').html('Valide control primero.');$('#error_datos').show();setTimeout(function(){$('#error_datos').hide(500);},4000);return;}
         var tipoSeleccionado=(form.find('input[data-campo="tipo-legalizacion-hidden"]').val()||'').toString().trim();
         if(tipoSeleccionado===''){$('#error_datos_span').html('Seleccione tipo para continuar.');$('#error_datos').show();setTimeout(function(){$('#error_datos').hide(500);},4000);return;}
-        enviar1(formulario,ruta,panel);
+        
+        var sitraElement = form.find('[data-campo="estado-sitra"]');
+        var tieneSitra = sitraElement.length > 0 && sitraElement.is(':visible');
+        if (tieneSitra) {
+            var estadoSitra = form.data('sitra-estado');
+            if (estadoSitra !== '0' && estadoSitra !== 'no-aplica') {
+                $('#error_datos_span').html('SITRA/SID debe estar validado como correcto.');
+                $('#error_datos').show();
+                setTimeout(function(){$('#error_datos').hide(500);},4000);
+                return;
+            }
+        }
+        
+        enviar1(formulario,ruta,panel,btn);
     }
-    function crearConfrontacionConValidacion(formulario,ruta,panel){
+    function crearConfrontacionConValidacion(formulario,ruta,panel,btn){
         var form=$('#'+formulario);sincronizarCamposObligatorios(form);
         var validado=form.find('[data-campo="validacion-recaudacion-ok"]').val()==='1';
         if(!validado){$('#error_datos_span').html('Valide control primero.');$('#error_datos').show();setTimeout(function(){$('#error_datos').hide(500);},4000);return;}
         var tipoSeleccionado=(form.find('input[data-campo="tipo-legalizacion-hidden"]').val()||'').toString().trim();
         if(tipoSeleccionado===''){$('#error_datos_span').html('Seleccione tipo para continuar.');$('#error_datos').show();setTimeout(function(){$('#error_datos').hide(500);},4000);return;}
-        enviar1(formulario,ruta,panel);
+        enviar1(formulario,ruta,panel,btn);
     }
 
     function actualizarEstadoSitra(formulario,clase,mensaje){
@@ -1747,16 +1856,20 @@
         var supletorioFlag = form.find('input[name="supletorio"]').is(':checked') ? '1' : '0';
         var secuencia=((form.data('sitra-req-seq')||0)+1);form.data('sitra-req-seq',secuencia);
         form.find('[data-campo="fuente-sitra"]').val('');
-        if(numero===''||numero==='-'){limpiarSitraFormulario(form);actualizarEstadoSitra(form,'text-muted','SITRA pendiente.');return;}
-        if(form.find('input[name="gestion"]').length&&gestion===''){limpiarSitraFormulario(form);actualizarEstadoSitra(form,'text-muted','Complete gestion para validar SITRA.');return;}
-        if(codTipo===''&&buscarEn===''){limpiarSitraFormulario(form);actualizarEstadoSitra(form,'text-muted','Seleccione tipo para validar SITRA.');return;}
+        if(numero===''||numero==='-'){limpiarSitraFormulario(form);form.data('sitra-estado','pendiente');actualizarEstadoSitra(form,'text-muted','SITRA pendiente.');return;}
+        if(form.find('input[name="gestion"]').length){
+            if(gestion===''){limpiarSitraFormulario(form);form.data('sitra-estado','pendiente');actualizarEstadoSitra(form,'text-muted','Complete gestion para validar SITRA.');return;}
+            var valGestion=parseInt(gestion,10);
+            if(isNaN(valGestion)||valGestion<1832){limpiarSitraFormulario(form);form.data('sitra-estado','2');actualizarEstadoSitra(form,'text-danger','No existe en SITRA/SID.');return;}
+        }
+        if(codTipo===''&&buscarEn===''){limpiarSitraFormulario(form);form.data('sitra-estado','pendiente');actualizarEstadoSitra(form,'text-muted','Seleccione tipo para validar SITRA.');return;}
         actualizarEstadoSitra(form,'text-muted','Validando en SITRA/SID...');
         $.ajax({
             url:"{{url('validar sitra legalizacion/'.$tramite->cod_tra)}}",type:'POST',
             data:{_token:form.find('input[name="_token"]').val(),numero:numero,gestion:gestion,tipo:codTipo,buscar_en:buscarEn,supletorio:supletorioFlag},
             success:function(resp){
                 if((form.data('sitra-req-seq')||0)!==secuencia)return;
-                if(!resp||resp.aplica===false){limpiarSitraFormulario(form);actualizarEstadoSitra(form,'text-muted',resp&&resp.message?resp.message:'No aplica para este tipo.');return;}
+                if(!resp||resp.aplica===false){limpiarSitraFormulario(form);form.data('sitra-estado','no-aplica');actualizarEstadoSitra(form,'text-muted',resp&&resp.message?resp.message:'No aplica para este tipo.');return;}
                 var estadoResp=(resp&&resp.estado!==undefined&&resp.estado!==null)?String(resp.estado).trim():'';
                 var fuenteResp=(resp&&resp.fuente)?String(resp.fuente).toLowerCase():'sitra';
                 var mensajeResp=(resp&&resp.message)?String(resp.message).toLowerCase():'';
@@ -1848,16 +1961,30 @@
         var select=formulario.find('select[data-campo="tipo-legalizacion"]');
         if(select.length){
             var opcionSeleccionada=select.find('option:selected'),valorSeleccionado='';
-            if(opcionSeleccionada.length&&!opcionSeleccionada.prop('disabled'))valorSeleccionado=opcionSeleccionada.val()||'';
+            var textoSeleccionado='';
+            if(opcionSeleccionada.length&&!opcionSeleccionada.prop('disabled')) {
+                valorSeleccionado=opcionSeleccionada.val()||'';
+                textoSeleccionado=opcionSeleccionada.text()||'';
+            }
             select.val(valorSeleccionado);
             formulario.find('input[data-campo="tipo-legalizacion-hidden"]').val(valorSeleccionado);
             
-            if(valorSeleccionado == '60'){
-                formulario.find('[data-campo="columna-carrera"]').show(300);
+            formulario.find('[data-campo="columna-carrera"]').hide(300);
+            formulario.find('#select_carrera_interesado').val('');
+            formulario.find('#cod_tit_seleccionado').val('');
+            formulario.find('input[name="numero"]').prop('readonly', false).removeClass('readonly');
+            formulario.find('input[name="gestion"]').prop('readonly', false).removeClass('readonly');
+
+            var textoMinusculas = textoSeleccionado.toLowerCase();
+            var esExtranjero = (textoMinusculas.indexOf('extrajero') !== -1 || textoMinusculas.indexOf('extranjero') !== -1);
+            if(esExtranjero) {
+                formulario.find('[data-campo="estado-sitra-icon"]').hide();
+                formulario.find('[data-campo="sitra-fuente"]').hide();
+                formulario.find('[data-campo="estado-sitra"]').hide();
             } else {
-                formulario.find('[data-campo="columna-carrera"]').hide(300);
-                formulario.find('#select_carrera_interesado').val('');
-                formulario.find('#cod_tit_seleccionado').val('');
+                formulario.find('[data-campo="estado-sitra-icon"]').show();
+                formulario.find('[data-campo="sitra-fuente"]').show();
+                formulario.find('[data-campo="estado-sitra"]').show();
             }
         }
     }
@@ -1869,6 +1996,12 @@
         formulario.find('[data-campo="columna-carrera"]').hide(300);
         formulario.find('#select_carrera_interesado').val('');
         formulario.find('#cod_tit_seleccionado').val('');
+        formulario.find('input[name="numero"]').prop('readonly', false).removeClass('readonly');
+        formulario.find('input[name="gestion"]').prop('readonly', false).removeClass('readonly');
+
+        formulario.find('[data-campo="estado-sitra-icon"]').show();
+        formulario.find('[data-campo="sitra-fuente"]').show();
+        formulario.find('[data-campo="estado-sitra"]').show();
     }
     function aplicarPtagSugerido(formulario,resp){
         var check=formulario.find('input[name="ptaang"]'),wrap=formulario.find('[data-campo="ptag-wrap"]');if(!check.length)return;
