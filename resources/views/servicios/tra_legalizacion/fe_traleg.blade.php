@@ -1843,7 +1843,8 @@
         var detalle=(($(trigger).attr('data-detalle-sitra')||'').toString()||'').trim();
         if(detalle===''){if(estado==='0')detalle='Coincide en SITRA/SID.';else if(estado==='1')detalle='Existe, pero no coincide.';else if(estado==='2')detalle='No existe en SITRA/SID.';else detalle='SITRA pendiente.';}
         if(fuente==='sitra_sid'&&detalle.toLowerCase().indexOf('pendiente')!==-1){detalle='No existe en SITRA/SID.';}
-        if(resp&&estado==='0'){var extra=[];if(resp.numero)extra.push('Nro: '+resp.numero);if(resp.gestion)extra.push('Gestión: '+resp.gestion);if(resp.tipo)extra.push('Tipo: '+resp.tipo);if(extra.length)detalle+=' '+extra.join(' | ');}
+        if(resp&&estado==='0'){var extra=[];if(resp.numero)extra.push('Nro: '+resp.numero);if(resp.gestion)extra.push('Gestión: '+resp.gestion);if(resp.tipo)extra.push('Tipo: '+resp.tipo);if(resp.fecha_impresion)extra.push('Impresión: '+resp.fecha_impresion);if(extra.length)detalle+=' '+extra.join(' | ');}
+        if(resp&&estado==='1'){var extra=[];if(resp.numero)extra.push('Nro: '+resp.numero);if(resp.gestion)extra.push('Gestión: '+resp.gestion);if(resp.fecha_impresion)extra.push('Impresión: '+resp.fecha_impresion);if(extra.length)detalle+=' '+extra.join(' | ');}
         if(fuente==='sid')detalle+=' Fuente: SID.';else if(fuente==='sitra_sid')detalle+=' Fuente: SITRA y SID.';
         return togglePopoverValidacion(trigger,detalle);
     }
@@ -1877,10 +1878,36 @@
                 if((estadoResp===''||estadoResp==='null'||estadoResp==='undefined')&&mensajeResp.indexOf('no existe')!==-1)estadoResp='2';
                 if((estadoResp===''||estadoResp==='null'||estadoResp==='undefined')&&mensajeResp.indexOf('no coincide')!==-1)estadoResp='1';
                 form.data('sitra-response',resp).data('sitra-estado',estadoResp).data('sitra-fuente',fuenteResp);
+                
+                // VALIDAR AÑO DE FECHA DE IMPRESIÓN
+                if(resp && resp.fecha_impresion && estadoResp==='0'){
+                    var partesFecha = resp.fecha_impresion.split('/'); // "20/02/2024" → ["20", "02", "2024"]
+                    var annoImpresion = partesFecha[2]; // Extraer 2024
+                    var annoIngresado = gestion; // El año que ingresó el usuario
+                    
+                    // Comparar años
+                    if(annoImpresion !== annoIngresado){
+                        form.data('sitra-estado','1'); // Marcar como no coincide
+                        estadoResp='1';
+                    }
+                }
+                
                 actualizarFuenteSitra(form,fuenteResp);
                 if(estadoResp==='0')actualizarEstadoSitra(form,'text-success','Coincide en SITRA/SID.');
                 else if(estadoResp==='2')actualizarEstadoSitra(form,'text-danger','No existe en SITRA/SID.');
-                else if(estadoResp==='1')actualizarEstadoSitra(form,'text-danger','Existe, pero no coincide.');
+                else if(estadoResp==='1'){
+                    // Mensajes específicos para no coincidencia
+                    var mensajeError='Existe, pero no coincide.';
+                    if(resp && resp.fecha_impresion){
+                        var partesFecha = resp.fecha_impresion.split('/');
+                        var annoImpresion = partesFecha[2];
+                        var annoIngresado = gestion;
+                        if(annoImpresion !== annoIngresado){
+                            mensajeError='Año de impresión no coincide. Documento: '+annoImpresion+', ingresado: '+annoIngresado;
+                        }
+                    }
+                    actualizarEstadoSitra(form,'text-danger',mensajeError);
+                }
                 else actualizarEstadoSitra(form,'text-muted',resp.message||'Sin datos para validar.');
             },
             error:function(xhr){

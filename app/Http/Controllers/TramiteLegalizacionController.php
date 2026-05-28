@@ -395,10 +395,10 @@ class TramiteLegalizacionController extends Controller
     }
     public function autoCompletarDesdeSitra(Request $request, SitraService $sitra){
         \Log::info('ENTRO AL CONTROLADOR');
-        \Log::info('ANTES DE SITRA', $request->all());
-
-        // ❌ quitar esto
-        // dd($request->all());
+        \Log::info('ANTES DE SITRA', [
+            'ci' => $request->ci,
+            'nro' => $request->nro
+        ]);
 
         $request->validate([
             'ci' => 'required',
@@ -428,12 +428,12 @@ class TramiteLegalizacionController extends Controller
             return response()->json([
                 'ok' => false,
                 'error' => 'No se encontró el documento'
-            ]);
+            ], 404);
         }
 
         return response()->json([
             'ok' => true,
-            'titulo' => $resultado['titulo'],
+            'titulo' => $resultado['titulo'] ?? null,
             'fecha_emision' => $resultado['fecha_emision'],
         ]);
     }
@@ -657,10 +657,35 @@ class TramiteLegalizacionController extends Controller
                                 $numeroLocal = trim((string)$numeroDoc);
 
                                 $nombresCoinciden=app(SitraService::class)->nombresCompatibles($nombreLocal,$nombreSitra);
+                                
+                                // Extraer año si existe
+                                $añoSitra = null;
+                                if (!empty($respSitra->fecha_impresion)) {
+                                    $parts = explode('/', $respSitra->fecha_impresion);
+                                    if (count($parts) === 3) {
+                                        $añoSitra = $parts[2];
+                                    }
+                                }
+                                if (!$añoSitra && !empty($respSitra->gestion)) {
+                                    $añoSitra = $respSitra->gestion;
+                                }
+
                                 if($nombresCoinciden && $tipoLocal==$tipoSitra && $numeroLocal==$numeroSitra){
-                                    $verificar_sitra='0';
-                                    $respuesta = $respSitra;
-                                    break;
+                                    $gestionLocal = trim((string)($form['gestion'] ?? ''));
+                                    $añoCoincide = true;
+                                    if ($gestionLocal !== '' && $añoSitra !== null) {
+                                        $añoCoincide = ($gestionLocal == $añoSitra);
+                                    }
+                                    
+                                    if (!$añoCoincide) {
+                                        $verificar_sitra='1';
+                                        $respuesta = $respSitra;
+                                        break;
+                                    } else {
+                                        $verificar_sitra='0';
+                                        $respuesta = $respSitra;
+                                        break;
+                                    }
                                 }else{
                                     if($nombreSitra=="" && $tipoSitra=="" && $numeroSitra==""){
                                         $respaldoUad9=app(SitraService::class)->buscarRespaldoInterno(
@@ -1818,8 +1843,42 @@ class TramiteLegalizacionController extends Controller
 
                 $nombresCoinciden=app(SitraService::class)->nombresCompatibles($nombreLocal,$nombreSitra);
                 $numerosCoinciden=app(SitraService::class)->numerosCompatibles($numeroLocal,$numeroSitra);
+                
+                // Extraer el año de fecha_impresion si existe
+                $añoSitra = null;
+                if (!empty($respuesta->fecha_impresion)) {
+                    $parts = explode('/', $respuesta->fecha_impresion);
+                    if (count($parts) === 3) {
+                        $añoSitra = $parts[2];
+                    }
+                }
+                if (!$añoSitra && !empty($respuesta->gestion)) {
+                    $añoSitra = $respuesta->gestion;
+                }
 
                 if($nombresCoinciden && $tipoLocal===$tipoSitraNormalizado && $numerosCoinciden){
+                    // Validar también el año si están presentes
+                    $añoCoincide = true;
+                    if ($gestion !== '' && $añoSitra !== null) {
+                        $añoCoincide = ($gestion == $añoSitra);
+                    }
+                    
+                    if (!$añoCoincide) {
+                        return response()->json([
+                            'ok'=>true,
+                            'aplica'=>true,
+                            'estado'=>'1',
+                            'fuente'=>'sitra',
+                            'nombre'=>$nombreSitra,
+                            'titulo'=>$tituloSitra,
+                            'tipo'=>$tipoSitra,
+                            'numero'=>$numeroSitra,
+                            'gestion'=>$gestionSitra,
+                            'fecha_impresion'=>$respuesta->fecha_impresion ?? null,
+                            'message'=>'Año de impresión no coincide. Documento: '.$añoSitra.', ingresado: '.$gestion
+                        ]);
+                    }
+
                     return response()->json([
                         'ok'=>true,
                         'aplica'=>true,
@@ -1830,6 +1889,7 @@ class TramiteLegalizacionController extends Controller
                         'tipo'=>$tipoSitra,
                         'numero'=>$numeroSitra,
                         'gestion'=>$gestionSitra,
+                        'fecha_impresion'=>$respuesta->fecha_impresion ?? null
                     ]);
                 }elseif($nombreSitra==='' && $tipoSitraNormalizado==='' && $numeroSitra===''){
                     $respaldoUad9=null;
