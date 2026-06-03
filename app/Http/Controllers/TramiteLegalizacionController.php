@@ -1915,8 +1915,6 @@ class TramiteLegalizacionController extends Controller
         }
 
         \Log::info('=== RESULTADO FINAL SITRA ===', [
-            'estado' => $estado,
-            'fuente' => $fuenteRespuesta,
             'nombreSitra' => $nombreSitra,
             'tipoSitra' => $tipoSitra,
             'numeroSitra' => $numeroSitra,

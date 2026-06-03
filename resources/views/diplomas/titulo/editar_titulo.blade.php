@@ -46,6 +46,17 @@
                                     </td>
                                 </tr>
                                 <tr>
+                                    <th class="text-right font-italic">Nº de serie:</th>
+                                    <td class="border-bottom border-dark">
+
+                                        <div class="input-group">
+                                            <input type="text" class="form-control form-control-sm border-0"
+                                                   required name="serie" value="{{$titulo[0]->tit_nro_serie ?? ''}}" id="e_nro_serie"/>
+                                        </div>
+
+                                    </td>
+                                </tr>
+                                <tr>
                                     <th class="text-right font-italic">Fecha:</th>
                                     <td class="border-bottom border-dark">
                                         <input type="date" class="form-control form-control-sm border-0" required

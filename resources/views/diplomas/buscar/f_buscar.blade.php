@@ -114,6 +114,12 @@
                                                     </td>
                                                 </tr>
                                                 <tr>
+                                                    <th class="text-right font-italic">Nº de Serie :</th>
+                                                    <td class="border-bottom border-dark">
+                                                        <input type="text" class="form-control form-control-sm border-0" name="serie" />
+                                                    </td>
+                                                </tr>
+                                                <tr>
                                                     <th class="text-right font-italic">Tipo :</th>
                                                     <td class="border-bottom border-dark">
                                                         <select class="form-control form-control-sm"  name="tipo">

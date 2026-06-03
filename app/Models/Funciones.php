@@ -862,23 +862,35 @@ class Funciones extends Model
         }
     }
     public static function DocumentoSitra($tipo){
-        switch ($tipo){
-            case "db": return 'DB'; break;
-            case "da":  return 'AC'; break;
-            case "ca":  return 'CA'; break;
-            case "tp":  return 'PN'; break;
-            case "di":  return 'DI'; break;
-            case "tpos": return 'TPOS'; break;
-            case "re":  return 'RE'; break;
-            case "res": return 'RE'; break;
-            case "rr":  return 'RE'; break;
-            case "rcu": return 'RE'; break;
-            case "rvr": return 'RE'; break;
-            case "rs":  return 'RE'; break;
-            case "rcf": return 'RE'; break;
-            case "rcc": return 'RE'; break;
-            case "rc":  return 'RE'; break;
-            case "su":  return 'SU'; break;
+        switch (strtolower(trim((string)$tipo))) {
+            case "db":
+                return 'DB';
+            case "da":
+            case "ac":
+                return 'AC';
+            case "ca":
+                return 'CA';
+            case "tp":
+            case "pn":
+                return 'PN';
+            case "di":
+                return 'DI';
+            case "tpos":
+                return 'TPOS';
+            case "re":
+            case "res":
+            case "rr":
+            case "rcu":
+            case "rvr":
+            case "rs":
+            case "rcf":
+            case "rcc":
+            case "rc":
+                return 'RE';
+            case "su":
+                return 'SU';
+            default:
+                return null;
         }
     }
     public static function grados($tipo){

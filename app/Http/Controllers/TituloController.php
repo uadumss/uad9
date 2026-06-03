@@ -154,6 +154,7 @@ class TituloController extends Controller
                     $cambio = ($titulo->tit_nro_titulo == $form['nro']) ? false : true;
                     //guarda los datos editados del tomo
                     $titulo->tit_nro_titulo=$form['nro'];
+                    $titulo->tit_nro_serie=$form['serie'];
                     $titulo->tit_nro_folio=$form['folio'];       $titulo->tit_fecha_emision=$form['fecha'];      $titulo->tit_grado=$form['grado'];
                     $titulo->cod_mod=$form['mod'];           $titulo->tit_titulo=mb_strtoupper($form['titulo']);   $titulo->tit_ref=$form['ref'];
                     $titulo->tit_otra_modalidad=mb_strtoupper($form['otra_modalidad']);
@@ -523,7 +524,7 @@ class TituloController extends Controller
                 ->leftJoin('facultads','carreras.cod_fac','=','facultads.cod_fac')
                 ->leftJoin('modalidads','titulos.cod_mod','=','modalidads.cod_mod')
                 ->where('titulos.cod_tit','=',$id_titulo)
-                ->select('tit_nro_titulo','tit_nro_folio','titulos.cod_tit','per_apellido','tit_fecha_emision','tit_titulo','tit_pdf','tit_antecedentes',
+                ->select('tit_nro_titulo','tit_nro_serie','tit_nro_folio','titulos.cod_tit','per_apellido','tit_fecha_emision','tit_titulo','tit_pdf','tit_antecedentes',
                     'tit_fecha_folio','tit_otra_modalidad','per_nombre','car_nombre','fac_nombre','tit_grado','diploma_academicos.cod_car','per_ci','per_sexo',
                     'per_pasaporte','titulos.cod_mod','mod_nombre','personas.cod_nac','nac_nombre','tit_revalida','per_ci_exp','fac_abreviacion','titulos.nota_marginal',
                     'titulos.tit_resolucion','titulos.tit_fecha_resolucion')
@@ -544,7 +545,7 @@ class TituloController extends Controller
                     ->join('personas','titulos.id_per','=','personas.id_per')
                     ->leftJoin('nacionalidads','personas.cod_nac','=','nacionalidads.cod_nac')
                     ->where('cod_tit','=',$id_titulo)
-                    ->select('tit_nro_titulo','tit_nro_folio','titulos.cod_tit','per_apellido','per_nombre','tit_fecha_emision','tit_pdf','tit_antecedentes',
+                    ->select('tit_nro_titulo','tit_nro_serie','tit_nro_folio','titulos.cod_tit','per_apellido','per_nombre','tit_fecha_emision','tit_pdf','tit_antecedentes',
                         'tit_fecha_folio','tit_grado','per_ci','per_pasaporte','per_sexo','per_apellido','per_nombre','nac_nombre','personas.cod_nac',
                         'tit_titulo','tit_ref','per_ci_exp','tit_reconocimiento')
                     ->get();
@@ -563,7 +564,7 @@ class TituloController extends Controller
                         ->leftJoin('modalidads','titulos.cod_mod','=','modalidads.cod_mod')
                         ->leftJoin('nacionalidads','personas.cod_nac','=','nacionalidads.cod_nac')
                         ->where('cod_tit','=',$id_titulo)
-                        ->select('tit_nro_titulo','tit_nro_folio','titulos.cod_tit','per_apellido','tit_fecha_emision','tit_titulo',
+                        ->select('tit_nro_titulo','tit_nro_serie','tit_nro_folio','titulos.cod_tit','per_apellido','tit_fecha_emision','tit_titulo',
                             'tit_fecha_folio','tit_otra_modalidad','tit_pdf','tit_antecedentes','per_nombre','mod_nombre','tit_grado','per_ci','per_sexo',
                             'per_pasaporte','titulos.cod_mod','personas.cod_nac','nac_nombre','per_ci_exp','titulos.nota_marginal','titulos.tit_resolucion','titulos.tit_fecha_resolucion')
                         ->get();
@@ -605,7 +606,7 @@ class TituloController extends Controller
         $titulo=DB::table('titulos')
                     ->join('personas','titulos.id_per','=','personas.id_per')
                     ->where('cod_tit',$id)
-                    ->select('per_nombre','per_apellido','cod_tit','tit_nro_titulo','cod_tom','cod_tom')
+                    ->select('per_nombre','per_apellido','cod_tit','tit_nro_titulo','tit_nro_serie','cod_tom','cod_tom')
                     ->get();
         $tomo=Tomo::find($titulo[0]->cod_tom);
         $tipoUnitario=TomoController::tipoTomoUnitario($tomo['tom_tipo']);

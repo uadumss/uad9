@@ -294,7 +294,7 @@
                                                     <th class="text-right font-italic">Nº título:</th>
                                                     <td class="border-bottom border-dark">
                                                         <div class="input-group">
-                                                            <input type="text" class="form-control form-control-sm border-0" pattern="[0-9]{1,5}" required name="nro_titulo" id="nro_titulo" onchange="buscarSitra()"/>
+                                                            <input type="text" class="form-control form-control-sm border-0" pattern="[0-9]{1,5}" required name="nro_titulo" id="nro_titulo" onchange="cargarDatosPersonales(this.value)"/>
                                                             @if($tipo=='re')
                                                                 <span class="text-danger font-weight-bold pt-1" style="font-size: 0.8em">Reconocimiento</span>&nbsp;&nbsp;
                                                                 <input type="checkbox" name="reconocimiento" class="" />
@@ -307,7 +307,7 @@
                                                     <th class="text-right font-italic">Nº serie:</th>
                                                     <td class="border-bottom border-dark">
                                                         <div class="input-group">
-                                                            <input type="text" class="form-control form-control-sm border-0" pattern="[A-Z]-[0-9]{1,10}" required name="nro_serie" id="nro_serie" onchange="buscarSitra()"/>
+                                                            <input type="text" class="form-control form-control-sm border-0" pattern="[A-Z]-[0-9]{1,10}" required name="nro_serie" id="nro_serie" onchange="cargarDatosPersonales(this.value)"/>
                                                             @if($tipo=='re')
                                                                 <span class="text-danger font-weight-bold pt-1" style="font-size: 0.8em">Reconocimiento</span>&nbsp;&nbsp;
                                                                 <input type="checkbox" name="reconocimiento" class="" />
@@ -414,7 +414,7 @@
                                                 <th class="text-right font-italic">Nº CI:</th>
                                                 <td class="border-bottom border-dark">
                                                     <div class="input-group">
-                                                        <input type="text" class="form-control form-control-sm border-0" id="ci" name="ci" onchange="cargarDatosPersonales(this.value); buscarSitra()" />
+                                                        <input type="text" class="form-control form-control-sm border-0" id="ci" name="ci" onchange="cargarDatosPersonales(this.value); cargarDatosTomo(this.value)" />
 
                                                         <span class="text-danger font-weight-bold" style="font-size: 0.9em">Exp. </span>&nbsp;&nbsp;
                                                         <select name="expedido" class="custom-select-sm custom-select col-md-4" id="expedido">
@@ -862,29 +862,7 @@
                     }
                 });
             }
-            function cargarDatosPersonales(ci){
-                var link="{{url('datos_per/')}}"+"/"+ci;
-                $.ajax({
-                    url: link,
-                    type: 'GET',
-                    success: function (resp) {
-                        if(resp=="No"){
-                            $('#apellido').val('');
-                            $('#nombre').val('');
-                            $('#expedido').val('');
-                        }else{
-                            var res=JSON.parse(resp);
-                            $('#apellido').val(res['per_apellido']);
-                            $('#nombre').val(res['per_nombre']);
-                            $('#expedido').val(res['per_ci_exp']);
-                            $('#sexo').val(res['per_sexo']);
-                        }
-                    },
-                    error: function () {
-                        alert('No se puede ejecutar la petición');
-                    }
-                });
-            }
+            
             function verDatos(url,panel,fila){
                 $('#'+panel).html("<br/><br/><div class='d-flex justify-content-center text-danger'><div class='spinner-border' role='status'> <span class='visually-hidden'></span></div></div>");
                 $.ajax({
@@ -914,47 +892,6 @@
             $(document).on('change', '.modal.show input[name="nota_marginal"]', function() {  // cambiado
                 toggleNotaMarginalNuevo();
             });
-            function formatearFecha(fecha) {
-                let [d, m, y] = fecha.split('/');
-                y = '20' + y; // asumiendo 20xx
-                return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
-            }
-
-            let timeout = null;
-
-            function buscarSitra() {
-                let ci = document.getElementById('ci').value;
-                let nro = document.getElementById('nro_titulo').value;
-                let serie = document.getElementById('nro_serie').value;
-                console.log({ ci, nro, serie }); // 👈 AQUÍ
-
-                if (!ci || !nro || !serie) return;
-
-                clearTimeout(timeout);
-
-                timeout = setTimeout(() => {
-                    fetch('/sitra/autocompletar', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                        },
-                        body: JSON.stringify({ ci, nro, serie })
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        console.log('RESPUESTA:', data); // 👈 clave para debug
-
-                        if (!data.ok) return;
-
-                        document.getElementById('titulo').value = data.titulo || '';
-                        document.getElementById('fecha_emision').value = formatearFecha(data.fecha_emision);
-                        autoseleccionarCarrera(data.titulo);
-                    })
-                    .catch(err => console.error(err));
-
-                }, 500);
-            }
 
             function normalizar(texto) {
                 return texto
@@ -965,7 +902,157 @@
                     .replace(/\s+/g, " ")
                     .trim();
             }
+            let timeoutSitra = null;
 
+            /**
+             * Carga SOLO datos personales (apellido, nombre, expedido, sexo)
+             * NO toca título ni fecha de emisión
+             */
+            function cargarDatosPersonales(ci){
+                var ci_nuevo = ($('#ci').val() || ci || '').trim();
+
+                console.log('📋 cargarDatosPersonales invocado', { ci_nuevo: ci_nuevo });
+
+                if(ci_nuevo === ''){
+                    $('#apellido').val('');
+                    $('#nombre').val('');
+                    $('#expedido').val('');
+                    $('#sexo').val('M');
+                    return;
+                }
+
+                // Llamar a datos_per para cargar datos personales
+                var link = "{{url('datos_per/')}}" + "/" + encodeURIComponent(ci_nuevo);
+
+                $.ajax({
+                    url: link,
+                    type: 'GET',
+                    dataType: 'text',
+
+                    success: function (resp) {
+                        console.log('✅ Respuesta datos_per:', resp);
+
+                        if(resp == "No"){
+                            $('#apellido').val('');
+                            $('#nombre').val('');
+                            $('#expedido').val('');
+                            $('#sexo').val('M');
+                        } else {
+                            var res = JSON.parse(resp);
+                            $('#apellido').val(res['per_apellido'] || '');
+                            $('#nombre').val(res['per_nombre'] || '');
+                            $('#expedido').val(res['per_ci_exp'] || '');
+                            $('#sexo').val(res['per_sexo'] || 'M');
+                        }
+
+                        // Disparar búsqueda de SITRA si los campos están completos
+                        
+                    },
+
+                    error: function () {
+                        console.error('❌ Error en datos_per');
+                        $('#apellido').val('');
+                        $('#nombre').val('');
+                        $('#expedido').val('');
+                        $('#sexo').val('M');
+                    }
+                });
+            }
+
+            /**
+             * Mapa de prefijos por tipo documental según SITRA
+             */
+            const TIPOS_SITRA = {
+                db: 'DB',
+                ca: 'AC',
+                da: 'AC',
+                tp: 'TP',
+                di: 'DI',
+                tpos: 'D',
+                re: 'R',
+                su: 'S'
+            };
+
+
+            /**
+             * Busca título y fecha en BD local o SITRA
+             * SOLO se ejecuta si CI, Nº Título y Nº Serie tienen valor
+             * Usa debounce para evitar múltiples llamadas
+             */
+            function buscarSitra() {
+                var ci = ($('#ci').val() || '').trim();
+                var nro_titulo = ($('#nro_titulo').val() || '').trim();
+
+                // toma el tipo real del formulario
+                var tipoLocal = ($('input[name="tipo"]').val() || '').trim().toLowerCase();                
+                var tipoSitra = TIPOS_SITRA[tipoLocal] || '';
+
+                // serie cruda: sin prefijos duplicados
+                
+                console.log('🔍 buscarSitra evaluando...', {
+                    ci: ci,
+                    nro_titulo: nro_titulo,
+                    tipo_local: tipoLocal,
+                    tipo_sitra: tipoSitra
+                    
+                });
+                
+                console.log('DEBUG TIPO', {
+                    tipoLocal: tipoLocal,
+                    tipoSitra: tipoSitra
+                });
+                if(ci === '' || nro_titulo === '' || tipoSitra === ''){
+                    console.log('⚠️ buscarSitra: Campos incompletos o tipo inválido');
+                    return;
+                }
+            
+
+                clearTimeout(timeoutSitra);
+
+                timeoutSitra = setTimeout(function(){
+                    $.ajax({
+                        url: "{{url('sitra/autocompletar-titulo')}}",
+                        type: 'POST',
+                        dataType: 'json',
+                        headers: {
+                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                        },
+                        data: {
+                            ci: ci,
+                            nro_titulo: nro_titulo,
+                            
+                            tipo: tipoLocal
+                        },
+                        success: function (resp) {
+                            console.log('✅ Respuesta buscarSitra:', resp);
+                            if(resp && resp.ok){
+                                if(resp.titulo){
+                                    $('#titulo').val(resp.titulo);
+                                }
+                                if(resp.fecha_emision){
+                                    $('#fecha_emision').val(resp.fecha_emision);
+                                }
+                                if(resp.serie) $('#nro_serie').val(resp.serie);
+                            }
+                        },
+                        error: function (jqXHR) {
+                            console.error('❌ Error en buscarSitra:', {
+                                status: jqXHR.status,
+                                response: jqXHR.responseJSON
+                            });
+                        }
+                    });
+                }, 500);
+            }
+
+            /**
+             * Event listeners para disparar buscarSitra cuando cambien nro_titulo o nro_serie
+             */
+            $(document).on('blur', '#nro_titulo', function(){
+                console.log('📝 Campo modificado:', $(this).attr('id'));
+                buscarSitra();
+            });
+            
         </script>
     @endsection
 @endsection

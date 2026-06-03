@@ -16,12 +16,35 @@ class SitraService
     public function consultarSitra(string $ci, string $numero, string $tipo)
     {
         $documento = Funciones::DocumentoSitra($tipo);
-        $ruta = "http://sitra.umss.net/consulta/api/ci/" . $ci . "/numero/" . $numero . "/tipo/" . $documento;
-        
+        $ruta = "http://sitra.umss.net/consulta/api/ci/{$ci}/numero/{$numero}/tipo/{$documento}";
+
+        \Log::info('URL SITRA', [
+            'ruta' => $ruta,
+            'ci' => $ci,
+            'numero' => $numero,
+            'tipo' => $tipo,
+            'documento' => $documento,
+        ]);
+
         try {
-            $data = json_decode(file_get_contents($ruta));
-            return $data;
+            $raw = file_get_contents($ruta);
+
+            \Log::info('RAW SITRA', [
+                'raw' => $raw,
+            ]);
+
+            $data = json_decode($raw);
+
+            \Log::info('DECODED SITRA', [
+                'data' => $data,
+            ]);
+
+            return $data ?: (object)[];
         } catch (\Throwable $e) {
+            \Log::error('ERROR SITRA', [
+                'error' => $e->getMessage(),
+                'ruta' => $ruta,
+            ]);
             return (object)[];
         }
     }

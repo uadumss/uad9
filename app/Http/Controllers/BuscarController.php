@@ -33,6 +33,7 @@ class BuscarController extends Controller
         $clausulas=array();
         $i=0;
         if($form['nro']!=''){$clausulas[$i]=" tit_nro_titulo='".$form['nro']."'";$i+=1;}
+        if($form['serie']!=''){$clausulas[$i]=" tit_nro_serie='".$form['serie']."'";$i+=1;}
         if($form['tipo']!=''){
             if($form['tipo']=='re'){
                 $clausulas[$i]=" (tom_tipo='".$form['tipo']."' or tit_revalida='t')";$i+=1;

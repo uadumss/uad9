@@ -7,6 +7,7 @@ use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\TomoController;
 use App\Http\Controllers\TituloController;
 use App\Http\Controllers\PersonaController;
+use App\Http\Controllers\SitraController;
 
 
 Route::group(['middleware'=>['permission:acceso al sistema - dyt']],function(){
@@ -66,6 +67,8 @@ Route::group(['middleware'=>['permission:acceso al sistema - dyt']],function(){
     Route::get('fe_titulo/{id_titulo}',[TituloController::class,'fe_Titulo'])->middleware(['permission:editar titulo - dyt']);
     Route::get('f_eli_titulo/{id}',[TituloController::class,'f_eli_titulo'])->middleware(['permission:eliminar titulo - dyt']);
     Route::post('e_titulo',[TituloController::class,'e_Titulo'])->middleware(['permission:eliminar titulo - dyt']);
+    //=====================AUTOCOMPLETAR TITULO DESDE SITRA
+    Route::post('sitra/autocompletar-titulo',[SitraController::class,'autocompletarTitulo'])->middleware(['permission:crear titulo - dyt|editar titulo - dyt']);
     //=====================CAMBIAR TITULOS DE TOMO
     Route::get('f_cambiar a tomo/{cod_tit}',[TituloController::class,'f_cambiarTomo'])->middleware(['permission:cambiar titulo a tomo - dyt']);
     Route::get('o_tomos/{gestion}/{tipo}',[TituloController::class,'o_tomos'])->middleware(['permission:cambiar titulo a tomo - dyt']);

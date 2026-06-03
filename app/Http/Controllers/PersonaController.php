@@ -9,6 +9,7 @@ use App\Models\Nacionalidad;
 use App\Models\Persona;
 use App\Models\PersonaCuadis;
 use App\Models\Persona_prueba;
+use App\Models\Titulo;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,47 +25,57 @@ class PersonaController extends Controller
         $this->middleware(['permission:corregir duplicados - adm'], ['only' => ['corregir_duplicados','corregir_persona_ci_duplicado','lista_duplicados','lista_duplicado']]);
 
     }
-    public function datos_per($ci){
-        $persona=Persona::where('per_ci','=',$ci)->select('per_nombre','per_apellido','per_sexo','per_ci_exp','per_celular','per_cod_sis')->get();
+    public function datos_per($ci, $tipo = null){
+        $persona=Persona::where('per_ci','=',$ci)->select('per_nombre','per_apellido','per_sexo','per_ci_exp','per_celular','per_cod_sis')->first();
+        $dato="No";
+        if($persona){
+            $data=$persona->toArray();
+            $tipo=trim((string)$tipo);
+
+            $titulo=Titulo::query()
+                ->join('personas','titulos.id_per','=','personas.id_per')
+                ->where('personas.per_ci','=',$ci)
+                ->whereNotNull('titulos.tit_titulo')
+                ->where('titulos.tit_titulo','<>','');
+
+            if($tipo !== ''){
+                $titulo->where('titulos.tit_tipo','=',$tipo);
+            }
+
+            $titulo=$titulo->orderByDesc('titulos.tit_fecha_emision')
+                ->orderByDesc('titulos.cod_tit')
+                ->select('titulos.tit_titulo','titulos.tit_tipo','titulos.tit_nro_titulo','titulos.tit_gestion')
+                ->first();
+
+            if($titulo){
+                $data['titulo']=trim((string)($titulo->tit_titulo ?? ''));
+                $data['tipo_titulo']=trim((string)($titulo->tit_tipo ?? ''));
+                $data['numero_titulo']=trim((string)($titulo->tit_nro_titulo ?? ''));
+                $data['gestion_titulo']=trim((string)($titulo->tit_gestion ?? ''));
+            }else{
+                $data['titulo']='';
+                $data['tipo_titulo']='';
+                $data['numero_titulo']='';
+                $data['gestion_titulo']='';
+            }
+
+            $dato=json_encode($data);
+        }
+        return ($dato);
+    }
+    public function datos_apo($ci){
+        $persona=Apoderado::where('apo_ci','=',$ci)->select('apo_nombre','apo_apellido')->get();
         $dato="No";
         if(sizeof($persona)>0){
             $dato=json_encode($persona[0]);
         }
         return ($dato);
     }
-    public function datos_apo($ci){
-        $persona = Persona::where('per_ci', '=', $ci)->select('per_nombre as apo_nombre', 'per_apellido as apo_apellido')->get();
-        $dato = "No";
-        if (sizeof($persona) > 0) {
-            $dato = json_encode($persona[0]);
-        } else {
-            $apoderadoFallback = Apoderado::where('apo_ci', '=', $ci)->select('apo_nombre', 'apo_apellido')->get();
-            if (sizeof($apoderadoFallback) > 0) {
-                $dato = json_encode($apoderadoFallback[0]);
-            }
-        }
-        return ($dato);
-    }
 
     public function verificar_boleta($control){
         $documento = trim((string) request()->query('documento',''));
-        $modulo = trim((string) request()->query('modulo',''));
-        $controlStr = preg_replace('/[^0-9]/','',(string)$control);
-
-        if ($modulo === 'servicios') {
-            $usado = \Illuminate\Support\Facades\DB::table('tramitas')->where('tra_boleta_apoderado', $controlStr)->exists();
-            if ($usado) {
-                return json_encode(['error' => 'Boleta ya utilizada en Servicios']);
-            }
-        } elseif ($modulo === 'apostilla') {
-            $usado = \Illuminate\Support\Facades\DB::table('apostilla.apostilla')->where('apos_boleta_apoderado', $controlStr)->exists();
-            if ($usado) {
-                return json_encode(['error' => 'Boleta ya utilizada en Apostilla']);
-            }
-        }
-
         try{
-            $controlInt = (int) $controlStr;
+            $controlInt = (int) preg_replace('/[^0-9]/','',(string)$control);
             if($documento !== ''){
                 $response = app(\App\Services\RecaudacionesService::class)->buscarPorControlYDocumento(122, $controlInt, $documento);
             }else{
@@ -89,12 +100,10 @@ class PersonaController extends Controller
                 if ($documento === '' || $docFila === $documento || preg_replace('/[^0-9]/', '', $docFila) === preg_replace('/[^0-9]/', '', $documento)) {
                     $nombre = trim(($fila['nombre_1'] ?? '').' '.($fila['nombre_2'] ?? ''));
                     $apellido = trim(($fila['apellido_1'] ?? '').' '.($fila['apellido_2'] ?? ''));
-                    $monto = floatval($fila['importe'] ?? $fila['monto'] ?? $fila['total'] ?? 0);
                     if ($nombre !== '' || $apellido !== '') {
                         return json_encode([
                             'nombre_apoderado' => $nombre,
                             'apellido_apoderado' => $apellido,
-                            'monto' => $monto,
                         ]);
                     }
                 }
@@ -104,7 +113,6 @@ class PersonaController extends Controller
         // 2. Fallback por si la respuesta viene con una estructura diferente
         $nombre = $this->buscarCampoRec($data, ['nombre','nombres','payer_nombre','payer.name','pagador_nombre','pagador.name','nombre_pago','nombre_pagador']);
         $apellido = $this->buscarCampoRec($data, ['apellido','apellidos','payer_apellido','payer.lastName','pagador_apellido','pagador.lastName','apellido_pagador']);
-        $monto = $this->buscarCampoRec($data, ['monto','importe','amount','total']);
 
         if($nombre === null && $apellido === null){
             return 'No';
@@ -113,7 +121,6 @@ class PersonaController extends Controller
         return json_encode([
             'nombre_apoderado' => $nombre ?? '',
             'apellido_apoderado' => $apellido ?? '',
-            'monto' => floatval($monto ?? 0),
         ]);
     }
 
