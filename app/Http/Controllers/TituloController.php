@@ -129,21 +129,103 @@ class TituloController extends Controller
         $grado=$this->grados($tomo['tom_tipo']);
         return view('diplomas.titulo.l_titulo',compact('titulo','tomo','tipo_completo','carrera','nacionalidad','modalidad','grado','listaTomo','tomo_carrera'));
     }
+    private function prefijoSeriePorTipo($tipo){
+        switch ($tipo) {
+            case 'db':
+                return 'B'; // Diploma de Bachiller
+
+            case 'da':
+            case 'ac':
+                return 'A'; // Diploma Académico
+            case 'ca':
+                return 'C'; // Certificado de Auxiliar
+            case 'tp':
+            case 'tpa':
+                return 'T'; // Título Profesional
+
+            case 'di':
+                return 'D'; // Diplomado
+
+            case 'tpos':
+                return 'P'; // Especialidad/Maestria/Posgrado
+
+            case 're':
+            case 'res':
+            case 'rr':
+            case 'rcu':
+            case 'rvr':
+            case 'rs':
+            case 'rcf':
+            case 'rcc':
+            case 'rc':
+                return 'R'; // Reválidas / Resoluciones
+
+            case 'su':
+            case 'SU':
+                return 'S'; // Supletorio
+
+            default:
+                return '';
+        }
+    }
+    private function normalizarSerieTitulo($serie, $tipo){
+        $serie = strtoupper(trim((string) $serie));
+
+        if ($serie === '') {
+            return '';
+        }
+
+        // Si ya viene como A-227143, B-12345, T-220304, etc.,
+        // no volver a agregar prefijo.
+        if (preg_match('/^[A-Z]+-[0-9]+$/', $serie)) {
+            return $serie;
+        }
+
+        // Si viene accidentalmente como A227143, B12345, T220304,
+        // quitamos letras iniciales para quedarnos con el número.
+        $serie = preg_replace('/^[A-Z]+/', '', $serie);
+        $serie = ltrim($serie, '-');
+
+        $prefijo = $this->prefijoSeriePorTipo($tipo);
+
+        if ($prefijo === '') {
+            return $serie;
+        }
+
+        return $prefijo . '-' . $serie;
+    }
     public function GuardarTitulo(TituloRequest $form){
         $tomo=Tomo::find($form['ct']);
         if($tomo->tom_cerrado!='t'){
             $tipo=$form['tipo'];
+            $nroTitulo = trim($form->input('nro_titulo', $form->input('nro', '')));
+            $serieTitulo = trim($form->input('serie', $form->input('nro_serie', '')));
+            $serieTitulo = $this->normalizarSerieTitulo($serieTitulo, $tipo);
+            $gestionTitulo = date('Y', strtotime($form['fecha']));
             //return $tipo;
-            $titulos=array();
-            //============SE PERMITE NUMERO REPETIDOS DE SUPLETORIO
-            if($tipo!='su' && $tipo!='ca') {
-                if(isset($form['ctit'])){
-                    $titulos=DB::select("select cod_tit from titulos where cod_tom=".$form['ct']." and tit_nro_titulo='".$form['nro']."' and cod_tit<>".$form['ctit']);
-                }else{
-                    $titulos=DB::select("select cod_tit from titulos where cod_tom=".$form['ct']." and tit_nro_titulo='".$form['nro']."'");
+            $titulos = collect();
+
+            //============ SE PERMITEN NÚMEROS REPETIDOS SI NO COINCIDEN GESTIÓN, SERIE Y TIPO
+            if($tipo != 'su' && $tipo != 'ca') {
+
+                $query = DB::table('titulos')
+                    ->select('cod_tit')
+                    ->where('tit_gestion', '=', $gestionTitulo)
+                    ->where('tit_tipo', '=', $tipo);
+
+                if($serieTitulo != '') {
+                    $query->where('tit_nro_serie', '=', $serieTitulo);
+                } else {
+                    $query->where('tit_nro_titulo', '=', $nroTitulo);
                 }
+
+                if(isset($form['ctit'])) {
+                    $query->where('cod_tit', '<>', $form['ctit']);
+                }
+
+                $titulos = $query->get();
             }
-            if(sizeof($titulos)<1){
+            if($titulos->count() < 1){
                 if(isset($form['ctit'])){
                     $nuevo='';
                     $antiguo='';
@@ -151,10 +233,10 @@ class TituloController extends Controller
                     $titulo=Titulo::find($form['ctit']);
                     $antiguo=$titulo->toArray();
                     $cod_tom=Tomo::find($titulo['cod_tom']);
-                    $cambio = ($titulo->tit_nro_titulo == $form['nro']) ? false : true;
+                    $cambio = ($titulo->tit_nro_titulo == $nroTitulo) ? false : true;
                     //guarda los datos editados del tomo
-                    $titulo->tit_nro_titulo=$form['nro'];
-                    $titulo->tit_nro_serie=$form['serie'];
+                    $titulo->tit_nro_titulo=$nroTitulo;
+                    $titulo->tit_nro_serie=$serieTitulo;
                     $titulo->tit_nro_folio=$form['folio'];       $titulo->tit_fecha_emision=$form['fecha'];      $titulo->tit_grado=$form['grado'];
                     $titulo->cod_mod=$form['mod'];           $titulo->tit_titulo=mb_strtoupper($form['titulo']);   $titulo->tit_ref=$form['ref'];
                     $titulo->tit_otra_modalidad=mb_strtoupper($form['otra_modalidad']);
@@ -170,11 +252,11 @@ class TituloController extends Controller
                     //da formato al nombre del archivo
                     $nombreArch="";
                     if($tipo=='su' || $tipo=='ca'){
-                        //return $form['nro'].'-'.$titulo->tit_gestion.'-'.$form['tipo'];
-                        $nombreArch=TituloController::nombreArchivo($form['nro'],$form['tipo']).'-'.$titulo->tit_gestion.".pdf";
+                        //return $nroTitulo.'-'.$titulo->tit_gestion.'-'.$form['tipo'];
+                        $nombreArch=TituloController::nombreArchivo($nroTitulo,$form['tipo']).'-'.$titulo->tit_gestion.".pdf";
 
                     }else{
-                        $nombreArch=TituloController::nombreArchivo($form['nro'],$form['tipo']).".pdf";
+                        $nombreArch=TituloController::nombreArchivo($nroTitulo,$form['tipo']).".pdf";
                     }
 
                     $ruta='alma/dt/'.$tipo.'/'.$tomo['tom_gestion'].'/'.$tomo['tom_numero'].'/';
@@ -301,9 +383,9 @@ class TituloController extends Controller
                     $nombreArch="";
                     $gestion=date('Y',strtotime($form['fecha']));
                     if($tipo=='su' || $tipo=='ca'){
-                        $nombreArch=TituloController::nombreArchivo($form['nro'],$form['tipo']).'-'.$gestion.".pdf";
+                        $nombreArch=TituloController::nombreArchivo($nroTitulo,$form['tipo']).'-'.$gestion.".pdf";
                     }else{
-                        $nombreArch=TituloController::nombreArchivo($form['nro'],$form['tipo']).".pdf";
+                        $nombreArch=TituloController::nombreArchivo($nroTitulo,$form['tipo']).".pdf";
                     }
 
 
@@ -367,10 +449,17 @@ class TituloController extends Controller
                         if($form['obs']!=''){
                             $obs=1;
                         }
-
+                        \Log::info('DATOS RECIBIDOS PARA GUARDAR TITULO', [
+                            'nroTitulo' => $nroTitulo,
+                            'serieTitulo' => $serieTitulo,
+                            'fecha_form_fecha' => $form->input('fecha'),
+                            'fecha_form_fecha_emision' => $form->input('fecha_emision'),
+                            'all' => $form->all(),
+                        ]);
                         $titulo=Titulo::create([
                             'cod_tom'=>$form['ct'],
-                            'tit_nro_titulo'=>$form['nro'],
+                            'tit_nro_titulo'=>$nroTitulo,
+                            'tit_nro_serie'=>$serieTitulo,
                             'tit_nro_folio'=>$form['folio'],
                             'tit_fecha_emision'=>$form['fecha'],
                             'tit_fecha_folio'=>$form['fecha_folio'],
@@ -391,6 +480,14 @@ class TituloController extends Controller
                             'nota_marginal' => $form->has('nota_marginal') ? 't' : 'f',
                             'tit_resolucion' => $form['resolucion'] ?? null,
                             'tit_fecha_resolucion' => $form['fecha_resolucion'] ?? null,
+                        ]);
+                        $titulo->refresh();
+
+                        \Log::info('✅ TITULO GUARDADO EN BD', [
+                            'cod_tit' => $titulo->cod_tit,
+                            'tit_nro_titulo' => $titulo->tit_nro_titulo,
+                            'tit_nro_serie' => $titulo->tit_nro_serie,
+                            'tit_fecha_emision' => $titulo->tit_fecha_emision,
                         ]);
                         $objetoCompleto=(object) array_merge((array)$objetoCompleto,$titulo->toArray());
 
@@ -421,12 +518,12 @@ class TituloController extends Controller
                         \Session::flash('exito','El titulo se ha creado exitosamente');
                         return redirect('l_titulo/'.$form['ct']);
                     }else{
-                        \Session::flash('error','No se ha podido guardar debido a que ya existe un archivo con el numero '.$form['nro']);
+                        \Session::flash('error','No se ha podido guardar debido a que ya existe un archivo con el numero '.$nroTitulo);
                         return redirect('l_titulo/'.$form['ct']);
                     }
                 }
             }else{
-                \Session::flash('error','No se ha podido guardar debido a que ya existe un título con el número '.$form['nro']);
+                \Session::flash('error','No se ha podido guardar debido a que ya existe un título con la misma gestión, serie y tipo documental');
                 if(!isset($form['ctit'])){
                 return redirect('l_titulo/'.$form['ct']);
                 }else{
@@ -799,4 +896,7 @@ class TituloController extends Controller
         }
         return $nombreArch;
     }
+
+    
+    
 }

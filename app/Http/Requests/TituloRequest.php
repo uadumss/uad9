@@ -36,7 +36,6 @@ class TituloRequest extends FormRequest
     {
         return [
             'nro' => 'Número de título',
-            
             'ci'    => 'Cédula de Identidad',
             'apellido' => 'Apellido',
             'nombre' =>'Nombre',

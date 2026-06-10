@@ -210,7 +210,7 @@
                                         <?php if($tipo=='tpos' || $tipo=='di'){ ?>
                                             <td class="border border-right" id="men{{$i}}">{{$t->tit_titulo}}</td>
                                         <?php } ?>
-                                        <td class="border border-right" id="nro{{$i}}" class="text-right">{{$t->tit_nro_titulo}}</td>
+                                        <td class="border border-right" id="nro_titulo{{$i}}" class="text-right">{{$t->tit_nro_titulo}}</td>
                                         <td class="border border-right" id="fec{{$i}}" class="text-right">{{date('d/m/Y',strtotime($t->tit_fecha_emision))}}</td>
                                         <td class="border border-right" id="fol{{$i}}" class="text-right">{{$t->tit_nro_folio}}</td>
                                         <?php if($tipo=='ca' || $tipo=='da' || $tipo=='tp' || $tipo=='tpa'){ ?>
@@ -294,7 +294,7 @@
                                                     <th class="text-right font-italic">Nº título:</th>
                                                     <td class="border-bottom border-dark">
                                                         <div class="input-group">
-                                                            <input type="text" class="form-control form-control-sm border-0" pattern="[0-9]{1,5}" required name="nro_titulo" id="nro_titulo" onchange="cargarDatosPersonales(this.value)"/>
+                                                            <input type="text" class="form-control form-control-sm border-0" pattern="[0-9]{1,5}" required name="nro" id="nro_titulo" onchange="cargarDatosPersonales(this.value)"/>
                                                             @if($tipo=='re')
                                                                 <span class="text-danger font-weight-bold pt-1" style="font-size: 0.8em">Reconocimiento</span>&nbsp;&nbsp;
                                                                 <input type="checkbox" name="reconocimiento" class="" />
@@ -307,7 +307,7 @@
                                                     <th class="text-right font-italic">Nº serie:</th>
                                                     <td class="border-bottom border-dark">
                                                         <div class="input-group">
-                                                            <input type="text" class="form-control form-control-sm border-0" pattern="[A-Z]-[0-9]{1,10}" required name="nro_serie" id="nro_serie" onchange="cargarDatosPersonales(this.value)"/>
+                                                            <input type="text" class="form-control form-control-sm border-0" required name="nro_serie" id="nro_serie" onchange="cargarDatosPersonales(this.value)"/>
                                                             @if($tipo=='re')
                                                                 <span class="text-danger font-weight-bold pt-1" style="font-size: 0.8em">Reconocimiento</span>&nbsp;&nbsp;
                                                                 <input type="checkbox" name="reconocimiento" class="" />
@@ -319,7 +319,7 @@
                                                 <tr>
                                                     <th class="text-right font-italic">Fecha:</th>
                                                     <td class="border-bottom border-dark">
-                                                        <input type="date" class="form-control form-control-sm border-0" required id="fecha_emision" name="fecha_emision" />
+                                                        <input type="date" class="form-control form-control-sm border-0" required id="fecha_emision" name="fecha" />
                                                     </td>
                                                 </tr>
                                                 <tr>
@@ -809,7 +809,7 @@
                         @else
                             $('#ape'+fila).html($('#form_editar #e_ape').val()+" , "+$('#form_editar #e_nom').val());
                         @endif
-                        $('#nro'+fila).html($('#form_editar #e_nro').val());
+                        $('#nro_titulo'+fila).html($('#form_editar #e_nro').val());
                         var fecha=$('#form_editar #e_fec').val().split('-');
                         $('#fec'+fila).html(fecha[2]+'/'+fecha[1]+'/'+fecha[0]);
                         $('#fol'+fila).html($('#form_editar #e_fol').val());
@@ -988,7 +988,14 @@
                 var tipoSitra = TIPOS_SITRA[tipoLocal] || '';
 
                 // serie cruda: sin prefijos duplicados
-                
+                if(nro_titulo === ''){
+                    $('#titulo').val('');
+                    $('#nro_serie').val('');
+                    $('#fecha_emision').val('');
+                    clearTimeout(timeoutSitra);
+                    console.log('🧹 Se limpió título y fecha porque N° título está vacío');
+                    return;
+                }
                 console.log('🔍 buscarSitra evaluando...', {
                     ci: ci,
                     nro_titulo: nro_titulo,
@@ -1032,7 +1039,9 @@
                                 if(resp.fecha_emision){
                                     $('#fecha_emision').val(resp.fecha_emision);
                                 }
-                                if(resp.serie) $('#nro_serie').val(resp.serie);
+                                if(resp.serie){ 
+                                    $('#nro_serie').val(resp.serie); 
+                                }
                             }
                         },
                         error: function (jqXHR) {
@@ -1048,7 +1057,7 @@
             /**
              * Event listeners para disparar buscarSitra cuando cambien nro_titulo o nro_serie
              */
-            $(document).on('blur', '#nro_titulo', function(){
+            $(document).on('input', '#nro_titulo', function(){
                 console.log('📝 Campo modificado:', $(this).attr('id'));
                 buscarSitra();
             });

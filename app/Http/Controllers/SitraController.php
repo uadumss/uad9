@@ -96,13 +96,18 @@ class SitraController extends Controller
                     'tit_titulo'          => $titulo->tit_titulo,
                     'tit_fecha_emision'   => $titulo->tit_fecha_emision,
                 ]);
+                $serie = $titulo->tit_nro_serie ?? '';
+                if ($serie === '') {
+                    $respuestaSitra = $sitraService->consultarSitra($ci, $nroTitulo, $tipo);
+                    $serie = $respuestaSitra->serie ?? '';
+                }
 
                 return response()->json([
                     'ok'            => true,
                     'titulo'        => $titulo->tit_titulo ?? '',
                     'fecha_emision' => $titulo->tit_fecha_emision ? date('Y-m-d', strtotime($titulo->tit_fecha_emision)) : '',
-                    'serie' => $respuestaSitra->serie ?? '',
-                    'fuente'        => 'local',
+                    'serie' => $serie,
+                    'fuente'        => $serie === '' ? 'local' : 'local+sitra',
                 ]);
             }
 

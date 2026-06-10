@@ -17,3 +17,4 @@ yarn-error.log
 package-lock.json
 /storage
 /modelo/uad9-19-03-24.sql
+*.md
