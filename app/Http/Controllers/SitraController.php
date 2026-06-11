@@ -60,41 +60,38 @@ class SitraController extends Controller
                 ->where('per_ci', '=', $ci)
                 ->first();
 
-            if (!$persona) {
-                Log::info('ℹ️ SitraController@autocompletarTitulo - Persona no encontrada en BD local', [
-                    'ci' => $ci,
+            $titulo = null;
+
+            if ($persona) {
+                $idPersona = $persona->id_per;
+
+                Log::info('✅ Persona encontrada', [
+                    'id_per'       => $idPersona,
+                    'per_nombre'   => $persona->per_nombre,
+                    'per_apellido' => $persona->per_apellido,
                 ]);
 
-                return response()->json([
-                    'ok'    => false,
-                    'error' => 'Persona no registrada en el sistema',
-                ], 404);
+                Log::info('🔍 Buscando en BD local (titulos)...', [
+                    'id_per'      => $idPersona,
+                    'nro_titulo'  => $nroTitulo,
+                ]);
+
+                $titulo = \DB::table('titulos')
+                    ->where('id_per', '=', $idPersona)
+                    ->where('tit_nro_titulo', '=', $nroTitulo)
+                    ->first();
+
+            } else {
+                Log::info('ℹ️ Persona no encontrada en BD local. Se omitirá búsqueda local y se consultará SITRA.', [
+                    'ci' => $ci,
+                ]);
             }
-
-            $idPersona = $persona->id_per;
-
-            Log::info('✅ Persona encontrada', [
-                'id_per'       => $idPersona,
-                'per_nombre'   => $persona->per_nombre,
-                'per_apellido' => $persona->per_apellido,
-            ]);
-
-            // **PASO 1: Buscar en la tabla local de títulos**
-            Log::info('🔍 Buscando en BD local (titulos)...', [
-                'id_per' => $idPersona,
-                'nro_titulo' => $nroTitulo,
-            ]);
-
-            $titulo = \DB::table('titulos')
-                ->where('id_per', '=', $idPersona)
-                ->where('tit_nro_titulo', '=', $nroTitulo)
-                ->first();
-
             if ($titulo) {
                 Log::info('✅ Título encontrado en BD local', [
                     'cod_tit'             => $titulo->cod_tit,
                     'tit_titulo'          => $titulo->tit_titulo,
                     'tit_fecha_emision'   => $titulo->tit_fecha_emision,
+                    'tit_nro_serie'     => $titulo->tit_nro_serie ?? '',
                 ]);
                 $serie = $titulo->tit_nro_serie ?? '';
                 if ($serie === '') {

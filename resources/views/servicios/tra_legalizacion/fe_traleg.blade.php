@@ -579,7 +579,15 @@
                                 @foreach($supletorios as $s)
                                     <li class="e-notice-item">
                                         <i class="fas fa-exclamation-triangle"></i>
-                                        <span>Ya tiene <strong>{{ $s->tipo }}</strong></span>
+                                        <span>Ya tiene
+                                            <strong>
+                                                {{ \App\Models\Funciones::tipoSupletorioDesdeReferencia($s->tit_ref) }}
+                                            </strong>
+                                            @if(!empty($s->titulo_original))
+                                                : {{ $s->titulo_original->tit_titulo }}
+                                                — emitido el {{ $s->titulo_original->tit_fecha_emision }}
+                                            @endif
+                                        </span>
                                     </li>
                                 @endforeach
                             @endif
@@ -587,7 +595,7 @@
                                 @php
                                     $tipos = [
                                         'da' => 'Diploma Académico',
-                                        'tp' => 'Título Provisional',
+                                        'tp' => 'Título Profesional',
                                         'di' => 'Diplomado',
                                         'db' => 'Diploma de Bachiller',
                                         'ca' => 'Certificado Académico'

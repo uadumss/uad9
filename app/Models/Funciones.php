@@ -6,6 +6,7 @@ use App\Http\Controllers\Noatentado\SancionadosController;
 use App\Models\Noatentado\D_sancion;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class Funciones extends Model
 {
@@ -924,5 +925,72 @@ class Funciones extends Model
         $max = strlen($pattern)-1;
         for($i=0;$i < $tamaño;$i++) $key .= $pattern[mt_rand(0,$max)];
         return $dia.$mes.$año.$key;
+    }
+    public static function tipoSupletorioDesdeReferencia($titRef, $detallado = false){
+        $refOriginal = strtoupper(trim((string) $titRef));
+
+        if ($refOriginal === '') {
+            return $detallado
+                ? ['descripcion' => 'SU', 'tipo_original' => null, 'numero_original' => null]
+                : 'SU';
+        }
+
+        $ref = preg_replace('/[^A-Z0-9]/', '', $refOriginal);
+
+        $descripcion = 'SU';
+        $tipoOriginal = null;
+
+        if (
+            preg_match('/^(TPN|TPL|TP|PN)/', $ref) ||
+            str_contains($ref, 'TITULOPROFESIONAL')
+        ) {
+            $descripcion = 'SU(TÍTULO PROFESIONAL)';
+            $tipoOriginal = 'tp';
+        } elseif (
+            preg_match('/^DB/', $ref) ||
+            str_contains($ref, 'BACHILLER')
+        ) {
+            $descripcion = 'SU(BACHILLER)';
+            $tipoOriginal = 'db';
+        } elseif (
+            preg_match('/^(DA|AC)/', $ref) ||
+            str_contains($ref, 'DIPLOMAACADEMICO') ||
+            str_contains($ref, 'ACADEMICO')
+        ) {
+            $descripcion = 'SU(DIPLOMA ACADÉMICO)';
+            $tipoOriginal = 'da';
+        } elseif (
+            preg_match('/^CA/', $ref) ||
+            str_contains($ref, 'CERTIFICADOACADEMICO')
+        ) {
+            $descripcion = 'SU(CERTIFICADO ACADÉMICO)';
+            $tipoOriginal = 'ca';
+        } elseif (
+            preg_match('/^DI/', $ref) ||
+            str_contains($ref, 'DIPLOMADO')
+        ) {
+            $descripcion = 'SU(DIPLOMADO)';
+            $tipoOriginal = 'di';
+        }
+
+        $numeroOriginal = null;
+
+        if (preg_match('/\d+/', $refOriginal, $match)) {
+            $numeroOriginal = ltrim($match[0], '0');
+
+            if ($numeroOriginal === '') {
+                $numeroOriginal = '0';
+            }
+        }
+
+        if ($detallado) {
+            return [
+                'descripcion' => $descripcion,
+                'tipo_original' => $tipoOriginal,
+                'numero_original' => $numeroOriginal,
+            ];
+        }
+
+        return $descripcion;
     }
 }

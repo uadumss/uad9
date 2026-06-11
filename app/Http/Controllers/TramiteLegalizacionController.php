@@ -164,13 +164,13 @@ class TramiteLegalizacionController extends Controller
             $supletorios = DB::table('titulos')
             ->where('id_per', $tramite->id_per)
             ->where('tit_tipo', 'su')
-            ->select('tit_ref')
+            ->select('cod_tit','tit_ref')
             ->get();
             $titulos = DB::table('titulos')
             ->where('id_per', $tramite->id_per)
             ->whereNotNull('tit_titulo')      // evita NULL
             ->where('tit_titulo', '<>', '')   // evita vacío ""
-            ->select('tit_titulo','tit_tipo','tit_fecha_emision')
+            ->select('tit_nro_titulo','tit_titulo','tit_tipo','tit_fecha_emision')
             ->get();
 
             // Obtener carreras de la persona (vía diplomas académicos uniendo con títulos para el id_per)
@@ -182,17 +182,41 @@ class TramiteLegalizacionController extends Controller
                 ->where('titulos.tit_tipo', 'tp')
                 ->select('carreras.cod_car', 'car_nombre', 'diploma_academicos.cod_tit', 'tit_nro_titulo', 'tit_gestion')
                 ->get();
+            \Log::info('DEBUG supletorios antes foreach', [
+                'cantidad_supletorios' => count($supletorios),
+                'supletorios' => $supletorios,
+                'cantidad_titulos' => count($titulos),
+            ]);
             foreach ($supletorios as $s) {
-                if (str_contains($s->tit_ref, 'D.A')) {
-                    $s->tipo = 'SU(ACADEMICO)';
-                } elseif (str_contains($s->tit_ref, 'T.P.N')) {
-                    $s->tipo = 'SU(PROVISION)';
-                } elseif (str_contains($s->tit_ref, 'D.B')) {
-                    $s->tipo = 'SU(BACHILLER)';
-                } elseif (str_contains($s->tit_ref, 'D.I.P')) {
-                    $s->tipo = 'SU(DIPLOMADO)';
-                } else {
-                    $s->tipo = 'SU';
+                \Log::info('DEBUG supletorio actual', [
+                    'cod_tit' => $s->cod_tit ?? null,
+                    'tit_ref' => $s->tit_ref ?? null,
+                ]);
+
+                $datosSu = \App\Models\Funciones::tipoSupletorioDesdeReferencia($s->tit_ref, true);
+
+                $s->tipo = $datosSu['descripcion'];
+                $s->tipo_original = $datosSu['tipo_original'];
+                $s->numero_original = $datosSu['numero_original'];
+
+                \Log::info('DEBUG buscando titulo original', [
+                    'tipo_original' => $s->tipo_original,
+                    'numero_original' => $s->numero_original,
+                ]);
+
+                $s->titulo_original = null;
+
+                if ($s->tipo_original && $s->numero_original) {
+                    $s->titulo_original = $titulos->first(function ($t) use ($s) {
+                        \Log::info('DEBUG comparando', [
+                            'tit_tipo' => $t->tit_tipo ?? null,
+                            'tit_nro_titulo' => $t->tit_nro_titulo ?? null,
+                            'buscando_tipo' => $s->tipo_original,
+                            'buscando_numero' => $s->numero_original,
+                        ]);
+                        return $t->tit_tipo === $s->tipo_original
+                            && intval($t->tit_nro_titulo) === intval($s->numero_original);
+                    });
                 }
             }
         }
@@ -925,7 +949,6 @@ class TramiteLegalizacionController extends Controller
         }
         return redirect('datos tramite legalizacion/'.$form['ctra']);
     }
-
     private function guardarConfrontacionDesdeEdicion(Request $form, Tramita $datosTramita)
     {
         if(!$datosTramita->id_per){
@@ -1075,7 +1098,6 @@ class TramiteLegalizacionController extends Controller
 
         return redirect('datos tramite legalizacion/'.$datosTramita->cod_tra);
     }
-
     public function validar_valorado_recaudaciones(Request $request, $cod_tra)
     {
         $data=$request->validate([
@@ -1340,16 +1362,7 @@ class TramiteLegalizacionController extends Controller
 
         return response()->json($validacion);
     }
-
-    private function estadoPagoCampo(
-        string $campo,
-        string $etiqueta,
-        string $estado,
-        ?bool $ok,
-        string $resumen,
-        string $detalle=''
-    ): array
-    {
+    private function estadoPagoCampo(string $campo,string $etiqueta,string $estado,?bool $ok,string $resumen,string $detalle=''): array{
         return [
             'campo'=>$campo,
             'etiqueta'=>$etiqueta,
