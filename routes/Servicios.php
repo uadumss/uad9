@@ -39,6 +39,7 @@ Route::group(['middleware'=>['permission:acceso al sistema - srv']],function(){
     Route::get('listar tramite legalizacion/{fecha}',[TramiteLegalizacionController::class,'lista_leg']);
     Route::post('generar numero',[TramiteLegalizacionController::class,'generar_numero'])->middleware(['permission:crear traleg - srv']);
     Route::post('g_traleg',[TramiteLegalizacionController::class,'g_traleg'])->middleware(['permission:editar datos traleg - srv']);
+    Route::post('g_traleg_completo',[TramiteLegalizacionController::class,'g_traleg_completo'])->middleware(['permission:editar datos traleg - srv']);
     Route::get('ltl_ajax/{fecha}',[TramiteLegalizacionController::class,'lista_leg_ajax']);
     Route::get('f_eli_tra_legalizacion/{cod_tra}',[TramiteLegalizacionController::class,'f_eli_tra_legalizacion'])->middleware(['permission:eliminar traleg - srv']);
     Route::post('eli_traleg',[TramiteLegalizacionController::class,'eli_traleg'])->middleware(['permission:eliminar traleg - srv']);
@@ -118,4 +119,4 @@ Route::group(['middleware'=>['permission:acceso al sistema - srv']],function(){
 });
 
 
-Route::get('verificar_qr/{codigo}',[QRController::class,'verificar_QR']);
+//Route::get('verificar_qr/{codigo}',[QRController::class,'verificar_QR']);

@@ -503,54 +503,131 @@
                                 </div>
                             </div>
                         </div>
-
+                        @php
+                            $apoderadoHabilitado = (bool) config('apoderado.habilitado', true);
+                        @endphp
                         @if($apoderadoHabilitado)
-                            {{-- Apoderado --}}
-                            <div class="e-panel">
+                            {{-- ── Apoderado ── --}}
+                            <div class="e-panel" style="margin-top:10px;">
                                 <div class="e-panel-head">
-                                    <span class="ph-bar slate"></span>
-                                    <span class="ph-title">Apoderado</span>
+                                    <div class="e-panel-head-left">
+                                        <span class="ph-bar slate"></span>
+                                        <span class="ph-title">Apoderado</span>
+                                    </div>
+                                    @if(!$apoderado)
+                                        @can('editar apoderado traleg - srv')
+                                            <button class="e-btn e-btn-sm e-btn-ghost"
+                                                    onclick="$('#eleg-apo-edit').show(300);$('#eleg-apo-view').hide(300);">
+                                                <i class="fas fa-user-plus" style="font-size:10px;"></i> Registrar apoderado
+                                            </button>
+                                        @endcan
+                                    @endif
                                 </div>
                                 <div class="e-panel-body">
-                                    <div class="fg fg-2">
-                                        <div class="e-field fg-span2">
-                                            <label>CI apoderado</label>
-                                                 <input class="e-input" type="text" name="ci_apoderado" id="ci_apoderado_apostilla"
-                                                     oninput="verificarBoleta();" autocomplete="off">
-                                        </div>
-                                        <div class="e-field fg-span2" id="contenedor_boleta_apostilla" style="{{ $mostrarBoletaNuevo ? '' : 'display:none;' }}">
-                                            <label>N° control boleta</label>
-                                                <input class="e-input" type="text" name="control_boleta" id="control_boleta_apostilla"
-                                                         oninput="verificarBoleta()" autocomplete="off" placeholder="Ingrese número de control">
-                                            <div style="margin-top:6px;"><span id="estado_pago_apoderado" class="badge badge-secondary">Sin validar</span></div>
-                                        <input type="hidden" name="control_boleta_valido" id="control_boleta_valido" value="{{ $mostrarBoletaNuevo ? '0' : '1' }}">
-                                            <input type="hidden" name="monto_boleta" id="monto_boleta_apostilla" value="0">
-                                        </div>
-
-                                        <div class="e-field">
-                                            <label>Nombres</label>
-                                                 <input class="e-input" type="text" name="nombre_apoderado"
-                                                     id="nombre_apoderado" required autocomplete="off" {{ $mostrarBoletaNuevo ? 'readonly' : '' }}>
-                                        </div>
-                                        <div class="e-field">
-                                            <label>Apellidos</label>
-                                                 <input class="e-input" type="text" name="apellido_apoderado"
-                                                     id="apellido_apoderado" required autocomplete="off" {{ $mostrarBoletaNuevo ? 'readonly' : '' }}>
-                                        </div>
-                                        <div class="e-field fg-span2">
-                                            <label>Tipo de apoderado</label>
-                                            <div class="e-radio-row">
-                                                <label class="e-radio-opt">
-                                                    <input type="radio" name="tipo" value="d" checked onchange="actualizarModoApoderadoApostilla()">
-                                                    <span>Declaración jurada</span>
-                                                </label>
-                                                <label class="e-radio-opt">
-                                                    <input type="radio" name="tipo" value="p" onchange="actualizarModoApoderadoApostilla()">
-                                                    <span>Poder notariado</span>
-                                                </label>
+                                    {{-- Vista lectura --}}
+                                    <div id="eleg-apo-view">
+                                        <div class="fg fg-2">
+                                            <div class="e-field">
+                                                <label>CI apoderado</label>
+                                                <div class="e-val">
+                                                    @if($apoderado) {{ $apoderado['apo_ci'] }} @else <span class="muted">Sin registro</span> @endif
+                                                </div>
+                                            </div>
+                                            <div class="e-field">
+                                                <label>Tipo</label>
+                                                @php
+                                                    $tipoApoderadoApostilla = is_array($tramite_apostilla)
+                                                        ? ($tramite_apostilla['tra_tipo_apoderado'] ?? '')
+                                                        : ($tramite_apostilla->tra_tipo_apoderado ?? '');
+                                                @endphp
+                                                <div class="e-val muted">
+                                                    @if($tipoApoderadoApostilla == 'd')
+                                                        Decl. jurada
+                                                    @elseif($tipoApoderadoApostilla == 'p')
+                                                        Poder notariado
+                                                    @else
+                                                        —
+                                                    @endif
+                                                </div>
+                                            </div>
+                                            <div class="e-field fg-span2" style="padding-bottom:0;">
+                                                <label>Nombre apoderado</label>
+                                                <div class="e-val">
+                                                    @if($apoderado) {{ $apoderado['apo_apellido'] . ' ' . $apoderado['apo_nombre'] }} @else <span class="muted">Sin registro</span> @endif
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
+
+                                    {{-- Formulario edición apoderado --}}
+                                    @can('editar apoderado traleg - srv')
+                                    <div id="eleg-apo-edit" style="display:none;">
+                                        <form id="form_apoderado_edi">
+                                            @csrf
+                                            @php
+                                                $apo_nombre = ''; $apo_apellido = ''; $apo_ci = '';
+                                                if($apoderado){ $apo_ci=$apoderado->apo_ci; $apo_apellido=$apoderado->apo_apellido; $apo_nombre=$apoderado->apo_nombre; }
+                                                $requiereBoletaDj = (bool) config('apoderado.requiere_boleta_dj', false);
+                                                $tipoApoderado = data_get($tramite_apostilla, 'apos_apoderado', '');
+                                                $mostrarBoleta = ($tipoApoderado === 'd' && $requiereBoletaDj);
+                                            @endphp
+                                            <div class="fg fg-2">
+                                                <div class="e-field fg-span2">
+                                                    <label>CI apoderado</label>
+                                                    <input class="e-input" name="ci_apoderado" id="ci_apoderado_apostilla" value="{{ $apo_ci }}"
+                                                        oninput="cargarDatosApoderado(this.value); verificarBoleta();" autocomplete="off">
+                                                </div>
+                                                <div class="e-field fg-span2" id="contenedor_boleta_apoderado_edi" style="{{ $mostrarBoleta ? '' : 'display:none;' }}">
+                                                    <label>N° control boleta</label>
+                                                    <input class="e-input" name="control_boleta" id="control_boleta_apoderado_edi"
+                                                        oninput="verificarBoletaApoderadoEdi()" autocomplete="off" placeholder="Ingrese número de control">
+                                                    <div style="margin-top:6px;"><span id="estado_pago_apoderado_edi" class="badge badge-secondary">Sin validar</span></div>
+                                                    <input type="hidden" name="control_boleta_valido" id="control_boleta_valido_edi" value="{{ $mostrarBoleta ? '0' : '1' }}">
+                                                    <input type="hidden" name="monto_boleta" id="monto_boleta_edi" value="0">
+                                                </div>
+                                                <div class="e-field">
+                                                    <label>Apellidos</label>
+                                                    <input class="e-input" required name="apellido_apoderado" id="apellido_apoderado"
+                                                        value="{{ $apo_apellido }}" autocomplete="off" {{ $mostrarBoleta ? 'readonly' : '' }}>
+                                                </div>
+                                                <div class="e-field">
+                                                    <label>Nombres</label>
+                                                    <input class="e-input" required name="nombre_apoderado" id="nombre_apoderado"
+                                                        value="{{ $apo_nombre }}" autocomplete="off" {{ $mostrarBoleta ? 'readonly' : '' }}>
+                                                </div>
+                                                <div class="e-field fg-span2" style="padding-bottom:0;">
+                                                    <label>Tipo de apoderado</label>
+                                                    <div class="e-radio-row">
+                                                        <label class="e-radio-opt">
+                                                            <input type="radio" name="tipo" value="d"
+                                                                {{ $tipoApoderado === 'd' ? 'checked' : '' }}
+                                                                    onchange="actualizarModoApoderadoApostilla()">
+                                                            <span>Declaración jurada</span>
+                                                        </label>
+                                                        <label class="e-radio-opt">
+                                                            <input type="radio" name="tipo" value="p"
+                                                                {{ $tipoApoderado === 'p' ? 'checked' : '' }}
+                                                                    onchange="actualizarModoApoderadoApostilla()">
+                                                            <span>Poder notariado</span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <input type="hidden" name="ca"
+                                                value="{{ data_get($tramite_apostilla, 'cod_apos', $cod_apos) }}">
+                                        </form>
+                                        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
+                                            <button class="e-btn e-btn-ghost e-btn-sm"
+                                                    onclick="$('#eleg-apo-edit').hide(300);$('#eleg-apo-view').show(300);">
+                                                Cancelar
+                                            </button>
+                                            <button class="e-btn e-btn-primary e-btn-sm"
+                                                    onclick="enviar('form_apoderado_edi','{{ url('guardar apoderado tramite apostilla') }}','panel_apostilla');">
+                                                <i class="fas fa-save" style="font-size:10px;"></i> Guardar
+                                            </button>
+                                        </div>
+                                    </div>
+                                    @endcan
                                 </div>
                             </div>
                         @endif
@@ -647,7 +724,7 @@
                                                     <label>CI apoderado</label>
                                                     <input class="e-input" type="text" name="ci_apoderado" id="ci_apoderado_apostilla"
                                                            value=""
-                                                           oninput="verificarBoleta();" autocomplete="off">
+                                                           oninput="cargarDatosApoderado(this.value); verificarBoleta();" autocomplete="off">
                                                 </div>
                                                 <div class="e-field fg-span2" id="contenedor_boleta_apostilla_edi" style="{{ $mostrarBoleta ? '' : 'display:none;' }}">
                                                     <label>N° control boleta</label>
@@ -658,12 +735,12 @@
                                                 </div>
                                                 <div class="e-field">
                                                     <label>Nombres</label>
-                                                    <input class="e-input" type="text" name="nombre_apoderado"
+                                                    <input class="e-input" type="text" name="nombre"
                                                            id="nombre_apoderado" value="" autocomplete="off" {{ $mostrarBoleta ? 'readonly' : '' }}>
                                                 </div>
                                                 <div class="e-field">
                                                     <label>Apellidos</label>
-                                                    <input class="e-input" type="text" name="apellido_apoderado"
+                                                    <input class="e-input" type="text" name="apellido"
                                                            id="apellido_apoderado" value="" autocomplete="off" {{ $mostrarBoleta ? 'readonly' : '' }}>
                                                 </div>
                                                 <div class="e-field fg-span2" style="padding-bottom:0;">
@@ -798,8 +875,8 @@
                             <input type="hidden" name="gestion_valorado" value="" data-campo="gestion-api">
                             <input type="hidden" value="0"  data-campo="validacion-recaudacion-ok">
                             <input type="hidden" value=""   data-campo="preimpreso-api">
-                            <input type="hidden" value=""   data-campo="estado-sitra">
-                            <input type="hidden" value=""   data-campo="fuente-sitra">
+                            <input type="hidden" value="" name="estado_sitra" data-campo="estado-sitra">
+                            <input type="hidden" value="" name="fuente_sitra" data-campo="fuente-sitra">
                         </form>
 
                     @else
@@ -963,7 +1040,16 @@ var verificarBoletaXHR = null;
 
 
 function actualizarModoApoderadoApostilla() {
-    var tipo = $('input[name="tipo"]:checked').val() || 'd';
+    var tipo = $('input[name="tipo"]:checked').val() || '';
+    if (tipo === '') {
+        $('#contenedor_boleta_apostilla').hide();
+        $('#contenedor_boleta_apostilla_edi').hide();
+
+        $('#control_boleta_valido').val('0');
+        $('#control_boleta_valido_edi').val('0');
+
+        return;
+    }
     if (tipo === 'p' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
         $('#contenedor_boleta_apostilla').hide();
         $('#control_boleta_apostilla').val('');
@@ -1001,7 +1087,10 @@ function verificarBoleta(){
     if(verificarBoletaTimer) clearTimeout(verificarBoletaTimer);
     
     verificarBoletaTimer = setTimeout(function(){
-        var tipo = $('input[name="tipo"]:checked').val() || 'd';
+        var tipo = $('input[name="tipo"]:checked').val() || '';
+        if (tipo === '') {
+            return;
+        }
         if (tipo === 'p' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
             var ci = ($('#ci_apoderado_apostilla').val()||'').toString().trim();
             if(ci !== '') {
@@ -1308,6 +1397,7 @@ function validarSitraRapidaApostilla(){
     const numero=(form.find('input[name="numero"]').val()||'').toString().trim();
     const gestion=(form.find('input[name="gestion"]').val()||'').toString().trim();
     const codLis=(form.find('input[name="cl"]').val()||'').toString().trim();
+    const codApos=(form.find('input[name="ca"]').val()||'').toString().trim();
     const requestSeq=++apostillaRapidaSitraSeq;
     form.find('[data-campo="fuente-sitra"]').val('');
     if(numero===''||numero==='-'){actualizarEstadoSitraRapido(form,'text-muted','SITRA pendiente.');return;}
@@ -1315,9 +1405,20 @@ function validarSitraRapidaApostilla(){
     if(gestion===''){actualizarEstadoSitraRapido(form,'text-muted','Complete gestión para validar SITRA.');return;}
     actualizarEstadoSitraRapido(form,'text-info','Validando en SITRA/SID…');
     $.ajax({
-        url:'{{url("validar sitra apostilla/".$cod_apos)}}',type:'POST',dataType:'json',
-        data:{_token:form.find('input[name="_token"]').val(),numero:numero,gestion:gestion,cl:parseInt(codLis,10)||0},
+        url:'{{ url("validar sitra apostilla") }}/'+encodeURIComponent(codApos),
+        type:'POST',
+        dataType:'json',
+        data:{
+            _token:form.find('input[name="_token"]').val(),
+            numero:numero,
+            gestion:gestion,
+            cl:parseInt(codLis,10)||0
+        },
         success:function(resp){
+            console.log('RESPUESTA VALIDAR SITRA/SID:', resp);
+            console.log('ESTADO:', resp ? resp.estado : null);
+            console.log('FUENTE:', resp ? resp.fuente : null);
+            console.log('MENSAJE:', resp ? resp.message : null);
             if(requestSeq!==apostillaRapidaSitraSeq)return;
             if((form.find('input[name="numero"]').val()||'').toString().trim()!==numero)return;
             if((form.find('input[name="gestion"]').val()||'').toString().trim()!==gestion)return;
@@ -1325,7 +1426,6 @@ function validarSitraRapidaApostilla(){
             let estado=(resp&&resp.estado!==undefined&&resp.estado!==null)?String(resp.estado).trim():'';
             const fuente=(resp&&resp.fuente)?String(resp.fuente).toLowerCase():'sitra';
             const mensaje=(resp&&resp.message)?String(resp.message).toLowerCase():'';
-            if((estado===''||estado==='null'||estado==='undefined')&&fuente==='sitra_sid')estado='2';
             if((estado===''||estado==='null'||estado==='undefined')&&mensaje.indexOf('no existe')!==-1)estado='2';
             if((estado===''||estado==='null'||estado==='undefined')&&mensaje.indexOf('no coincide')!==-1)estado='1';
             form.find('[data-campo="estado-sitra"]').val(estado);form.find('[data-campo="fuente-sitra"]').val(fuente);
@@ -1346,7 +1446,8 @@ function validarSitraRapidaApostilla(){
         error:function(xhr){
             if(requestSeq!==apostillaRapidaSitraSeq)return;
             const msg=(xhr.responseJSON&&xhr.responseJSON.message)?xhr.responseJSON.message:'SITRA/SID no disponible.';
-            form.find('[data-campo="estado-sitra"]').val('2');form.find('[data-campo="fuente-sitra"]').val('ninguno');
+            form.find('[data-campo="estado-sitra"]').val('');
+            form.find('[data-campo="fuente-sitra"]').val('');
             actualizarEstadoSitraRapido(form,'text-danger',msg);
         }
     });
@@ -1455,7 +1556,11 @@ function guardarAgregarApostillaRapida(onDone){
 }
 
 function guardarTramiteApostillaYEnfocar(){
+    console.log('DEBUG guardarTramiteApostillaYEnfocar - inicio');
+
     const form=$('#form_tramite_apostilla');
+    console.log('DEBUG form existe:', form.length);
+    console.log('DEBUG datos form:', form.serialize());
     if(!form.length)return false;
     if(apostillaGuardarEnCurso){return false;}
     const btn=obtenerBotonGuardarApostillaUi();
@@ -1469,6 +1574,7 @@ function guardarTramiteApostillaYEnfocar(){
         headers:{'Accept':'application/json'},
         data:form.serialize(),
         success:function(resp){
+            console.log('DEBUG guardar trámite apostilla - success:', resp);
             if(resp&&resp.ok&&resp.redirect){
                 $.ajax({
                     url:resp.redirect,
@@ -1500,6 +1606,8 @@ function guardarTramiteApostillaYEnfocar(){
             limpiarBotonCargandoApostillaUi(btn);
         },
         error:function(xhr){
+            console.log('DEBUG guardar trámite apostilla - error status:', xhr.status);
+            console.log('DEBUG guardar trámite apostilla - response:', xhr.responseText);
             const msg=(xhr.responseJSON&&xhr.responseJSON.message)?xhr.responseJSON.message:'No se pudo guardar el trámite.';
             estadoRegistroRapido('error',msg);
             apostillaGuardarEnCurso=false;
@@ -1511,6 +1619,15 @@ function guardarTramiteApostillaYEnfocar(){
 }
 function submitAgregarApostillaRapida(){
     const form=formApostillaRapida();if(!form.length)return false;
+    const estadoSitra = (form.find('[data-campo="estado-sitra"]').val() || '').toString().trim();
+    if (estadoSitra !== '0') {
+        actualizarEstadoSitraRapido(
+            form,
+            'text-danger',
+            'Debe validar correctamente en SITRA/SID antes de agregar.'
+        );
+        return false;
+    }
     const nroControl=obtenerControlRapidoApostilla();
     if(nroControl===''){estadoRegistroRapido('pending','Ingrese N° de control.');return false;}
     if(apostillaRapidaEnvioEnCurso){return false;}

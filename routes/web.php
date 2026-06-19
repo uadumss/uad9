@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 use App\Http\Controllers\PersonaController;
-
+use App\Http\Controllers\QRController;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,7 +29,7 @@ Route::get('/home', function () {
 Route::get('/index', function () {
     return view('inicio');
 })->middleware('auth');
-
+Route::get('verificar_qr/{codigo}', [QRController::class, 'verificar_QR']);
 Auth::routes();
 
 Route::middleware('auth')->group(function () {

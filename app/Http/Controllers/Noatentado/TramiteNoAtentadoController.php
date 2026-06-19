@@ -700,31 +700,43 @@ class TramiteNoAtentadoController extends Controller
 
     private function escalaCandidatosMontoNoAtentado(): array
     {
-        if(!Schema::hasTable('noatentado.escala_candidatos')){
+        \Log::info('DEBUG escala NOA - inicio');
+        \Log::info('DEBUG escala NOA - existe tabla', [
+            'tabla' => 'noatentado.escala_candidatos',
+            'hasTable' => Schema::hasTable('noatentado.escala_candidatos'),
+        ]);
+        
+        try {
+            $reglas=EscalaCandidato::query()
+                ->where('habilitado','=',true)
+                ->orderBy('monto_total','ASC')
+                ->orderBy('cantidad_max','ASC')
+                ->orderBy('orden','ASC')
+                ->get(['cantidad_min','cantidad_max','costo','aporte_umss','monto_total'])
+                ->map(function($fila){
+                    return [
+                        'cantidad_min'=>(int)($fila->cantidad_min ?? 0),
+                        'cantidad_max'=>(int)($fila->cantidad_max ?? 0),
+                        'costo'=>(float)($fila->costo ?? 0),
+                        'aporte_umss'=>(float)($fila->aporte_umss ?? 0),
+                        'monto_total'=>(float)($fila->monto_total ?? 0),
+                    ];
+                })
+                ->toArray();
+            \Log::info('DEBUG escala NOA - reglas desde BD', [
+                'cantidad' => count($reglas),
+                'reglas' => $reglas,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('ERROR escala NOA - consulta falló', [
+                'mensaje' => $e->getMessage(),
+            ]);
+
             return [];
         }
-
-        $reglas=EscalaCandidato::query()
-            ->where('habilitado','=',true)
-            ->orderBy('monto_total','ASC')
-            ->orderBy('cantidad_max','ASC')
-            ->orderBy('orden','ASC')
-            ->get(['cantidad_min','cantidad_max','costo','aporte_umss','monto_total'])
-            ->map(function($fila){
-                return [
-                    'cantidad_min'=>(int)($fila->cantidad_min ?? 0),
-                    'cantidad_max'=>(int)($fila->cantidad_max ?? 0),
-                    'costo'=>(float)($fila->costo ?? 0),
-                    'aporte_umss'=>(float)($fila->aporte_umss ?? 0),
-                    'monto_total'=>(float)($fila->monto_total ?? 0),
-                ];
-            })
-            ->toArray();
-
         if(!is_array($reglas)){
-            return [];
-        }
-
+        return [];
+        }   
         $normalizadas=[];
         foreach($reglas as $fila){
             if(!is_array($fila)){
@@ -752,6 +764,14 @@ class TramiteNoAtentadoController extends Controller
                 'aporte_umss'=>$aporte,
                 'monto_total'=>$montoTotal,
             ];
+            \Log::info('DEBUG escala NOA - procesando fila', [
+                'fila' => $fila,
+                'cantidadMin' => $cantidadMin,
+                'cantidadMax' => $cantidadMax,
+                'costo' => $costo,
+                'aporte' => $aporte,
+                'montoTotal' => $montoTotal,
+            ]);
         }
 
         usort($normalizadas,function(array $a,array $b){
@@ -761,7 +781,10 @@ class TramiteNoAtentadoController extends Controller
             }
             return (int)$a['cantidad_max'] <=> (int)$b['cantidad_max'];
         });
-
+        \Log::info('DEBUG escala NOA - normalizadas final', [
+            'cantidad' => count($normalizadas),
+            'normalizadas' => $normalizadas,
+        ]);
         return $normalizadas;
     }
 

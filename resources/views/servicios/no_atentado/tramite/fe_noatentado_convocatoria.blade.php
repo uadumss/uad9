@@ -1118,6 +1118,7 @@ function noaIrPaso1() {
         salida.sort(function(a,b){return a.monto_total===b.monto_total?a.cantidad_max-b.cantidad_max:a.monto_total-b.monto_total;});
         return salida;
     }
+    
     function resolverCupoCandidatosPorMontoNoatentado(montoTotal){
         const escala=escalaCandidatosNoaNormalizada,monto=Number(montoTotal||0);
         if(!Array.isArray(escala)||escala.length===0)return{ok:false,maxPermitidos:0,resumen:'Sin escala',detalle:'No hay escala de precios configurada.',regla:null};
@@ -1729,19 +1730,49 @@ function noaIrPaso1() {
     }
 
     $(function(){
-        escalaCandidatosNoa=obtenerEscalaCandidatosConfigNoatentado();
-        escalaCandidatosNoaNormalizada=normalizarEscalaCandidatosNoatentado();
-        $('#tramite_noa').off('change.noaTramite').on('change.noaTramite',onCambioTramiteNoa);
-        $(document).off('click.noaPagoPopover').on('click.noaPagoPopover',function(e){
-            if($(e.target).closest(selectorIconosPagoNoatentado()+', .popover').length===0)cerrarPopoversPagoNoatentado();
+        console.log('=== DEBUG ESCALA NOA ===');
+
+        const nodo = document.getElementById('noa_escala_candidatos_json');
+        console.log('nodo escala:', nodo);
+        console.log('contenido escala:', nodo ? nodo.textContent : 'NO EXISTE');
+
+        escalaCandidatosNoa = obtenerEscalaCandidatosConfigNoatentado();
+        console.log('escalaCandidatosNoa:', escalaCandidatosNoa);
+
+        escalaCandidatosNoaNormalizada = normalizarEscalaCandidatosNoatentado();
+        console.log('DEBUG escalaCandidatosNoaNormalizada:', escalaCandidatosNoaNormalizada);
+        console.log('Es array:', Array.isArray(escalaCandidatosNoaNormalizada));
+        console.log('Cantidad:', escalaCandidatosNoaNormalizada?.length);
+        console.log('escalaCandidatosNoaNormalizada:', escalaCandidatosNoaNormalizada);
+
+        $('#tramite_noa').off('change.noaTramite').on('change.noaTramite', onCambioTramiteNoa);
+
+        $(document).off('click.noaPagoPopover').on('click.noaPagoPopover', function(e){
+            if($(e.target).closest(selectorIconosPagoNoatentado()+', .popover').length===0) {
+                cerrarPopoversPagoNoatentado();
+            }
         });
-        $('#Noatentado').off('hidden.bs.modal.noaPagoPopover').on('hidden.bs.modal.noaPagoPopover',function(){cerrarPopoversPagoNoatentado();});
-        $('#Noatentado').off('shown.bs.modal.noaFocus').on('shown.bs.modal.noaFocus',function(){enfocarCiNoAtentado();});
-        if($('#tabla_candidatos_noa').length>0){
-            renderTablaCandidatosNoAtentado();inicializarOpcionesTramiteNoatentado();resetValidacionPagoNoAtentado();
-            actualizarFiltroPreimpresoNoAtentado();actualizarContextoControlPagoNoAtentado();actualizarControlCupoCandidatosNoatentado();
+
+        $('#Noatentado').off('hidden.bs.modal.noaPagoPopover').on('hidden.bs.modal.noaPagoPopover', function(){
+            cerrarPopoversPagoNoatentado();
+        });
+
+        $('#Noatentado').off('shown.bs.modal.noaFocus').on('shown.bs.modal.noaFocus', function(){
+            enfocarCiNoAtentado();
+        });
+
+        if($('#tabla_candidatos_noa').length > 0){
+            renderTablaCandidatosNoAtentado();
+            inicializarOpcionesTramiteNoatentado();
+            resetValidacionPagoNoAtentado();
+            actualizarFiltroPreimpresoNoAtentado();
+            actualizarContextoControlPagoNoAtentado();
+            actualizarControlCupoCandidatosNoatentado();
             enfocarCiNoAtentado();
         }
-        if($('#control_noa_edit').length>0)actualizarFiltroPreimpresoNoAtentado();
+
+        if($('#control_noa_edit').length > 0) {
+            actualizarFiltroPreimpresoNoAtentado();
+        }
     });
 </script>

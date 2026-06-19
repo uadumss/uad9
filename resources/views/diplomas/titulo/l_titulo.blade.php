@@ -307,7 +307,7 @@
                                                     <th class="text-right font-italic">Nº serie:</th>
                                                     <td class="border-bottom border-dark">
                                                         <div class="input-group">
-                                                            <input type="text" class="form-control form-control-sm border-0" required name="nro_serie" id="nro_serie" onchange="cargarDatosPersonales(this.value)"/>
+                                                            <input type="text" class="form-control form-control-sm border-0" name="nro_serie" id="nro_serie" onchange="cargarDatosPersonales(this.value)"/>
                                                             @if($tipo=='re')
                                                                 <span class="text-danger font-weight-bold pt-1" style="font-size: 0.8em">Reconocimiento</span>&nbsp;&nbsp;
                                                                 <input type="checkbox" name="reconocimiento" class="" />

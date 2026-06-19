@@ -163,13 +163,20 @@ class ApostillaController extends Controller
         return view('apostilla.tramite.l_tramite_apostilla_tabla',compact('tramites','fecha'));
     }
     public function fe_tramite_apostilla($cod_apos){
+        \Log::info('ENTRE A fe_tramite_apostilla', [
+            'cod_apos' => $cod_apos
+        ]);
+
         $persona=array();
         $apoderado=array();
         $apostilla=array();
         $detalle_apostilla=array();
-
         if($cod_apos==0){
-            $tramite_apostilla=array();
+            $tramite_apostilla = new \stdClass();
+            \Log::info('DEBUG NUEVA APOSTILLA', [
+                'tramite_apostilla' => $tramite_apostilla,
+                'tipo' => gettype($tramite_apostilla),
+            ]);
             return view('apostilla.tramite.fe_tramite_apostilla',compact('tramite_apostilla','apostilla','cod_apos','persona','apoderado','detalle_apostilla'));
         }else{
             $apostilla=Lista_doc_apostilla::where('lis_hab','=','t')->orderBy('lis_nombre')->get();
@@ -182,6 +189,10 @@ class ApostillaController extends Controller
                 //dd($detalle_apostilla);
                 $persona=Persona::find($tramite_apostilla->id_per);
                 $apoderado=Apoderado::find($tramite_apostilla->cod_apo);
+                \Log::info('DEBUG NUEVA APOSTILLA', [
+                    'tramite_apostilla' => $tramite_apostilla,
+                    'tipo' => gettype($tramite_apostilla),
+                ]);
                 return view('apostilla.tramite.fe_tramite_apostilla',compact('apostilla','tramite_apostilla','cod_apos','persona','apoderado','detalle_apostilla'));
             }else{
                 \Session::flash('error','Hubo un error en los datos proveidos');

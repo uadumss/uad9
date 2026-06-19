@@ -48,6 +48,16 @@ class TramiteLegalizacionController extends Controller
             ->leftJoin('personas','tramitas.id_per','=','personas.id_per')
             ->where('tra_fecha_solicitud','=',$fecha)
             ->select('tramitas.*','per_ci','per_nombre','per_apellido')
+            ->selectRaw("
+                EXISTS (
+                    SELECT 1
+                    FROM tramitas AS tdj
+                    WHERE tdj.id_per = tramitas.id_per
+                    AND tdj.tra_fecha_solicitud = tramitas.tra_fecha_solicitud
+                    AND tdj.tra_tipo_apoderado = 'd'
+                ) AS tiene_declaracion_jurada_dia
+            ")
+            ->where('tra_fecha_solicitud', '=', $fecha)
             ->orderBy('tra_numero')->get();
          return view('servicios.tra_legalizacion.l_traleg',compact('tramitas','fecha'));
     }
@@ -249,7 +259,28 @@ class TramiteLegalizacionController extends Controller
             'E' => 'bg-secondary text-white',   // Consejo (gris)
             default => 'bg-primary text-white',
         };
-        return view('servicios.tra_legalizacion.fe_traleg',compact('tramite','documentos','lista_tramites','confrontacion','apoderado','tipos_array','ptaang','supletorios','titulos','modalTitle','modalHeaderClass','carreras_persona','cuadisPersona'));
+        $declaracionesJuradasDelDia = collect();
+
+        if (!empty($tramite->id_per) && !empty($tramite->tra_fecha_solicitud)) {
+            $declaracionesJuradasDelDia = DB::table('tramitas')
+                ->where('id_per', '=', $tramite->id_per)
+                ->whereDate(
+                    'tra_fecha_solicitud',
+                    '=',
+                    date('Y-m-d', strtotime($tramite->tra_fecha_solicitud))
+                )
+                ->where('tra_tipo_apoderado', '=', 'd')
+                ->select(
+                    'cod_tra',
+                    'tra_numero',
+                    'tra_fecha_solicitud',
+                    'tra_tipo_tramite',
+                    'cod_apo'
+                )
+                ->orderBy('tra_numero')
+                ->get();
+        }
+        return view('servicios.tra_legalizacion.fe_traleg',compact('tramite','documentos','lista_tramites','confrontacion','apoderado','tipos_array','ptaang','supletorios','titulos','modalTitle','modalHeaderClass','carreras_persona','cuadisPersona','declaracionesJuradasDelDia'));
     }
     public function g_traleg(Request $form){
         //return $form['ci'];
@@ -285,6 +316,148 @@ class TramiteLegalizacionController extends Controller
             }
 
         return redirect('datos tramite legalizacion/'.$form['ctra']);
+    }
+    public function g_traleg_completo(Request $request){
+        // 1. Validar campos obligatorios (persona siempre requerida)
+        $request->validate([
+            'ci' => 'required|string',
+            'apellido' => 'required|string',
+            'nombre' => 'required|string',
+            'ctra' => 'required|integer|exists:tramitas,cod_tra',
+            // Apoderado: campos opcionales pero si uno viene, todos deben venir
+            'ci_apoderado' => 'nullable|string',
+            'apellido_apoderado' => 'nullable|string',
+            'nombre_apoderado' => 'nullable|string',
+            'tipo' => 'nullable|in:d,p',
+            'control_boleta' => 'nullable|string',
+            'control_boleta_valido' => 'nullable|in:0,1',
+            'monto_boleta' => 'nullable|numeric',
+        ]);
+
+        // 2. Determinar si se enviaron datos de apoderado
+        $hayDatosApoderado = $request->filled('ci_apoderado') || 
+                            $request->filled('apellido_apoderado') || 
+                            $request->filled('nombre_apoderado') ||
+                            $request->filled('tipo');
+
+        // 3. Si hay datos de apoderado, validar que todos los campos requeridos estén completos
+        if ($hayDatosApoderado) {
+            $request->validate([
+                'ci_apoderado' => 'required|string',
+                'apellido_apoderado' => 'required|string',
+                'nombre_apoderado' => 'required|string',
+                'tipo' => 'required|in:d,p',
+            ]);
+
+            // Validación adicional para boleta (si aplica)
+            if (config('apoderado.requiere_boleta_dj', false) && $request->tipo === 'd') {
+                $request->validate([
+                    'control_boleta' => 'required|string',
+                    'control_boleta_valido' => 'required|in:1',
+                ]);
+            }
+        }
+
+        // 4. Iniciar transacción
+        DB::beginTransaction();
+        try {
+            $tramite = Tramita::findOrFail($request->ctra);
+
+            // --- Guardar persona (similar a g_traleg) ---
+            $persona = Persona::where('per_ci', $request->ci)->first();
+            if ($persona) {
+                $tramite->id_per = $persona->id_per;
+            } else {
+                $persona = Persona::create([
+                    'per_ci' => $request->ci,
+                    'per_pasaporte' => $request->pasaporte ?? '',
+                    'per_apellido' => mb_strtoupper($request->apellido),
+                    'per_nombre' => mb_strtoupper($request->nombre),
+                    'per_sistema' => 3,
+                ]);
+                $tramite->id_per = $persona->id_per;
+            }
+
+            // --- Guardar apoderado solo si se enviaron datos ---
+            if ($hayDatosApoderado) {
+                $apoderado = Apoderado::where('apo_ci', $request->ci_apoderado)->first();
+                if (!$apoderado) {
+                    $apoderado = Apoderado::create([
+                        'apo_ci' => $request->ci_apoderado,
+                        'apo_apellido' => mb_strtoupper($request->apellido_apoderado),
+                        'apo_nombre' => mb_strtoupper($request->nombre_apoderado),
+                        'apo_sistema' => 3,
+                    ]);
+                } else {
+                    // Actualizar por si cambiaron los datos
+                    $apoderado->apo_apellido = mb_strtoupper($request->apellido_apoderado);
+                    $apoderado->apo_nombre = mb_strtoupper($request->nombre_apoderado);
+                    $apoderado->save();
+                }
+
+                // Asignar apoderado al trámite
+                $tramite->cod_apo = $apoderado->cod_apo;
+                $tramite->tra_tipo_apoderado = $request->tipo;
+
+                // Registrar uso de boleta (si aplica)
+                if (!empty($request->control_boleta)) {
+                    $this->registrarUsoBoletaApoderado($request, $tramite->cod_tra);
+                }
+            } else {
+                // Si no se envían datos de apoderado, NO tocar cod_apo
+                // (dejamos el valor que tuviera o null si no existía)
+            }
+
+            $tramite->save();
+            DB::commit();
+
+            // 5. Respuesta exitosa (igual que en g_traleg)
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'ok' => true,
+                    'redirect' => url('datos tramite legalizacion/' . $request->ctra),
+                ]);
+            }
+            return redirect('datos tramite legalizacion/' . $request->ctra);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            \Log::error('Error en g_traleg_completo: ' . $e->getMessage(), [
+                'ctra' => $request->ctra,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Error al guardar: ' . $e->getMessage(),
+                ], 422);
+            }
+            \Session::flash('error', 'Error al guardar: ' . $e->getMessage());
+            return redirect()->back();
+        }
+    }
+    private function registrarUsoBoletaApoderado(Request $request, int $codTra){
+        $controlStr = preg_replace('/[^0-9]/', '', $request->control_boleta);
+        if ($controlStr === '') {
+            return;
+        }
+        $identificador = 'APO_SERVICIOS_' . $controlStr;
+        if (DB::table('recaudacion_usos')->where('identificador', $identificador)->exists()) {
+            return;
+        }
+        DB::table('recaudacion_usos')->insert([
+            'identificador' => $identificador,
+            'recibo' => $controlStr,
+            'documento' => $request->ci_apoderado ?? '',
+            'nombre_persona' => ($request->nombre_apoderado ?? '') . ' ' . ($request->apellido_apoderado ?? ''),
+            'cod_tra' => $codTra,
+            'modulo' => 'servicios',
+            'tramite' => 'Apoderado Declaración Jurada',
+            'monto' => isset($request->monto_boleta) ? floatval($request->monto_boleta) : 0,
+            'usuario_registro' => Auth::check() ? Auth::user()->name : 'sistema',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
     public function eli_traleg(Request $form){
         $tramita=Tramita::find($form['ctra']);

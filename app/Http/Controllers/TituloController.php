@@ -203,24 +203,86 @@ class TituloController extends Controller
             $serieTitulo = $this->normalizarSerieTitulo($serieTitulo, $tipo);
             $gestionTitulo = date('Y', strtotime($form['fecha']));
             //return $tipo;
+            
+            //============ SE PERMITEN NÚMEROS REPETIDOS SI NO COINCIDEN GESTIÓN, SERIE Y TIPO
             $titulos = collect();
 
-            //============ SE PERMITEN NÚMEROS REPETIDOS SI NO COINCIDEN GESTIÓN, SERIE Y TIPO
-            if($tipo != 'su' && $tipo != 'ca') {
+            if ($tipo !== 'su' && $tipo !== 'ca') {
 
-                $query = DB::table('titulos')
-                    ->select('cod_tit')
-                    ->where('tit_gestion', '=', $gestionTitulo)
-                    ->where('tit_tipo', '=', $tipo);
+                $ciTitulo = trim((string) $form->input('ci', ''));
+                $personaTitulo = Persona::where('per_ci', $ciTitulo)->first();
 
-                if($serieTitulo != '') {
-                    $query->where('tit_nro_serie', '=', $serieTitulo);
+                $codCarrera = $form->filled('car')
+                    ? $form->input('car')
+                    : null;
+
+                /*
+                * CASO 1:
+                * El documento tiene serie.
+                *
+                * Se identifica principalmente por:
+                * tipo + gestión + serie + número de título.
+                */
+                if ($serieTitulo !== '') {
+
+                    $query = DB::table('titulos')
+                        ->select('titulos.cod_tit')
+                        ->where('titulos.tit_gestion', $gestionTitulo)
+                        ->where('titulos.tit_tipo', $tipo)
+                        ->where('titulos.tit_nro_serie', $serieTitulo)
+                        ->where('titulos.tit_nro_titulo', $nroTitulo);
+
+                /*
+                * CASO 2:
+                * Documento antiguo sin serie.
+                *
+                * Se identifica por:
+                * persona + tipo + gestión + número + carrera.
+                */
                 } else {
-                    $query->where('tit_nro_titulo', '=', $nroTitulo);
+
+                    // Si la persona todavía no existe, no puede haber un título previo suyo.
+                    if (!$personaTitulo) {
+                        $query = DB::table('titulos')
+                            ->select('cod_tit')
+                            ->whereRaw('1 = 0');
+                    } else {
+                        $query = DB::table('titulos')
+                            ->select('titulos.cod_tit')
+                            ->leftJoin(
+                                'diploma_academicos',
+                                'diploma_academicos.cod_tit',
+                                '=',
+                                'titulos.cod_tit'
+                            )
+                            ->where('titulos.id_per', $personaTitulo->id_per)
+                            ->where('titulos.tit_gestion', $gestionTitulo)
+                            ->where('titulos.tit_tipo', $tipo)
+                            ->where('titulos.tit_nro_titulo', $nroTitulo)
+                            ->where(function ($q) {
+                                $q->whereNull('titulos.tit_nro_serie')
+                                ->orWhere('titulos.tit_nro_serie', '');
+                            });
+
+                        /*
+                        * Los tipos que poseen carrera se diferencian también por cod_car.
+                        */
+                        if ($codCarrera !== null) {
+                            $query->where(
+                                'diploma_academicos.cod_car',
+                                $codCarrera
+                            );
+                        }
+                    }
                 }
 
-                if(isset($form['ctit'])) {
-                    $query->where('cod_tit', '<>', $form['ctit']);
+                // Al editar, no comparar el título consigo mismo.
+                if ($form->filled('ctit')) {
+                    $query->where(
+                        'titulos.cod_tit',
+                        '<>',
+                        $form->input('ctit')
+                    );
                 }
 
                 $titulos = $query->get();

@@ -163,13 +163,13 @@
                                                             <input class="form-control form-control-sm border-0" placeholder=""
                                                                    id="ci_noa_apoderado" name="ci" value="{{$ci}}" oninput="verificarBoletaApoderadoNoa();"/></td>
                                                     </tr>
-                                                    <tr id="fila_boleta_apoderado_noa" data-requiere-boleta="{{ $requiereBoletaDj ? 1 : 0 }}" style="{{ $mostrarBoleta ? '' : 'display:none;' }}">
+                                                    <tr id="fila_boleta_apoderado_noa">
                                                         <th class="text-right font-italic">N° control boleta : </th>
                                                         <td class="border-bottom border-dark">
                                                             <input class="form-control form-control-sm border-0" placeholder="Ingrese número de control"
                                                                    id="control_boleta_noa" name="control_boleta" oninput="verificarBoletaApoderadoNoa()"/>
                                                             <div style="margin-top:6px;"><span id="estado_pago_apoderado_noa" class="badge badge-secondary">Sin validar</span></div>
-                                                             <input type="hidden" id="control_boleta_valido_noa" name="control_boleta_valido" value="{{ $mostrarBoleta ? '0' : '1' }}">
+                                                             <input type="hidden" id="control_boleta_valido_noa" name="control_boleta_valido" value="1">
                                                              <input type="hidden" name="monto_boleta" id="monto_boleta_noa" value="0">
                                                         </td>
                                                     </tr>
@@ -215,7 +215,10 @@
                                                 <input type="hidden" name="cdtra" value="{{$tramite_noatentado->cod_dtra}}">
                                                 <input type="hidden" name="pan" value="ent">
                                             </form>
-                                            <a class="btn btn-primary btn-sm text-white float-right" onclick="enviar('form_apoderado_noa','{{url("guardar apoderado noatentado")}}','panel_traleg');" >Guardar</a><br/>
+                                                <a class="btn btn-primary btn-sm text-white float-right"
+                                                    onclick="guardarApoderadoNoa();">
+                                                    Guardar
+                                                </a><br/>
                                             <br/>
                                         </div>
                                     </div>
@@ -331,28 +334,39 @@
     }
 
     function actualizarModoApoderadoNoa() {
-        var tipo = $('input[name="tipo"]:checked').val() || 'd';
-        var requiereBoleta = requiereBoletaDjNoa();
-        if (tipo === 'p' || tipo === 'c' || (tipo === 'd' && !requiereBoleta)) {
-            $('#fila_boleta_apoderado_noa').hide();
-            $('#control_boleta_noa').val('');
-            $('#estado_pago_apoderado_noa').removeClass().addClass('badge badge-secondary').text('Sin validar');
+        // El N.º de control siempre debe mostrarse.
+        $('#fila_boleta_apoderado_noa').show();
+
+        var control = ($('#control_boleta_noa').val() || '')
+            .toString()
+            .trim();
+
+        var ci = ($('#ci_noa_apoderado').val() || '')
+            .toString()
+            .trim();
+
+        // El campo es opcional.
+        if (control === '') {
+            $('#estado_pago_apoderado_noa')
+                .removeClass()
+                .addClass('badge badge-secondary')
+                .text('Opcional');
+
             $('#control_boleta_valido_noa').val('1');
-            
+            $('#monto_boleta_noa').val('0');
+
             $('#nombre_apoderado').removeAttr('readonly');
             $('#apellido_apoderado').removeAttr('readonly');
-            
-            var ci = ($('#ci_noa_apoderado').val()||'').toString().trim();
-            if(ci !== '') {
+
+            if (ci !== '') {
                 cargarDatosApoderadoGlobal(ci);
             }
-        } else {
-            $('#fila_boleta_apoderado_noa').show();
-            $('#nombre_apoderado').prop('readonly', true).val('');
-            $('#apellido_apoderado').prop('readonly', true).val('');
-            $('#control_boleta_valido_noa').val('0');
-            verificarBoletaApoderadoNoa();
+
+            return;
         }
+
+        // Si ya tiene un número, se vuelve a validar.
+        verificarBoletaApoderadoNoa();
     }
 
     $(function(){
@@ -382,23 +396,25 @@
         if(verificarBoletaApoderadoNoaTimer) clearTimeout(verificarBoletaApoderadoNoaTimer);
 
         verificarBoletaApoderadoNoaTimer = setTimeout(function(){
-            var tipo = $('input[name="tipo"]:checked').val() || 'd';
-            var requiereBoleta = requiereBoletaDjNoa();
-            if (tipo === 'p' || tipo === 'c' || (tipo === 'd' && !requiereBoleta)) {
-                var ci = ($('#ci_noa_apoderado').val()||'').toString().trim();
-                if(ci !== '') {
-                    cargarDatosApoderadoGlobal(ci);
-                }
-                return;
-            }
 
             var control=($('#control_boleta_noa').val()||'').toString().trim();
             var ci=($('#ci_noa_apoderado').val()||'').toString().trim();
-            if(control===''){
-                $('#nombre_apoderado').val('');
-                $('#apellido_apoderado').val('');
-                $('#estado_pago_apoderado_noa').removeClass().addClass('badge badge-secondary').text('Sin validar');
-                $('#control_boleta_valido_noa').val('0');
+            if (control === '') {
+                $('#estado_pago_apoderado_noa')
+                    .removeClass()
+                    .addClass('badge badge-secondary')
+                    .text('Opcional');
+
+                $('#control_boleta_valido_noa').val('1');
+                $('#monto_boleta_noa').val('0');
+
+                $('#nombre_apoderado').removeAttr('readonly');
+                $('#apellido_apoderado').removeAttr('readonly');
+
+                if (ci !== '') {
+                    cargarDatosApoderadoGlobal(ci);
+                }
+
                 return;
             }
             if(ci===''){
@@ -449,6 +465,35 @@
                 }
             });
         }, 500);
+    }
+    function guardarApoderadoNoa() {
+        var control = ($('#control_boleta_noa').val() || '')
+            .toString()
+            .trim();
+
+        var valido = $('#control_boleta_valido_noa').val();
+
+        // Vacío: permitido.
+        if (control === '') {
+            enviar(
+                'form_apoderado_noa',
+                '{{ url("guardar apoderado noatentado") }}',
+                'panel_traleg'
+            );
+            return;
+        }
+
+        // Escribió un control, pero no fue validado.
+        if (valido !== '1') {
+            alert('El número de control no es válido, no existe o ya fue utilizado.');
+            return;
+        }
+
+        enviar(
+            'form_apoderado_noa',
+            '{{ url("guardar apoderado noatentado") }}',
+            'panel_traleg'
+        );
     }
 </script>
 

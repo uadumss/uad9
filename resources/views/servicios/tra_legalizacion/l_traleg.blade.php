@@ -160,8 +160,15 @@
                                                 @if($t->tra_tipo_apoderado=='p')
                                                     <span class="text-white bg-danger rounded" style="font-size: 0.7em"> &nbsp;Pod&nbsp; </span>
                                                 @else
-                                                    @if($t->tra_tipo_apoderado=='d')
-                                                        <span class="text-white bg-success rounded" style="font-size: 0.7em"> &nbsp;Dec&nbsp; </span>
+                                                    @if(
+                                                        $t->tra_tipo_apoderado == 'd' ||
+                                                        !empty($t->tiene_declaracion_jurada_dia)
+                                                    )
+                                                        <span class="text-white bg-success rounded"
+                                                            style="font-size:0.7em"
+                                                            title="La persona tiene una declaración jurada registrada en otro trámite de esta fecha">
+                                                            &nbsp;Dec&nbsp;
+                                                        </span>
                                                     @endif
                                                 @endif
                                             </td>
