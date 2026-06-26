@@ -232,42 +232,86 @@
                                          @if($tramita->tra_tipo_tramite=='B')
                                              <td>{{$d->dcon_doc}}</td>
                                          @endif
-                                         <td class="text-left">{{$d->dtra_numero."/".substr($d->dtra_gestion,-2)}}</td>
-                                         <td class="text-right">
-                                             @if($d->dtra_generado=='t')
-                                                 @if($d->dtra_estado_doc==0)
-                                                     <a href="#" class="btn btn-light btn-circle btn-sm text-primary" data-target="#docleg" data-toggle="modal" onclick="cargarDatos('ver documento pdf legalizado/{{$d->cod_dtra}}','panel_docleg')"
-                                                        title="Ver documento PDF"><i class="fas fa-file-code"></i> </a>
-                                                 @endif
-                                                     @if($tramita->tra_tipo_tramite=='C')
-                                                        <a class="btn btn-light btn-sm btn-circle" href="{{url('generar pdf/'.$d->cod_dtra)}}" target="pdf{{rand(1,1000)}}"><i class="text-dark fas fa-file-pdf"></i></a>
-                                                     @endif
-
-                                             @endif
+                                         <td class="text-left">{{$d->dtra_numero."/".substr($d->dtra_gestion,-2)}}
                                          </td>
-                                         <td class="text-right">
-                                             @if($d->dtra_entregado!='a' && $d->dtra_entregado!='t')
-                                                 @can('entregar legalizacion docleg - srv')
+                                         <td class="text-center">
+                                            <div class="d-flex justify-content-center align-items-center" style="gap:6px;">
+
+                                                <a href="#"
+                                                class="btn btn-light btn-circle btn-sm {{ ($d->dtra_obs!='' || $d->dtra_falso=='t') ? 'text-danger' : 'text-primary' }}"
+                                                data-target="#docleg"
+                                                data-toggle="modal"
+                                                onclick="cargarDatos('{{ url('obs_docleg/'.$d->cod_dtra) }}','panel_docleg')"
+                                                title="{{ ($d->dtra_obs!='' || $d->dtra_falso=='t') ? 'Ver observación' : 'Observar' }}">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+
+                                                @if($d->dtra_generado=='t')
+                                                    @if($d->dtra_estado_doc==0)
+                                                        <a href="#"
+                                                        class="btn btn-light btn-circle btn-sm text-primary"
+                                                        data-target="#docleg"
+                                                        data-toggle="modal"
+                                                        onclick="cargarDatos('{{ url('ver documento pdf legalizado/'.$d->cod_dtra) }}','panel_docleg')"
+                                                        title="Ver documento PDF">
+                                                            <i class="fas fa-file-code"></i>
+                                                        </a>
+                                                    @endif
+
+                                                    @if($tramita->tra_tipo_tramite=='C')
+                                                        <a class="btn btn-light btn-sm btn-circle"
+                                                        href="{{ url('generar pdf/'.$d->cod_dtra) }}"
+                                                        target="pdf{{ rand(1,1000) }}"
+                                                        title="Generar PDF">
+                                                            <i class="text-dark fas fa-file-pdf"></i>
+                                                        </a>
+                                                    @endif
+                                                @endif
+
+                                            </div>
+                                        </td>
+
+                                        <td class="text-center">
+                                            @if($d->dtra_entregado!='a' && $d->dtra_entregado!='t')
+                                                @can('entregar legalizacion docleg - srv')
                                                     @if($tramita->cod_apo!='')
-                                                        <a href="#" class="btn btn-primary btn-sm" data-target="#docleg" data-toggle="modal" onclick="cargarDatos('{{url("datos legalizado/1/".$d->cod_dtra)}}','panel_docleg')"
-                                                            title="Ver documento PDF"><i class="fas fa-angle-right"></i> Entregar +</a>
-                                                     @else
-                                                        <form id="form_g_entrega{{$i}}">
+                                                        <a href="#"
+                                                        class="btn btn-primary btn-sm"
+                                                        data-target="#docleg"
+                                                        data-toggle="modal"
+                                                        onclick="cargarDatos('{{ url('datos legalizado/1/'.$d->cod_dtra) }}','panel_docleg')"
+                                                        title="Entregar con apoderado">
+                                                            <i class="fas fa-angle-right"></i> Entregar +
+                                                        </a>
+                                                    @else
+                                                        <form id="form_g_entrega{{ $i }}">
                                                             @csrf
-                                                            <input type="hidden" name="cdtra" value="{{$d->cod_dtra}}">
-                                                            <input type="hidden" name="ctra" value="{{$d->cod_tra}}">
+                                                            <input type="hidden" name="cdtra" value="{{ $d->cod_dtra }}">
+                                                            <input type="hidden" name="ctra" value="{{ $d->cod_tra }}">
                                                             <input type="hidden" name="tipo" value="t">
                                                         </form>
-                                                         <a href="#" class="btn btn-primary btn-sm" onclick="guardarDatos('{{url("g_entrega")}}','panel_traleg','form_g_entrega{{$i}}')"
-                                                            title="Ver documento PDF"><i class="fas fa-angle-right"></i> Entregar</a>
-                                                     @endif
 
-                                                 @endcan
-                                             @else
-                                                 <span class="border-danger rounded text-success"><i class="fas fa-check"></i></span>
-                                                 @if($d->dtra_entregado=='a') <span class="font-weight-bold text-success font-italic">Apoderado </span> @endif
-                                             @endif
-                                         </td>
+                                                        <a href="#"
+                                                        class="btn btn-primary btn-sm"
+                                                        onclick="guardarDatos('{{ url('g_entrega') }}','panel_traleg','form_g_entrega{{ $i }}')"
+                                                        title="Entregar documento">
+                                                            <i class="fas fa-angle-right"></i> Entregar
+                                                        </a>
+                                                    @endif
+                                                @endcan
+                                            @else
+                                                <span class="text-success">
+                                                    <i class="fas fa-check"></i>
+                                                </span>
+
+                                                @if($d->dtra_entregado=='a')
+                                                    <br>
+                                                    <span class="font-weight-bold text-success font-italic" style="font-size:0.85em;">
+                                                        Apoderado
+                                                    </span>
+                                                @endif
+                                            @endif
+                                        </td>
                                      </tr>
                                      <?php $i++;?>
                                      @endforeach

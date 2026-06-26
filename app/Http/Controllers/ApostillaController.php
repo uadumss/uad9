@@ -189,6 +189,19 @@ class ApostillaController extends Controller
                 //dd($detalle_apostilla);
                 $persona=Persona::find($tramite_apostilla->id_per);
                 $apoderado=Apoderado::find($tramite_apostilla->cod_apo);
+                if (!$apoderado && $tramite_apostilla->id_per) {
+                    $tramiteConApoderado = DB::table('tramitas')
+                        ->where('id_per', $tramite_apostilla->id_per)
+                        ->whereNotNull('cod_apo')
+                        ->where('cod_apo', '>', 0)
+                        ->whereDate('tra_fecha_solicitud', date('Y-m-d'))
+                        ->orderByDesc('tra_fecha_solicitud')
+                        ->first();
+
+                    if ($tramiteConApoderado) {
+                        $apoderado = Apoderado::find($tramiteConApoderado->cod_apo);
+                    }
+                }
                 \Log::info('DEBUG NUEVA APOSTILLA', [
                     'tramite_apostilla' => $tramite_apostilla,
                     'tipo' => gettype($tramite_apostilla),

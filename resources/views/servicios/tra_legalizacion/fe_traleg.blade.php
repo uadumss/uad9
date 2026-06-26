@@ -474,470 +474,875 @@
         {{-- ════ MAIN GRID ════ --}}
         <div class="e-grid">
 
-            {{-- ─── COLUMNA IZQUIERDA — datos persona / apoderado ─── --}}
+            {{-- ─── COLUMNA IZQUIERDA — datos persona / información adicional / apoderado ─── --}}
+
+            @php
+                $apoderadoHabilitado = (bool) config('apoderado.habilitado', true);
+
+                $tieneApoderado = !empty(data_get($apoderado, 'apo_ci'));
+
+                $modoEdicionPersona = empty($tramite->per_ci);
+
+                $requiereBoletaDj = (bool) config(
+                    'apoderado.requiere_boleta_dj',
+                    false
+                );
+
+                $tipoApoderado = data_get(
+                    $tramite,
+                    'tra_tipo_apoderado',
+                    ''
+                ) ?: '';
+
+                $mostrarBoleta = (
+                    $tipoApoderado === 'd'
+                    && $requiereBoletaDj
+                );
+
+                $tiposTramiteDj = [
+                    'L' => 'Legalización',
+                    'C' => 'Certificación',
+                    'F' => 'Confrontación',
+                    'B' => 'Búsqueda',
+                    'E' => 'Consejo',
+                ];
+
+                $tiposTitulo = [
+                    'da' => 'Diploma Académico',
+                    'tp' => 'Título Profesional',
+                    'di' => 'Diplomado',
+                    'db' => 'Diploma de Bachiller',
+                    'ca' => 'Certificado Académico',
+                ];
+            @endphp
+
             <div>
 
-                {{-- ── Datos personales ── --}}
-                @if($tramite->per_ci == '')
-                {{-- MODO EDICIÓN --}}
-                <div class="e-panel">
-                    <div class="e-panel-head">
-                        <div class="e-panel-head-left">
-                            <span class="ph-bar"></span>
-                            <span class="ph-title">Datos personales</span>
+                {{-- Un único formulario para todo el bloque izquierdo --}}
+                <form id="form_traleg">
+                    @csrf
+
+                    {{-- ===================================================== --}}
+                    {{-- 1. DATOS PERSONALES                                   --}}
+                    {{-- ===================================================== --}}
+
+                    <div class="e-panel">
+                        <div class="e-panel-head">
+                            <div class="e-panel-head-left">
+                                <span class="ph-bar"></span>
+                                <span class="ph-title">Datos personales</span>
+                            </div>
+                        </div>
+
+                        <div class="e-panel-body">
+
+                            @if($modoEdicionPersona)
+
+                                {{-- Persona todavía no registrada --}}
+                                <div class="fg fg-2">
+
+                                    <div class="e-field">
+                                        <label>CI</label>
+
+                                        <input
+                                            class="e-input"
+                                            name="ci"
+                                            value="{{ $tramite->per_ci }}"
+                                            onchange="cargarDatosPersonales(this.value)"
+                                            autocomplete="off"
+                                        >
+                                    </div>
+
+                                    <div class="e-field">
+                                        <label>Pasaporte</label>
+
+                                        <input
+                                            class="e-input"
+                                            name="pasaporte"
+                                            value="{{ $tramite->per_pasaporte }}"
+                                            autocomplete="off"
+                                        >
+                                    </div>
+
+                                    <div class="e-field">
+                                        <label>Apellidos</label>
+
+                                        <input
+                                            class="e-input"
+                                            required
+                                            name="apellido"
+                                            id="apellido"
+                                            value="{{ $tramite->per_apellido }}"
+                                            autocomplete="off"
+                                        >
+                                    </div>
+
+                                    <div
+                                        class="e-field"
+                                        style="padding-bottom:0;"
+                                    >
+                                        <label>Nombres</label>
+
+                                        <input
+                                            class="e-input"
+                                            required
+                                            name="nombre"
+                                            id="nombre"
+                                            value="{{ $tramite->per_nombre }}"
+                                            autocomplete="off"
+                                        >
+                                    </div>
+
+                                </div>
+
+                            @else
+
+                                {{-- Persona ya registrada: solo lectura --}}
+                                <div class="fg fg-2">
+
+                                    <div class="e-field">
+                                        <label>CI</label>
+
+                                        <div class="e-val">
+                                            {{ $tramite->per_ci }}
+                                        </div>
+                                    </div>
+
+                                    <div class="e-field">
+                                        <label>Pasaporte</label>
+
+                                        <div class="e-val muted">
+                                            {{ $tramite->per_pasaporte ?: '—' }}
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="e-field fg-span2"
+                                        style="padding-bottom:0;"
+                                    >
+                                        <label>Nombre completo</label>
+
+                                        <div class="e-val">
+                                            {{ $tramite->per_nombre }}
+                                            {{ $tramite->per_apellido }}
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                {{--
+                                    Se mantienen ocultos para que g_traleg_completo
+                                    reciba los datos personales aunque estén en modo lectura.
+                                --}}
+                                <input
+                                    type="hidden"
+                                    name="ci"
+                                    value="{{ $tramite->per_ci }}"
+                                >
+
+                                <input
+                                    type="hidden"
+                                    name="pasaporte"
+                                    value="{{ $tramite->per_pasaporte }}"
+                                >
+
+                                <input
+                                    type="hidden"
+                                    name="apellido"
+                                    value="{{ $tramite->per_apellido }}"
+                                >
+
+                                <input
+                                    type="hidden"
+                                    name="nombre"
+                                    value="{{ $tramite->per_nombre }}"
+                                >
+
+                            @endif
+
                         </div>
                     </div>
-                    <div class="e-panel-body">
-                        <!-- <form id="form_traleg">
-                            @csrf
-                            <div class="fg fg-2">
-                                <div class="e-field">
-                                    <label>CI</label>
-                                    <input class="e-input" name="ci" value="{{ $tramite->per_ci }}"
-                                           onchange="cargarDatosPersonales(this.value)" autocomplete="off">
-                                </div>
-                                <div class="e-field">
-                                    <label>Pasaporte</label>
-                                    <input class="e-input" name="pasaporte" value="{{ $tramite->per_pasaporte }}" autocomplete="off">
-                                </div>
-                                <div class="e-field">
-                                    <label>Apellidos</label>
-                                    <input class="e-input" required name="apellido" id="apellido" value="{{ $tramite->per_apellido }}" autocomplete="off">
-                                </div>
-                                <div class="e-field" style="padding-bottom:0;">
-                                    <label>Nombres</label>
-                                    <input class="e-input" required name="nombre" id="nombre" value="{{ $tramite->per_nombre }}" autocomplete="off">
+
+
+                    {{-- ===================================================== --}}
+                    {{-- 2. INFORMACIÓN ADICIONAL                              --}}
+                    {{-- ===================================================== --}}
+
+                    @if(
+                        isset($declaracionesJuradasDelDia)
+                        && $declaracionesJuradasDelDia->isNotEmpty()
+                    )
+
+                        <div
+                            class="e-panel"
+                            style="margin-top:10px;"
+                        >
+                            <div class="e-panel-head">
+                                <div class="e-panel-head-left">
+
+                                    <span
+                                        class="ph-bar"
+                                        style="background:var(--e-amber);"
+                                    ></span>
+
+                                    <span class="ph-title">
+                                        Declaración jurada registrada hoy
+                                    </span>
+
                                 </div>
                             </div>
-                            <input type="hidden" name="ctra" value="{{ $tramite->cod_tra }}">
-                            <input type="hidden" name="ip" value="{{ $tramite->id_per }}">
-                            @can('editar datos traleg - srv')
-                                <button type="button" class="e-btn e-btn-primary e-btn-full"
-                                        onclick="guardarDatos('{{ url('g_traleg') }}','panel_traleg','form_traleg', this)">
-                                    <i class="fas fa-save" style="font-size:11px;"></i> Guardar
-                                </button>
-                            @endcan
-                        </form> -->
-                        {{-- ── FORMULARIO PRINCIPAL (persona + apoderado) ── --}}
-                        <form id="form_traleg">
-                            @csrf
-                            {{-- ===== DATOS PERSONALES ===== --}}
-                            <div class="fg fg-2">
-                                <div class="e-field">
-                                    <label>CI</label>
-                                    <input class="e-input" name="ci" value="{{ $tramite->per_ci }}"
-                                        onchange="cargarDatosPersonales(this.value)" autocomplete="off">
-                                </div>
-                                <div class="e-field">
-                                    <label>Pasaporte</label>
-                                    <input class="e-input" name="pasaporte" value="{{ $tramite->per_pasaporte }}" autocomplete="off">
-                                </div>
-                                <div class="e-field">
-                                    <label>Apellidos</label>
-                                    <input class="e-input" required name="apellido" id="apellido" value="{{ $tramite->per_apellido }}" autocomplete="off">
-                                </div>
-                                <div class="e-field" style="padding-bottom:0;">
-                                    <label>Nombres</label>
-                                    <input class="e-input" required name="nombre" id="nombre" value="{{ $tramite->per_nombre }}" autocomplete="off">
+
+                            <div
+                                class="e-panel-body"
+                                style="padding:10px 14px;"
+                            >
+                                <ul class="e-notice-list">
+
+                                    @foreach($declaracionesJuradasDelDia as $dj)
+
+                                        <li class="e-notice-item">
+
+                                            <i class="fas fa-exclamation-triangle"></i>
+
+                                            <span>
+                                                Esta persona ya tiene una declaración jurada
+                                                en
+
+                                                <strong>
+                                                    {{
+                                                        $tiposTramiteDj[
+                                                            $dj->tra_tipo_tramite
+                                                        ] ?? 'Trámite'
+                                                    }}
+                                                </strong>
+
+                                                Nº
+
+                                                <strong>
+                                                    {{ $dj->tra_numero }}
+                                                </strong>
+
+                                                del
+
+                                                <strong>
+                                                    {{
+                                                        date(
+                                                            'd/m/Y',
+                                                            strtotime(
+                                                                $dj->tra_fecha_solicitud
+                                                            )
+                                                        )
+                                                    }}
+                                                </strong>.
+                                            </span>
+
+                                        </li>
+
+                                    @endforeach
+
+                                </ul>
+                            </div>
+                        </div>
+
+                    @endif
+
+
+                    @if(
+                        sizeof($ptaang) > 0
+                        || sizeof($supletorios) > 0
+                        || sizeof($titulos) > 0
+                    )
+
+                        <div
+                            class="e-panel"
+                            style="margin-top:10px;"
+                        >
+                            <div class="e-panel-head">
+                                <div class="e-panel-head-left">
+
+                                    <span
+                                        class="ph-bar"
+                                        style="background:var(--e-amber);"
+                                    ></span>
+
+                                    <span class="ph-title">
+                                        Registros previos
+                                    </span>
+
                                 </div>
                             </div>
-                                
-                            
 
-                            {{-- ===== APODERADO (con botón desplegable) ===== --}}
-                            @php
-                                $apoderadoHabilitado = (bool) config('apoderado.habilitado', true);
-                            @endphp
-                            @if($apoderadoHabilitado)
-                                <div class="e-panel" style="margin-top:10px;">
-                                    <div class="e-panel-head">
-                                        <div class="e-panel-head-left">
-                                            <span class="ph-bar slate"></span>
-                                            <span class="ph-title">Apoderado</span>
-                                        </div>
-                                        @if(!$apoderado)
-                                            @can('editar apoderado traleg - srv')
-                                                <button class="e-btn e-btn-sm e-btn-ghost" type="button"
-                                                        onclick="$('#eleg-apo-view').hide(300);$('#eleg-apo-edit').show(300);">
-                                                    <i class="fas fa-user-plus" style="font-size:10px;"></i> Registrar apoderado
-                                                </button>
-                                            @endcan
-                                        @endif
-                                    </div>
-                                    <div class="e-panel-body">
+                            <div
+                                class="e-panel-body"
+                                style="padding:10px 14px;"
+                            >
+                                <ul class="e-notice-list">
 
-                                        {{-- Vista de lectura (cuando ya hay apoderado o al cancelar) --}}
-                                        <div id="eleg-apo-view">
-                                            <div class="fg fg-2">
-                                                <div class="e-field">
-                                                    <label>CI apoderado</label>
-                                                    <div class="e-val">
-                                                        @if($apoderado) {{ $apoderado->apo_ci }} @else <span class="muted">Sin registro</span> @endif
-                                                    </div>
-                                                </div>
-                                                <div class="e-field">
-                                                    <label>Tipo</label>
-                                                    <div class="e-val muted">
-                                                        @if($tramite->tra_tipo_apoderado=='d') Decl. jurada
-                                                        @elseif($tramite->tra_tipo_apoderado=='p') Poder notariado
-                                                        @else —
-                                                        @endif
-                                                    </div>
-                                                </div>
-                                                <div class="e-field fg-span2" style="padding-bottom:0;">
-                                                    <label>Nombre apoderado</label>
-                                                    <div class="e-val">
-                                                        @if($apoderado) {{ $apoderado->apo_apellido . ' ' . $apoderado->apo_nombre }} @else <span class="muted">Sin registro</span> @endif
-                                                    </div>
-                                                </div>
+                                    {{-- Registros PTAANG --}}
+                                    @if(sizeof($ptaang) > 0)
+
+                                        @foreach($ptaang as $p)
+
+                                            <li class="e-notice-item">
+
+                                                <i class="fas fa-exclamation-triangle"></i>
+
+                                                <span>
+                                                    Ya tiene
+
+                                                    {{
+                                                        \App\Models\Funciones::tipo_ptaang(
+                                                            $p->dtra_ptaang
+                                                        )
+                                                    }}
+
+                                                    Nº
+
+                                                    <strong>
+                                                        {{
+                                                            $p->dtra_numero
+                                                            . '/'
+                                                            . $p->dtra_gestion
+                                                        }}
+                                                    </strong>
+
+                                                    por PTAG
+                                                </span>
+
+                                            </li>
+
+                                        @endforeach
+
+                                    @endif
+
+
+                                    {{-- Documentos supletorios --}}
+                                    @if(sizeof($supletorios) > 0)
+
+                                        @foreach($supletorios as $s)
+
+                                            <li class="e-notice-item">
+
+                                                <i class="fas fa-exclamation-triangle"></i>
+
+                                                <span>
+                                                    Ya tiene
+
+                                                    <strong>
+                                                        {{
+                                                            \App\Models\Funciones::
+                                                            tipoSupletorioDesdeReferencia(
+                                                                $s->tit_ref
+                                                            )
+                                                        }}
+                                                    </strong>
+
+                                                    @if(!empty($s->titulo_original))
+
+                                                        :
+                                                        {{
+                                                            $s->titulo_original
+                                                                ->tit_titulo
+                                                        }}
+
+                                                        — emitido el
+
+                                                        {{
+                                                            $s->titulo_original
+                                                                ->tit_fecha_emision
+                                                        }}
+
+                                                    @endif
+                                                </span>
+
+                                            </li>
+
+                                        @endforeach
+
+                                    @endif
+
+
+                                    {{-- Títulos --}}
+                                    @if(sizeof($titulos) > 0)
+
+                                        @foreach($titulos as $t)
+
+                                            <li class="e-notice-item">
+
+                                                <i class="fas fa-exclamation-triangle"></i>
+
+                                                <span>
+                                                    Ya tiene el
+
+                                                    <strong>
+                                                        {{
+                                                            $tiposTitulo[$t->tit_tipo]
+                                                            ?? strtoupper($t->tit_tipo)
+                                                        }}
+                                                    </strong>
+
+                                                    :
+                                                    {{ $t->tit_titulo }}
+
+                                                    — emitido el
+                                                    {{ $t->tit_fecha_emision }}
+                                                </span>
+
+                                            </li>
+
+                                        @endforeach
+
+                                    @endif
+
+                                </ul>
+                            </div>
+                        </div>
+
+                    @endif
+
+
+                    {{-- ===================================================== --}}
+                    {{-- 3. APODERADO                                         --}}
+                    {{-- ===================================================== --}}
+
+                    @if($apoderadoHabilitado)
+
+                        <div
+                            class="e-panel"
+                            style="margin-top:10px;"
+                        >
+                            <div class="e-panel-head">
+
+                                <div class="e-panel-head-left">
+                                    <span class="ph-bar slate"></span>
+                                    <span class="ph-title">Apoderado</span>
+                                </div>
+
+                                @if(!$tieneApoderado)
+
+                                    @can('editar apoderado traleg - srv')
+
+                                        <button
+                                            class="e-btn e-btn-sm e-btn-ghost"
+                                            type="button"
+                                            onclick="
+                                                $('#procesar_apoderado').val('1');
+                                                $('#eleg-apo-edit :input').prop(
+                                                    'disabled',
+                                                    false
+                                                );
+                                                $('#eleg-apo-view').hide(300);
+                                                $('#eleg-apo-edit').show(300);
+
+                                                setTimeout(function(){
+                                                    $('#ci_apoderado_edi').trigger(
+                                                        'focus'
+                                                    );
+                                                }, 320);
+                                            "
+                                        >
+                                            <i
+                                                class="fas fa-user-plus"
+                                                style="font-size:10px;"
+                                            ></i>
+
+                                            Registrar apoderado
+                                        </button>
+
+                                    @endcan
+
+                                @endif
+
+                            </div>
+
+                            <div class="e-panel-body">
+
+                                {{-- Vista del apoderado --}}
+                                <div id="eleg-apo-view">
+
+                                    <div class="fg fg-2">
+
+                                        <div class="e-field">
+                                            <label>CI apoderado</label>
+
+                                            <div class="e-val">
+
+                                                @if($tieneApoderado)
+
+                                                    {{ data_get($apoderado, 'apo_ci') }}
+
+                                                @else
+
+                                                    <span class="muted">
+                                                        Sin registro
+                                                    </span>
+
+                                                @endif
+
                                             </div>
                                         </div>
 
-                                        {{-- Formulario de edición de apoderado (dentro del mismo form_traleg) --}}
-                                        @can('editar apoderado traleg - srv')
-                                        <div id="eleg-apo-edit" style="display:none;">
-                                            @php
-                                                $apo_nombre = ''; $apo_apellido = ''; $apo_ci = '';
-                                                if($apoderado){ $apo_ci = $apoderado->apo_ci; $apo_apellido = $apoderado->apo_apellido; $apo_nombre = $apoderado->apo_nombre; }
-                                                $requiereBoletaDj = (bool) config('apoderado.requiere_boleta_dj', false);
-                                                $tipoApoderado = $tramite->tra_tipo_apoderado ?: '';
-                                                $mostrarBoleta = ($tipoApoderado === 'd' && $requiereBoletaDj);
-                                            @endphp
+                                        <div class="e-field">
+                                            <label>Tipo</label>
+
+                                            <div class="e-val muted">
+
+                                                @if($tipoApoderado === 'd')
+
+                                                    Decl. jurada
+
+                                                @elseif($tipoApoderado === 'p')
+
+                                                    Poder notariado
+
+                                                @else
+
+                                                    —
+
+                                                @endif
+
+                                            </div>
+                                        </div>
+
+                                        <div
+                                            class="e-field fg-span2"
+                                            style="padding-bottom:0;"
+                                        >
+                                            <label>Nombre apoderado</label>
+
+                                            <div class="e-val">
+
+                                                @if($tieneApoderado)
+
+                                                    {{
+                                                        data_get(
+                                                            $apoderado,
+                                                            'apo_apellido'
+                                                        )
+                                                    }}
+
+                                                    {{
+                                                        data_get(
+                                                            $apoderado,
+                                                            'apo_nombre'
+                                                        )
+                                                    }}
+
+                                                @else
+
+                                                    <span class="muted">
+                                                        Sin registro
+                                                    </span>
+
+                                                @endif
+
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+
+                                {{--
+                                    El formulario de registro solamente existe cuando
+                                    todavía no hay un apoderado asociado.
+                                --}}
+                                @if(!$tieneApoderado)
+
+                                    @can('editar apoderado traleg - srv')
+
+                                        <div
+                                            id="eleg-apo-edit"
+                                            style="display:none;"
+                                        >
+
                                             <div class="fg fg-2">
+
                                                 <div class="e-field fg-span2">
                                                     <label>CI apoderado</label>
-                                                    <input class="e-input" name="ci_apoderado" id="ci_apoderado_edi"
-                                                        value="{{ $apo_ci }}" oninput="verificarBoletaApoderadoEdi();" autocomplete="off">
+
+                                                    <input
+                                                        class="e-input"
+                                                        name="ci_apoderado"
+                                                        id="ci_apoderado_edi"
+                                                        value=""
+                                                        oninput="
+                                                            verificarBoletaApoderadoEdi();
+                                                        "
+                                                        autocomplete="off"
+                                                        disabled
+                                                    >
                                                 </div>
-                                                <div class="e-field fg-span2" id="contenedor_boleta_apoderado_edi"
-                                                    style="{{ $mostrarBoleta ? '' : 'display:none;' }}">
+
+
+                                                <div
+                                                    class="e-field fg-span2"
+                                                    id="contenedor_boleta_apoderado_edi"
+                                                    style="{{
+                                                        $mostrarBoleta
+                                                            ? ''
+                                                            : 'display:none;'
+                                                    }}"
+                                                >
                                                     <label>N° control boleta</label>
-                                                    <input class="e-input" name="control_boleta" id="control_boleta_apoderado_edi"
-                                                        oninput="verificarBoletaApoderadoEdi()" autocomplete="off" placeholder="Ingrese número de control">
+
+                                                    <input
+                                                        class="e-input"
+                                                        name="control_boleta"
+                                                        id="control_boleta_apoderado_edi"
+                                                        oninput="
+                                                            verificarBoletaApoderadoEdi()
+                                                        "
+                                                        autocomplete="off"
+                                                        placeholder="Ingrese número de control"
+                                                        disabled
+                                                    >
+
                                                     <div style="margin-top:6px;">
-                                                        <span id="estado_pago_apoderado_edi" class="badge badge-secondary">Sin validar</span>
+
+                                                        <span
+                                                            id="estado_pago_apoderado_edi"
+                                                            class="badge badge-secondary"
+                                                        >
+                                                            Sin validar
+                                                        </span>
+
                                                     </div>
-                                                    <input type="hidden" name="control_boleta_valido" id="control_boleta_valido_edi"
-                                                        value="{{ $mostrarBoleta ? '0' : '1' }}">
-                                                    <input type="hidden" name="monto_boleta" id="monto_boleta_edi" value="0">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="control_boleta_valido"
+                                                        id="control_boleta_valido_edi"
+                                                        value="{{
+                                                            $mostrarBoleta ? '0' : '1'
+                                                        }}"
+                                                        disabled
+                                                    >
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="monto_boleta"
+                                                        id="monto_boleta_edi"
+                                                        value="0"
+                                                        disabled
+                                                    >
                                                 </div>
+
+
                                                 <div class="e-field">
                                                     <label>Apellidos</label>
-                                                    <input class="e-input" required name="apellido_apoderado" id="apellido_apoderado"
-                                                        value="{{ $apo_apellido }}" autocomplete="off"
-                                                        {{ $mostrarBoleta ? 'readonly' : '' }}>
+
+                                                    <input
+                                                        class="e-input"
+                                                        name="apellido_apoderado"
+                                                        id="apellido_apoderado"
+                                                        value=""
+                                                        autocomplete="off"
+                                                        disabled
+                                                    >
                                                 </div>
+
+
                                                 <div class="e-field">
                                                     <label>Nombres</label>
-                                                    <input class="e-input" required name="nombre_apoderado" id="nombre_apoderado"
-                                                        value="{{ $apo_nombre }}" autocomplete="off"
-                                                        {{ $mostrarBoleta ? 'readonly' : '' }}>
+
+                                                    <input
+                                                        class="e-input"
+                                                        name="nombre_apoderado"
+                                                        id="nombre_apoderado"
+                                                        value=""
+                                                        autocomplete="off"
+                                                        disabled
+                                                    >
                                                 </div>
-                                                <div class="e-field fg-span2" style="padding-bottom:0;">
+
+
+                                                <div
+                                                    class="e-field fg-span2"
+                                                    style="padding-bottom:0;"
+                                                >
                                                     <label>Tipo de apoderado</label>
+
                                                     <div class="e-radio-row">
+
                                                         <label class="e-radio-opt">
-                                                            <input type="radio" name="tipo" value="d"
-                                                                {{ $tipoApoderado == 'd' ? 'checked' : '' }}
-                                                                onchange="actualizarModoApoderadoTraleg()">
-                                                            <span>Declaración jurada</span>
+
+                                                            <input
+                                                                type="radio"
+                                                                name="tipo"
+                                                                value="d"
+                                                                onchange="
+                                                                    actualizarModoApoderadoTraleg()
+                                                                "
+                                                                disabled
+                                                            >
+
+                                                            <span>
+                                                                Declaración jurada
+                                                            </span>
+
                                                         </label>
+
+
                                                         <label class="e-radio-opt">
-                                                            <input type="radio" name="tipo" value="p"
-                                                                {{ $tipoApoderado == 'p' ? 'checked' : '' }}
-                                                                onchange="actualizarModoApoderadoTraleg()">
-                                                            <span>Poder notariado</span>
+
+                                                            <input
+                                                                type="radio"
+                                                                name="tipo"
+                                                                value="p"
+                                                                onchange="
+                                                                    actualizarModoApoderadoTraleg()
+                                                                "
+                                                                disabled
+                                                            >
+
+                                                            <span>
+                                                                Poder notariado
+                                                            </span>
+
                                                         </label>
+
                                                     </div>
                                                 </div>
+
                                             </div>
-                                            {{-- Botón cancelar (solo oculta el editor, no envía) --}}
-                                            <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
-                                                <button class="e-btn e-btn-ghost e-btn-sm" type="button"
-                                                        onclick="$('#eleg-apo-edit').hide(300);$('#eleg-apo-view').show(300);">
+
+
+                                            <div
+                                                style="
+                                                    display:flex;
+                                                    gap:8px;
+                                                    margin-top:12px;
+                                                    justify-content:flex-end;
+                                                "
+                                            >
+
+                                                <button
+                                                    class="e-btn e-btn-ghost e-btn-sm"
+                                                    type="button"
+                                                    onclick="
+                                                        $('#procesar_apoderado').val('0');
+
+                                                        $('#ci_apoderado_edi').val('');
+
+                                                        $('#apellido_apoderado').val('');
+
+                                                        $('#nombre_apoderado').val('');
+
+                                                        $('#control_boleta_apoderado_edi')
+                                                            .val('');
+
+                                                        $('#control_boleta_valido_edi')
+                                                            .val('1');
+
+                                                        $('#monto_boleta_edi').val('0');
+
+                                                        $('#estado_pago_apoderado_edi')
+                                                            .removeClass(
+                                                                'badge-success badge-danger'
+                                                            )
+                                                            .addClass(
+                                                                'badge-secondary'
+                                                            )
+                                                            .text('Sin validar');
+
+                                                        $('#form_traleg input[name=tipo]')
+                                                            .prop('checked', false);
+
+                                                        $('#contenedor_boleta_apoderado_edi')
+                                                            .hide();
+
+                                                        $('#apellido_apoderado')
+                                                            .prop('readonly', false);
+
+                                                        $('#nombre_apoderado')
+                                                            .prop('readonly', false);
+
+                                                        $('#eleg-apo-edit :input')
+                                                            .prop('disabled', true);
+
+                                                        $('#eleg-apo-edit').hide(300);
+
+                                                        $('#eleg-apo-view').show(300);
+                                                    "
+                                                >
                                                     Cancelar
                                                 </button>
+
                                             </div>
+
                                         </div>
-                                        @endcan
 
-                                    </div>
-                                </div>
-                            @endif
+                                    @endcan
 
-                            {{-- ===== HIDDEN FIELDS ===== --}}
-                            <input type="hidden" name="ctra" value="{{ $tramite->cod_tra }}">
-                            <input type="hidden" name="ip" value="{{ $tramite->id_per }}">
+                                @endif
 
-                            {{-- ===== BOTÓN ÚNICO GUARDAR ===== --}}
-                            @can('editar datos traleg - srv')
-                                <button type="button" class="e-btn e-btn-primary e-btn-full"
-                                        onclick="guardarDatos('{{ url('g_traleg_completo') }}','panel_traleg','form_traleg', this)">
-                                    <i class="fas fa-save" style="font-size:11px;"></i> Guardar trámite
-                                </button>
-                            @endcan
-
-                        </form>
-                    </div>
-                </div>
-
-                @else
-                {{-- MODO LECTURA --}}
-                <div class="e-panel">
-                    <div class="e-panel-head">
-                        <div class="e-panel-head-left">
-                            <span class="ph-bar"></span>
-                            <span class="ph-title">Datos personales</span>
-                        </div>
-                    </div>
-                    <div class="e-panel-body">
-                        <form id="form_traleg" style="display:none;">
-                            <input type="hidden" name="ci" value="{{ $tramite->per_ci }}">
-                            <input type="hidden" name="ip" value="{{ $tramite->id_per }}">
-                        </form>
-                        <div class="fg fg-2">
-                            <div class="e-field">
-                                <label>CI</label>
-                                <div class="e-val">{{ $tramite->per_ci }}</div>
-                            </div>
-                            <div class="e-field">
-                                <label>Pasaporte</label>
-                                <div class="e-val muted">{{ $tramite->per_pasaporte ?: '—' }}</div>
-                            </div>
-                            <div class="e-field fg-span2" style="padding-bottom:0;">
-                                <label>Nombre completo</label>
-                                <div class="e-val">{{ $tramite->per_nombre . ' ' . $tramite->per_apellido }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                @endif
-
-                {{-- ── Declaración jurada / Notices ptaang / supletorios / títulos ── --}}
-                @if(isset($declaracionesJuradasDelDia) && $declaracionesJuradasDelDia->isNotEmpty())
-                    @php
-                        $tiposTramiteDj = [
-                            'L' => 'Legalización',
-                            'C' => 'Certificación',
-                            'F' => 'Confrontación',
-                            'B' => 'Búsqueda',
-                            'E' => 'Consejo',
-                        ];
-                    @endphp
-
-                    <div class="e-panel" style="margin-top:10px;">
-                        <div class="e-panel-head">
-                            <div class="e-panel-head-left">
-                                <span class="ph-bar" style="background:var(--e-amber);"></span>
-                                <span class="ph-title">Declaración jurada registrada hoy</span>
                             </div>
                         </div>
 
-                        <div class="e-panel-body" style="padding:10px 14px;">
-                            <ul class="e-notice-list">
-                                @foreach($declaracionesJuradasDelDia as $dj)
-                                    <li class="e-notice-item">
-                                        <i class="fas fa-exclamation-triangle"></i>
+                    @endif
 
-                                        <span>
-                                            Esta persona ya tiene una declaración jurada en
-                                            <strong>
-                                                {{ $tiposTramiteDj[$dj->tra_tipo_tramite] ?? 'Trámite' }}
-                                            </strong>
 
-                                            Nº <strong>{{ $dj->tra_numero }}</strong>
+                    {{-- ===================================================== --}}
+                    {{-- CAMPOS OCULTOS GENERALES                              --}}
+                    {{-- ===================================================== --}}
 
-                                            del
-                                            <strong>
-                                                {{ date('d/m/Y', strtotime($dj->tra_fecha_solicitud)) }}
-                                            </strong>.
-                                        </span>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    </div>
-                @endif
-                @if(sizeof($ptaang) > 0 || sizeof($supletorios) > 0 || sizeof($titulos) > 0)
-                <div class="e-panel" style="margin-top:10px;">
-                    <div class="e-panel-head">
-                        <div class="e-panel-head-left">
-                            <span class="ph-bar" style="background:var(--e-amber);"></span>
-                            <span class="ph-title">Registros previos</span>
-                        </div>
-                    </div>
-                    <div class="e-panel-body" style="padding:10px 14px;">
-                        <ul class="e-notice-list">
-                            @if(sizeof($ptaang) > 0)
-                                @foreach($ptaang as $p)
-                                    <li class="e-notice-item">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                        <span>Ya tiene
-                                            @php echo \App\Models\Funciones::tipo_ptaang($p->dtra_ptaang)." Nº "; @endphp
-                                            <strong>{{ $p->dtra_numero . "/" . $p->dtra_gestion }}</strong> por PTAG
-                                        </span>
-                                    </li>
-                                @endforeach
-                            @endif
-                            @if(sizeof($supletorios) > 0)
-                                @foreach($supletorios as $s)
-                                    <li class="e-notice-item">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                        <span>Ya tiene
-                                            <strong>
-                                                {{ \App\Models\Funciones::tipoSupletorioDesdeReferencia($s->tit_ref) }}
-                                            </strong>
-                                            @if(!empty($s->titulo_original))
-                                                : {{ $s->titulo_original->tit_titulo }}
-                                                — emitido el {{ $s->titulo_original->tit_fecha_emision }}
-                                            @endif
-                                        </span>
-                                    </li>
-                                @endforeach
-                            @endif
-                            @if(sizeof($titulos) > 0)
-                                @php
-                                    $tipos = [
-                                        'da' => 'Diploma Académico',
-                                        'tp' => 'Título Profesional',
-                                        'di' => 'Diplomado',
-                                        'db' => 'Diploma de Bachiller',
-                                        'ca' => 'Certificado Académico'
-                                    ];
-                                @endphp
-                                @foreach($titulos as $t)
-                                    <li class="e-notice-item">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                        <span>Ya tiene el <strong>{{ $tipos[$t->tit_tipo] ?? strtoupper($t->tit_tipo) }}</strong>:
-                                            {{ $t->tit_titulo }} — emitido el {{ $t->tit_fecha_emision }}
-                                        </span>
-                                    </li>
-                                @endforeach
-                            @endif
-                        </ul>
-                    </div>
-                </div>
-                @endif
+                    <input
+                        type="hidden"
+                        name="ctra"
+                        value="{{ $tramite->cod_tra }}"
+                    >
 
-                <!-- @php
-                    $apoderadoHabilitado = (bool) config('apoderado.habilitado', true);
-                @endphp
-                @if($apoderadoHabilitado)
-                    {{-- ── Apoderado ── --}}
-                    <div class="e-panel" style="margin-top:10px;">
-                        <div class="e-panel-head">
-                            <div class="e-panel-head-left">
-                                <span class="ph-bar slate"></span>
-                                <span class="ph-title">Apoderado</span>
-                            </div>
-                            @if(!$apoderado)
-                                @can('editar apoderado traleg - srv')
-                                    <button class="e-btn e-btn-sm e-btn-ghost"
-                                            onclick="$('#eleg-apo-edit').show(300);$('#eleg-apo-view').hide(300);">
-                                        <i class="fas fa-user-plus" style="font-size:10px;"></i> Registrar apoderado
-                                    </button>
-                                @endcan
-                            @endif
-                        </div>
-                        <div class="e-panel-body">
-                            {{-- Vista lectura --}}
-                            <div id="eleg-apo-view">
-                                <div class="fg fg-2">
-                                    <div class="e-field">
-                                        <label>CI apoderado</label>
-                                        <div class="e-val">
-                                            @if($apoderado) {{ $apoderado['apo_ci'] }} @else <span class="muted">Sin registro</span> @endif
-                                        </div>
-                                    </div>
-                                    <div class="e-field">
-                                        <label>Tipo</label>
-                                        <div class="e-val muted">
-                                            @if($tramite->tra_tipo_apoderado=='d') Decl. jurada
-                                            @elseif($tramite->tra_tipo_apoderado=='p') Poder notariado
-                                            @else —
-                                            @endif
-                                        </div>
-                                    </div>
-                                    <div class="e-field fg-span2" style="padding-bottom:0;">
-                                        <label>Nombre apoderado</label>
-                                        <div class="e-val">
-                                            @if($apoderado) {{ $apoderado['apo_apellido'] . ' ' . $apoderado['apo_nombre'] }} @else <span class="muted">Sin registro</span> @endif
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                    <input
+                        type="hidden"
+                        name="ip"
+                        value="{{ $tramite->id_per }}"
+                    >
 
-                            {{-- Formulario edición apoderado --}}
-                            @can('editar apoderado traleg - srv')
-                            <div id="eleg-apo-edit" style="display:none;">
-                                <form id="form_apoderado_edi">
-                                    @csrf
-                                    @php
-                                        $apo_nombre = ''; $apo_apellido = ''; $apo_ci = '';
-                                        if($apoderado){ $apo_ci=$apoderado->apo_ci; $apo_apellido=$apoderado->apo_apellido; $apo_nombre=$apoderado->apo_nombre; }
-                                        $requiereBoletaDj = (bool) config('apoderado.requiere_boleta_dj', false);
-                                        $tipoApoderado = $tramite->tra_tipo_apoderado ?: 'd';
-                                        $mostrarBoleta = ($tipoApoderado === 'd' && $requiereBoletaDj);
-                                    @endphp
-                                    <div class="fg fg-2">
-                                        <div class="e-field fg-span2">
-                                            <label>CI apoderado</label>
-                                            <input class="e-input" name="ci_apoderado" id="ci_apoderado_edi" value="{{ $apo_ci }}"
-                                                   oninput="verificarBoletaApoderadoEdi();" autocomplete="off">
-                                        </div>
-                                        <div class="e-field fg-span2" id="contenedor_boleta_apoderado_edi" style="{{ $mostrarBoleta ? '' : 'display:none;' }}">
-                                            <label>N° control boleta</label>
-                                            <input class="e-input" name="control_boleta" id="control_boleta_apoderado_edi"
-                                                   oninput="verificarBoletaApoderadoEdi()" autocomplete="off" placeholder="Ingrese número de control">
-                                            <div style="margin-top:6px;"><span id="estado_pago_apoderado_edi" class="badge badge-secondary">Sin validar</span></div>
-                                            <input type="hidden" name="control_boleta_valido" id="control_boleta_valido_edi" value="{{ $mostrarBoleta ? '0' : '1' }}">
-                                            <input type="hidden" name="monto_boleta" id="monto_boleta_edi" value="0">
-                                        </div>
-                                        <div class="e-field">
-                                            <label>Apellidos</label>
-                                            <input class="e-input" required name="apellido_apoderado" id="apellido_apoderado"
-                                                   value="{{ $apo_apellido }}" autocomplete="off" {{ $mostrarBoleta ? 'readonly' : '' }}>
-                                        </div>
-                                        <div class="e-field">
-                                            <label>Nombres</label>
-                                            <input class="e-input" required name="nombre_apoderado" id="nombre_apoderado"
-                                                   value="{{ $apo_nombre }}" autocomplete="off" {{ $mostrarBoleta ? 'readonly' : '' }}>
-                                        </div>
-                                        <div class="e-field fg-span2" style="padding-bottom:0;">
-                                            <label>Tipo de apoderado</label>
-                                            <div class="e-radio-row">
-                                                <label class="e-radio-opt">
-                                                    <input type="radio" name="tipo" value="d"
-                                                        {{ $tramite->tra_tipo_apoderado=='d' ? 'checked' : '' }} onchange="actualizarModoApoderadoTraleg()">
-                                                    <span>Declaración jurada</span>
-                                                </label>
-                                                <label class="e-radio-opt">
-                                                    <input type="radio" name="tipo" value="p"
-                                                        {{ $tramite->tra_tipo_apoderado=='p' ? 'checked' : '' }} onchange="actualizarModoApoderadoTraleg()">
-                                                    <span>Poder notariado</span>
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <input type="hidden" name="ctra" value="{{ $tramite->cod_tra }}">
-                                </form>
-                                <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
-                                    <button class="e-btn e-btn-ghost e-btn-sm"
-                                            onclick="$('#eleg-apo-edit').hide(300);$('#eleg-apo-view').show(300);">
-                                        Cancelar
-                                    </button>
-                                    <button class="e-btn e-btn-primary e-btn-sm"
-                                            onclick="enviar('form_apoderado_edi','{{ url('guardar apoderado') }}','panel_traleg');">
-                                        <i class="fas fa-save" style="font-size:10px;"></i> Guardar
-                                    </button>
-                                </div>
-                            </div>
-                            @endcan
-                        </div>
-                    </div>
-                @endif  -->
+                    <input
+                        type="hidden"
+                        name="procesar_apoderado"
+                        id="procesar_apoderado"
+                        value="0"
+                    >
 
-            </div>{{-- /col left --}}
+
+                    {{-- ===================================================== --}}
+                    {{-- 4. BOTÓN ÚNICO DE GUARDADO                            --}}
+                    {{-- ===================================================== --}}
+
+                    @can('editar datos traleg - srv')
+
+                        @if($modoEdicionPersona || !$tieneApoderado)
+
+                            <button
+                                type="button"
+                                class="e-btn e-btn-primary e-btn-full"
+                                onclick="
+                                    guardarDatos(
+                                        '{{ url('g_traleg_completo') }}',
+                                        'panel_traleg',
+                                        'form_traleg',
+                                        this
+                                    )
+                                "
+                            >
+                                <i
+                                    class="fas fa-save"
+                                    style="font-size:11px;"
+                                ></i>
+
+                                Guardar trámite
+                            </button>
+
+                        @endif
+
+                    @endcan
+
+                </form>
+
+            </div>
 
             {{-- ─── COLUMNA DERECHA — documentos + formulario ─── --}}
             <div style="min-width:0;display:flex;flex-direction:column;gap:14px;">
@@ -1163,7 +1568,7 @@
                     </div>
                     <div id="divNueTram" style="display:none;">
                         <div class="e-add-body">
-                            <div id="error_datos" style="display:none;" class="e-alert danger" style="margin-bottom:10px;">
+                            <div id="error_datos" style="display:none;margin-bottom:10px;" class="e-alert danger">
                                 <i class="fas fa-exclamation-circle" style="flex-shrink:0;"></i>
                                 <span id="error_datos_span"></span>
                             </div>
@@ -1284,7 +1689,7 @@
                     @if($puedeAgregarDoc)
                     <div id="divNueTram" style="display:none;">
                         <div class="e-add-body">
-                            <div id="error_datos" style="display:none;" class="e-alert danger" style="margin-bottom:10px;">
+                            <div id="error_datos" style="display:none;margin-bottom:10px;" class="e-alert danger">
                                 <i class="fas fa-exclamation-circle" style="flex-shrink:0;"></i>
                                 <span id="error_datos_span"></span>
                             </div>
@@ -1671,7 +2076,7 @@
     var verificarBoletaApoderadoEdiXHR = null;
 
     function actualizarModoApoderadoTraleg() {
-        var tipo = $('#form_apoderado_edi input[name="tipo"]:checked').val() || 'd';
+        var tipo = $('#form_traleg input[name="tipo"]:checked').val() || '';
         if (tipo === 'p' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
             $('#contenedor_boleta_apoderado_edi').hide();
             $('#control_boleta_apoderado_edi').val('');
@@ -1702,7 +2107,7 @@
         if(verificarBoletaApoderadoEdiTimer) clearTimeout(verificarBoletaApoderadoEdiTimer);
 
         verificarBoletaApoderadoEdiTimer = setTimeout(function(){
-            var tipo = $('#form_apoderado_edi input[name="tipo"]:checked').val() || 'd';
+            var tipo = $('#form_traleg input[name="tipo"]:checked').val() || '';
             if (tipo === 'p' || (tipo === 'd' && !window.GLOB_REQUIERE_BOLETA_DJ)) {
                 var ci = ($('#ci_apoderado_edi').val()||'').toString().trim();
                 if(ci !== '') {
