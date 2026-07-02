@@ -51,7 +51,7 @@
 
                                         <div class="input-group">
                                             <input type="text" class="form-control form-control-sm border-0"
-                                                   required name="serie" value="{{$titulo[0]->tit_nro_serie ?? ''}}" id="e_nro_serie"/>
+                                                   name="serie" value="{{$titulo[0]->tit_nro_serie ?? ''}}" id="e_nro_serie"/>
                                         </div>
 
                                     </td>

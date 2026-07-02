@@ -200,6 +200,9 @@ class ApostillaController extends Controller
 
                     if ($tramiteConApoderado) {
                         $apoderado = Apoderado::find($tramiteConApoderado->cod_apo);
+                        if (empty($tramite_apostilla->apos_apoderado)) {
+                            $tramite_apostilla->apos_apoderado = $tramiteConApoderado->tra_tipo_apoderado;
+                        }
                     }
                 }
                 \Log::info('DEBUG NUEVA APOSTILLA', [
@@ -882,8 +885,25 @@ class ApostillaController extends Controller
             ->where('cod_apos','=',$tramite_apostilla->cod_apos)->orderBy('lis_nombre')
             ->where('dapo_hab','=','t')->orderBy('lis_nombre')->get();
 
-        if($tramite_apostilla->cod_apos!=''){
+        if($tramite_apostilla->cod_apo){
             $apoderado=Apoderado::find($tramite_apostilla->cod_apo);
+        }
+        if (!$apoderado && $tramite_apostilla->id_per) {
+            $tramiteConApoderado = DB::table('tramitas')
+                ->where('id_per', $tramite_apostilla->id_per)
+                ->whereNotNull('cod_apo')
+                ->where('cod_apo', '>', 0)
+                ->whereDate('tra_fecha_solicitud', date('Y-m-d'))
+                ->orderByDesc('tra_fecha_solicitud')
+                ->first();
+
+            if ($tramiteConApoderado) {
+                $apoderado = Apoderado::find($tramiteConApoderado->cod_apo);
+
+                if (empty($tramite_apostilla->apos_apoderado)) {
+                    $tramite_apostilla->apos_apoderado = $tramiteConApoderado->tra_tipo_apoderado;
+                }
+            }
         }
 
         $pdf = app('dompdf.wrapper');

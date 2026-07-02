@@ -82,13 +82,21 @@
             <img id="imagen" src="../public/img/icon//logoArchivosMarcaAgua.jpg" style="width: 320px; height: 360px"/>
         </div>
         <hr/>
+        @php
+            $sufijoApoderado = '';
 
+            if (($tramite_apostilla->apos_apoderado ?? '') === 'd') {
+                $sufijoApoderado = '-DJ';
+            } elseif (($tramite_apostilla->apos_apoderado ?? '') === 'p') {
+                $sufijoApoderado = '-PN';
+            }
+        @endphp
         <table>
             <tr>
                 <td>
                     <table style="text-align: left;" cellspacing="0" >
                         <tr><td style="border-bottom: #888888 solid 1px;font-weight: bold; width: 30%">Número de Trámite:</td>
-                            <td style="border-bottom: #888888 solid 1px;">UAD{{$tramite_apostilla->apos_numero }}</td>
+                            <td style="border-bottom: #888888 solid 1px;">UAD{{$tramite_apostilla->apos_numero }}{{ $sufijoApoderado }}</td>
                         </tr>
                         <tr>
                             <td style="border-bottom: #888888 solid 1px;font-weight: bold; width: 30%">Cedula de Identidad:</td>
@@ -113,7 +121,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <td style="border-bottom: #888888 solid 1px;font-weight: bold; width: 30%" valign="top">Cantidad de documetos: </td>
+                            <td style="border-bottom: #888888 solid 1px;font-weight: bold; width: 30%" valign="top">Cantidad de documentos: </td>
                             <td style="border-bottom: #888888 solid 1px;">
                                 @if($i>0)
                                     @if($i==1)

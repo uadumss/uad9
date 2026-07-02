@@ -195,6 +195,13 @@ class TituloController extends Controller
         return $prefijo . '-' . $serie;
     }
     public function GuardarTitulo(TituloRequest $form){
+        \Log::info('=== EDITAR TITULO: DATOS RECIBIDOS ===', [
+            'ctit'              => $form->input('ctit'),
+            'nota_marginal'     => $form->input('nota_marginal'),
+            'has_nota_marginal' => $form->has('nota_marginal'),
+            'resolucion'        => $form->input('resolucion'),
+            'fecha_resolucion'  => $form->input('fecha_resolucion'),
+        ]);
         $tomo=Tomo::find($form['ct']);
         if($tomo->tom_cerrado!='t'){
             $tipo=$form['tipo'];
@@ -404,6 +411,13 @@ class TituloController extends Controller
                         }
                     }
                     $titulo->save();
+                    $titulo->refresh();
+                    \Log::info('=== EDITAR TITULO: DATOS GUARDADOS ===', [
+                        'cod_tit'           => $titulo->cod_tit,
+                        'nota_marginal'     => $titulo->nota_marginal,
+                        'tit_resolucion'    => $titulo->tit_resolucion,
+                        'tit_fecha_resolucion' => $titulo->tit_fecha_resolucion,
+                    ]);
                     $nuevo=$titulo;
                     $persona=Persona::find($titulo->id_per);
                     $antiguo=(object) array_merge($antiguo,$persona->toArray(),$archivoEliminado);

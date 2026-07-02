@@ -180,7 +180,7 @@ class TramiteLegalizacionController extends Controller
             ->where('id_per', $tramite->id_per)
             ->whereNotNull('tit_titulo')      // evita NULL
             ->where('tit_titulo', '<>', '')   // evita vacío ""
-            ->select('tit_nro_titulo','tit_titulo','tit_tipo','tit_fecha_emision')
+            ->select('tit_nro_titulo','tit_titulo','tit_tipo','tit_fecha_emision','nota_marginal')
             ->get();
 
             // Obtener carreras de la persona (vía diplomas académicos uniendo con títulos para el id_per)

@@ -851,7 +851,9 @@
                                                             $s->titulo_original
                                                                 ->tit_fecha_emision
                                                         }}
-
+                                                        @if(($t->nota_marginal ?? 'f') == 't')
+                                                            <strong class="text-danger">(con N.M.)</strong>
+                                                        @endif
                                                     @endif
                                                 </span>
 
@@ -886,6 +888,9 @@
 
                                                     — emitido el
                                                     {{ $t->tit_fecha_emision }}
+                                                    @if(($t->nota_marginal ?? 'f') == 't')
+                                                        <strong class="text-danger">(con N.M.)</strong>
+                                                    @endif
                                                 </span>
 
                                             </li>
