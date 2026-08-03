@@ -257,6 +257,11 @@
     </div>
     <!--===========================END ==============================-->
     <script>
+        window.permisos = {
+        forzarDocleg: @json(Auth::user()->can('forzar creacion docleg - srv'))
+        };
+    </script>
+    <script>
         function guardarPermisoObjeto(formulario, url){
             $.ajax({
                 type: 'POST',

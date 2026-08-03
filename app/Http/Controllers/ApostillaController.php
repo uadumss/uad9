@@ -410,12 +410,12 @@ class ApostillaController extends Controller
     }
     public function g_agregar_tramite_apostilla(Request $form){
         /*
-         * Estado del tramite [apos_estado]
-         * 0 -> Creado
-         * 1 -> Registrado
-         * 2 -> Firmado
-         * 3 -> Entregado
-         */
+        * Estado del tramite [apos_estado]
+        * 0 -> Creado
+        * 1 -> Registrado
+        * 2 -> Firmado
+        * 3 -> Entregado
+        */
         $form->validate([
             'cl'=>'nullable|integer',
             'ca'=>'required',
@@ -424,6 +424,7 @@ class ApostillaController extends Controller
             'numero'=>'nullable|digits_between:1,20',
             'gestion'=>'nullable|digits:4',
         ]);
+
         $codApos=(string)$form['ca'];
         if(!Str::isUuid($codApos)){
             return $this->responderAgregarTramiteApostilla($form,false,'Debe guardar primero el trámite de apostilla antes de agregar documentos.',$codApos);
@@ -463,6 +464,25 @@ class ApostillaController extends Controller
             return $this->responderAgregarTramiteApostilla($form,false,'No se encontró el tipo de trámite seleccionado.',$codApos);
         }
 
+        // 🆕 Determinar si el trámite requiere validación (tiene lis_tipo definido)
+        $tipoDocumento = trim((string)($apostilla->lis_tipo ?? ''));
+
+        $requiereValidacion = !in_array($tipoDocumento, ['', '0'], true);
+
+        // 🆕 Validación condicional: si requiere validación, numero y gestion son obligatorios
+        if ($requiereValidacion) {
+            $form->validate([
+                'numero' => 'required|digits_between:1,20',
+                'gestion' => 'required|digits:4',
+            ]);
+        } else {
+            // Si no requiere validación, los campos son opcionales pero si vienen los validamos
+            $form->validate([
+                'numero' => 'nullable|digits_between:1,20',
+                'gestion' => 'nullable|digits:4',
+            ]);
+        }
+
         $controlIngresado=trim((string)$form['nro_control']);
         if($controlIngresado===''){
             return $this->responderAgregarTramiteApostilla($form,false,'Debe ingresar el número de control del pago.',$codApos);
@@ -497,11 +517,14 @@ class ApostillaController extends Controller
                 'dapo_numero'=>$numero,
             ]);
 
-            if(isset($form['numero'])){
-                $documento->dapo_numero_documento=$form['numero'];
-            }
-            if(isset($form['gestion'])){
-                $documento->dapo_gestion_documento=$form['gestion'];
+            // 🆕 Asignar numero y gestion según requiera validación
+            if ($requiereValidacion) {
+                $documento->dapo_numero_documento = trim((string)$form['numero']);
+                $documento->dapo_gestion_documento = trim((string)$form['gestion']);
+            } else {
+                // Si no requiere validación, forzar NULL
+                $documento->dapo_numero_documento = null;
+                $documento->dapo_gestion_documento = null;
             }
 
             $documento->dapo_valorado_preimpreso=$controlIngresado;
@@ -513,16 +536,35 @@ class ApostillaController extends Controller
 
             $numeroDocumento=trim((string)($form['numero'] ?? ''));
             $gestionDocumento=trim((string)($form['gestion'] ?? ''));
-            $resultadoSitra=$this->resolverEstadoSitraApostilla(
-                (int)$tramite_apostilla->id_per,
-                (string)$persona->per_ci,
-                trim((string)(($persona->per_apellido ?? '').' '.($persona->per_nombre ?? ''))),
-                $numeroDocumento,
-                $gestionDocumento,
-                $buscarEnSitra
-            );
 
-            $documento->dapo_verificacion_sitra=$resultadoSitra['estado'];
+            // 🆕 Solo ejecutar validación SITRA si el trámite requiere validación
+            if ($requiereValidacion) {
+                $resultadoSitra=$this->resolverEstadoSitraApostilla(
+                    (int)$tramite_apostilla->id_per,
+                    (string)$persona->per_ci,
+                    trim((string)(($persona->per_apellido ?? '').' '.($persona->per_nombre ?? ''))),
+                    $numeroDocumento,
+                    $gestionDocumento,
+                    $buscarEnSitra
+                );
+                // ✅ Validar estado SITRA
+                if ($resultadoSitra['estado'] !== '0') {
+                    // Deshacer cualquier cambio previo y retornar error
+                    $errorMsg = 'El año de gestión no coincide con el documento en SITRA.';
+                    if ($resultadoSitra['estado'] === '2') {
+                        $errorMsg = 'No se encontró el documento en SITRA/SID.';
+                    } elseif ($resultadoSitra['estado'] === '1') {
+                        $errorMsg = 'El año de gestión no coincide con el documento en SITRA.';
+                    }
+                    return $this->responderAgregarTramiteApostilla($form, false, $errorMsg, $codApos);
+                }
+                
+                // Solo si estado == '0', guardamos el estado
+                $documento->dapo_verificacion_sitra = $resultadoSitra['estado'];
+            } else {
+                // No requiere validación: guardamos NULL
+                $documento->dapo_verificacion_sitra=null;
+            }
             $documento->save();
 
             $errorUso='';
@@ -648,26 +690,20 @@ class ApostillaController extends Controller
 
     private function resolverEstadoSitraApostilla(int $idPer, string $ci, string $nombreCompleto, string $numero, string $gestion, string $buscarEn): array
     {
-        $buscarEn=app(SitraService::class)->normalizarBuscarEn($buscarEn);
-        $numero=trim($numero);
-        $gestion=trim($gestion);
+        $buscarEn = app(SitraService::class)->normalizarBuscarEn($buscarEn);
+        $numero = trim($numero);
+        $gestion = trim($gestion);
 
-        if(!app(SitraService::class)->debeValidar($buscarEn) || $numero==='' || $numero==='-'){
+        if (!app(SitraService::class)->debeValidar($buscarEn) || $numero === '' || $numero === '-') {
             return [
-                'estado'=>'',
-                'fuente'=>'sitra',
-                'respuesta'=>(object)[],
+                'estado' => '',
+                'fuente' => 'sitra',
+                'respuesta' => (object)[],
             ];
         }
 
         $lugares = explode(',', $buscarEn);
-        $respuestaValidacion = [
-            'estado'=>'1',
-            'fuente'=>'sitra',
-            'respuesta'=>(object)[],
-        ];
-
-        foreach($lugares as $lugarStr) {
+        foreach ($lugares as $lugarStr) {
             $lugar = strtolower(trim(explode('-', trim($lugarStr))[0]));
             if ($lugar === '') continue;
 
@@ -675,65 +711,92 @@ class ApostillaController extends Controller
                 $resolucion = app(SitraService::class)->buscarResolucionInterna($numero, $gestion);
                 if ($resolucion) {
                     return [
-                        'estado'=>'0',
-                        'fuente'=>'sid',
-                        'respuesta'=>(object)[
-                            'nombre'=>$nombreCompleto,
-                            'titulo'=>trim((string)($resolucion->res_objeto ?? $resolucion->res_desc ?? $resolucion->res_tema ?? '')),
-                            'numero'=>trim((string)$resolucion->res_numero),
-                            'gestion'=>trim((string)$resolucion->res_gestion),
-                            'tipo'=>Funciones::DocumentoSitra($lugar),
+                        'estado' => '0',
+                        'fuente' => 'sid',
+                        'respuesta' => (object)[
+                            'nombre' => $nombreCompleto,
+                            'titulo' => trim((string)($resolucion->res_objeto ?? $resolucion->res_desc ?? $resolucion->res_tema ?? '')),
+                            'numero' => trim((string)$resolucion->res_numero),
+                            'gestion' => trim((string)$resolucion->res_gestion),
+                            'tipo' => Funciones::DocumentoSitra($lugar),
                         ],
-                        'message'=>'Validado con respaldo SID.',
+                        'message' => 'Validado con respaldo SID.',
                     ];
                 }
             } else {
-                $sitraDisponible=true;
+                $sitraDisponible = true;
                 try {
-                    $respuesta=app(SitraService::class)->consultarSitra($ci,$numero,$lugar);
+                    $respuesta = app(SitraService::class)->consultarSitra($ci, $numero, $lugar);
                 } catch (\Throwable $e) {
-                    $sitraDisponible=false;
-                    $respuesta=(object)[];
+                    $sitraDisponible = false;
+                    $respuesta = (object)[];
                 }
-                if(!is_object($respuesta)){
-                    $respuesta=(object)[];
+                if (!is_object($respuesta)) {
+                    $respuesta = (object)[];
                 }
 
-                $documento=trim((string)Funciones::DocumentoSitra($lugar));
-                $nombreSitra=trim((string)($respuesta->nombre ?? ''));
-                $tipoSitraNormalizado=strtolower(trim((string)($respuesta->tipo ?? '')));
-                $numeroSitra=trim((string)($respuesta->numero ?? ''));
-                $nombreLocal=trim((string)$nombreCompleto);
-                $tipoLocal=strtolower($documento);
+                $documento = trim((string)Funciones::DocumentoSitra($lugar));
+                $nombreSitra = trim((string)($respuesta->nombre ?? ''));
+                $tipoSitraNormalizado = strtolower(trim((string)($respuesta->tipo ?? '')));
+                $numeroSitra = trim((string)($respuesta->numero ?? ''));
+                $nombreLocal = trim((string)$nombreCompleto);
+                $tipoLocal = strtolower($documento);
 
                 $numerosCoinciden = app(SitraService::class)->numerosCompatibles($numero, $numeroSitra);
-                $nombresCoinciden = app(SitraService::class)->nombresCompatibles($nombreLocal,$nombreSitra);
+                $nombresCoinciden = app(SitraService::class)->nombresCompatibles($nombreLocal, $nombreSitra);
 
-                if($nombresCoinciden && $tipoLocal===$tipoSitraNormalizado && $numerosCoinciden){
+                if ($nombresCoinciden && $tipoLocal === $tipoSitraNormalizado && $numerosCoinciden) {
+                    // 🆕 VALIDACIÓN DEL AÑO (similar a legalizaciones)
+                    $añoSitra = null;
+                    if (!empty($respuesta->fecha_impresion)) {
+                        $fechaParts = explode('/', $respuesta->fecha_impresion);
+                        if (count($fechaParts) === 3) {
+                            $añoSitra = $fechaParts[2]; // "2024" de "20/02/2024"
+                        }
+                    }
+                    // Si no tiene fecha_impresion, usar $respuesta->gestion
+                    if (!$añoSitra && !empty($respuesta->gestion)) {
+                        $añoSitra = $respuesta->gestion;
+                    }
+
+                    // Comparar año si ambos existen
+                    if ($añoSitra !== null && $gestion !== '') {
+                        if ((string)$gestion !== (string)$añoSitra) {
+                            return [
+                                'estado' => '1', // No coincide (año incorrecto)
+                                'fuente' => 'sitra',
+                                'respuesta' => $respuesta,
+                                'message' => 'Año de impresión no coincide. Documento: ' . $añoSitra . ', ingresado: ' . $gestion,
+                            ];
+                        }
+                    }
+
+                    // ✅ Todo coincide (incluyendo el año)
                     return [
-                        'estado'=>'0',
-                        'fuente'=>'sitra',
-                        'respuesta'=>$respuesta,
+                        'estado' => '0',
+                        'fuente' => 'sitra',
+                        'respuesta' => $respuesta,
                     ];
                 }
 
-                if($nombreSitra==='' && $tipoSitraNormalizado==='' && $numeroSitra===''){
-                    $respaldoUad9=null;
-                    if($gestion!==''){
-                        $respaldoUad9=app(SitraService::class)->buscarRespaldoInterno($idPer,$numero,$lugar,$gestion);
+                // Fallback a respaldo interno (sin validación de año, se asume que el usuario ingresó la gestión correcta)
+                if ($nombreSitra === '' && $tipoSitraNormalizado === '' && $numeroSitra === '') {
+                    $respaldoUad9 = null;
+                    if ($gestion !== '') {
+                        $respaldoUad9 = app(SitraService::class)->buscarRespaldoInterno($idPer, $numero, $lugar, $gestion);
                     }
-                    if($respaldoUad9){
+                    if ($respaldoUad9) {
                         return [
-                            'estado'=>'0',
-                            'fuente'=>'sid',
-                            'respuesta'=>(object)[
-                                'nombre'=>$nombreLocal,
-                                'titulo'=>trim((string)($respaldoUad9->tit_titulo ?? '')),
-                                'numero'=>(string)($respaldoUad9->tit_nro_titulo ?? $numero),
-                                'gestion'=>(string)($respaldoUad9->tit_gestion ?? $gestion),
-                                'tipo'=>$documento,
+                            'estado' => '0',
+                            'fuente' => 'sid',
+                            'respuesta' => (object)[
+                                'nombre' => $nombreLocal,
+                                'titulo' => trim((string)($respaldoUad9->tit_titulo ?? '')),
+                                'numero' => (string)($respaldoUad9->tit_nro_titulo ?? $numero),
+                                'gestion' => (string)($respaldoUad9->tit_gestion ?? $gestion),
+                                'tipo' => $documento,
                             ],
-                            'message'=>'Validado con respaldo SID'.($sitraDisponible ? '' : ' (SITRA no disponible)').'.',
+                            'message' => 'Validado con respaldo SID' . ($sitraDisponible ? '' : ' (SITRA no disponible)') . '.',
                         ];
                     }
                 }
@@ -741,10 +804,10 @@ class ApostillaController extends Controller
         }
 
         return [
-            'estado'=>'2',
-            'fuente'=>'sitra_sid',
-            'respuesta'=>(object)[],
-            'message'=>'No existe en SITRA/SID.',
+            'estado' => '2',
+            'fuente' => 'sitra_sid',
+            'respuesta' => (object)[],
+            'message' => 'No existe en SITRA/SID.',
         ];
     }
 
@@ -1306,8 +1369,8 @@ class ApostillaController extends Controller
         string $ci,
         int $idPer,
         int $codLis
-    ): array
-    {
+        ): array
+        {
         $ciSistemaRaw=trim($ci);
         $ciConsulta=$ciSistemaRaw;
 
@@ -1330,6 +1393,7 @@ class ApostillaController extends Controller
         $detalleNombre='';
         $hayDatosPersonaRecaudacion=false;
         $hayNombreRecaudacion=false;
+        
 
         foreach($lista as $fila){
             $ciFila=trim((string)($fila['documento'] ?? ''));
@@ -1389,7 +1453,8 @@ class ApostillaController extends Controller
                 $usoEncontrado=$usoCombinacion;
                 continue;
             }
-
+            $tipoSugerido = trim((string)($tramiteSugerido->lis_tipo ?? ''));
+            $requiereValidacion = !in_array($tipoSugerido, ['', '0'], true);
             return [
                 'ok' => true,
                 'nro_control' => $nroControl,
@@ -1408,6 +1473,7 @@ class ApostillaController extends Controller
                 'lis_alias_sugerido'=>(string)($tramiteSugerido->lis_alias ?? ''),
                 'lis_tipo_sugerido'=>(string)($tramiteSugerido->lis_tipo ?? ''),
                 'documento_label_sugerido'=>$this->etiquetaDocumentoApostilla($tramiteSugerido),
+                'requiere_validacion' => $requiereValidacion,
             ];
         }
 

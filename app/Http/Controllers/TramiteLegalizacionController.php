@@ -634,77 +634,92 @@ class TramiteLegalizacionController extends Controller
             'fecha_emision' => $resultado['fecha_emision'],
         ]);
     }
-    public function g_docleg(Request $form){
-        $datosTramita=Tramita::find($form['ctra']);
-        if($datosTramita && $datosTramita->tra_tipo_tramite=='F' && !isset($form['cdtra'])){
-            return $this->guardarConfrontacionDesdeEdicion($form,$datosTramita);
+    public function g_docleg(Request $form)
+    {
+        $datosTramita = Tramita::find($form['ctra']);
+        if ($datosTramita && $datosTramita->tra_tipo_tramite == 'F' && !isset($form['cdtra'])) {
+            return $this->guardarConfrontacionDesdeEdicion($form, $datosTramita);
         }
 
-        /* cuadis = 'c' hace referencia a los del cuadis que no pagan valorados*/
-        $cuadisSolicitado=$form->input('cuadis')==='on';
-        $cuadis='';
+        // 🔥 VERIFICAR PERMISO PARA FORZAR
+        $puedeForzar = Auth::user()->can('forzar creacion docleg - srv');
+        $modoForzado = false;
+        /* cuadis = 'c' hace referencia a los del cuadis que no pagan valorados */
+        $cuadisSolicitado = $form->input('cuadis') === 'on';
+        $cuadis = '';
 
-        if(!isset($form['cdtra'])){
-            $datosTramita=Tramita::find($form['ctra']);
-            if(!$datosTramita || !$datosTramita->id_per){
-                \Session::flash('error','Debe registrar primero los datos personales (CI) del trámite.');
+        if (!isset($form['cdtra'])) {
+            $datosTramita = Tramita::find($form['ctra']);
+            if (!$datosTramita || !$datosTramita->id_per) {
+                \Session::flash('error', 'Debe registrar primero los datos personales (CI) del trámite.');
                 return redirect('datos tramite legalizacion/'.$form['ctra']);
             }
 
-            if($datosTramita->tra_tipo_tramite=='F'){
-                $yaTieneDocumento=D_tramita::where('cod_tra','=',$form['ctra'])->exists();
-                if($yaTieneDocumento){
-                    \Session::flash('error','Confrontación permite un solo trámite por registro.');
+            if ($datosTramita->tra_tipo_tramite == 'F') {
+                $yaTieneDocumento = D_tramita::where('cod_tra', '=', $form['ctra'])->exists();
+                if ($yaTieneDocumento) {
+                    \Session::flash('error', 'Confrontación permite un solo trámite por registro.');
                     return redirect('datos tramite legalizacion/'.$form['ctra']);
                 }
-                if(empty($form['documentos'])){
-                    \Session::flash('error','Seleccione el documento de confrontación.');
+                if (empty($form['documentos'])) {
+                    \Session::flash('error', 'Seleccione el documento de confrontación.');
                     return redirect('datos tramite legalizacion/'.$form['ctra']);
                 }
             }
 
-            $persona=Persona::find($datosTramita->id_per);
-            if(!$persona){
-                \Session::flash('error','No se encontró la persona asociada al trámite.');
+            $persona = Persona::find($datosTramita->id_per);
+            if (!$persona) {
+                \Session::flash('error', 'No se encontró la persona asociada al trámite.');
                 return redirect('datos tramite legalizacion/'.$form['ctra']);
             }
+            // =====================================================
+            // FLUJO ÚNICO PARA RECAUDACIÓN
+            // =====================================================
 
-            $controlPrincipal=trim((string)($form['control'] ?? ''));
-            $preimpreso=trim((string)($form['reimpresion'] ?? ''));
-            $reintegroControl=trim((string)($form['reintegro'] ?? ''));
-            $tieneReintegro=$reintegroControl!=='';
-            $busquedaControl=trim((string)($form['valorado_bus'] ?? ''));
-            $tieneBusqueda=$busquedaControl!=='';
-            $verificacionRecaudacion=['ok'=>true];
-            $verificacionReintegro=['ok'=>true];
-            $verificacionBusqueda=['ok'=>true];
+            $controlPrincipal = trim((string)($form['control'] ?? ''));
+            $preimpreso = trim((string)($form['reimpresion'] ?? ''));
+            $reintegroControl = trim((string)($form['reintegro'] ?? ''));
+            $tieneReintegro = $reintegroControl !== '';
+            $busquedaControl = trim((string)($form['valorado_bus'] ?? ''));
+            $tieneBusqueda = $busquedaControl !== '';
 
-            $esPersonaCuadis=$this->esPersonaRegistradaCuadis((string)($persona->per_ci ?? ''),(int)($persona->id_per ?? 0));
-            if($cuadisSolicitado && !$esPersonaCuadis){
+            $verificacionRecaudacion = ['ok'=>true];
+            $verificacionReintegro = ['ok'=>true];
+            $verificacionBusqueda = ['ok'=>true];
+
+            $esPersonaCuadis = $this->esPersonaRegistradaCuadis(
+                (string)($persona->per_ci ?? ''),
+                (int)($persona->id_per ?? 0)
+            );
+
+            if ($cuadisSolicitado && !$esPersonaCuadis && !$puedeForzar) {
                 \Session::flash('error','No se puede usar CUADIS: la persona no está registrada en el padrón CUADIS.');
                 return redirect('datos tramite legalizacion/'.$form['ctra']);
             }
-            if($esPersonaCuadis){
+
+            if ($esPersonaCuadis) {
                 $cuadis='c';
             }
 
-            if($cuadis!='c' && $controlPrincipal===''){
-                \Session::flash('error','El número de control del valorado es requerido');
-                return redirect('datos tramite legalizacion/'.$form['ctra']);
-            }
+            if ($cuadis=='c') {
 
-            if($cuadis==='c'){
                 $controlPrincipal='';
                 $preimpreso='';
                 $reintegroControl='';
-                $tieneReintegro=false;
                 $busquedaControl='';
+
                 $tieneBusqueda=false;
+                $tieneReintegro=false;
             }
 
-            // Validación obligatoria contra recaudaciones para valorados pagados
             if($cuadis!='c'){
-                if($tieneReintegro && $controlPrincipal===$reintegroControl){
+
+                if($controlPrincipal==''){
+                    \Session::flash('error','El número de control del valorado es requerido');
+                    return redirect('datos tramite legalizacion/'.$form['ctra']);
+                }
+
+                if($tieneReintegro && $controlPrincipal==$reintegroControl){
                     \Session::flash('error','El número de control principal y el de reintegro deben ser diferentes.');
                     return redirect('datos tramite legalizacion/'.$form['ctra']);
                 }
@@ -716,14 +731,23 @@ class TramiteLegalizacionController extends Controller
                     (int)$persona->id_per,
                     $preimpreso,
                     (int)$form['ctra'],
-                    $tieneReintegro
+                    $tieneReintegro,
+                    $puedeForzar
                 );
+
                 if(!$verificacionRecaudacion['ok']){
-                    \Session::flash('error',$verificacionRecaudacion['message']);
-                    return redirect('datos tramite legalizacion/'.$form['ctra']);
+                    if (!$puedeForzar) {
+                        \Session::flash('error',$verificacionRecaudacion['message']);
+                        return redirect('datos tramite legalizacion/'.$form['ctra']);
+                    }
+
+                    \Log::warning('Recaudación forzada', [
+                        'mensaje' => $verificacionRecaudacion['message']
+                    ]);
                 }
 
                 if($tieneReintegro){
+
                     $verificacionReintegro=$this->validarRecaudacionReintegroLegalizacion(
                         $reintegroControl,
                         (string)$persona->per_ci,
@@ -731,33 +755,48 @@ class TramiteLegalizacionController extends Controller
                         (int)$persona->id_per,
                         (int)$form['ctra']
                     );
+
                     if(!$verificacionReintegro['ok']){
-                        \Session::flash('error',$verificacionReintegro['message']);
-                        return redirect('datos tramite legalizacion/'.$form['ctra']);
+                        if (!$puedeForzar) {
+                            \Session::flash('error',$verificacionReintegro['message']);
+                            return redirect('datos tramite legalizacion/'.$form['ctra']);
+                        }
+
+                        \Log::warning('Recaudación de reintegro forzada', [
+                            'mensaje' => $verificacionReintegro['message']
+                        ]);
                     }
                 }
-            }
 
-            if($tieneBusqueda){
-                if($controlPrincipal!=='' && $controlPrincipal===$busquedaControl){
-                    \Session::flash('error','El número de control principal y el de búsqueda deben ser diferentes.');
-                    return redirect('datos tramite legalizacion/'.$form['ctra']);
-                }
+                if($tieneBusqueda){
 
-                if($tieneReintegro && $reintegroControl===$busquedaControl){
-                    \Session::flash('error','El número de control de reintegro y el de búsqueda deben ser diferentes.');
-                    return redirect('datos tramite legalizacion/'.$form['ctra']);
-                }
+                    if($controlPrincipal==$busquedaControl){
+                        \Session::flash('error','El número de control principal y el de búsqueda deben ser diferentes.');
+                        return redirect('datos tramite legalizacion/'.$form['ctra']);
+                    }
 
-                $verificacionBusqueda=$this->validarRecaudacionBusquedaLegalizacion(
-                    $busquedaControl,
-                    (string)$persona->per_ci,
-                    (int)$persona->id_per,
-                    (int)$form['ctra']
-                );
-                if(!$verificacionBusqueda['ok']){
-                    \Session::flash('error',$verificacionBusqueda['message']);
-                    return redirect('datos tramite legalizacion/'.$form['ctra']);
+                    if($tieneReintegro && $reintegroControl==$busquedaControl){
+                        \Session::flash('error','El número de control de reintegro y el de búsqueda deben ser diferentes.');
+                        return redirect('datos tramite legalizacion/'.$form['ctra']);
+                    }
+
+                    $verificacionBusqueda=$this->validarRecaudacionBusquedaLegalizacion(
+                        $busquedaControl,
+                        (string)$persona->per_ci,
+                        (int)$persona->id_per,
+                        (int)$form['ctra']
+                    );
+
+                    if(!$verificacionBusqueda['ok']){
+                        if (!$puedeForzar) {
+                            \Session::flash('error',$verificacionBusqueda['message']);
+                            return redirect('datos tramite legalizacion/'.$form['ctra']);
+                        }
+
+                        \Log::warning('Recaudación de búsqueda forzada', [
+                            'mensaje' => $verificacionBusqueda['message']
+                        ]);
+                    }
                 }
             }
 
@@ -768,57 +807,52 @@ class TramiteLegalizacionController extends Controller
                 $verificacionRecaudacion,
                 $tieneReintegro ? $verificacionReintegro : null
             );
+
             if(!$seleccionTipo['ok']){
                 \Session::flash('error',$seleccionTipo['message']);
                 return redirect('datos tramite legalizacion/'.$form['ctra']);
             }
 
             $tramita=$seleccionTipo['tramite'];
+
             $form->merge([
-                'tipo'=>(int)$tramita->cod_tre,
+                'tipo'=>(int)$tramita->cod_tre
             ]);
-            $buscarEnSitra=app(SitraService::class)->obtenerBuscarEn($tramita,(string)($form['buscar_en'] ?? ''));
+            $esResolucion = $tramita->tre_buscar_en === 'res';
+ 
+            $buscarEnSitra = app(SitraService::class)->obtenerBuscarEn($tramita, (string)($form['buscar_en'] ?? ''));
             if (($form['supletorio'] ?? '') === 'on') {
                 $buscarEnSitra = 'su';
             }
-            $a=$buscarEnSitra;
-            $respuesta="";
-            $verificar_sitra=app(SitraService::class)->debeValidar($a) ? '2' : '';
-            $numeroDoc=$form['numero'];
-            
-            // Detectar si es supletorio
-            $esSupletorio=$form->boolean('supletorio', false);
-            
-            // SUPLETORIO: Forzar tipo a "SU" en SITRA
-            if($esSupletorio){
+            $a = $buscarEnSitra;
+            $respuesta = "";
+            $verificar_sitra = app(SitraService::class)->debeValidar($a) ? '2' : '';
+            $numeroDoc = $form['numero'];
+
+            $esSupletorio = $form->boolean('supletorio', false);
+            if ($esSupletorio) {
                 \Log::info('⚠ SUPLETORIO en g_docleg: cambiando tipo a SU', [
                     'buscar_en_original' => $buscarEnSitra,
                     'buscar_en_nuevo' => 'su',
                 ]);
-                $buscarEnSitra='su';
-                $a=$buscarEnSitra;
+                $buscarEnSitra = 'su';
+                $a = $buscarEnSitra;
             }
-            
-            \Log::info('=== g_docleg VALIDAR SITRA ===', [
-                'numeroDoc' => $form['numero'],
-                'gestion' => $form['gestion'] ?? null,
-                'buscarEnSitra' => $buscarEnSitra,
-                'esSupletorio' => $esSupletorio,
-                'tra_tipo_tramite' => $datosTramita->tra_tipo_tramite,
-            ]);
 
-            if(!in_array($datosTramita->tra_tipo_tramite,['E','F'],true)){
+            // SOLO EJECUTAR VALIDACIÓN SITRA SI NO ES FORZADO
+            if (!in_array($datosTramita->tra_tipo_tramite, ['E', 'F'], true)) {
                 $valGestion = intval(trim((string)($form['gestion'] ?? '')));
                 $lugares = explode(',', $buscarEnSitra);
-                
-                if($valGestion >= 1832 && $numeroDoc != '-') {
-                    foreach($lugares as $lugarStr) {
+                if ($valGestion >= 1832 && $numeroDoc != '-') {
+                    foreach ($lugares as $lugarStr) {
                         $lugar = strtolower(trim(explode('-', trim($lugarStr))[0]));
-                        if ($lugar === '') continue;
+                        if ($lugar === '') {
+                            continue;
+                        }
 
                         if ($lugar === 'res') {
                             $resolucion = app(SitraService::class)->buscarResolucionInterna(
-                                (string)$numeroDoc, 
+                                (string)$numeroDoc,
                                 trim((string)($form['gestion'] ?? ''))
                             );
 
@@ -834,17 +868,23 @@ class TramiteLegalizacionController extends Controller
                                 break;
                             }
                         } else {
-                            if(app(SitraService::class)->debeValidar($lugar)) {
+                            if (app(SitraService::class)->debeValidar($lugar)) {
                                 try {
-                                    $respSitra=app(SitraService::class)->consultarSitra($persona->per_ci,$numeroDoc,$lugar);
+                                    $respSitra = app(SitraService::class)->consultarSitra(
+                                        $persona->per_ci,
+                                        $numeroDoc,
+                                        $lugar
+                                    );
                                 } catch (\Throwable $e) {
-                                    $respSitra=(object)[];
+                                    $respSitra = (object)[];
                                 }
-                                if(!is_object($respSitra)){
-                                    $respSitra=(object)[];
+
+                                if (!is_object($respSitra)) {
+                                    $respSitra = (object)[];
                                 }
-                                $nombre=$persona->per_apellido." ".$persona->per_nombre;
-                                $documento=Funciones::DocumentoSitra($lugar);
+
+                                $nombre = $persona->per_apellido." ".$persona->per_nombre;
+                                $documento = Funciones::DocumentoSitra($lugar);
 
                                 $nombreSitra = trim((string)($respSitra->nombre ?? ''));
                                 $tipoSitra = strtolower(trim((string)($respSitra->tipo ?? '')));
@@ -853,88 +893,133 @@ class TramiteLegalizacionController extends Controller
                                 $tipoLocal = strtolower(trim((string)$documento));
                                 $numeroLocal = trim((string)$numeroDoc);
 
-                                $nombresCoinciden=app(SitraService::class)->nombresCompatibles($nombreLocal,$nombreSitra);
-                                
-                                // Extraer año si existe
+                                $nombresCoinciden = app(SitraService::class)
+                                    ->nombresCompatibles($nombreLocal, $nombreSitra);
+
                                 $añoSitra = null;
+
                                 if (!empty($respSitra->fecha_impresion)) {
                                     $parts = explode('/', $respSitra->fecha_impresion);
+
                                     if (count($parts) === 3) {
                                         $añoSitra = $parts[2];
                                     }
                                 }
+
                                 if (!$añoSitra && !empty($respSitra->gestion)) {
                                     $añoSitra = $respSitra->gestion;
                                 }
 
-                                if($nombresCoinciden && $tipoLocal==$tipoSitra && $numeroLocal==$numeroSitra){
+                                if (
+                                    $nombresCoinciden &&
+                                    $tipoLocal == $tipoSitra &&
+                                    $numeroLocal == $numeroSitra
+                                ) {
                                     $gestionLocal = trim((string)($form['gestion'] ?? ''));
+
                                     $añoCoincide = true;
+
                                     if ($gestionLocal !== '' && $añoSitra !== null) {
                                         $añoCoincide = ($gestionLocal == $añoSitra);
                                     }
-                                    
+
                                     if (!$añoCoincide) {
-                                        $verificar_sitra='1';
+                                        $verificar_sitra = '1';
                                         $respuesta = $respSitra;
+
+                                        if ($puedeForzar) {
+                                            $modoForzado = true;
+
+                                            \Log::warning('SITRA: gestión no coincide, permitido por permiso de forzar', [
+                                                'gestion_formulario' => $gestionLocal,
+                                                'gestion_sitra' => $añoSitra,
+                                                'numero' => $numeroDoc
+                                            ]);
+                                        }
+
                                         break;
                                     } else {
-                                        $verificar_sitra='0';
+                                        $verificar_sitra = '0';
                                         $respuesta = $respSitra;
                                         break;
                                     }
-                                }else{
-                                    if($nombreSitra=="" && $tipoSitra=="" && $numeroSitra==""){
-                                        $respaldoUad9=app(SitraService::class)->buscarRespaldoInterno(
-                                            (int)$datosTramita->id_per,
-                                            (string)$numeroDoc,
-                                            (string)$lugar,
-                                            trim((string)($form['gestion'] ?? ''))
-                                        );
-                                        if($respaldoUad9) {
+                                } else {
+
+                                    if (
+                                        $nombreSitra == "" &&
+                                        $tipoSitra == "" &&
+                                        $numeroSitra == ""
+                                    ) {
+
+                                        $respaldoUad9 = app(SitraService::class)
+                                            ->buscarRespaldoInterno(
+                                                (int)$datosTramita->id_per,
+                                                (string)$numeroDoc,
+                                                (string)$lugar,
+                                                trim((string)($form['gestion'] ?? ''))
+                                            );
+
+                                        if ($respaldoUad9) {
                                             $verificar_sitra = '0';
                                             break;
                                         }
-                                    }else{
-                                        $verificar_sitra='1';
+
+                                    } else {
+                                        $verificar_sitra = '1';
                                     }
                                 }
                             }
                         }
                     }
                 } else {
-                    $numeroDoc=0;
+                    $numeroDoc = 0;
                 }
             }
 
-            //return $respuesta;
+            // ──────────────────────────────────────────────
+            // VALIDACIÓN DE FORMULARIO (campos requeridos)
+            // ──────────────────────────────────────────────
             $es_extranjero = stripos((string)$tramita->tre_nombre, 'extranjero') !== false || stripos((string)$tramita->tre_nombre, 'extrajero') !== false;
 
-            if($tramita->tre_buscar_en=='' || $tramita->tre_buscar_en=='res' || $es_extranjero){
+            // Si es forzado, no exigimos control, reintegro ni valorado_bus
+            if ($puedeForzar) {
                 $form->validate([
-                    'tipo'=>'required',
-                    'ctra'=>'required',
-                    'control'=>'nullable|integer',
-                    'reintegro'=>'nullable|integer|min:1',
-                    'valorado_bus'=>'nullable|integer|min:1',
+                    'tipo' => 'required',
+                    'ctra' => 'required',
+                    // control, reintegro, valorado_bus son opcionales
                 ]);
-            }else{
-                $form->validate([
-                    'tipo'=>'required',
-                    'ctra'=>'required',
-                    'gestion'=>'required|numeric',
-                    'control'=>'nullable|integer',
-                    'reintegro'=>'nullable|integer|min:1',
-                    'valorado_bus'=>'nullable|integer|min:1',
-                ]);
+            } else {
+                // Validación normal
+                if ($tramita->tre_buscar_en == '' || $tramita->tre_buscar_en == 'res' || $es_extranjero) {
+                    $form->validate([
+                        'tipo' => 'required',
+                        'ctra' => 'required',
+                        'control' => 'nullable|integer',
+                        'reintegro' => 'nullable|integer|min:1',
+                        'valorado_bus' => 'nullable|integer|min:1',
+                    ]);
+                } else {
+                    $form->validate([
+                        'tipo' => 'required',
+                        'ctra' => 'required',
+                        'gestion' => 'required|numeric',
+                        'control' => 'nullable|integer',
+                        'reintegro' => 'nullable|integer|min:1',
+                        'valorado_bus' => 'nullable|integer|min:1',
+                    ]);
+                }
             }
+
+            // ──────────────────────────────────────────────
+            // RESTO DE LA LÓGICA (buscar título, crear documento)
+            // ──────────────────────────────────────────────
             $buscar_en_str = $datosTramita->tra_tipo_tramite == 'B' ? (string)($form['buscar_en'] ?? '') : (string)($tramita->tre_buscar_en ?? '');
-            $titulo='';
-            if($form->has('cod_tit') && $form->input('cod_tit') != ''){
+            $titulo = '';
+            if ($form->has('cod_tit') && $form->input('cod_tit') != '') {
                 $titulo = Titulo::find($form->input('cod_tit'));
             }
 
-            if(!$titulo && $buscarEnSitra!='' && $form['numero']!='-'){
+            if (!$titulo && $buscarEnSitra != '' && $form['numero'] != '-') {
                 $titulo = app(SitraService::class)->resolverTitulo(
                     (int)$datosTramita->id_per,
                     (string)$form['numero'],
@@ -942,183 +1027,124 @@ class TramiteLegalizacionController extends Controller
                     (string)$form['gestion']
                 );
             }
-            //dd($titulo);
-            /* dtra_estado_doc
-                0. verificado
-                1. No hay el titulo en la base de datos
-                2. Hay titulo, pero no hay el PDF
-                3. Hay el titulo pero no hay su antecedente
-                4. Confrontado
-                5. Busqueda
-            */
-            $año_tramita=date('Y',strtotime($datosTramita->tra_fecha_solicitud));
-            $numero_tramite=DB::table('d_tramitas')->where('dtra_gestion_tramite','=',$año_tramita)->max('dtra_numero_tramite');
-            $numero_tramite+=1;
 
-            //dd($numero_tramite);
+            // Generar número de trámite
+            $año_tramita = date('Y', strtotime($datosTramita->tra_fecha_solicitud));
+            $numero_tramite = DB::table('d_tramitas')->where('dtra_gestion_tramite', '=', $año_tramita)->max('dtra_numero_tramite');
+            $numero_tramite += 1;
 
-            $aux=explode('-',$tramita->tre_buscar_en);
-            $estado=1;
+            $estado = 1; // por defecto
+
             try {
                 DB::beginTransaction();
 
-                if(true){
-                /*if($titulo){  IMPORTANTE============Cuando este restringido por titulo
+                $codtit = 0;
+                if ($titulo) {
+                    $codtit = $titulo->cod_tit;
+                }
 
-                    if(sizeof($aux)==1){
-                        if($titulo->tit_pdf==''){    $estado=2;  }
-                    }else{
-                        if($titulo->tit_pdf==''){    $estado=3;  }
-                    }*/
-                    $codtit=0;
-                    if($titulo){
-                        $codtit=$titulo->cod_tit;
-                    }
-                    $ptaang='';
-                    $tipoPtagActual=$this->resolverTipoPtagDesdeBuscarEn((string)($tramita->tre_buscar_en ?? ''));
-                    $ptagAuto=!!($verificacionRecaudacion['ptag_auto'] ?? false);
-                    if($ptagAuto){
-                        $usoPtagPrevio=$this->obtenerUsoPreferencialPtagPorPersona((int)$persona->id_per,$tipoPtagActual);
-                        if($usoPtagPrevio){
+                $ptaang = '';
+                // Solo calcular PTAG si no es forzado y existe validación de recaudación
+                if (isset($verificacionRecaudacion)) {
+                    $tipoPtagActual = $this->resolverTipoPtagDesdeBuscarEn((string)($tramita->tre_buscar_en ?? ''));
+                    $ptagAuto = !!(isset($verificacionRecaudacion['ptag_auto']) ? $verificacionRecaudacion['ptag_auto'] : false);
+                    if ($ptagAuto) {
+                        $usoPtagPrevio = $this->obtenerUsoPreferencialPtagPorPersona((int)$persona->id_per, $tipoPtagActual);
+                        if ($usoPtagPrevio) {
                             throw new \RuntimeException($this->mensajeBeneficioPtagYaUsado($usoPtagPrevio));
                         }
-
-                        $ptaang=$tipoPtagActual;
-                    }
-                    $supletorio="";
-                    if($form['supletorio']=='on'){
-                        $supletorio="t";
-                    }
-                    $busqueda_en='';
-                    if($form['buscar_en']!=''){
-                        $busqueda_en=$form['buscar_en'];
-                    }else{
-                        $busqueda_en=$tramita->tre_buscar_en;
-                    }
-                    $gestion_final = $form['gestion'] ?? null;
-                    if ($es_extranjero && empty($gestion_final)) {
-                        $gestion_final = 0;
-                    }
-                    if ($es_extranjero && (empty($numeroDoc) || $numeroDoc === '-')) {
-                        $numeroDoc = 0;
-                    }
-
-                    $tramite=D_tramita::create([
-                        'cod_tre'=>$form['tipo'],
-                        'cod_tra'=>$form['ctra'],
-                        'dtra_numero'=>$numeroDoc,
-                        'dtra_gestion'=>$gestion_final,
-                        // Hasta el 08-05-2023 se guardaba el preimpreso, ahora se guarda el nro. de control del valorado desde el 9 de mayo
-                        //'dtra_control'=>$form['valorado'],
-                        'dtra_control'=>$controlPrincipal,
-                        'dtra_valorado_reintegro'=>$reintegroControl!=='' ? (int)$reintegroControl : null,
-                        'dtra_valorado_busqueda'=>$tieneBusqueda ? (int)$busquedaControl : null,
-                        'dtra_control_reimpresion'=>$form['reimpresion'],
-                        'dtra_numero_tramite'=>$numero_tramite,
-                        'dtra_gestion_tramite'=>$año_tramita,
-                        'dtra_costo'=>$tramita->tre_costo,
-                        'dtra_tipo'=>$tramita->tre_tipo,
-                        'dtra_solo_sello'=>$tramita->tre_solo_sello,
-                        //'dtra_cod_tit'=>$titulo->cod_tit,
-                        'dtra_cod_tit'=>$codtit,
-                        'dtra_estado_doc'=>$estado,
-                        'dtra_fecha_registro'=>date('d/m/Y'),
-                        'dtra_interno'=>$form['tipo_tramite'],
-                        'dtra_buscar_en'=>$busqueda_en,
-                        'dtra_ptaang'=>$ptaang,
-                        'dtra_verificacion_sitra'=> $es_extranjero ? '' : $verificar_sitra,
-                        'dtra_supletorio'=>$supletorio,
-                        'dtra_sin_valorado'=>$cuadis,
-                    ]);
-                    if($cuadis!='c'){
-                        $errorUso='';
-                        if(!$this->registrarUsoRecaudacion($verificacionRecaudacion,(int)$form['ctra'],(int)$tramite->cod_dtra,$errorUso)){
-                            throw new \RuntimeException($errorUso!=='' ? $errorUso : 'No se pudo registrar el pago principal.');
-                        }
-
-                        if($tieneReintegro){
-                            $errorUsoReintegro='';
-                            if(!$this->registrarUsoRecaudacion($verificacionReintegro,(int)$form['ctra'],(int)$tramite->cod_dtra,$errorUsoReintegro)){
-                                throw new \RuntimeException($errorUsoReintegro!=='' ? $errorUsoReintegro : 'No se pudo registrar el pago de reintegro.');
-                            }
-                        }
-                    }
-
-                    if($tieneBusqueda){
-                        $errorUsoBusqueda='';
-                        if(!$this->registrarUsoRecaudacion($verificacionBusqueda,(int)$form['ctra'],(int)$tramite->cod_dtra,$errorUsoBusqueda)){
-                            throw new \RuntimeException($errorUsoBusqueda!=='' ? $errorUsoBusqueda : 'No se pudo registrar el pago de búsqueda.');
-                        }
-                    }
-                    $nuevo=json_encode($tramite);
-                    SessionController::write('C','',$nuevo,'d_tramitas','3',$tramite->cod_dtra);
-                }else{ // EN CASO DE QUE EL TITULO NO SE HAYA ENCONTRADO
-                    //return $tramita->tre_buscar_en." --";
-                    if($tramita->tre_buscar_en=='res'){
-                        $estado=7;
-                    }else{
-                        $estado=6;
-                    }
-                    if($tramita->tre_buscar_en=='' || $tramita->tre_buscar_en=='res'){
-                        $tramite=D_tramita::create([
-                            'cod_tre'=>$form['tipo'],
-                            'cod_tra'=>$form['ctra'],
-                            'dtra_control'=>$controlPrincipal,
-                            'dtra_control_reimpresion'=>$form['reimpresion'],
-                            'dtra_valorado_busqueda'=>$tieneBusqueda ? (int)$busquedaControl : null,
-                            'dtra_numero_tramite'=>$numero_tramite,
-                            'dtra_gestion_tramite'=>$año_tramita,
-                            'dtra_costo'=>$tramita->tre_costo,
-                            'dtra_tipo'=>$tramita->tre_tipo,
-                            'dtra_solo_sello'=>$tramita->tre_solo_sello,
-                            'dtra_fecha_registro'=>date('d/m/Y'),
-                            'dtra_estado_doc'=>$estado,
-                            'dtra_interno'=>$form['tipo_tramite'],
-                            'dtra_buscar_en'=>$form['buscar_en'],
-                            'dtra_sin_valorado'=>$cuadis,
-                        ]);
-                        if($cuadis!='c'){
-                            $errorUso='';
-                            if(!$this->registrarUsoRecaudacion($verificacionRecaudacion,(int)$form['ctra'],(int)$tramite->cod_dtra,$errorUso)){
-                                throw new \RuntimeException($errorUso!=='' ? $errorUso : 'No se pudo registrar el pago principal.');
-                            }
-
-                            if($tieneReintegro){
-                                $errorUsoReintegro='';
-                                if(!$this->registrarUsoRecaudacion($verificacionReintegro,(int)$form['ctra'],(int)$tramite->cod_dtra,$errorUsoReintegro)){
-                                    throw new \RuntimeException($errorUsoReintegro!=='' ? $errorUsoReintegro : 'No se pudo registrar el pago de reintegro.');
-                                }
-                            }
-                        }
-
-                        if($tieneBusqueda){
-                            $errorUsoBusqueda='';
-                            if(!$this->registrarUsoRecaudacion($verificacionBusqueda,(int)$form['ctra'],(int)$tramite->cod_dtra,$errorUsoBusqueda)){
-                                throw new \RuntimeException($errorUsoBusqueda!=='' ? $errorUsoBusqueda : 'No se pudo registrar el pago de búsqueda.');
-                            }
-                        }
-                        $nuevo=json_encode($tramite);
-                        SessionController::write('C','',$nuevo,'d_tramitas','3',$tramite->cod_dtra);
-                    }else{
-                        throw new \RuntimeException('El título '.$form['numero'].'/'.$form['gestion'].' No corresponde a la persona');
+                        $ptaang = $tipoPtagActual;
                     }
                 }
-                if($datosTramita->tra_tipo_tramite=='B' || $datosTramita->tra_tipo_tramite=='F'){
+
+                $supletorio = ($form['supletorio'] == 'on') ? 't' : '';
+                $busqueda_en = ($form['buscar_en'] != '') ? $form['buscar_en'] : $tramita->tre_buscar_en;
+                $gestion_final = $form['gestion'] ?? null;
+                if ($es_extranjero && empty($gestion_final)) {
+                    $gestion_final = 0;
+                }
+                if ($es_extranjero && (empty($numeroDoc) || $numeroDoc === '-')) {
+                    $numeroDoc = 0;
+                }
+
+                // Si es forzado, los campos de control y recaudación pueden estar vacíos
+                $tramite = D_tramita::create([
+                    'cod_tre' => $form['tipo'],
+                    'cod_tra' => $form['ctra'],
+                    'dtra_numero' => $numeroDoc,
+                    'dtra_gestion' => $gestion_final,
+                    'dtra_control' => $controlPrincipal,
+                    'dtra_valorado_reintegro' => !$tieneReintegro ? null : (int)$reintegroControl,
+                    'dtra_valorado_busqueda' => !$tieneBusqueda ? null : (int)$busquedaControl,
+                    'dtra_control_reimpresion' => $form['reimpresion'] ?? '',
+                    'dtra_numero_tramite' => $numero_tramite,
+                    'dtra_gestion_tramite' => $año_tramita,
+                    'dtra_costo' => $tramita->tre_costo,
+                    'dtra_tipo' => $tramita->tre_tipo,
+                    'dtra_solo_sello' => $tramita->tre_solo_sello,
+                    'dtra_cod_tit' => $codtit,
+                    'dtra_estado_doc' => $estado,
+                    'dtra_fecha_registro' => date('d/m/Y'),
+                    'dtra_interno' => $form['tipo_tramite'],
+                    'dtra_buscar_en' => $busqueda_en,
+                    'dtra_ptaang' => $ptaang,
+                    'dtra_verificacion_sitra' => $es_extranjero ? '' : $verificar_sitra,
+                    'dtra_supletorio' => $supletorio,
+                    'dtra_sin_valorado' => $cuadis,
+                ]);
+
+                // 🔥 REGISTRAR USO DE RECAUDACIÓN SIEMPRE (independientemente del permiso)
+                if ($cuadis != 'c' && isset($verificacionRecaudacion)) {
+                    $errorUso = '';
+                    if (!$this->registrarUsoRecaudacion($verificacionRecaudacion, (int)$form['ctra'], (int)$tramite->cod_dtra, $errorUso)) {
+                        if (!$puedeForzar) {
+                            throw new \RuntimeException($errorUso !== '' ? $errorUso : 'No se pudo registrar el pago principal.');
+                        }
+                        \Log::warning('Error al registrar uso de recaudación (modo forzado)', ['error' => $errorUso]);
+                    }
+                    if ($tieneReintegro) {
+                        $errorUsoReintegro = '';
+                        if (!$this->registrarUsoRecaudacion($verificacionReintegro, (int)$form['ctra'], (int)$tramite->cod_dtra, $errorUsoReintegro)) {
+                            if (!$puedeForzar) {
+                                throw new \RuntimeException($errorUsoReintegro !== '' ? $errorUsoReintegro : 'No se pudo registrar el pago de reintegro.');
+                            }
+                            \Log::warning('Error al registrar uso de reintegro (modo forzado)', ['error' => $errorUsoReintegro]);
+                        }
+                    }
+                    if ($tieneBusqueda) {
+                        $errorUsoBusqueda = '';
+                        if (!$this->registrarUsoRecaudacion($verificacionBusqueda, (int)$form['ctra'], (int)$tramite->cod_dtra, $errorUsoBusqueda)) {
+                            if (!$puedeForzar) {
+                                throw new \RuntimeException($errorUsoBusqueda !== '' ? $errorUsoBusqueda : 'No se pudo registrar el pago de búsqueda.');
+                            }
+                            \Log::warning('Error al registrar uso de búsqueda (modo forzado)', ['error' => $errorUsoBusqueda]);
+                        }
+                    }
+                }
+
+                // Si es tipo B o F, crear confrontación
+                if ($datosTramita->tra_tipo_tramite == 'B' || $datosTramita->tra_tipo_tramite == 'F') {
                     D_confrontacion::create([
-                        'dcon_doc'=>$form['documentos'],
-                        'cod_dtra'=>$tramite->cod_dtra,
+                        'dcon_doc' => $form['documentos'],
+                        'cod_dtra' => $tramite->cod_dtra,
                     ]);
                 }
-
+                \Log::info('Estado final del modo forzado', [
+                    'modoForzado' => $modoForzado,
+                    'verificacion_sitra' => $verificar_sitra,
+                    'recaudacion_ok' => $verificacionRecaudacion['ok'] ?? null,
+                    'reintegro_ok' => $verificacionReintegro['ok'] ?? null,
+                    'busqueda_ok' => $verificacionBusqueda['ok'] ?? null,
+                ]);
                 DB::commit();
-                \Session::flash('exito','Se ha creado exitosamente el trámite');
+                \Session::flash('exito','Se ha creado exitosamente el trámite' .($modoForzado ? ' (forzado)' : ''));
             } catch (\Throwable $e) {
                 DB::rollBack();
-                $mensaje=trim((string)$e->getMessage());
-                \Session::flash('error',$mensaje!=='' ? $mensaje : 'No se pudo registrar el trámite.');
+                $mensaje = trim((string)$e->getMessage());
+                \Session::flash('error', $mensaje !== '' ? $mensaje : 'No se pudo registrar el trámite.');
             }
-        }else{
-
+        } else {
+            // Si ya existe cdtra, no hacer nada (flujo original)
         }
         return redirect('datos tramite legalizacion/'.$form['ctra']);
     }
@@ -1629,7 +1655,7 @@ class TramiteLegalizacionController extends Controller
         string $cuadis,
         array $validacionRecaudacion = [],
         ?array $validacionReintegro = null
-    ): array
+        ): array
     {
         $tipoSeleccionado=trim((string)$form->input('tipo',''));
 
@@ -2125,8 +2151,9 @@ class TramiteLegalizacionController extends Controller
         int $idPer,
         string $preimpreso = '',
         int $codTraActual = 0,
-        bool $permitirTipoDistintoConReintegro = false
-    ): array
+        bool $permitirTipoDistintoConReintegro = false,
+        bool $permitirNombreDistinto = false
+        ): array
     {
         $response=app(\App\Services\RecaudacionesService::class)->buscarPorControlYDocumento(122,(int)$control,$ci);
         if(!is_array($response)){
@@ -2184,7 +2211,11 @@ class TramiteLegalizacionController extends Controller
 
             $nombreR=trim(($fila['apellido_1'] ?? '').' '.($fila['apellido_2'] ?? '').' '.($fila['nombre_1'] ?? '').' '.($fila['nombre_2'] ?? ''));
             $nombreRecaudacionNormalizado=$this->normalizarTexto($nombreR);
-            if($nombreSistemaNormalizado!=='' && $nombreSistemaNormalizado!==$nombreRecaudacionNormalizado){
+            if(
+                !$permitirNombreDistinto &&
+                $nombreSistemaNormalizado!=='' &&
+                $nombreSistemaNormalizado!==$nombreRecaudacionNormalizado
+            ){
                 if($detalleNombre===''){
                     $detalleNombre='(Recaudación: '.$nombreR.' | Datos: '.$nombreSistemaNormalizado.')';
                 }
@@ -2629,6 +2660,12 @@ class TramiteLegalizacionController extends Controller
     private function registrarUsoRecaudacion(array $validacion, int $codTra, int $codDtra, string &$error): bool
     {
         $error='';
+        \Log::info('Entró a registrarUsoRecaudacion', [
+            'control' => $validacion['control'] ?? null,
+            'ci' => $validacion['ci'] ?? null,
+            'cod_tra' => $codTra,
+            'cod_dtra' => $codDtra,
+        ]);
         if(!Schema::hasTable('recaudacion_usos')){
             $error='No se puede continuar: falta la tabla de bloqueo de pagos (migración pendiente).';
             Log::critical('Bloqueo de recaudación deshabilitado por migración faltante.',[
@@ -3785,4 +3822,5 @@ class TramiteLegalizacionController extends Controller
         }
         return $texto;
     }
+
 }

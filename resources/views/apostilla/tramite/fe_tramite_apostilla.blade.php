@@ -826,37 +826,34 @@
                                 {{-- Separador visual --}}
                                 <div class="e-qa-sep"></div>
 
-                                {{-- PASO 2 --}}
-                                <div class="e-qa-col">
-                                    <div class="e-step-tag"><span class="sn">2</span><span class="sl">Documento</span></div>
-                                    <label data-campo="label-documento">N° título / resolución</label>
-                                    <div class="e-qa-input-wrap">
-                                        <input type="text" class="e-input" name="numero" autocomplete="off" inputmode="numeric" pattern="[0-9]*" maxlength="20" style="width:100%;">
-                                        <div class="e-qa-error" data-campo="error-numero"></div>
-                                    </div>
-                                </div>
+                                <div id="campos-documento" style="display: none;">
+                <!-- PASO 2: Documento (columna 1) -->
+                <div class="e-qa-col">
+                    <div class="e-step-tag"><span class="sn">2</span><span class="sl">Documento</span></div>
+                    <label data-campo="label-documento">N° título / resolución</label>
+                    <div class="e-qa-input-wrap">
+                        <input type="text" class="e-input" name="numero" autocomplete="off" inputmode="numeric" pattern="[0-9]*" maxlength="20" style="width:100%;">
+                        <div class="e-qa-error" data-campo="error-numero"></div>
+                    </div>
+                </div>
 
-                                <div class="e-qa-col">
-                                    <div class="e-step-tag" style="opacity:0;pointer-events:none;"><span class="sn">·</span><span class="sl">·</span></div>
-                                    <label>Gestión</label>
-                                    <div class="e-qa-input-wrap">
-                                         <input type="text" class="e-input" name="gestion" pattern="[0-9]{4}"
-                                             autocomplete="off" inputmode="numeric" maxlength="4" placeholder="2024" style="width:100%;">
-                                        <div class="e-qa-error" data-campo="error-gestion"></div>
-                                    </div>
-                                </div>
+                <!-- Gestión (columna 2) -->
+                <div class="e-qa-col">
+                    <div class="e-step-tag" style="opacity:0;pointer-events:none;"><span class="sn">·</span><span class="sl">·</span></div>
+                    <label>Gestión</label>
+                    <div class="e-qa-input-wrap">
+                        <input type="text" class="e-input" name="gestion" pattern="[0-9]{4}" autocomplete="off" inputmode="numeric" maxlength="4" placeholder="2024" style="width:100%;">
+                        <div class="e-qa-error" data-campo="error-gestion"></div>
+                    </div>
+                </div>
 
-                                {{-- SITRA pill --}}
-                                <div class="e-qa-col" style="align-self:end;padding-bottom:0;">
-                                    <a href="#" class="e-pill idle" data-campo="estado-sitra-icon"
-                                       title="Ver detalle SITRA"
-                                       onclick="abrirModalSitraFormularioApostilla(this); return false;"
-                                       style="text-decoration:none;margin-bottom:1px;">
-                                        <i class="fas fa-minus-circle" style="font-size:10px;"></i>
-                                        <span>SITRA</span>
-                                    </a>
-                                </div>
-
+                <!-- SITRA pill (columna 3) -->
+                <div class="e-qa-col" style="align-self:end;padding-bottom:0;">
+                    <a href="#" class="e-pill idle" data-campo="estado-sitra-icon" title="Ver detalle de validación SITRA" onclick="abrirModalSitraFormularioApostilla(this); return false;" style="text-decoration:none;margin-bottom:1px;">
+                        <i class="fas fa-minus-circle" style="font-size:10px;"></i> <span>SITRA</span>
+                    </a>
+                </div>
+                </div>
                                 {{-- Botón agregar --}}
                                 <div class="e-qa-col" style="align-self:end;">
                                     <button type="button" class="e-btn e-btn-primary"
@@ -867,11 +864,12 @@
                                     </button>
                                 </div>
 
-                            </div>{{-- /band --}}
+                </div>{{-- /band --}}
 
                             {{-- Hidden fields — todos originales --}}
                             <input type="hidden" name="cl" value="" data-campo="tipo-apostilla-hidden">
                             <input type="hidden" name="ca" value="{{ $cod_apos }}">
+                            <input type="hidden" data-campo="requiere-validacion" value="0">
                             <input type="hidden" name="gestion_valorado" value="" data-campo="gestion-api">
                             <input type="hidden" value="0"  data-campo="validacion-recaudacion-ok">
                             <input type="hidden" value=""   data-campo="preimpreso-api">
@@ -1468,6 +1466,10 @@ function limpiarEstadoValidacionRapida(){
     actualizarEstadoSitraRapido(form,'text-muted','SITRA pendiente.');
     limpiarErroresRapidoApostilla();
     setEstadoAccionRapida('','');
+    $('#campos-documento').css('display', 'none');
+    form.find('input[name="numero"]').val('');
+    form.find('input[name="gestion"]').val('');
+    form.find('[data-campo="requiere-validacion"]').val('0');
 }
 function solicitarValidacionRapidaApostilla(callbackOk,callbackError){
     const form=formApostillaRapida();if(!form.length)return;
@@ -1497,6 +1499,31 @@ function solicitarValidacionRapidaApostilla(callbackOk,callbackError){
             form.find('input[data-campo="preimpreso-api"]').val(resp.preimpreso||'');form.find('[data-campo="validacion-recaudacion-ok"]').val('1');
             apostillaRapidaValidacionOk=true;apostillaRapidaControlValidado=nroControl;apostillaRapidaCodLisDetectado=codSugerido;
             let resumen='Pago validado.';if(resp.lis_alias_sugerido)resumen='Pago validado. Trámite: '+resp.lis_alias_sugerido+'.';
+            var requiereValidacion = resp.requiere_validacion === true;
+            form.find('[data-campo="requiere-validacion"]').val(requiereValidacion ? '1' : '0');
+            var $camposDocumento = $('#campos-documento');
+            var $inputNumero = form.find('input[name="numero"]');
+            var $inputGestion = form.find('input[name="gestion"]');
+
+            if (requiereValidacion) {
+                // Mostrar campos de documento
+                $('#campos-documento').css('display', 'contents');
+                // Limpiar errores previos
+                setErrorRapidoApostilla('numero', '');
+                setErrorRapidoApostilla('gestion', '');
+                // (Opcional) Enfocar el campo número
+                setTimeout(function(){ $inputNumero.trigger('focus'); }, 100);
+            } else {
+                // Ocultar campos de documento
+                $('#campos-documento').css('display', 'none');
+                // Limpiar valores para que no se envíen residuales
+                $inputNumero.val('');
+                $inputGestion.val('');
+                // Limpiar estado SITRA (ya que no aplica)
+                form.find('[data-campo="estado-sitra"]').val('');
+                form.find('[data-campo="fuente-sitra"]').val('');
+                actualizarEstadoSitraRapido(form, 'text-muted', 'SITRA no aplica para este trámite.');
+            }
             estadoRegistroRapido('ok',resumen);validarSitraRapidaApostilla();
             if(typeof callbackOk==='function')callbackOk(resp);
         },
@@ -1525,31 +1552,72 @@ function programarValidacionRapidaApostilla(){
     apostillaRapidaTimer=setTimeout(function(){solicitarValidacionRapidaApostilla();},400);
 }
 function guardarAgregarApostillaRapida(onDone){
-    const form=formApostillaRapida();if(!form.length)return;
-    const codApos=(form.find('input[name="ca"]').val()||'').toString();
-    const finalizar=function(){if(typeof onDone==='function')onDone();};
+    const form = formApostillaRapida();
+    if (!form.length) return;
+    const codApos = (form.find('input[name="ca"]').val() || '').toString();
+    const finalizar = function(){
+        if (typeof onDone === 'function') onDone();
+    };
+    console.log("ANTES DEL AJAX");
+    console.log(form.serialize());
     $.ajax({
-        url:'{{url("guardar agregar tramite apostilla")}}',type:'POST',dataType:'json',headers:{'Accept':'application/json'},data:form.serialize(),
-        success:function(resp){
-            if(resp&&resp.ok){
-                cargarDatos('{{url("ajax tabla agregar")}}/'+codApos,'panel_lista_tramites_apostilla');
-                cargarDatos('{{url("listar tramite apostilla tabla/$fechaListadoApostilla")}}','panel_tabla_tramites');
-                form.find('input[name="nro_control"]').val('');form.find('input[name="numero"]').val('');form.find('input[name="gestion"]').val('');
+        url: '{{url("guardar agregar tramite apostilla")}}',
+        type: 'POST',
+        dataType: 'json',
+        headers: { 'Accept': 'application/json' },
+        data: form.serialize(),
+        success: function(resp) {
+            if (resp && resp.ok) {
+                // Éxito: limpiar y resetear
+                cargarDatos('{{url("ajax tabla agregar")}}/' + codApos, 'panel_lista_tramites_apostilla');
+                cargarDatos('{{url("listar tramite apostilla tabla/$fechaListadoApostilla")}}', 'panel_tabla_tramites');
+                form.find('input[name="nro_control"]').val('');
+                form.find('input[name="numero"]').val('');
+                form.find('input[name="gestion"]').val('');
                 limpiarEstadoValidacionRapida();
-                estadoRegistroRapido('pending','Trámite agregado. Ingrese nuevo N° de control.');
-                setEstadoAccionRapida('Listo.','ok');
+                estadoRegistroRapido('pending', 'Trámite agregado. Ingrese nuevo N° de control.');
+                setEstadoAccionRapida('Listo.', 'ok');
                 form.find('input[name="nro_control"]').trigger('focus');
                 finalizar();
                 return;
             }
-            const msg=(resp&&resp.message)?resp.message:'No se pudo registrar el trámite.';estadoRegistroRapido('error',msg);
-            setEstadoAccionRapida('Error.','error');
+            // Error de negocio (no 422)
+            const msg = (resp && resp.message) ? resp.message : 'No se pudo registrar el trámite.';
+            estadoRegistroRapido('error', msg);
+            setEstadoAccionRapida('Error.', 'error');
             finalizar();
         },
-        error:function(xhr){
-            const msg=(xhr.responseJSON&&xhr.responseJSON.message)?xhr.responseJSON.message:'No se pudo registrar el trámite.';
-            estadoRegistroRapido('error',msg);
-            setEstadoAccionRapida('Error.','error');
+        error: function(xhr) {
+            // 🆕 Manejar errores de validación (422) sin tocar el pill de pago
+            if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                // Mostrar errores en los campos correspondientes
+                var errors = xhr.responseJSON.errors;
+                if (errors.numero) {
+                    setErrorRapidoApostilla('numero', errors.numero[0]);
+                } else {
+                    setErrorRapidoApostilla('numero', '');
+                }
+                if (errors.gestion) {
+                    setErrorRapidoApostilla('gestion', errors.gestion[0]);
+                } else {
+                    setErrorRapidoApostilla('gestion', '');
+                }
+                // También podemos mostrar un mensaje general si existe
+                if (xhr.responseJSON.message) {
+                    setEstadoAccionRapida(xhr.responseJSON.message, 'error');
+                } else {
+                    setEstadoAccionRapida('Revise los datos.', 'error');
+                }
+                finalizar();
+                return;
+            }
+
+            // Otros errores (red, servidor, etc.) - actualizar pill de pago
+            const msg = (xhr.responseJSON && xhr.responseJSON.message)
+                        ? xhr.responseJSON.message
+                        : 'No se pudo registrar el trámite.';
+            estadoRegistroRapido('error', msg);
+            setEstadoAccionRapida('Error.', 'error');
             finalizar();
         }
     });
@@ -1619,8 +1687,10 @@ function guardarTramiteApostillaYEnfocar(){
 }
 function submitAgregarApostillaRapida(){
     const form=formApostillaRapida();if(!form.length)return false;
+    const requiereValidacion=form.find('[data-campo="requiere-validacion"]').val() === '1';
     const estadoSitra = (form.find('[data-campo="estado-sitra"]').val() || '').toString().trim();
-    if (estadoSitra !== '0') {
+
+    if (requiereValidacion && estadoSitra !== '0') {
         actualizarEstadoSitraRapido(
             form,
             'text-danger',
@@ -1649,20 +1719,42 @@ function submitAgregarApostillaRapida(){
             finalizarEnvio();
             return;
         }
-        const numeroDocumento=(form.find('input[name="numero"]').val()||'').toString().trim();
-        const gestionDocumento=(form.find('input[name="gestion"]').val()||'').toString().trim();
-        if(numeroDocumento!=='' && !/^\d+$/.test(numeroDocumento)){
-            setErrorRapidoApostilla('numero','El numero debe ser numerico.');
-            setEstadoAccionRapida('Revise los datos.','error');
-            finalizarEnvio();
-            return;
-        }
-        if(gestionDocumento!=='' && !/^\d{4}$/.test(gestionDocumento)){
-            setErrorRapidoApostilla('gestion','La gestion debe tener 4 digitos.');
-            setEstadoAccionRapida('Revise los datos.','error');
-            finalizarEnvio();
-            return;
-        }
+            const display = $('#campos-documento').css('display');
+
+            // Si están visibles, número y gestión son obligatorios
+            if (requiereValidacion) {
+                const numero = (form.find('input[name="numero"]').val() || '').toString().trim();
+                const gestion = (form.find('input[name="gestion"]').val() || '').toString().trim();
+
+                if (numero === '') {
+                    setErrorRapidoApostilla('numero', 'El número de documento es obligatorio.');
+                    setEstadoAccionRapida('Revise los datos.','error');
+                    finalizarEnvio();
+                    return;
+                }
+                if (!/^\d+$/.test(numero)) {
+                    setErrorRapidoApostilla('numero', 'El número debe ser numérico.');
+                    setEstadoAccionRapida('Revise los datos.','error');
+                    finalizarEnvio();
+                    return;
+                }
+                if (gestion === '') {
+                    setErrorRapidoApostilla('gestion', 'La gestión es obligatoria.');
+                    setEstadoAccionRapida('Revise los datos.','error');
+                    finalizarEnvio();
+                    return;
+                }
+                if (!/^\d{4}$/.test(gestion)) {
+                    setErrorRapidoApostilla('gestion', 'La gestión debe tener 4 dígitos.');
+                    setEstadoAccionRapida('Revise los datos.','error');
+                    finalizarEnvio();
+                    return;
+                }
+            } else {
+                // Si no están visibles, limpiamos los campos (por seguridad)
+                form.find('input[name="numero"]').val('');
+                form.find('input[name="gestion"]').val('');
+            }
         const gestionValorado=(form.find('input[data-campo="gestion-api"]').val()||'').toString().trim();
         if(gestionValorado===''){
             estadoRegistroRapido('error','No se obtuvo gestión del pago.');

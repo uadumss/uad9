@@ -905,6 +905,37 @@
 
                     @endif
 
+                    {{-- ===================================================== --}}
+                    {{-- 4. BOTÓN ÚNICO DE GUARDADO                            --}}
+                    {{-- ===================================================== --}}
+
+                    @can('editar datos traleg - srv')
+
+                        @if($modoEdicionPersona || !$tieneApoderado)
+
+                            <button
+                                type="button"
+                                class="e-btn e-btn-primary e-btn-full"
+                                onclick="
+                                    guardarDatos(
+                                        '{{ url('g_traleg_completo') }}',
+                                        'panel_traleg',
+                                        'form_traleg',
+                                        this
+                                    )
+                                "
+                            >
+                                <i
+                                    class="fas fa-save"
+                                    style="font-size:11px;"
+                                ></i>
+
+                                Guardar
+                            </button>
+
+                        @endif
+
+                    @endcan
 
                     {{-- ===================================================== --}}
                     {{-- 3. APODERADO                                         --}}
@@ -912,10 +943,7 @@
 
                     @if($apoderadoHabilitado)
 
-                        <div
-                            class="e-panel"
-                            style="margin-top:10px;"
-                        >
+                        <div class="e-panel" style="margin-top:10px;">
                             <div class="e-panel-head">
 
                                 <div class="e-panel-head-left">
@@ -1311,39 +1339,6 @@
                         id="procesar_apoderado"
                         value="0"
                     >
-
-
-                    {{-- ===================================================== --}}
-                    {{-- 4. BOTÓN ÚNICO DE GUARDADO                            --}}
-                    {{-- ===================================================== --}}
-
-                    @can('editar datos traleg - srv')
-
-                        @if($modoEdicionPersona || !$tieneApoderado)
-
-                            <button
-                                type="button"
-                                class="e-btn e-btn-primary e-btn-full"
-                                onclick="
-                                    guardarDatos(
-                                        '{{ url('g_traleg_completo') }}',
-                                        'panel_traleg',
-                                        'form_traleg',
-                                        this
-                                    )
-                                "
-                            >
-                                <i
-                                    class="fas fa-save"
-                                    style="font-size:11px;"
-                                ></i>
-
-                                Guardar trámite
-                            </button>
-
-                        @endif
-
-                    @endcan
 
                 </form>
 
@@ -1937,6 +1932,11 @@
 
 {{-- ═══════════════════ JS — idéntico al original ═══════════════════ --}}
 <script>
+    window.permisos = {
+    forzarDocleg: @json(Auth::user()->can('forzar creacion docleg - srv'))
+    };
+</script>
+<script>
     function cargarDatosPersonales(ci){
         var link="{{url('datos_per/')}}"+"/"+encodeURIComponent((ci || '').toString().trim());
         $.ajax({
@@ -2411,14 +2411,36 @@
     }
 
     function crearDoclegConValidacion(formulario,ruta,panel,btn){
-        var form=$('#'+formulario);sincronizarCamposObligatorios(form);
-        var cuadis=form.find('input[name="cuadis"]').is(':checked'),validado=form.find('[data-campo="validacion-recaudacion-ok"]').val()==='1';
-        if(!cuadis&&!validado){$('#error_datos_span').html('Valide control primero.');$('#error_datos').show();setTimeout(function(){$('#error_datos').hide(500);},4000);return;}
+        var form=$('#'+formulario);
+        sincronizarCamposObligatorios(form);
+
         var tipoSeleccionado=(form.find('input[data-campo="tipo-legalizacion-hidden"]').val()||'').toString().trim();
-        if(tipoSeleccionado===''){$('#error_datos_span').html('Seleccione tipo para continuar.');$('#error_datos').show();setTimeout(function(){$('#error_datos').hide(500);},4000);return;}
-        
+        if(tipoSeleccionado===''){
+            $('#error_datos_span').html('Seleccione tipo para continuar.');
+            $('#error_datos').show();
+            setTimeout(function(){$('#error_datos').hide(500);},4000);
+            return;
+        }
+
+        // NUEVO BLOQUE
+        if (window.permisos && window.permisos.forzarDocleg) {
+            enviar1(formulario,ruta,panel,btn);
+            return;
+        }
+
+        var cuadis=form.find('input[name="cuadis"]').is(':checked'),
+            validado=form.find('[data-campo="validacion-recaudacion-ok"]').val()==='1';
+
+        if(!cuadis&&!validado){
+            $('#error_datos_span').html('Valide control primero.');
+            $('#error_datos').show();
+            setTimeout(function(){$('#error_datos').hide(500);},4000);
+            return;
+        }
+
         var sitraElement = form.find('[data-campo="estado-sitra"]');
         var tieneSitra = sitraElement.length > 0 && sitraElement.is(':visible');
+
         if (tieneSitra) {
             var estadoSitra = form.data('sitra-estado');
             if (estadoSitra !== '0' && estadoSitra !== 'no-aplica') {
@@ -2428,7 +2450,7 @@
                 return;
             }
         }
-        
+
         enviar1(formulario,ruta,panel,btn);
     }
     function crearConfrontacionConValidacion(formulario,ruta,panel,btn){
